@@ -8,6 +8,8 @@
 
 [English](README.md) · **Español**
 
+![Captura de Omnio](https://github.com/user-attachments/assets/f7abdd85-ae6b-4deb-b1c1-00441e0456f3)
+
 **Omnio** es una aplicación de escritorio local-first para trackear tus hobbies — videojuegos, música, películas, series, anime, donghua, manga, manhwa, manhua y cómics occidentales — todo en un solo lugar. Sin cuentas, sin telemetría, sin nube. Tus datos viven en `data.json` y `assets/` al lado del ejecutable, así que es lo suficientemente portable para llevarla en un pendrive.
 
 La interfaz está en inglés. Para una referencia de campo por campo en inglés y español, ver [`docs/FIELDS.md`](docs/FIELDS.md).
