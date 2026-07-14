@@ -6,105 +6,101 @@
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-informational.svg)
 ![Local-first](https://img.shields.io/badge/local--first-yes-success.svg)
 
+**English** · [Español](README.es.md)
+
 **Omnio** is a local-first desktop app to track your hobbies — games, music, movies, series, anime, donghua, manga, manhwa, manhua and western comics — all in one place. No accounts, no telemetry, no cloud. Your data lives in `data.json` and `assets/` next to the executable, so it's portable enough to carry on a USB stick.
 
-**The UI is in English.** If you want a field-by-field explanation in **English and Spanish**, see [`docs/FIELDS.md`](docs/FIELDS.md).
+The UI is in English. For a field-by-field reference in English and Spanish, see [`docs/FIELDS.md`](docs/FIELDS.md).
 
----
-
-Aplicación de escritorio para trackear tus hobbies — videojuegos, música, películas, series, anime, manga, manhwa, manhua y comics — todo en un solo lugar, 100% local, sin cuentas, sin telemetría, sin conexión a internet requerida.
-
-La interfaz está en inglés; hay una referencia completa de campos en inglés + español en [`docs/FIELDS.md`](docs/FIELDS.md).
-
-## Stack técnico
+## Tech stack
 
 - **Electron 30** + **React 18** + **Vite 5** + **TypeScript 5**
-- Proceso principal en `electron/`, interfaz en `src/`
-- Guardado local: un único `data.json` + carpeta `assets/` con las imágenes por categoría/tipo
-- Sin backend, sin APIs externas
-- Tipografías: Fraunces (display) + Inter (cuerpo) + IBM Plex Mono (etiquetas/datos)
+- Main process under `electron/`, renderer under `src/`
+- Local storage: a single `data.json` + an `assets/` folder holding images per category/kind
+- No backend, no external APIs
+- Typography: Fraunces (display) + Inter (body) + IBM Plex Mono (labels/data)
 
-## Categorías
+## Categories
 
 ### Games
-Ficha estilo infinitebacklog: banner + logo, cover, descripción, dev/publisher, **plataformas libres** (creás las que quieras, con sugerencias y autocompletado), ownership, status (Backlog / Playing / Played / Completed / Dropped), tiempo jugado, rating (medio punto), DLC/Expansions y Addons con status propio, notas mini-markdown, tags. **Extendido**: alternative titles, source (Original/Remake/Remaster/Port/Sequel/Spin-off), age rating ESRB, franchise, review con toggle de spoilers, replay history, related games con tipo de relación, franchise timeline auto, recommendations.
+Infinitebacklog-style card: banner + logo, cover, description, developers/publishers (multiple), **free-form platforms** (create your own, with suggestions + autocomplete), ownership, status (Backlog / Playing / Played / Completed / Dropped), time played, half-step rating, achievements unlocked/total, DLC/Expansions and Addons with their own status, mini-markdown notes, tags. **Extended**: alternative titles, source (Original/Remake/Remaster/Port/Sequel/Spin-off), ESRB age rating, franchise, review with spoiler toggle, replay history, related games with relation kind, auto franchise timeline, recommendations.
 
 ### Music
-Fichas por tipo (Single / EP / Album / OST / Live / Recopilation), tracklist con rating por track, favorito, listened y **botón de Lyrics por canción** (modal para leer/editar la letra). Duración total auto (formatos álbum-like). Perfil de Artista estilo Spotify: banner + avatar circular, discografía cronológica, rating promedio. Collections Listened / Not listened. **Extendido**: alternative titles, source (Original/Compilation/Soundtrack/Remaster/Deluxe/Reissue), producers, review con spoilers, listen history, related albums, recommendations.
+Cards per type (Single / EP / Album / OST / Live / Compilation), tracklist with per-track rating, favorite, listened, and a **per-track Lyrics button** (modal to read/edit lyrics). Auto-computed total duration for album-like types. Spotify-style Artist profile: banner + circular avatar, chronological discography, average rating. Listened / Not listened collections. **Extended**: alternative titles, source (Original/Compilation/Soundtrack/Remaster/Deluxe/Reissue), producers, review with spoilers, listen history, related albums, recommendations.
 
 ### Movies
-Directors, cast, franchise, watched + rewatch count, review con toggle de spoilers, backdrop image. **Extendido**: alternative titles, source (Original/Book/Comic/Game/True story/Remake/Sequel), content rating, watched where, rewatch history log completo, related movies, franchise timeline, recommendations.
+Directors, cast, franchise, watched + rewatch count, review with spoiler toggle, backdrop image. **Extended**: alternative titles, source (Original/Book/Comic/Game/True story/Remake/Sequel), content rating, watched where, full rewatch history log, related movies, franchise timeline, recommendations.
 
 ### Series
-Ficha propia estilo Anime — cast, directors, showrunners, writers, network, country, language, content rating. **Lista de temporadas** anidada con episodios opcionales por temporada (número/título/año/eps totales, watched, rating, notas). Migración automática desde el sistema viejo de `units[]` checklist. Related series, franchise timeline, recommendations, rewatch history, review con spoilers.
+Its own Anime-style card — cast, directors, showrunners, writers, network, country, language, content rating. **Nested season list** with optional episodes per season (number/title/year/total eps, watched, rating, notes). Automatic migration from the old flat `units[]` checklist system. Related series, franchise timeline, recommendations, rewatch history, review with spoilers.
 
 ### Anime & Donghua
-Grupo colapsable en la sidebar con dos sub-bibliotecas independientes (**Anime** y **Donghua**) que comparten la misma ficha estilo AniList/MAL: Studios, formato (TV/Movie/OVA/ONA/Special/Music Video), airing status, season + año, demographic, watch status (Plan to watch / Watching / Completed / Paused / Dropped), episodios vistos/totales, fechas inicio/fin, rating, notas. **Extendido**: alternative titles, source (Manga/Light novel/Web novel/Novel/Original/Game/Visual novel), age rating ESRB, ep. duration + total runtime auto, aired from/to range, favorite episode + nota, dropped-at info condicional, **lista de episodios** con watched/rating/filler/notes, review con spoilers, rewatch history, related con tipo de relación, franchise timeline, recommendations.
+Collapsible sidebar group with two independent sub-libraries (**Anime** and **Donghua**) sharing an AniList/MAL-style card: studios, format (TV/Movie/OVA/ONA/Special/Music Video), airing status, season + year, demographic, watch status (Plan to watch / Watching / Completed / Paused / Dropped), episodes watched/total, aired-from/to, rating, notes. **Extended**: alternative titles, source (Manga/Light novel/Web novel/Novel/Original/Game/Visual novel), ESRB age rating, ep. duration + auto total runtime, aired range, favorite episode + note, conditional dropped-at info, **episode list** with watched/rating/filler/notes, review with spoilers, rewatch history, related with relation kind, franchise timeline, recommendations.
 
 ### Comics & Manga
-4 sub-bibliotecas independientes (Manga, Manhwa, Manhua, Western Comics) con ficha compartida estilo AniList/MAL: authors + artists, géneros, publication status, reading status, capítulos y volúmenes leídos/totales, volume covers en galería, rating, notas. **Extendido**: alternative titles, source, age rating ESRB, magazine/serialization, **lista de capítulos** con read/rating/notas, review con spoilers, reread history, related manga con tipo de relación, franchise timeline, recommendations.
+Four independent sub-libraries (Manga, Manhwa, Manhua, Western Comics) sharing an AniList/MAL-style card: authors + artists, genres, publication status, reading status, chapters and volumes read/total, volume covers gallery, rating, notes. **Extended**: alternative titles, source, ESRB age rating, magazine/serialization, **chapter list** with read/rating/notes, review with spoilers, reread history, related manga with relation kind, franchise timeline, recommendations.
 
-## Interfaz
+## UI
 
-- **6 temas**: Dark (default), Light, Dark AMOLED, Nord, Gruvbox, Solarized Dark. Via `data-theme` attr.
-- **8 accents independientes**: theme default, amber, red, blue, green, purple, teal, pink. Via `data-accent`.
-- **Density**: Comfortable / Compact (reduce paddings, font-sizes).
-- **Font size**: Small / Medium / Large (zoom global).
-- **Sidebar**: Full (216px) / Icons only (60px).
-- **Motion**: On / Reduced (respeta prefers-reduced-motion del SO + override manual).
-- **Startup**: última categoría vista o siempre la primera.
-- **Layouts**: List / Grid / Compact + orden manual por arrastre.
-- **Onboarding**: modal de bienvenida en el primer arranque que permite elegir qué librerías activar (opciones editables después desde Settings → Libraries).
+- **6 themes**: Dark (default), Light, Dark AMOLED, Nord, Gruvbox, Solarized Dark. Via `data-theme`.
+- **8 independent accents**: theme default, amber, red, blue, green, purple, teal, pink. Via `data-accent`.
+- **Density**: Comfortable / Compact (reduces paddings and font sizes).
+- **Font size**: Small / Medium / Large (global zoom).
+- **Sidebar**: Full (216 px) / Icons only (60 px).
+- **Motion**: On / Reduced (respects `prefers-reduced-motion` from the OS plus manual override).
+- **Startup**: last-viewed category or always the first one.
+- **Layouts**: List / Grid / Compact + manual drag-to-reorder.
+- **Onboarding**: welcome modal on first run to pick which libraries to enable (editable later under Settings → Libraries).
 
 ## Settings
 
-Organizado en tabs:
+Organized in tabs:
 - **Appearance**: Theme, Accent, Density, Font size, Sidebar mode, Default view, Motion.
 - **Behavior**: Confirm before deleting, Startup category.
-- **Libraries**: Toggles individuales para cada una de las 9 categorías.
-- **Card Fields**: qué campos mostrar en las cards por categoría (Games, Music, Manga/etc., Movies, Anime, Series).
+- **Libraries**: Individual toggles for each of the 9 categories.
+- **Card Fields**: which fields to show on cards per category (Games, Music, Manga/etc., Movies, Anime, Series).
 - **Data**: Export / Import backup JSON, Reset settings to defaults, Delete all data, About.
 
-## Insights por categoría
+## Statistics per category
 
-Todas las categorías tienen distribución de status (pie/bar), top rated, y actividad de "completados por mes". Además:
+Every category has status distribution (pie/bar), top rated, and "completed per month" activity. Plus:
 
 - **Games**: Top developers, Top publishers, Top platforms, Top genres.
 - **Music**: Top artists, Top genres, Top labels, Listens per month.
 - **Movies**: Movies watched per month, Top directors, Top actors, Top genres.
-- **Anime & Donghua**: Episodes watched per month, Top studios, Total watch time (cross-agrega ambas sub-bibliotecas).
+- **Anime & Donghua**: Episodes watched per month, Top studios, Total watch time (aggregated across both sub-libraries).
 - **Series**: Episodes watched per month, Top networks, Top actors, Total watch time.
 - **Manga/Manhwa/Manhua/Comics**: Chapters read per month, Top authors, Top artists, Top magazines.
 
-## Funciones transversales
+## Cross-cutting features
 
-- **Tags** libres por ítem.
-- **Groups**: colecciones propias del usuario dentro de cada categoría, con reordenamiento manual por arrastre.
-- **Buscador** por título (Ctrl+F).
-- **Filtros** por tags + específicos por categoría (status, plataforma, género).
-- **Órdenes**: alfabético, más reciente, rating, y órdenes específicos (tiempo jugado, fecha, status, manual).
-- **Related items**: sistema manual de linkeo entre ítems de la misma categoría con tipo de relación (sequel, prequel, side story, spin-off, alt version, adaptation, other). Clickeable en la ficha.
-- **Franchise timeline**: auto-derivado — ítems que comparten el mismo campo `franchise` se ordenan cronológicamente en una fila scrolleable. Clickeable.
-- **Recommendations**: lista manual sin tipo de relación.
-- **Review con spoilers**: campo dedicado separado de notas, con toggle "Contains spoilers / No spoilers" — al abrir la ficha aparece un botón "Show spoilers" que hay que clickear para revelar.
-- **Rewatch/Reread/Replay/Listen history**: log completo con fecha, rating y notas por sesión.
-- **Toast** de confirmación al guardar.
-- **Esc** cierra cualquier modal, panel o vista de detalle abierta.
-- **"Don't ask again"** en confirmaciones de borrado.
-- **Empty states** con icono + CTA cuando la categoría está vacía; variante para cuando los filtros dejan la lista vacía.
-- **Scroll con top fijo**: la barra superior de cada vista queda pinneada al top y solo el contenido de abajo scrollea. Layout basado en flex (no sticky con offsets), sin gaps ni content bleeding. Lo que queda fijo depende de la vista:
-  - **Library items**: header + tabs (All X / Groups) + toolbar (search / sort / filters) fijos, solo la lista scrollea.
-  - **Library groups / artists**: header + tabs fijos, el grid de folders scrollea.
-  - **Boards por status**: header (+ toolbar en Games) fijos, la lista scrollea.
-  - **Insights / Settings**: solo el header fijo — las tabs de categoría/settings + contenido scrollean juntos como antes.
+- **Tags** free per item.
+- **Groups**: user-created collections inside each category, drag-to-reorder.
+- **Search** by title (Ctrl+F).
+- **Filters** by tags plus category-specific ones (status, platform, genre).
+- **Sort modes**: alphabetical, most recent, rating, plus category-specific ones (time played, date, status, custom drag order, artist, duration, episodes watched, chapters read).
+- **Related items**: manual linking between items in the same category with a relation kind (sequel, prequel, side story, spin-off, alt version, adaptation, other). Clickable from the detail view. Displayed as a cover-only strip.
+- **Franchise timeline**: auto-derived — items sharing the same `franchise` field appear together in a scrollable row, sorted chronologically. Clickable.
+- **Recommendations**: manual list, no relation kind. Cover-only strip.
+- **Review with spoilers**: separate from notes, with a "Contains spoilers / No spoilers" toggle — a "Show spoilers" button gates the content until clicked.
+- **Rewatch/Reread/Replay/Listen history**: full log with date, rating and notes per session.
+- **Toast** on save.
+- **Esc** closes any open modal, panel or detail view.
+- **"Don't ask again"** on delete confirmations.
+- **Empty states** with icon + CTA when a category is empty; a smaller variant when filters leave the list empty.
+- **Sticky top layout**: the top bar of every view stays pinned and only the content below scrolls. Flex-based (no `sticky` with offsets), no gaps or content bleed. What stays pinned depends on the view:
+  - **Library items**: header + tabs (All X / Groups) + toolbar (search / sort / filters) pinned; only the list scrolls.
+  - **Library groups / artists**: header + tabs pinned; the folder grid scrolls.
+  - **Status boards**: header (plus toolbar in Games) pinned; the list scrolls.
+  - **Statistics / Settings**: only the header pinned — the category/settings tabs scroll along with the content.
 
-## Storage y portabilidad
+## Storage & portability
 
-**Archivos**:
+**Files**:
 ```
-Omnio-0.1.0-portable.exe   ← el ejecutable
-data.json                   ← toda la data
-assets/                     ← imágenes locales
+Omnio-0.1.0-portable.exe   ← the executable
+data.json                   ← all data
+assets/                     ← local images
   anime/cover/
   videojuegos/cover/
   videojuegos/banner/
@@ -119,79 +115,58 @@ assets/                     ← imágenes locales
   ...
 ```
 
-**Cómo funciona**:
-- Al empaquetarse como portable, `data.json` y `assets/` viven en la misma carpeta que el `.exe` (via `PORTABLE_EXECUTABLE_DIR` en Windows).
-- Cuando subís una imagen desde tu PC, se decodifica y se escribe a disco en `assets/{categoría}/{tipo}/{uuid}.{ext}`. En el `data.json` queda solo el path relativo — nada de data URLs pesados embebidos.
-- Un custom protocol `omnio-asset://` sirve las imágenes al renderer con guard anti-path-traversal.
-- **Migración automática**: la primera vez que abrís la app con esta versión y tenías covers/banners/logos guardados como data URLs, todos se extraen a disco automáticamente y el `data.json` se reescribe con paths relativos.
+**How it works**:
+- In the portable build, `data.json` and `assets/` live in the same folder as the `.exe` (via `PORTABLE_EXECUTABLE_DIR` on Windows).
+- When you upload an image from your PC, it's decoded and written to disk at `assets/{category}/{kind}/{uuid}.{ext}`. The `data.json` only stores the relative path — no heavy data URLs embedded.
+- A custom `omnio-asset://` protocol serves images to the renderer with a path-traversal guard.
+- **Automatic migration**: the first time you open the app with this version, if you had covers/banners/logos stored as data URLs, they're extracted to disk and `data.json` is rewritten with relative paths.
 
-**Portable de verdad**: podés meter la carpeta completa en un pendrive y llevarlo. Toda tu data + imágenes viajan con el ejecutable.
+**Truly portable**: drop the whole folder onto a USB stick and take it with you. All your data + images travel with the executable.
 
-## Identidad visual
+## Visual identity
 
-- Paleta base amber sobre superficie oscura (dark theme por default), light y 4 temas alternativos más.
-- Iconografía lineal propia sin emojis — categorías, status de Games/Manga/Anime/Series, navegación. Símbolos tipográficos monocromo (`✓ ★ → ✎ ⧉ ←`) sí se usan.
-- Radios progresivos: 6px (chico), 10px (medio), 16px (grande).
-- Focus rings con glow via `box-shadow`.
-- Logo: anillo con estrella de 4 puntas centrada — el anillo simboliza "una biblioteca que contiene todo", la estrella simboliza el rating/pasión por los hobbies.
+- Amber-on-dark base palette (dark theme by default), plus light and 4 alternative themes.
+- Custom line iconography with no emojis — categories, Games/Manga/Anime/Series statuses, navigation. Monochrome typographic symbols (`✓ ★ → ✎ ⧉ ←`) are used sparingly.
+- Progressive radii: 6 px (small), 10 px (medium), 16 px (large).
+- Focus rings with glow via `box-shadow`.
+- Logo: ring with a 4-point star centered — the ring stands for "a library that holds everything", the star for the rating / passion for hobbies.
 
-## Cambios recientes (v0.1.0)
-
-1. **Rework completo de Series** — de checklist plano de `units[]` a ficha propia con lista de temporadas anidada y episodios opcionales.
-2. **Rework de interfaz global** — Settings reorganizado en tabs, sistema de temas escalable via `data-theme`, accent color independiente, density/font-size/sidebar/motion configurables, refinamiento de contraste en dark y light.
-3. **Paridad de features en las 6 categorías** — todas ahora tienen alt titles, source, age rating ESRB, review con spoilers, {rewatch/reread/replay/listen} history, related items con tipo de relación, franchise timeline, recommendations. Anime y Series suman lista granular de episodios; Manga suma lista granular de capítulos; Series suma lista de temporadas.
-4. **Insights extendidos por categoría** — actividad por mes específica, top actors/directors/studios/networks/authors/artists/labels/publishers/platforms según la categoría.
-5. **UX** — empty states, onboarding con library picker, "don't ask again" en confirmaciones, About expandido, welcome de 2 pasos.
-6. **Portabilidad** — build portable Windows, imágenes a disco en `assets/`, custom protocol, migración automática de data URLs viejos.
-7. **Donghua** — nueva sub-biblioteca dentro del grupo colapsable "Anime & Donghua" (misma ficha que Anime, insights compartidos).
-8. **Plataformas custom en Games** — el usuario crea sus propias plataformas con autocompletado desde sugerencias + acumulado histórico.
-9. **Scroll con top fijo** — layout flex donde el bloque superior (header + tabs + toolbar según la vista) queda pinneado y solo el contenido de abajo scrollea. Insights y Settings mantienen sus tabs debajo del título como estaban antes.
-10. **Lyrics por canción** — botón en cada track de la tracklist que abre un modal para cargar y leer la letra (view/edit mode).
-
-## Próximos pasos
-
-- Integración a GitHub (repo público, licencia, CI para builds automáticos).
-- Más temas (Catppuccin, Tokyo Night, Everforest, One Dark…).
-- Multi-idioma (i18n) — hoy solo inglés en la UI.
-- Búsqueda global cross-category.
-- Ideas menores anotadas: vincular manualmente un single a su álbum real (hoy es solo texto libre), reproductor visual decorativo para Música (descartado por ahora).
-
-## Desarrollo
+## Development
 
 ```bash
-git clone https://github.com/<tu-usuario>/Omnio.git
+git clone https://github.com/TonyMontania/Omnio.git
 cd Omnio
 npm install
-npm run dev          # dev con hot reload
-npm run build        # empaqueta portable en release/{version}/
+npm run dev          # dev with hot reload
+npm run build        # packages the portable exe under release/{version}/
 npm run lint
 ```
 
-Requiere Node 18+ (para `crypto.randomUUID` en el bundler) y Windows para el build portable (electron-builder). En Mac/Linux se puede correr en dev pero el target de build está pensado para Windows portable — se puede extender editando `electron-builder.json5`.
+Requires Node 18+ (for `crypto.randomUUID` in the bundler) and Windows for the portable build (electron-builder). On Mac/Linux it runs in dev mode, but the build target is Windows portable — extend `electron-builder.json5` if you need other platforms.
 
-### Estructura del código
+### Code layout
 
 ```
-electron/                proceso principal de Electron + IPC
-public/                  assets estáticos (logos, iconos)
-build/                   iconos generados para empaquetar
-scripts/                 scripts de build (generación del .ico)
+electron/                Electron main process + IPC
+public/                  static assets (logos, icons)
+build/                   icons generated for packaging
+scripts/                 build scripts (icon generation)
 src/
-├── App.tsx              componente raíz (state + vistas)
-├── App.css              re-exporta styles/*.css
+├── App.tsx              root component (state + views)
+├── App.css              re-exports styles/*.css
 ├── styles/              tokens, base, sidebar, layout, forms, cards, panels, detail, insights, settings
 ├── types/               entities, options, helpers (barrel index.ts)
 ├── insights/            stats.ts + DistChart.tsx
-├── components/editors/  15 subcomponentes de edición reusables
-├── *DetailModal.tsx     una ficha de detalle por categoría
-├── ArtistDetailView.tsx perfil de artista de música
-├── ItemCard.tsx         card genérica de listado
-├── StarRating.tsx       componente de estrellas con medio punto
-├── icons.tsx            iconografía inline SVG
-└── categories.ts        metadata de las 9 categorías
+├── components/editors/  15 reusable edit-form subcomponents
+├── *DetailModal.tsx     one detail view per category
+├── ArtistDetailView.tsx music artist profile
+├── ItemCard.tsx         generic list card
+├── StarRating.tsx       half-star rating input
+├── icons.tsx            inline SVG iconography
+└── categories.ts        metadata for the 9 categories
 ```
 
-Hay una referencia detallada de cada campo por categoría en [`docs/FIELDS.md`](docs/FIELDS.md).
+For a detailed field-by-field reference by category, see [`docs/FIELDS.md`](docs/FIELDS.md).
 
 ## Contributing
 
