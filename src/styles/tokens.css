@@ -1,0 +1,129 @@
+* { box-sizing: border-box; }
+
+:root {
+  --bg: #111217;
+  --surface: #191a21;
+  --surface-2: #23242d;
+  --surface-hover: #2d2e39;
+  --border: #313240;
+  --border-soft: #262731;
+  --text: #eceef2;
+  --text-dim: #a1a3ae;
+  --text-faint: #6e7080;
+  --accent: #c9a227;
+  --accent-hover: #ddb941;
+  --accent-soft: rgba(201, 162, 39, 0.14);
+  --status-backlog: #8a8d99;
+  --status-playing: #5b9bd5;
+  --status-played: #7fb77e;
+  --status-completed: #c9a227;
+  --status-dropped: #d9695f;
+  --danger: #d9695f;
+  --danger-soft: rgba(217, 105, 95, 0.12);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+.app[data-theme="light"] {
+  /* Warm-paper light theme, tuned to sit next to amber without feeling
+     like a "photonegative" of the dark theme. Backgrounds bias slightly
+     yellow; text is a dark warm brown rather than pure black so it
+     doesn't fight the accent. */
+  --bg: #faf6ec;
+  --surface: #ffffff;
+  --surface-2: #f2ecd9;
+  --surface-hover: #ebe4cd;
+  --border: #d3c9a8;
+  --border-soft: #e6dfc8;
+  --text: #2b2411;
+  --text-dim: #6a5f43;
+  --text-faint: #a09571;
+  --accent: #b3811a;
+  --accent-hover: #8f6413;
+  --accent-soft: rgba(179, 129, 26, 0.14);
+  --danger: #b53a34;
+  --danger-soft: rgba(181, 58, 52, 0.12);
+  --status-backlog: #8a8474;
+  --status-playing: #4a7fb0;
+  --status-played: #5f8f5e;
+  --status-completed: #b3811a;
+  --status-dropped: #b53a34;
+}
+
+.app[data-theme="dark-amoled"] {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface-2: #131317;
+  --surface-hover: #1c1c22;
+  --border: #24242c;
+  --border-soft: #17171d;
+  --text: #ececec;
+  --text-dim: #8a8a92;
+  --text-faint: #555560;
+  --accent: #c9a227;
+  --accent-hover: #ddb941;
+  --accent-soft: rgba(201, 162, 39, 0.14);
+}
+
+.app[data-theme="nord"] {
+  --bg: #2e3440;
+  --surface: #3b4252;
+  --surface-2: #434c5e;
+  --surface-hover: #4c566a;
+  --border: #4c566a;
+  --border-soft: #3b4252;
+  --text: #eceff4;
+  --text-dim: #d8dee9;
+  --text-faint: #7b8394;
+  --accent: #88c0d0;
+  --accent-hover: #a3d1de;
+  --accent-soft: rgba(136, 192, 208, 0.16);
+  --danger: #bf616a;
+  --danger-soft: rgba(191, 97, 106, 0.14);
+}
+
+.app[data-theme="gruvbox-dark"] {
+  --bg: #282828;
+  --surface: #32302f;
+  --surface-2: #3c3836;
+  --surface-hover: #504945;
+  --border: #504945;
+  --border-soft: #3c3836;
+  --text: #ebdbb2;
+  --text-dim: #d5c4a1;
+  --text-faint: #928374;
+  --accent: #d79921;
+  --accent-hover: #fabd2f;
+  --accent-soft: rgba(215, 153, 33, 0.16);
+  --danger: #cc241d;
+  --danger-soft: rgba(204, 36, 29, 0.14);
+}
+
+.app[data-theme="solarized-dark"] {
+  --bg: #002b36;
+  --surface: #073642;
+  --surface-2: #0d4453;
+  --surface-hover: #14515f;
+  --border: #14515f;
+  --border-soft: #0d4453;
+  --text: #eee8d5;
+  --text-dim: #93a1a1;
+  --text-faint: #657b83;
+  --accent: #b58900;
+  --accent-hover: #d19f0f;
+  --accent-soft: rgba(181, 137, 0, 0.16);
+  --danger: #dc322f;
+  --danger-soft: rgba(220, 50, 47, 0.14);
+}
+
+.app[data-accent="amber"] { --accent: #c9a227; --accent-hover: #ddb941; --accent-soft: rgba(201, 162, 39, 0.14); }
+.app[data-accent="red"] { --accent: #d9695f; --accent-hover: #e58076; --accent-soft: rgba(217, 105, 95, 0.14); }
+.app[data-accent="blue"] { --accent: #5b9bd5; --accent-hover: #7cb2e0; --accent-soft: rgba(91, 155, 213, 0.14); }
+.app[data-accent="green"] { --accent: #7fb77e; --accent-hover: #99c898; --accent-soft: rgba(127, 183, 126, 0.14); }
+.app[data-accent="purple"] { --accent: #a284d9; --accent-hover: #b59fe2; --accent-soft: rgba(162, 132, 217, 0.14); }
+.app[data-accent="teal"] { --accent: #4fb4a5; --accent-hover: #6dc7ba; --accent-soft: rgba(79, 180, 165, 0.14); }
+.app[data-accent="pink"] { --accent: #d97ea0; --accent-hover: #e397b3; --accent-soft: rgba(217, 126, 160, 0.14); }

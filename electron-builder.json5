@@ -1,0 +1,50 @@
+// @see - https://www.electron.build/configuration/configuration
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.omnio.app",
+  "asar": true,
+  "productName": "Omnio",
+  "directories": {
+    "output": "release/${version}"
+  },
+  "files": [
+    "dist",
+    "dist-electron"
+  ],
+  // Copies the icon files next to the app so BrowserWindow.icon can resolve
+  // them at runtime (the .ico embedded into the .exe by win.icon is separate
+  // and drives the taskbar).
+  "extraResources": [
+    { "from": "build/icon.ico", "to": "icon.ico" },
+    { "from": "build/icon.png", "to": "icon.png" }
+  ],
+  "mac": {
+    "icon": "build/icon.png",
+    "target": [
+      "dmg"
+    ],
+    "artifactName": "${productName}-Mac-${version}.${ext}"
+  },
+  "win": {
+    "icon": "build/icon.ico",
+    "target": [
+      {
+        "target": "portable",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "artifactName": "${productName}-${version}-portable.${ext}"
+  },
+  "portable": {
+    "artifactName": "${productName}-${version}-portable.${ext}"
+  },
+  "linux": {
+    "icon": "build/icon.png",
+    "target": [
+      "AppImage"
+    ],
+    "artifactName": "${productName}-Linux-${version}.${ext}"
+  }
+}

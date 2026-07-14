@@ -1,0 +1,140 @@
+.sidebar {
+  width: 216px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 12px;
+}
+
+.sidebar.sidebar-icons { width: 60px; padding: 20px 6px; }
+.sidebar.sidebar-icons .sidebar-header { justify-content: center; }
+.sidebar.sidebar-icons .sidebar-title,
+.sidebar.sidebar-icons .sidebar-version,
+.sidebar.sidebar-icons .sidebar-section-title,
+.sidebar.sidebar-icons .nav-item span:not(.nav-icon):not(.nav-count),
+.sidebar.sidebar-icons .sidebar-action span:not(.nav-icon) { display: none; }
+.sidebar.sidebar-icons .nav-item { justify-content: center; padding: 8px; }
+.sidebar.sidebar-icons .nav-count { position: absolute; top: 0; right: 0; font-size: 9px; padding: 1px 4px; }
+.sidebar.sidebar-icons .nav-item { position: relative; }
+.sidebar.sidebar-icons .sidebar-divider { margin: 10px 4px; }
+
+.brand { padding: 4px 10px 10px; }
+
+.brand-mark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.brand-logo {
+  width: 22px;
+  height: 22px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.brand-row { display: flex; align-items: center; gap: 8px; padding: 4px 10px 14px; }
+
+/* In icons-only mode the wordmark hides; only the logo mark remains centered. */
+.sidebar.sidebar-icons .brand-row { padding: 4px 0 14px; justify-content: center; }
+.sidebar.sidebar-icons .brand-mark { display: none; }
+
+.sidebar-section-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-dim);
+  padding: 2px 10px 6px;
+  display: block;
+}
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+.sidebar-divider { height: 1px; background: var(--border-soft); margin: 6px 4px 12px; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13.5px;
+  font-family: var(--font-body);
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-item:hover { background: var(--surface-hover); color: var(--text); }
+.nav-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.nav-icon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+.sidebar-footer { margin-top: auto; display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
+
+.sidebar-action {
+  display: flex; align-items: center; gap: 8px;
+  background: transparent; border: none; color: var(--text-faint);
+  padding: 7px 10px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12.5px; font-family: var(--font-body); text-align: left;
+}
+.sidebar-action:hover { background: var(--surface-hover); color: var(--text); }
+.sidebar-action.active { background: var(--accent-soft); color: var(--accent); }
+
+.nav-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.nav-item.active .nav-count { color: var(--accent); }
+
+.sidebar-toggle {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text-faint);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.sidebar-toggle:hover { color: var(--text); }
+
+.sidebar-reveal {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  color: var(--text-dim);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  z-index: 50;
+}
+.sidebar-reveal:hover { color: var(--text); border-color: var(--accent); }
+
+.nav-caret { margin-left: auto; display: flex; align-items: center; color: var(--text-faint); }
+.nav-item.active .nav-caret { color: var(--accent); }
+
+.nav-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 2px 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-soft);
+}
+
+.nav-item.sub { padding: 7px 10px; font-size: 12.5px; }

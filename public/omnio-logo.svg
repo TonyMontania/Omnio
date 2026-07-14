@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Omnio">
+  <defs>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8c04a"/>
+      <stop offset="1" stop-color="#a8791b"/>
+    </linearGradient>
+    <linearGradient id="star" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7d76a"/>
+      <stop offset="1" stop-color="#c9a227"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="#14151a"/>
+  <circle cx="64" cy="64" r="46" fill="none" stroke="url(#ring)" stroke-width="6"/>
+  <path d="M64 26 L71.5 56.5 L102 64 L71.5 71.5 L64 102 L56.5 71.5 L26 64 L56.5 56.5 Z" fill="url(#star)"/>
+  <circle cx="64" cy="64" r="6" fill="#14151a"/>
+</svg>

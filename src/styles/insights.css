@@ -1,0 +1,82 @@
+.chart-toggle { margin-bottom: 16px; width: fit-content; }
+
+.pie-chart-wrap { display: flex; align-items: center; gap: 24px; margin-bottom: 20px; }
+
+.pie-chart {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pie-chart-hole {
+  position: absolute;
+  inset: 24px;
+  background: var(--bg);
+  border-radius: 50%;
+}
+
+.pie-legend { display: flex; flex-direction: column; gap: 6px; }
+.pie-legend-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); }
+.pie-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pie-legend-value { font-family: var(--font-mono); color: var(--text-faint); margin-left: 4px; }
+
+.bar-chart { display: flex; flex-direction: column; gap: 10px; max-width: 480px; margin-bottom: 20px; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-label { width: 100px; font-size: 12.5px; color: var(--text-dim); flex-shrink: 0; }
+.bar-track { flex: 1; height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; }
+.bar-value { width: 30px; text-align: right; font-family: var(--font-mono); font-size: 12px; color: var(--text-faint); }
+
+.badge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.status-backlog { background: rgba(138,141,153,0.15); color: var(--status-backlog); }
+.status-badge.status-playing { background: rgba(91,155,213,0.15); color: var(--status-playing); }
+.status-badge.status-played { background: rgba(127,183,126,0.15); color: var(--status-played); }
+.status-badge.status-completed { background: var(--accent-soft); color: var(--accent); }
+.status-badge.status-dropped { background: rgba(217,105,95,0.15); color: var(--danger); }
+
+.group-badge { background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border-soft); }
+
+.insights-subheading {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 24px 0 12px;
+}
+
+.insights-row {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.insights-col { flex: 1; min-width: 280px; }
+.insights-col .insights-subheading { margin-top: 0; }
+
+.month-chart .bar-label { width: 40px; }
+
+.top-rated-list { display: flex; flex-direction: column; gap: 6px; max-width: 420px; }
+
+.top-rated-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+}
+
+.top-rated-rank { font-family: var(--font-mono); font-size: 12px; color: var(--text-faint); width: 24px; }
+.top-rated-title { flex: 1; font-size: 13px; color: var(--text); }
+.top-rated-score { font-family: var(--font-mono); font-size: 12px; color: var(--accent); }

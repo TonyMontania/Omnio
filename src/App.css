@@ -1,0 +1,17 @@
+/*
+ * Omnio — hoja de estilos raíz.
+ * El contenido real vive en styles/ organizado por dominio.
+ * El orden de import importa: los primeros definen tokens y base,
+ * los siguientes son componentes que los consumen.
+ */
+
+@import './styles/tokens.css';        /* reset, :root, 6 temas, 8 accents */
+@import './styles/base.css';          /* html/body, scrollbars, focus, motion, font-size, density, toast */
+@import './styles/sidebar.css';       /* sidebar completo, nav-items, brand */
+@import './styles/layout.css';        /* content, header, toolbar, filters, sub-tabs, stats-bar, back-btn */
+@import './styles/forms.css';         /* form, inputs, pills, tags, dropdowns, rating, stars, notes */
+@import './styles/cards.css';         /* list, item-card, folder-card, empty-state, status-dots */
+@import './styles/panels.css';        /* detail-panel, modal-overlay, modal-box */
+@import './styles/detail.css';        /* game/music/artist detail views, tracks, seasons, episodes, volumes, lyrics */
+@import './styles/insights.css';      /* charts, badges, top-rated */
+@import './styles/settings.css';      /* theme/accent swatches, welcome, about, danger-btn, spoiler */
