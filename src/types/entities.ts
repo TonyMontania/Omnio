@@ -124,6 +124,7 @@ export interface Collection {
   categoryId: string
   itemIds: string[]
   createdAt: number
+  cover?: string
 }
 
 export interface Item {

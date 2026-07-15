@@ -158,6 +158,45 @@
 .folder-card h3 { margin: 4px 0 0; font-size: 14px; color: var(--text); font-weight: 600; }
 .folder-count { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); letter-spacing: 0.03em; }
 
+/* Image variant of the folder-card (custom group covers, artist photos). */
+.folder-photo {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+.folder-photo.circle { border-radius: 50%; }
+.folder-photo.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  color: var(--text-faint);
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 600;
+}
+
+/* Edit affordance on group folders. Sits opposite the delete ✕. */
+.folder-edit {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.folder-edit:hover { color: var(--accent); }
+
 .cover-wrap.square img, .cover-wrap.square .cover-placeholder { aspect-ratio: 1 / 1; }
 .cover-preview.square img { aspect-ratio: 1 / 1; object-fit: cover; }
 

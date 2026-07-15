@@ -288,6 +288,10 @@ function App() {
   const artistBannerFileInputRef = useRef<HTMLInputElement>(null)
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null)
   const [newCollectionName, setNewCollectionName] = useState('')
+  const [editingCollectionId, setEditingCollectionId] = useState<string | null>(null)
+  const [collectionNameField, setCollectionNameField] = useState('')
+  const [collectionCoverField, setCollectionCoverField] = useState('')
+  const collectionCoverFileRef = useRef<HTMLInputElement>(null)
 
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<SortBy>('recent')
@@ -668,6 +672,11 @@ function App() {
 
   const handleDeleteArtist = (id: string) => {
     askConfirm('Delete this artist? Your songs/albums stay, only the artist entry is removed.', () => {
+      const artist = musicArtists.find((a) => a.id === id)
+      if (artist) {
+        deleteAssetFile(artist.photo)
+        deleteAssetFile(artist.bannerImage)
+      }
       setMusicArtists((prev) => prev.filter((a) => a.id !== id))
       if (viewingArtist?.id === id) setViewingArtist(null)
     })
@@ -714,6 +723,12 @@ function App() {
     const photo = await persistArtistImg(artistPhotoField)
     const bannerImage = await persistArtistImg(artistBannerField)
     const updated = { name: artistNameField.trim(), photo, bannerImage }
+    // Delete replaced/cleared image files.
+    const oldArtist = musicArtists.find((a) => a.id === editingArtistId)
+    if (oldArtist) {
+      if (isLocalAssetPath(oldArtist.photo) && oldArtist.photo !== photo) deleteAssetFile(oldArtist.photo)
+      if (isLocalAssetPath(oldArtist.bannerImage) && oldArtist.bannerImage !== bannerImage) deleteAssetFile(oldArtist.bannerImage)
+    }
     setMusicArtists((prev) => prev.map((a) => (a.id === editingArtistId ? { ...a, ...updated } : a)))
     if (viewingArtist && viewingArtist.id === editingArtistId) setViewingArtist({ ...viewingArtist, ...updated })
     closeArtistPanel()
@@ -1149,12 +1164,51 @@ function App() {
     return { ...item, cover, bannerImage, bannerImage2, logoImage, volumeCovers }
   }
 
+  // True only for asset paths we own on disk under assets/ — i.e. relative
+  // strings, not data URLs, remote URLs, or blob:/file: refs. Used to gate
+  // image:delete calls so we never try to unlink something we didn't write.
+  const isLocalAssetPath = (val: string | undefined | null): val is string => {
+    if (!val) return false
+    return !/^(data:|https?:|file:|blob:|omnio-asset:)/i.test(val)
+  }
+
+  const deleteAssetFile = (rel: string | undefined | null) => {
+    if (isLocalAssetPath(rel)) window.ipcRenderer.invoke('image:delete', rel)
+  }
+
+  // Compare the item we're about to save against the previously-saved version
+  // and collect every asset path that used to be referenced but no longer is.
+  // Covers the "clear cover", "replace banner", "remove one volume" cases.
+  const findOrphanedItemAssets = (oldItem: Item | undefined, newItem: Item): string[] => {
+    if (!oldItem) return []
+    const orphans: string[] = []
+    const check = (oldVal: string | undefined, newVal: string | undefined) => {
+      if (isLocalAssetPath(oldVal) && oldVal !== newVal) orphans.push(oldVal)
+    }
+    check(oldItem.cover, newItem.cover)
+    check(oldItem.bannerImage, newItem.bannerImage)
+    check(oldItem.bannerImage2, newItem.bannerImage2)
+    check(oldItem.logoImage, newItem.logoImage)
+    const newVolIds = new Set((newItem.volumeCovers ?? []).map((v) => v.id))
+    ;(oldItem.volumeCovers ?? []).forEach((oldV) => {
+      if (!newVolIds.has(oldV.id)) {
+        if (isLocalAssetPath(oldV.cover)) orphans.push(oldV.cover)
+      } else {
+        const newV = newItem.volumeCovers!.find((v) => v.id === oldV.id)
+        if (newV && isLocalAssetPath(oldV.cover) && oldV.cover !== newV.cover) orphans.push(oldV.cover)
+      }
+    })
+    return orphans
+  }
+
   const handleSave = async () => {
     if (!title.trim()) return
     if (editingId) {
-      const createdAt = items.find((it) => it.id === editingId)?.createdAt ?? Date.now()
+      const oldItem = items.find((it) => it.id === editingId)
+      const createdAt = oldItem?.createdAt ?? Date.now()
       const built = buildItemFromForm(editingId, createdAt)
       const updated = await persistItemImages(built)
+      findOrphanedItemAssets(oldItem, updated).forEach(deleteAssetFile)
       setItems((prev) => prev.map((it) => (it.id === editingId ? updated : it)))
       if (viewingGame && viewingGame.id === editingId) setViewingGame(updated)
       if (viewingMusic && viewingMusic.id === editingId) setViewingMusic(updated)
@@ -1172,6 +1226,13 @@ function App() {
   }
 
   const performDelete = (item: Item) => {
+    // Fire-and-forget removal of any local asset files this item owned so
+    // deleting an entry doesn't leave orphan images under assets/.
+    deleteAssetFile(item.cover)
+    deleteAssetFile(item.bannerImage)
+    deleteAssetFile(item.bannerImage2)
+    deleteAssetFile(item.logoImage)
+    ;(item.volumeCovers ?? []).forEach((v) => deleteAssetFile(v.cover))
     setItems((prev) => prev.filter((i) => i.id !== item.id))
     setCollections((prev) => prev.map((c) => ({ ...c, itemIds: c.itemIds.filter((id) => id !== item.id) })))
     if (editingId === item.id) closePanel()
@@ -1253,9 +1314,48 @@ function App() {
 
   const handleDeleteCollection = (id: string) => {
     askConfirm('Delete this group? Items stay, they just stop being grouped.', () => {
+      const target = collections.find((c) => c.id === id)
+      if (target) deleteAssetFile(target.cover)
       setCollections((prev) => prev.filter((c) => c.id !== id))
       if (activeCollectionId === id) setActiveCollectionId(null)
     })
+  }
+
+  const openCollectionEditModal = (c: Collection) => {
+    setEditingCollectionId(c.id)
+    setCollectionNameField(c.name)
+    setCollectionCoverField(c.cover ?? '')
+  }
+
+  const closeCollectionEditModal = () => {
+    setEditingCollectionId(null)
+    setCollectionNameField('')
+    setCollectionCoverField('')
+  }
+
+  const handleCollectionCoverFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => { if (typeof reader.result === 'string') setCollectionCoverField(reader.result) }
+    reader.readAsDataURL(file)
+  }
+
+  const handleSaveCollectionEdit = async () => {
+    if (!collectionNameField.trim() || !editingCollectionId) return
+    const trimmedCover = collectionCoverField.trim()
+    let cover: string | undefined
+    if (!trimmedCover) cover = undefined
+    else if (trimmedCover.startsWith('data:')) {
+      const rel = await window.ipcRenderer.invoke('image:save', 'groups', 'cover', trimmedCover)
+      cover = typeof rel === 'string' ? rel : trimmedCover
+    } else cover = trimmedCover
+    const oldCollection = collections.find((c) => c.id === editingCollectionId)
+    if (oldCollection && isLocalAssetPath(oldCollection.cover) && oldCollection.cover !== cover) {
+      deleteAssetFile(oldCollection.cover)
+    }
+    setCollections((prev) => prev.map((c) => (c.id === editingCollectionId ? { ...c, name: collectionNameField.trim(), cover } : c)))
+    closeCollectionEditModal()
   }
 
   const handleToggleItemInCollection = (collectionId: string, itemId: string) => {
@@ -2499,7 +2599,9 @@ function App() {
                     {musicArtists.map((a) => (
                       <div key={a.id} className="folder-card" onClick={() => setViewingArtist(a)}>
                         <button className="delete" onClick={(e) => { e.stopPropagation(); handleDeleteArtist(a.id) }}>✕</button>
-                        <span className="folder-icon">🎤</span>
+                        {a.photo
+                          ? <img className="folder-photo circle" src={assetSrc(a.photo)} alt={a.name} />
+                          : <div className="folder-photo circle placeholder">{a.name.slice(0, 1).toUpperCase()}</div>}
                         <h3>{a.name}</h3>
                         <span className="folder-count">{musicList.filter((m) => m.artist === a.name).length} items</span>
                       </div>
@@ -2521,8 +2623,11 @@ function App() {
                     {categoryCollections.length === 0 && <p className="empty">You haven't created any groups here yet.</p>}
                     {categoryCollections.map((c) => (
                       <div key={c.id} className="folder-card" onClick={() => { setActiveCollectionId(c.id); resetListControls(); setSortBy('custom') }}>
+                        <button className="folder-edit" onClick={(e) => { e.stopPropagation(); openCollectionEditModal(c) }} title="Edit group">✎</button>
                         <button className="delete" onClick={(e) => { e.stopPropagation(); handleDeleteCollection(c.id) }}>✕</button>
-                        <span className="folder-icon"><FolderIcon /></span>
+                        {c.cover
+                          ? <img className="folder-photo" src={assetSrc(c.cover)} alt={c.name} />
+                          : <span className="folder-icon"><FolderIcon /></span>}
                         <h3>{c.name}</h3>
                         <span className="folder-count">{c.itemIds.length} {c.itemIds.length === 1 ? 'item' : 'items'}</span>
                       </div>
@@ -3845,6 +3950,37 @@ function App() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {editingCollectionId && (
+        <div className="modal-overlay" onClick={closeCollectionEditModal}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ width: 380 }}>
+            <p className="modal-brand">Edit group</p>
+            <div className="field-group">
+              <label>Name</label>
+              <input value={collectionNameField} onChange={(e) => setCollectionNameField(e.target.value)} autoFocus />
+            </div>
+            <div className="field-group">
+              <label>Cover image</label>
+              {collectionCoverField && (
+                <div className="cover-preview">
+                  <img src={assetSrc(collectionCoverField) ?? collectionCoverField} alt="" />
+                </div>
+              )}
+              <div className="upload-row">
+                <button type="button" className="upload-btn" onClick={() => collectionCoverFileRef.current?.click()}>Upload</button>
+                <input type="file" accept="image/*" ref={collectionCoverFileRef} style={{ display: 'none' }} onChange={handleCollectionCoverFile} />
+                {collectionCoverField && (
+                  <button type="button" className="upload-btn clear" onClick={() => setCollectionCoverField('')}>Clear</button>
+                )}
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="ghost" onClick={closeCollectionEditModal}>Cancel</button>
+              <button className="primary" onClick={handleSaveCollectionEdit}>Save</button>
+            </div>
           </div>
         </div>
       )}
