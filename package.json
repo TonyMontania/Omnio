@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite",
     "icon": "node scripts/build-icon.mjs",
-    "build": "npm run icon && tsc && vite build && electron-builder",
+    "build": "npm run icon && tsc && vite build && electron-builder --publish=never",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
