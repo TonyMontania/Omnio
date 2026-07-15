@@ -1,14 +1,16 @@
 # Cross-platform release build.
 #
-# Trigger: push a semver tag like `v0.2.0`. The workflow runs `npm run build`
-# on Windows, macOS and Ubuntu in parallel, then uploads each platform's
-# artifact (portable .exe, universal .dmg, .AppImage) to a GitHub Release
-# named after the tag.
+# Trigger: push a semver tag like `v0.2.0`. Two-stage flow:
+#   1. `build` runs in parallel on Windows, macOS and Ubuntu. Each job runs
+#      `npm run build`, then stages only the user-facing installer(s) into
+#      a per-OS artifact (no raw electron output, no auto-updater YAML, no
+#      elevate.exe helper).
+#   2. `release` runs once after all builds finish, downloads the artifacts,
+#      and publishes them to a GitHub Release named after the tag.
 #
 # Also supports manual triggering from the Actions tab (workflow_dispatch) —
 # useful for smoke-testing changes to this workflow without cutting a tag.
-# Manual runs don't create a Release; they just leave artifacts on the run
-# page so you can download them.
+# Manual runs skip the release step (no tag → no release).
 #
 # Nothing here is signed — Windows SmartScreen and macOS Gatekeeper will
 # warn on first launch. Documented in the READMEs.
@@ -21,8 +23,7 @@ on:
       - 'v*'
   workflow_dispatch:
 
-# GITHUB_TOKEN needs contents:write to attach artifacts to a Release and to
-# fetch generated notes. Repos default to read-only for token scope now.
+# GITHUB_TOKEN needs contents:write to upload assets to a Release.
 permissions:
   contents: write
 
@@ -46,32 +47,53 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Intentionally NOT passing GH_TOKEN here: with a token in the env,
+      # electron-builder auto-publishes every intermediate file (raw exe,
+      # elevate.exe, latest-*.yml) directly to the Release. We want only
+      # the curated installers, so we let the build finish locally and
+      # publish from a separate job below.
       - name: Build
         run: npm run build
-        env:
-          # Skip electron-builder's auto-publish; we upload to the Release
-          # ourselves in the next step so the flow is uniform across OSes.
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload build artifacts (for run inspection)
+      # Copy only the user-facing installers into a flat staging dir. The
+      # `|| true` on each line lets the step succeed on OSes that don't
+      # produce that particular artifact (no .dmg on Windows, etc).
+      - name: Stage release files
+        shell: bash
+        run: |
+          mkdir -p staging
+          cp release/*/Omnio-*-portable.exe staging/ 2>/dev/null || true
+          cp release/*/Omnio-Mac-*.dmg staging/ 2>/dev/null || true
+          cp release/*/Omnio-Linux-*.AppImage staging/ 2>/dev/null || true
+          echo "--- staged files ---"
+          ls -la staging/
+
+      - name: Upload staged artifacts
         uses: actions/upload-artifact@v4
         with:
           name: omnio-${{ matrix.os }}
-          path: |
-            release/**/*.exe
-            release/**/*.dmg
-            release/**/*.AppImage
-          if-no-files-found: warn
+          path: staging/
+          if-no-files-found: error
           retention-days: 14
 
-      - name: Attach to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List collected files
+        run: ls -la artifacts/
+
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            release/**/*.exe
-            release/**/*.dmg
-            release/**/*.AppImage
+          files: artifacts/*
           draft: false
           prerelease: false
           generate_release_notes: true
