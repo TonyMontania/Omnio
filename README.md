@@ -3,7 +3,7 @@
 <img src="public/omnio-logo.svg" width="80" align="right" alt="Omnio logo">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-c9a227.svg)](LICENSE)
-![Platform: Windows](https://img.shields.io/badge/platform-Windows-informational.svg)
+![Platform: Windows · macOS · Linux](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-informational.svg)
 ![Local-first](https://img.shields.io/badge/local--first-yes-success.svg)
 
 **English** · [Español](README.es.md)
@@ -13,6 +13,28 @@
 **Omnio** is a local-first desktop app to track your hobbies — games, music, movies, series, anime, donghua, manga, manhwa, manhua and western comics — all in one place. No accounts, no telemetry, no cloud. Your data lives in `data.json` and `assets/` next to the executable, so it's portable enough to carry on a USB stick.
 
 The UI is in English. For a field-by-field reference in English and Spanish, see [`docs/FIELDS.md`](docs/FIELDS.md).
+
+## Install
+
+Download from the [latest release](https://github.com/TonyMontania/Omnio/releases/latest) and pick your platform.
+
+**Windows** (`.exe` portable)
+1. Download `Omnio-*-portable.exe`, drop it in a folder of your choice.
+2. Double-click to run. `data.json` and `assets/` are created next to it on first run.
+3. First launch: SmartScreen will show *"Windows protected your PC"* — click **More info** → **Run anyway**. It's an unsigned open-source build; you can inspect and rebuild the source yourself if you prefer.
+
+**macOS** (`.dmg`, universal Intel + Apple Silicon)
+1. Download `Omnio-Mac-*-x64.dmg` (Intel) or `Omnio-Mac-*-arm64.dmg` (Apple Silicon) and drag Omnio.app to Applications.
+2. First launch: Gatekeeper will say *"Omnio can't be opened because Apple cannot check it for malicious software"*. To bypass:
+   - **Right-click** the app → **Open** → confirm in the dialog. Or:
+   - In Terminal: `xattr -cr /Applications/Omnio.app` and launch normally.
+
+**Linux** (`.AppImage`)
+1. Download `Omnio-Linux-*.AppImage`.
+2. `chmod +x Omnio-Linux-*.AppImage`
+3. Double-click or run from terminal. Some distros need `libfuse2` (`sudo apt install libfuse2` on Debian/Ubuntu).
+
+The whole folder (exe/dmg/AppImage + `data.json` + `assets/`) is portable — move it between machines or drop it on a USB stick and your library travels with it.
 
 ## Tech stack
 

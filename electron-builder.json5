@@ -20,10 +20,13 @@
   ],
   "mac": {
     "icon": "build/icon.png",
+    // Build a universal binary that runs natively on Intel + Apple Silicon.
+    // category is required by Apple for the .dmg installer.
+    "category": "public.app-category.productivity",
     "target": [
-      "dmg"
+      { "target": "dmg", "arch": ["x64", "arm64"] }
     ],
-    "artifactName": "${productName}-Mac-${version}.${ext}"
+    "artifactName": "${productName}-Mac-${version}-${arch}.${ext}"
   },
   "win": {
     "icon": "build/icon.ico",

@@ -3,7 +3,7 @@
 <img src="public/omnio-logo.svg" width="80" align="right" alt="Logo de Omnio">
 
 [![Licencia: MIT](https://img.shields.io/badge/License-MIT-c9a227.svg)](LICENSE)
-![Plataforma: Windows](https://img.shields.io/badge/platform-Windows-informational.svg)
+![Plataforma: Windows · macOS · Linux](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-informational.svg)
 ![Local-first](https://img.shields.io/badge/local--first-yes-success.svg)
 
 [English](README.md) · **Español**
@@ -13,6 +13,28 @@
 **Omnio** es una aplicación de escritorio local-first para trackear tus hobbies — videojuegos, música, películas, series, anime, donghua, manga, manhwa, manhua y cómics occidentales — todo en un solo lugar. Sin cuentas, sin telemetría, sin nube. Tus datos viven en `data.json` y `assets/` al lado del ejecutable, así que es lo suficientemente portable para llevarla en un pendrive.
 
 La interfaz está en inglés. Para una referencia de campo por campo en inglés y español, ver [`docs/FIELDS.md`](docs/FIELDS.md).
+
+## Instalación
+
+Descargá desde el [último release](https://github.com/TonyMontania/Omnio/releases/latest) y elegí tu plataforma.
+
+**Windows** (`.exe` portable)
+1. Descargá `Omnio-*-portable.exe` y ponelo en la carpeta que quieras.
+2. Doble click para ejecutar. `data.json` y `assets/` se crean al lado en el primer arranque.
+3. Primer arranque: SmartScreen va a mostrar *"Windows protegió tu PC"* — click en **Más información** → **Ejecutar de todos modos**. Es un build sin firmar y open-source; podés inspeccionar el código y buildearlo vos mismo si preferís.
+
+**macOS** (`.dmg`, universal Intel + Apple Silicon)
+1. Descargá `Omnio-Mac-*-x64.dmg` (Intel) o `Omnio-Mac-*-arm64.dmg` (Apple Silicon) y arrastrá Omnio.app a Aplicaciones.
+2. Primer arranque: Gatekeeper va a decir *"Omnio no puede abrirse porque Apple no pudo verificarla"*. Para saltear esto:
+   - **Click derecho** sobre la app → **Abrir** → confirmar en el diálogo. O:
+   - En Terminal: `xattr -cr /Applications/Omnio.app` y abrila normalmente.
+
+**Linux** (`.AppImage`)
+1. Descargá `Omnio-Linux-*.AppImage`.
+2. `chmod +x Omnio-Linux-*.AppImage`
+3. Doble click o correlo desde la terminal. Algunas distros necesitan `libfuse2` (`sudo apt install libfuse2` en Debian/Ubuntu).
+
+La carpeta entera (exe/dmg/AppImage + `data.json` + `assets/`) es portable — moverla entre máquinas o meterla en un pendrive y tu biblioteca viaja con vos.
 
 ## Stack técnico
 

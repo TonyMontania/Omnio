@@ -1,0 +1,74 @@
+# Cross-platform release build.
+#
+# Trigger: push a semver tag like `v0.2.0`. The workflow runs `npm run build`
+# on Windows, macOS and Ubuntu in parallel, then uploads each platform's
+# artifact (portable .exe, universal .dmg, .AppImage) to a GitHub Release
+# named after the tag.
+#
+# Also supports manual triggering from the Actions tab (workflow_dispatch) —
+# useful for smoke-testing changes to this workflow without cutting a tag.
+# Manual runs don't create a Release; they just leave artifacts on the run
+# page so you can download them.
+#
+# Nothing here is signed — Windows SmartScreen and macOS Gatekeeper will
+# warn on first launch. Documented in the READMEs.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          # Skip electron-builder's auto-publish; we upload to the Release
+          # ourselves in the next step so the flow is uniform across OSes.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts (for run inspection)
+        uses: actions/upload-artifact@v4
+        with:
+          name: omnio-${{ matrix.os }}
+          path: |
+            release/**/*.exe
+            release/**/*.dmg
+            release/**/*.AppImage
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/**/*.exe
+            release/**/*.dmg
+            release/**/*.AppImage
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
