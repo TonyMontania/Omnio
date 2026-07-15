@@ -7,13 +7,18 @@ const svg = await readFile(path.join(root, 'public', 'omnio-logo.svg'))
 
 await mkdir(path.join(root, 'build'), { recursive: true })
 
-const sizes = [16, 24, 32, 48, 64, 128, 256]
-const buffers = await Promise.all(sizes.map((s) => sharp(svg).resize(s, s).png().toBuffer()))
+// Multiple resolutions for the Windows .ico (used for the exe embed + taskbar).
+const icoSizes = [16, 24, 32, 48, 64, 128, 256]
+const icoBuffers = await Promise.all(icoSizes.map((s) => sharp(svg).resize(s, s).png().toBuffer()))
 
-await writeFile(path.join(root, 'build', 'icon.png'), buffers[buffers.length - 1])
+// Large PNG for Linux AppImage and macOS. electron-builder converts the PNG
+// to a proper .icns for Mac but requires the source to be at least 512×512;
+// we use 1024 so the generated icon looks crisp on retina displays too.
+const bigPng = await sharp(svg).resize(1024, 1024).png().toBuffer()
+await writeFile(path.join(root, 'build', 'icon.png'), bigPng)
 
 const pngToIco = await import('png-to-ico').then((m) => m.default ?? m)
-const ico = await pngToIco(buffers)
+const ico = await pngToIco(icoBuffers)
 await writeFile(path.join(root, 'build', 'icon.ico'), ico)
 
-console.log('Generated build/icon.png and build/icon.ico')
+console.log('Generated build/icon.png (1024×1024) and build/icon.ico (16→256)')
