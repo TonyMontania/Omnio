@@ -57,6 +57,9 @@ export default function MovieDetailModal({ item, groups, allMovies, onClose, onE
             {item.directors && item.directors.length > 0 && (
               <p className="game-modal-devs">{item.directors.join(', ')}</p>
             )}
+            {item.writers && item.writers.length > 0 && (
+              <p className="game-modal-devs">Written by {item.writers.join(', ')}</p>
+            )}
             {item.cast && item.cast.length > 0 && (
               <p className="game-modal-devs">Starring: {item.cast.join(', ')}</p>
             )}
@@ -133,6 +136,19 @@ export default function MovieDetailModal({ item, groups, allMovies, onClose, onE
               </div>
             )}
           </div>
+
+          {item.productionCompanies && item.productionCompanies.length > 0 && (
+            <div className="field-group">
+              <label>Production companies</label>
+              <div className="pills">{item.productionCompanies.map((c) => <span key={c} className="pill static">{c}</span>)}</div>
+            </div>
+          )}
+          {item.distributors && item.distributors.length > 0 && (
+            <div className="field-group">
+              <label>Distributed by</label>
+              <div className="pills">{item.distributors.map((d) => <span key={d} className="pill static">{d}</span>)}</div>
+            </div>
+          )}
 
           {item.movieReview && (
             <div className="field-group">

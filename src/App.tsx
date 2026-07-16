@@ -16,6 +16,7 @@ import type {
   SeriesStatus, SeriesField, SeriesFormat, Season,
   MovieField, MovieSource, WatchLocation,
   AgeRating, RelatedItem, RewatchEntry,
+  BandStatus, BandMember, SingleCover, AlbumEdition,
 } from './types'
 
 // Runtime constants (option lists, default field visibility)
@@ -29,7 +30,7 @@ import {
   ANIME_FIELD_OPTIONS, DEFAULT_ANIME_FIELDS, AIRING_STATUS_OPTIONS, DEMOGRAPHIC_OPTIONS,
   SERIES_STATUS_OPTIONS, SERIES_FORMAT_OPTIONS, SERIES_FIELD_OPTIONS, DEFAULT_SERIES_FIELDS,
   MOVIE_SOURCE_OPTIONS, MOVIE_FIELD_OPTIONS, DEFAULT_MOVIE_FIELDS, WATCH_LOCATION_OPTIONS,
-  AGE_RATING_OPTIONS,
+  AGE_RATING_OPTIONS, BAND_STATUS_OPTIONS,
 } from './types'
 
 // Helpers (label lookups, derived counts, formatters, mini markdown)
@@ -77,6 +78,9 @@ import SeasonListEditor from './components/editors/SeasonListEditor'
 import ChapterListEditor from './components/editors/ChapterListEditor'
 import EpisodeListEditor from './components/editors/EpisodeListEditor'
 import TagEditor from './components/editors/TagEditor'
+import BandMembersEditor from './components/editors/BandMembersEditor'
+import SingleCoverEditor from './components/editors/SingleCoverEditor'
+import EditionsEditor from './components/editors/EditionsEditor'
 import FiltersDropdown from './components/editors/FiltersDropdown'
 
 import './App.css'
@@ -284,6 +288,13 @@ function App() {
   const [artistNameField, setArtistNameField] = useState('')
   const [artistPhotoField, setArtistPhotoField] = useState('')
   const [artistBannerField, setArtistBannerField] = useState('')
+  const [artistOrigin, setArtistOrigin] = useState('')
+  const [artistBandStatus, setArtistBandStatus] = useState<BandStatus | ''>('')
+  const [artistGenres, setArtistGenres] = useState<string[]>([])
+  const [artistActiveFrom, setArtistActiveFrom] = useState('')
+  const [artistActiveTo, setArtistActiveTo] = useState('')
+  const [artistLabels, setArtistLabels] = useState<string[]>([])
+  const [artistMembers, setArtistMembers] = useState<BandMember[]>([])
   const artistPhotoFileInputRef = useRef<HTMLInputElement>(null)
   const artistBannerFileInputRef = useRef<HTMLInputElement>(null)
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null)
@@ -359,6 +370,8 @@ function App() {
   const [partOfAlbum, setPartOfAlbum] = useState('')
   const [hasTracks, setHasTracks] = useState(false)
   const [tracks, setTracks] = useState<Track[]>([])
+  const [singleCovers, setSingleCovers] = useState<SingleCover[]>([])
+  const [editions, setEditions] = useState<AlbumEdition[]>([])
   const [unitCount, setUnitCount] = useState('')
   const [mangaAuthors, setMangaAuthors] = useState<string[]>([])
   const [mangaArtists, setMangaArtists] = useState<string[]>([])
@@ -366,6 +379,8 @@ function App() {
   const [mangaDescription, setMangaDescription] = useState('')
   const [directors, setDirectors] = useState<string[]>([])
   const [cast, setCast] = useState<string[]>([])
+  const [productionCompanies, setProductionCompanies] = useState<string[]>([])
+  const [distributors, setDistributors] = useState<string[]>([])
   const [movieDescription, setMovieDescription] = useState('')
   const [studios, setStudios] = useState<string[]>([])
   const [animeFormat, setAnimeFormat] = useState<AnimeFormat | ''>('')
@@ -642,14 +657,14 @@ function App() {
     setPlatforms([]); setOwnership(''); setGameStatus('backlog'); setPlayTime('')
     setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([])
     setReleaseYear(''); setDuration(''); setConsumed(false); setArtist(''); setMusicType('')
-    setGenres([]); setLabel(''); setPartOfAlbum(''); setHasTracks(false); setTracks([])
+    setGenres([]); setLabel(''); setPartOfAlbum(''); setHasTracks(false); setTracks([]); setSingleCovers([]); setEditions([])
     setMusicSource(''); setProducers([]); setMusicReview('')
     setUnitCount(''); setStartYear(''); setEndYear(''); setTotalSubUnits(''); setUnits([])
     setMangaAuthors([]); setMangaArtists([]); setVolumeCovers([]); setMangaDescription(''); setPubStatus(''); setReadingStatus('plan_to_read')
     setMangaSource(''); setMagazine(''); setMangaReview(''); setHasChapters(false); setChapters([])
     setMovieSource(''); setMovieReview('')
     setGameSource(''); setGameReview('')
-    setDirectors([]); setCast([]); setMovieDescription(''); setFranchise(''); setWatchedWhere(''); setMovieBanner(''); setHasSpoilers(false); setTimesWatched('')
+    setDirectors([]); setCast([]); setProductionCompanies([]); setDistributors([]); setMovieDescription(''); setFranchise(''); setWatchedWhere(''); setMovieBanner(''); setHasSpoilers(false); setTimesWatched('')
     setStudios([]); setAnimeFormat(''); setAiringStatus(''); setWatchStatus('plan_to_watch'); setEpisodesWatched(''); setTotalEpisodes(''); setAnimeDescription('')
     setSeason(''); setSeasonYear(''); setDemographic('')
     setAlternativeTitles([]); setAnimeSource(''); setEpisodeDuration(''); setAiredFrom(''); setAiredTo(''); setAgeRating('')
@@ -687,6 +702,13 @@ function App() {
     setArtistNameField(a.name)
     setArtistPhotoField(a.photo ?? '')
     setArtistBannerField(a.bannerImage ?? '')
+    setArtistOrigin(a.origin ?? '')
+    setArtistBandStatus(a.bandStatus ?? '')
+    setArtistGenres(a.genres ?? [])
+    setArtistActiveFrom(a.activeFrom ?? '')
+    setArtistActiveTo(a.activeTo ?? '')
+    setArtistLabels(a.labels ?? [])
+    setArtistMembers(a.members ?? [])
     setArtistPanelOpen(true)
   }
 
@@ -722,7 +744,19 @@ function App() {
     }
     const photo = await persistArtistImg(artistPhotoField)
     const bannerImage = await persistArtistImg(artistBannerField)
-    const updated = { name: artistNameField.trim(), photo, bannerImage }
+    const cleanMembers = artistMembers
+      .filter((m) => m.name.trim())
+      .map((m) => ({ ...m, name: m.name.trim(), roles: m.roles.filter((r) => r.trim()) }))
+    const updated: Partial<MusicArtist> = {
+      name: artistNameField.trim(), photo, bannerImage,
+      origin: artistOrigin.trim() || undefined,
+      bandStatus: artistBandStatus || undefined,
+      genres: artistGenres.length > 0 ? artistGenres : undefined,
+      activeFrom: artistActiveFrom.trim() || undefined,
+      activeTo: artistActiveTo.trim() || undefined,
+      labels: artistLabels.length > 0 ? artistLabels : undefined,
+      members: cleanMembers.length > 0 ? cleanMembers : undefined,
+    }
     // Delete replaced/cleared image files.
     const oldArtist = musicArtists.find((a) => a.id === editingArtistId)
     if (oldArtist) {
@@ -786,6 +820,8 @@ function App() {
     setLabel(item.label ?? '')
     setHasTracks(item.hasTracks ?? false)
     setTracks(item.tracks ?? [])
+    setSingleCovers(item.singleCovers ?? [])
+    setEditions(item.editions ?? [])
     setUnitCount(item.unitCount ?? '')
     setStartYear(item.startYear ?? '')
     setEndYear(item.endYear ?? '')
@@ -806,6 +842,8 @@ function App() {
     setMangaDescription(item.mangaDescription ?? '')
     setDirectors(item.directors ?? [])
     setCast(item.cast ?? [])
+    setProductionCompanies(item.productionCompanies ?? [])
+    setDistributors(item.distributors ?? [])
     setMovieDescription(item.movieDescription ?? '')
     setStudios(item.studios ?? [])
     setAnimeFormat(item.animeFormat ?? '')
@@ -988,6 +1026,9 @@ function App() {
         ...base,
         directors: directors.length > 0 ? directors : undefined,
         cast: cast.length > 0 ? cast : undefined,
+        writers: writers.length > 0 ? writers : undefined,
+        productionCompanies: productionCompanies.length > 0 ? productionCompanies : undefined,
+        distributors: distributors.length > 0 ? distributors : undefined,
         movieDescription: movieDescription.trim() || undefined,
         franchise: franchise.trim() || undefined,
         watchedWhere: watchedWhere || undefined,
@@ -1132,6 +1173,8 @@ function App() {
         label: albumLike ? (label.trim() || undefined) : undefined,
         hasTracks: albumLike ? hasTracks : undefined,
         tracks: albumLike && hasTracks && tracks.length > 0 ? tracks : undefined,
+        singleCovers: albumLike && singleCovers.length > 0 ? singleCovers : undefined,
+        editions: albumLike && editions.length > 0 ? editions : undefined,
         alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
         musicSource: musicSource || undefined,
         producers: producers.length > 0 ? producers : undefined,
@@ -1161,7 +1204,15 @@ function App() {
     if (volumeCovers && volumeCovers.length > 0) {
       volumeCovers = await Promise.all(volumeCovers.map(async (v) => ({ ...v, cover: (await persistDataUrl(v.cover, item.categoryId, 'volume')) ?? v.cover })))
     }
-    return { ...item, cover, bannerImage, bannerImage2, logoImage, volumeCovers }
+    let singleCovers = item.singleCovers
+    if (singleCovers && singleCovers.length > 0) {
+      singleCovers = await Promise.all(singleCovers.map(async (s) => ({ ...s, cover: (await persistDataUrl(s.cover, item.categoryId, 'single')) ?? s.cover })))
+    }
+    let editions = item.editions
+    if (editions && editions.length > 0) {
+      editions = await Promise.all(editions.map(async (e) => ({ ...e, cover: await persistDataUrl(e.cover, item.categoryId, 'edition') })))
+    }
+    return { ...item, cover, bannerImage, bannerImage2, logoImage, volumeCovers, singleCovers, editions }
   }
 
   // True only for asset paths we own on disk under assets/ — i.e. relative
@@ -1198,6 +1249,18 @@ function App() {
         if (newV && isLocalAssetPath(oldV.cover) && oldV.cover !== newV.cover) orphans.push(oldV.cover)
       }
     })
+    // Single covers (removed or replaced).
+    const newSingleIds = new Set((newItem.singleCovers ?? []).map((s) => s.id))
+    ;(oldItem.singleCovers ?? []).forEach((oldS) => {
+      const newS = newItem.singleCovers?.find((s) => s.id === oldS.id)
+      if ((!newSingleIds.has(oldS.id) || (newS && oldS.cover !== newS.cover)) && isLocalAssetPath(oldS.cover)) orphans.push(oldS.cover)
+    })
+    // Edition covers (removed or replaced).
+    const newEdIds = new Set((newItem.editions ?? []).map((e) => e.id))
+    ;(oldItem.editions ?? []).forEach((oldE) => {
+      const newE = newItem.editions?.find((e) => e.id === oldE.id)
+      if ((!newEdIds.has(oldE.id) || (newE && oldE.cover !== newE.cover)) && isLocalAssetPath(oldE.cover)) orphans.push(oldE.cover!)
+    })
     return orphans
   }
 
@@ -1233,6 +1296,8 @@ function App() {
     deleteAssetFile(item.bannerImage2)
     deleteAssetFile(item.logoImage)
     ;(item.volumeCovers ?? []).forEach((v) => deleteAssetFile(v.cover))
+    ;(item.singleCovers ?? []).forEach((s) => deleteAssetFile(s.cover))
+    ;(item.editions ?? []).forEach((e) => deleteAssetFile(e.cover))
     setItems((prev) => prev.filter((i) => i.id !== item.id))
     setCollections((prev) => prev.map((c) => ({ ...c, itemIds: c.itemIds.filter((id) => id !== item.id) })))
     if (editingId === item.id) closePanel()
@@ -3004,11 +3069,32 @@ function App() {
                           onRemove={(i) => setDirectors((prev) => prev.filter((_, idx) => idx !== i))}
                         />
                         <TagEditor
+                          label="Writers"
+                          placeholder="Add writer"
+                          tags={writers}
+                          onAdd={(w) => setWriters((prev) => prev.includes(w) ? prev : [...prev, w])}
+                          onRemove={(i) => setWriters((prev) => prev.filter((_, idx) => idx !== i))}
+                        />
+                        <TagEditor
                           label="Cast"
                           placeholder="Add actor/actress"
                           tags={cast}
                           onAdd={(c) => setCast((prev) => prev.includes(c) ? prev : [...prev, c])}
                           onRemove={(i) => setCast((prev) => prev.filter((_, idx) => idx !== i))}
+                        />
+                        <TagEditor
+                          label="Production companies"
+                          placeholder="Add production company"
+                          tags={productionCompanies}
+                          onAdd={(c) => setProductionCompanies((prev) => prev.includes(c) ? prev : [...prev, c])}
+                          onRemove={(i) => setProductionCompanies((prev) => prev.filter((_, idx) => idx !== i))}
+                        />
+                        <TagEditor
+                          label="Distributed by"
+                          placeholder="Add distributor"
+                          tags={distributors}
+                          onAdd={(d) => setDistributors((prev) => prev.includes(d) ? prev : [...prev, d])}
+                          onRemove={(i) => setDistributors((prev) => prev.filter((_, idx) => idx !== i))}
                         />
                         <div className="field-group">
                           <label>Description</label>
@@ -3789,6 +3875,20 @@ function App() {
                             />
                           )}
                         </div>
+                        <div className="field-group">
+                          <label>Single covers</label>
+                          <p className="hint">Artwork for singles released with their own cover (often before the album).</p>
+                          <SingleCoverEditor
+                            singles={singleCovers}
+                            onAdd={(s) => setSingleCovers((prev) => [...prev, { ...s, id: crypto.randomUUID() }])}
+                            onRemove={(id) => setSingleCovers((prev) => prev.filter((s) => s.id !== id))}
+                          />
+                        </div>
+                        <div className="field-group">
+                          <label>Editions</label>
+                          <p className="hint">Deluxe, Japan, Anniversary… each with its own cover and extra tracks.</p>
+                          <EditionsEditor editions={editions} mainArtist={artist} onChange={setEditions} />
+                        </div>
                       </>
                     ) : (
                       <>
@@ -4045,6 +4145,44 @@ function App() {
                     {artistBannerField && <button type="button" className="upload-btn clear" onClick={() => setArtistBannerField('')}>Clear</button>}
                   </div>
                   <input type="file" accept="image/*" ref={artistBannerFileInputRef} style={{ display: 'none' }} onChange={handleArtistBannerFile} />
+                </div>
+                <div className="field-group">
+                  <label>Origin</label>
+                  <input value={artistOrigin} onChange={(e) => setArtistOrigin(e.target.value)} placeholder="e.g. London, England" />
+                </div>
+                <div className="field-row">
+                  <div className="field-group">
+                    <label>Status</label>
+                    <select value={artistBandStatus} onChange={(e) => setArtistBandStatus(e.target.value as BandStatus | '')}>
+                      <option value="">Unspecified</option>
+                      {BAND_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="field-group">
+                    <label>Years active</label>
+                    <div className="field-row">
+                      <input value={artistActiveFrom} onChange={(e) => setArtistActiveFrom(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="From" />
+                      <input value={artistActiveTo} onChange={(e) => setArtistActiveTo(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="To" />
+                    </div>
+                  </div>
+                </div>
+                <TagEditor
+                  label="Genres"
+                  placeholder="Add genre"
+                  tags={artistGenres}
+                  onAdd={(g) => setArtistGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
+                  onRemove={(i) => setArtistGenres((prev) => prev.filter((_, idx) => idx !== i))}
+                />
+                <TagEditor
+                  label="Labels"
+                  placeholder="Add record label"
+                  tags={artistLabels}
+                  onAdd={(l) => setArtistLabels((prev) => prev.includes(l) ? prev : [...prev, l])}
+                  onRemove={(i) => setArtistLabels((prev) => prev.filter((_, idx) => idx !== i))}
+                />
+                <div className="field-group">
+                  <label>Members</label>
+                  <BandMembersEditor members={artistMembers} onChange={setArtistMembers} />
                 </div>
               </div>
             </div>

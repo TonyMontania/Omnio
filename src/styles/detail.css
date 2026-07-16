@@ -19,17 +19,23 @@
 .game-modal-banner {
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 220px;
+  /* Tall enough to reach just past the bottom of the cover, so the full
+     banner image is visible behind the cover + info instead of only a top
+     strip. The fade keeps the lower area readable and hides the cutoff. */
+  height: 470px;
   overflow: hidden;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
-.game-modal-banner img { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; }
+.game-modal-banner img { width: 100%; height: 100%; object-fit: cover; opacity: 0.55; }
 
 .banner-fade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, var(--surface) 100%);
+  /* Clear at the very top, ramping to solid surface by ~90% so text sitting
+     over the banner (title, description) stays legible and the bottom edge
+     dissolves into the page. */
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 12%, var(--surface) 90%);
 }
 
 .game-modal-body { position: relative; padding: 28px 32px 32px; }
@@ -373,7 +379,46 @@
   color: var(--text-faint);
 }
 
-.artist-content-header { justify-content: flex-end; margin-bottom: 20px; }
+/* Raised above the absolutely-positioned .artist-header-row so its toggle
+   buttons always receive clicks even if the header row's box overlaps. */
+.artist-content-header { justify-content: flex-end; margin-bottom: 20px; position: relative; z-index: 3; }
+
+/* Band / group info block shown under the artist header. */
+.artist-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px 32px;
+  margin-bottom: 24px;
+}
+.artist-info-block h4 {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 8px;
+  font-weight: 500;
+}
+.artist-info-block .val { font-size: 13.5px; color: var(--text); }
+.artist-members { display: flex; flex-direction: column; gap: 6px; }
+.artist-member-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+.artist-member-row .m-name { font-weight: 600; }
+.artist-member-row .m-roles { font-size: 12px; color: var(--text-dim); }
+.artist-member-row.former .m-name { color: var(--text-dim); }
+.artist-members-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 8px 0 4px;
+}
 
 .col-listened { width: 66px; text-align: center; }
 .col-lyrics { width: 68px; text-align: center; }
@@ -460,6 +505,52 @@
   font-size: 10px;
 }
 .volume-preview-card button:hover { color: var(--danger); }
+
+/* Editions editor (music form) + edition display (music detail). */
+.editions-editor { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.edition-card { background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); overflow: hidden; }
+.edition-head { display: flex; align-items: center; gap: 8px; padding: 8px; }
+.edition-track-count { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); margin-left: auto; }
+.edition-body { padding: 0 8px 10px; display: flex; flex-direction: column; gap: 10px; }
+.edition-cover-row { display: flex; align-items: center; gap: 12px; }
+.edition-cover { width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); flex-shrink: 0; }
+.edition-cover.placeholder {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface); color: var(--text-faint);
+  font-size: 11px; text-align: center;
+}
+
+/* Music detail — editions section (read-only). */
+.music-editions { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-soft); }
+.music-edition {
+  display: flex;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.music-edition:last-child { border-bottom: 0; }
+.music-edition-cover { width: 90px; height: 90px; object-fit: cover; border-radius: var(--radius-sm); flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+.music-edition-cover.placeholder { display: flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--text-faint); font-size: 11px; }
+.music-edition-info { flex: 1; min-width: 0; }
+.music-edition-info h4 { margin: 0 0 6px; font-family: var(--font-display); font-size: 16px; color: var(--text); }
+.music-edition-tracks { display: flex; flex-direction: column; gap: 2px; }
+.music-edition-track {
+  display: flex; gap: 10px; font-size: 12.5px; color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+.music-edition-track .t-num { color: var(--text-faint); width: 24px; text-align: right; }
+.music-edition-track .t-name { color: var(--text); font-family: var(--font-body); }
+
+/* Single covers gallery (music detail, read-only). */
+.single-covers-gallery { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-soft); }
+.single-covers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 14px;
+}
+.single-cover-card { display: flex; flex-direction: column; gap: 4px; }
+.single-cover-card img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: var(--radius-sm); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+.single-cover-card span { font-size: 11.5px; color: var(--text-dim); text-align: center; }
 
 .volume-gallery { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-soft); }
 

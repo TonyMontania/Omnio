@@ -8,7 +8,7 @@ import type {
   AnimeStatus, AiringStatus, AnimeFormat, AnimeSeason, Demographic, AnimeSource,
   SeriesStatus, SeriesFormat,
   MusicSource, MangaSource, MovieSource, GameSource, WatchLocation,
-  AgeRating, RelationKind,
+  AgeRating, RelationKind, BandStatus,
   Chapter, Episode, Season, Track, Item,
 } from './entities'
 
@@ -21,7 +21,7 @@ import {
   MOVIE_SOURCE_OPTIONS,
   GAME_SOURCE_OPTIONS,
   WATCH_LOCATION_OPTIONS,
-  RELATION_OPTIONS, AGE_RATING_OPTIONS,
+  RELATION_OPTIONS, AGE_RATING_OPTIONS, BAND_STATUS_OPTIONS,
 } from './options'
 
 // ---- Asset resolution ----
@@ -131,6 +131,10 @@ export function getSeriesFormatLabel(v: SeriesFormat): string {
 
 export function getMusicSourceLabel(v: MusicSource): string {
   return MUSIC_SOURCE_OPTIONS.find((s) => s.value === v)?.label ?? v
+}
+
+export function getBandStatusLabel(v: BandStatus): string {
+  return BAND_STATUS_OPTIONS.find((s) => s.value === v)?.label ?? v
 }
 
 export function getMangaSourceLabel(v: MangaSource): string {

@@ -238,6 +238,47 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
         </div>
       )}
 
+      {albumLike && item.singleCovers && item.singleCovers.length > 0 && (
+        <div className="field-group single-covers-gallery">
+          <label>Single covers</label>
+          <div className="single-covers-grid">
+            {item.singleCovers.map((s) => (
+              <div key={s.id} className="single-cover-card">
+                <img src={assetSrc(s.cover)} alt={s.name} />
+                <span>{s.name}{s.year ? ` (${s.year})` : ''}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {albumLike && item.editions && item.editions.length > 0 && (
+        <div className="field-group music-editions">
+          <label>Editions</label>
+          {item.editions.map((ed) => (
+            <div key={ed.id} className="music-edition">
+              {ed.cover
+                ? <img className="music-edition-cover" src={assetSrc(ed.cover)} alt="" />
+                : <div className="music-edition-cover placeholder">No cover</div>}
+              <div className="music-edition-info">
+                <h4>{ed.name}</h4>
+                {ed.tracks && ed.tracks.length > 0 && (
+                  <div className="music-edition-tracks">
+                    {ed.tracks.map((t) => (
+                      <div key={t.id} className="music-edition-track">
+                        <span className="t-num">{t.number}</span>
+                        <span className="t-name">{t.name}{t.favorite ? ' ★' : ''}</span>
+                        {t.duration && <span>{t.duration}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {currentLyricsTrack && (
         <div className="modal-overlay" onClick={() => setLyricsTrackId(null)}>
           <div className="modal-box lyrics-modal" onClick={(e) => e.stopPropagation()}>

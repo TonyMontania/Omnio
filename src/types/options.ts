@@ -8,7 +8,7 @@ import type {
   AnimeStatus, AiringStatus, AnimeFormat, AnimeSeason, Demographic, AnimeSource, AnimeField,
   SeriesStatus, SeriesFormat, SeriesField,
   MovieSource, MovieField, WatchLocation,
-  AgeRating, RelationKind, Platform,
+  AgeRating, RelationKind, Platform, BandStatus,
 } from './entities'
 
 // ---- Shared ----
@@ -29,7 +29,17 @@ export const RELATION_OPTIONS: { value: RelationKind; label: string }[] = [
   { value: 'prequel', label: 'Prequel' },
   { value: 'side_story', label: 'Side story' },
   { value: 'spin_off', label: 'Spin-off' },
+  { value: 'standalone', label: 'Standalone expansion' },
+  { value: 'dlc', label: 'DLC / Expansion' },
+  { value: 'remake', label: 'Remake' },
+  { value: 'remaster', label: 'Remaster' },
+  { value: 'reboot', label: 'Reboot' },
+  { value: 'port', label: 'Port' },
   { value: 'alt_version', label: 'Alternative version' },
+  { value: 'collection', label: 'Same collection' },
+  { value: 'same_series', label: 'Same series' },
+  { value: 'same_universe', label: 'Same universe' },
+  { value: 'crossover', label: 'Crossover' },
   { value: 'adaptation', label: 'Adaptation' },
   { value: 'other', label: 'Other' },
 ]
@@ -55,9 +65,13 @@ export const GAME_SOURCE_OPTIONS: { value: GameSource; label: string }[] = [
   { value: 'original', label: 'Original' },
   { value: 'remake', label: 'Remake' },
   { value: 'remaster', label: 'Remaster' },
+  { value: 'reboot', label: 'Reboot' },
   { value: 'port', label: 'Port' },
   { value: 'sequel', label: 'Sequel' },
   { value: 'spinoff', label: 'Spin-off' },
+  { value: 'standalone', label: 'Standalone expansion' },
+  { value: 'expanded', label: 'Expanded / Definitive edition' },
+  { value: 'collection', label: 'Collection / Compilation' },
   { value: 'other', label: 'Other' },
 ]
 
@@ -82,6 +96,21 @@ export const MUSIC_TYPE_OPTIONS: { value: MusicType; label: string }[] = [
   { value: 'ost', label: 'OST' },
   { value: 'live', label: 'Live' },
   { value: 'recopilation', label: 'Recopilation' },
+]
+
+export const BAND_STATUS_OPTIONS: { value: BandStatus; label: string }[] = [
+  { value: 'active', label: 'Active' },
+  { value: 'hiatus', label: 'On hiatus' },
+  { value: 'disbanded', label: 'Disbanded' },
+  { value: 'unknown', label: 'Unknown' },
+]
+
+// Free-form, but these seed the autocomplete for band member roles.
+export const BAND_ROLE_SUGGESTIONS: string[] = [
+  'Vocals', 'Lead vocals', 'Backing vocals', 'Rap',
+  'Guitar', 'Lead guitar', 'Rhythm guitar', 'Bass',
+  'Drums', 'Percussion', 'Keyboard', 'Piano', 'Synth',
+  'DJ', 'Producer', 'Songwriter', 'Dance',
 ]
 
 export const MUSIC_SOURCE_OPTIONS: { value: MusicSource; label: string }[] = [

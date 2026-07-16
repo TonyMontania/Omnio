@@ -1,5 +1,5 @@
 import type { Item, MusicArtist } from './types'
-import { assetSrc } from './types'
+import { assetSrc, getBandStatusLabel } from './types'
 import ItemCard from './ItemCard'
 
 interface Props {
@@ -22,6 +22,15 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
 
   const ratedItems = items.filter((i) => i.rating)
   const avgRating = ratedItems.length ? (ratedItems.reduce((a, i) => a + (i.rating || 0), 0) / ratedItems.length).toFixed(1) : null
+
+  const activePeriod = [artist.activeFrom, artist.activeTo].some(Boolean)
+    ? `${artist.activeFrom || '?'} – ${artist.activeTo || 'present'}`
+    : null
+
+  const currentMembers = (artist.members ?? []).filter((m) => !m.former)
+  const formerMembers = (artist.members ?? []).filter((m) => m.former)
+  const hasInfo = artist.origin || artist.bandStatus || (artist.genres && artist.genres.length > 0)
+    || activePeriod || (artist.labels && artist.labels.length > 0) || (artist.members && artist.members.length > 0)
 
   return (
     <div className="game-page artist-page">
@@ -50,12 +59,60 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
         </div>
       </div>
 
+      {hasInfo && (
+        <div className="artist-info-grid">
+          {artist.origin && (
+            <div className="artist-info-block"><h4>Origin</h4><div className="val">{artist.origin}</div></div>
+          )}
+          {artist.bandStatus && (
+            <div className="artist-info-block"><h4>Status</h4><div className="val">{getBandStatusLabel(artist.bandStatus)}</div></div>
+          )}
+          {activePeriod && (
+            <div className="artist-info-block"><h4>Years active</h4><div className="val">{activePeriod}</div></div>
+          )}
+          {artist.genres && artist.genres.length > 0 && (
+            <div className="artist-info-block"><h4>Genres</h4><div className="val">{artist.genres.join(', ')}</div></div>
+          )}
+          {artist.labels && artist.labels.length > 0 && (
+            <div className="artist-info-block"><h4>Labels</h4><div className="val">{artist.labels.join(', ')}</div></div>
+          )}
+          {artist.members && artist.members.length > 0 && (
+            <div className="artist-info-block" style={{ gridColumn: '1 / -1' }}>
+              <h4>Members</h4>
+              {currentMembers.length > 0 && (
+                <div className="artist-members">
+                  {currentMembers.map((m) => (
+                    <div key={m.id} className="artist-member-row">
+                      <span className="m-name">{m.name}</span>
+                      {m.roles.length > 0 && <span className="m-roles">— {m.roles.join(', ')}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {formerMembers.length > 0 && (
+                <>
+                  <div className="artist-members-label">Former members</div>
+                  <div className="artist-members">
+                    {formerMembers.map((m) => (
+                      <div key={m.id} className="artist-member-row former">
+                        <span className="m-name">{m.name}</span>
+                        {m.roles.length > 0 && <span className="m-roles">— {m.roles.join(', ')}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="content-header artist-content-header">
         <div />
         <div className="view-toggle">
-          <button className={layout === 'list' ? 'active' : ''} onClick={() => onSetLayout('list')}>☰ List</button>
-          <button className={layout === 'grid' ? 'active' : ''} onClick={() => onSetLayout('grid')}>▦ Grid</button>
-          <button className={layout === 'compact' ? 'active' : ''} onClick={() => onSetLayout('compact')}>≡ Compact</button>
+          <button type="button" className={layout === 'list' ? 'active' : ''} onClick={() => onSetLayout('list')}>☰ List</button>
+          <button type="button" className={layout === 'grid' ? 'active' : ''} onClick={() => onSetLayout('grid')}>▦ Grid</button>
+          <button type="button" className={layout === 'compact' ? 'active' : ''} onClick={() => onSetLayout('compact')}>≡ Compact</button>
         </div>
       </div>
 

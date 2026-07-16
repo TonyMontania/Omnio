@@ -4,7 +4,7 @@
 export type Platform = string
 export type Ownership = 'owned' | 'shared' | 'subscription' | 'unlicensed'
 export type GameStatus = 'backlog' | 'playing' | 'played' | 'completed' | 'dropped'
-export type GameSource = 'original' | 'remake' | 'remaster' | 'port' | 'sequel' | 'spinoff' | 'other'
+export type GameSource = 'original' | 'remake' | 'remaster' | 'reboot' | 'port' | 'sequel' | 'spinoff' | 'standalone' | 'expanded' | 'collection' | 'other'
 export type GameField = 'title' | 'status' | 'playTime' | 'rating' | 'tags'
 
 export type MusicType = 'single' | 'ep' | 'album' | 'ost' | 'live' | 'recopilation'
@@ -33,7 +33,11 @@ export type MovieField = 'title' | 'status' | 'year' | 'rating' | 'tags'
 export type WatchLocation = 'cinema' | 'streaming' | 'physical' | 'tv' | 'other'
 
 export type AgeRating = 'e' | 'e10' | 't' | 'm' | 'ao' | 'rp'
-export type RelationKind = 'sequel' | 'prequel' | 'side_story' | 'spin_off' | 'alt_version' | 'adaptation' | 'other'
+export type RelationKind =
+  | 'sequel' | 'prequel' | 'side_story' | 'spin_off' | 'alt_version' | 'adaptation'
+  | 'standalone' | 'remake' | 'remaster' | 'reboot' | 'port'
+  | 'dlc' | 'collection' | 'same_series' | 'same_universe' | 'crossover'
+  | 'other'
 
 export interface DlcEntry {
   id: string
@@ -105,9 +109,38 @@ export interface Track {
   lyrics?: string
 }
 
+// A distinct release edition of an album (Deluxe, Japan, 10th Anniversary…),
+// each with its own optional cover and extra/alternate tracks.
+export interface AlbumEdition {
+  id: string
+  name: string
+  cover?: string
+  tracks?: Track[]
+}
+
+// Artwork for a single that shipped with its own cover, often before the
+// album dropped. Displayed as a small gallery under the tracklist.
+export interface SingleCover {
+  id: string
+  name: string
+  cover: string
+  year?: string
+}
+
 export interface Unit {
   number: number
   watched: boolean
+}
+
+export type BandStatus = 'active' | 'disbanded' | 'hiatus' | 'unknown'
+
+// A band member with one or more roles (Vocals, Guitar, Bass, Drums…).
+// `former` marks ex-members so the UI can split current vs. past line-ups.
+export interface BandMember {
+  id: string
+  name: string
+  roles: string[]
+  former?: boolean
 }
 
 export interface MusicArtist {
@@ -116,6 +149,13 @@ export interface MusicArtist {
   photo?: string
   bannerImage?: string
   createdAt: number
+  origin?: string
+  bandStatus?: BandStatus
+  genres?: string[]
+  activeFrom?: string
+  activeTo?: string
+  labels?: string[]
+  members?: BandMember[]
 }
 
 export interface Collection {
@@ -212,6 +252,8 @@ export interface Item {
   musicSource?: MusicSource
   producers?: string[]
   musicReview?: string
+  singleCovers?: SingleCover[]
+  editions?: AlbumEdition[]
   mangaSource?: MangaSource
   magazine?: string
   mangaReview?: string
@@ -219,6 +261,8 @@ export interface Item {
   chapters?: Chapter[]
   movieSource?: MovieSource
   movieReview?: string
+  productionCompanies?: string[]
+  distributors?: string[]
   gameSource?: GameSource
   gameReview?: string
   mangaDescription?: string

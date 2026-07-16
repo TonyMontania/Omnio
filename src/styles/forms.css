@@ -263,3 +263,26 @@
 }
 .star-half-btn.left { left: 0; }
 .star-half-btn.right { left: 50%; }
+
+/* Band members editor (artist panel). */
+.band-members-editor { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.band-member-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.band-member-top { display: flex; gap: 8px; align-items: center; }
+.band-member-name {
+  flex: 1;
+  padding: 7px 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-body);
+}
