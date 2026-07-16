@@ -47,13 +47,13 @@ The whole folder (exe/dmg/AppImage + `data.json` + `assets/`) is portable — mo
 ## Categories
 
 ### Games
-Infinitebacklog-style card: banner + logo, cover, description, developers/publishers (multiple), **free-form platforms** (create your own, with suggestions + autocomplete), ownership, status (Backlog / Playing / Played / Completed / Dropped), time played, half-step rating, achievements unlocked/total, DLC/Expansions and Addons with their own status, mini-markdown notes, tags. **Extended**: alternative titles, source (Original/Remake/Remaster/Port/Sequel/Spin-off), ESRB age rating, franchise, review with spoiler toggle, replay history, related games with relation kind, auto franchise timeline, recommendations.
+Infinitebacklog-style card: banner + logo, cover, description, **multiple developers and publishers**, **free-form platforms** (create your own, with suggestions + autocomplete), ownership, status (Backlog / Playing / Played / Completed / Dropped), time played, half-step rating, **achievements unlocked / total**, DLC/Expansions and Addons with their own status, mini-markdown notes, tags. **Extended**: alternative titles, source (Original / Remake / Remaster / Reboot / Port / Sequel / Spin-off / Standalone expansion / Expanded / Collection), ESRB age rating, franchise, review with spoiler toggle, replay history, related games with rich relation kinds (sequel, prequel, standalone, DLC, remake, reboot, port, collection, same universe, crossover…), auto franchise timeline, recommendations.
 
 ### Music
-Cards per type (Single / EP / Album / OST / Live / Compilation), tracklist with per-track rating, favorite, listened, and a **per-track Lyrics button** (modal to read/edit lyrics). Auto-computed total duration for album-like types. Spotify-style Artist profile: banner + circular avatar, chronological discography, average rating. Listened / Not listened collections. **Extended**: alternative titles, source (Original/Compilation/Soundtrack/Remaster/Deluxe/Reissue), producers, review with spoilers, listen history, related albums, recommendations.
+Cards per type (Single / EP / Album / OST / Live / Compilation), tracklist with per-track rating, favorite, listened, and a **per-track Lyrics button** (modal to read/edit lyrics). Auto-computed total duration for album-like types. **Single covers gallery** — separate artwork for singles released before/around the album (title + year + image). **Editions** — Deluxe, Japan, Anniversary and others, each with its own cover image and its own tracklist (extra or alternate tracks). Spotify-style Artist profile: banner + circular avatar (shown on the Artists overview too), chronological discography, average rating, **band info** (origin, status, years active, genres, labels, current + former members with per-member roles). Listened / Not listened collections. **Extended**: alternative titles, source, producers, review with spoilers, listen history, related albums, recommendations.
 
 ### Movies
-Directors, cast, franchise, watched + rewatch count, review with spoiler toggle, backdrop image. **Extended**: alternative titles, source (Original/Book/Comic/Game/True story/Remake/Sequel), content rating, watched where, full rewatch history log, related movies, franchise timeline, recommendations.
+Directors, **writers**, cast, **production companies**, **distributed by**, franchise, watched + rewatch count, review with spoiler toggle, backdrop image. **Extended**: alternative titles, source (Original / Book / Comic / Game / True story / Remake / Sequel), content rating, watched where, full rewatch history log, related movies, franchise timeline, recommendations.
 
 ### Series
 Its own Anime-style card — cast, directors, showrunners, writers, network, country, language, content rating. **Nested season list** with optional episodes per season (number/title/year/total eps, watched, rating, notes). Automatic migration from the old flat `units[]` checklist system. Related series, franchise timeline, recommendations, rewatch history, review with spoilers.
@@ -99,11 +99,11 @@ Every category has status distribution (pie/bar), top rated, and "completed per 
 ## Cross-cutting features
 
 - **Tags** free per item.
-- **Groups**: user-created collections inside each category, drag-to-reorder.
+- **Groups**: user-created collections inside each category, drag-to-reorder. **Each group can have its own custom cover image** (click ✎ on the group card).
 - **Search** by title (Ctrl+F).
 - **Filters** by tags plus category-specific ones (status, platform, genre).
 - **Sort modes**: alphabetical, most recent, rating, plus category-specific ones (time played, date, status, custom drag order, artist, duration, episodes watched, chapters read).
-- **Related items**: manual linking between items in the same category with a relation kind (sequel, prequel, side story, spin-off, alt version, adaptation, other). Clickable from the detail view. Displayed as a cover-only strip.
+- **Related items**: manual linking between items in the same category with a rich set of relation kinds — sequel, prequel, side story, spin-off, standalone expansion, DLC/expansion, remake, remaster, reboot, port, alt version, same collection, same series, same universe, crossover, adaptation, other. Clickable from the detail view. Displayed as a cover-only strip.
 - **Franchise timeline**: auto-derived — items sharing the same `franchise` field appear together in a scrollable row, sorted chronologically. Clickable.
 - **Recommendations**: manual list, no relation kind. Cover-only strip.
 - **Review with spoilers**: separate from notes, with a "Contains spoilers / No spoilers" toggle — a "Show spoilers" button gates the content until clicked.

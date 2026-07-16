@@ -47,13 +47,13 @@ La carpeta entera (exe/dmg/AppImage + `data.json` + `assets/`) es portable — m
 ## Categorías
 
 ### Games (Videojuegos)
-Ficha estilo infinitebacklog: banner + logo, cover, descripción, developers/publishers (varios), **plataformas libres** (creás las que quieras, con sugerencias y autocompletado), ownership, status (Backlog / Playing / Played / Completed / Dropped), tiempo jugado, rating (medio punto), logros desbloqueados/totales, DLC/Expansions y Addons con status propio, notas mini-markdown, tags. **Extendido**: alternative titles, source (Original/Remake/Remaster/Port/Sequel/Spin-off), age rating ESRB, franchise, review con toggle de spoilers, replay history, related games con tipo de relación, franchise timeline auto, recommendations.
+Ficha estilo infinitebacklog: banner + logo, cover, descripción, **múltiples developers y publishers**, **plataformas libres** (creás las que quieras, con sugerencias y autocompletado), ownership, status (Backlog / Playing / Played / Completed / Dropped), tiempo jugado, rating (medio punto), **logros desbloqueados / totales**, DLC/Expansions y Addons con status propio, notas mini-markdown, tags. **Extendido**: alternative titles, source (Original / Remake / Remaster / Reboot / Port / Sequel / Spin-off / Standalone expansion / Expanded / Collection), age rating ESRB, franchise, review con toggle de spoilers, replay history, related games con set completo de tipos de relación (sequel, prequel, standalone, DLC, remake, reboot, port, collection, same universe, crossover…), franchise timeline auto, recommendations.
 
 ### Music (Música)
-Fichas por tipo (Single / EP / Album / OST / Live / Recopilation), tracklist con rating por track, favorito, listened y **botón de Lyrics por canción** (modal para leer/editar la letra). Duración total auto (formatos álbum-like). Perfil de Artista estilo Spotify: banner + avatar circular, discografía cronológica, rating promedio. Collections Listened / Not listened. **Extendido**: alternative titles, source (Original/Compilation/Soundtrack/Remaster/Deluxe/Reissue), producers, review con spoilers, listen history, related albums, recommendations.
+Fichas por tipo (Single / EP / Album / OST / Live / Recopilation), tracklist con rating por track, favorito, listened y **botón de Lyrics por canción** (modal para leer/editar la letra). Duración total auto (formatos álbum-like). **Galería de single covers** — arte separado para singles con portada propia (título + año + imagen). **Editions** — Deluxe, Japan, Anniversary y demás, cada una con su cover propio y su tracklist propia (tracks extra o alternativos). Perfil de Artista estilo Spotify: banner + avatar circular (también en la vista de Artistas), discografía cronológica, rating promedio, **info de banda** (origen, estado, años activos, géneros, sellos, miembros actuales + ex-miembros con roles por integrante). Collections Listened / Not listened. **Extendido**: alternative titles, source, producers, review con spoilers, listen history, related albums, recommendations.
 
 ### Movies (Películas)
-Directors, cast, franchise, watched + rewatch count, review con toggle de spoilers, backdrop image. **Extendido**: alternative titles, source (Original/Book/Comic/Game/True story/Remake/Sequel), content rating, watched where, rewatch history log completo, related movies, franchise timeline, recommendations.
+Directors, **writers (guionistas)**, cast, **production companies**, **distributed by**, franchise, watched + rewatch count, review con toggle de spoilers, backdrop image. **Extendido**: alternative titles, source (Original / Book / Comic / Game / True story / Remake / Sequel), content rating, watched where, rewatch history log completo, related movies, franchise timeline, recommendations.
 
 ### Series
 Ficha propia estilo Anime — cast, directors, showrunners, writers, network, country, language, content rating. **Lista de temporadas** anidada con episodios opcionales por temporada (número/título/año/eps totales, watched, rating, notas). Migración automática desde el sistema viejo de `units[]` checklist. Related series, franchise timeline, recommendations, rewatch history, review con spoilers.
@@ -99,11 +99,11 @@ Todas las categorías tienen distribución de status (pie/bar), top rated, y act
 ## Funciones transversales
 
 - **Tags** libres por ítem.
-- **Groups**: colecciones propias del usuario dentro de cada categoría, con reordenamiento manual por arrastre.
+- **Groups**: colecciones propias del usuario dentro de cada categoría, con reordenamiento manual por arrastre. **Cada grupo puede tener su portada personalizada** (click en el ✎ de la card).
 - **Buscador** por título (Ctrl+F).
 - **Filtros** por tags + específicos por categoría (status, plataforma, género).
 - **Órdenes**: alfabético, más reciente, rating, y órdenes específicos por categoría (tiempo jugado, fecha, status, manual, por artista, duración, episodios vistos, capítulos leídos).
-- **Related items**: sistema manual de linkeo entre ítems de la misma categoría con tipo de relación (sequel, prequel, side story, spin-off, alt version, adaptation, other). Clickeable en la ficha. Se muestra como grid de covers.
+- **Related items**: sistema manual de linkeo entre ítems de la misma categoría con set completo de tipos de relación — sequel, prequel, side story, spin-off, standalone expansion, DLC/expansión, remake, remaster, reboot, port, alt version, same collection, same series, same universe, crossover, adaptation, other. Clickeable en la ficha. Se muestra como grid de covers.
 - **Franchise timeline**: auto-derivado — ítems que comparten el mismo campo `franchise` se ordenan cronológicamente en una fila scrolleable. Clickeable.
 - **Recommendations**: lista manual sin tipo de relación. Grid de covers.
 - **Review con spoilers**: campo dedicado separado de notas, con toggle "Contains spoilers / No spoilers" — al abrir la ficha aparece un botón "Show spoilers" que hay que clickear para revelar.
