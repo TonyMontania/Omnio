@@ -20,8 +20,8 @@ Present in almost every category. Presentes en casi todas las categorías.
 | **Tags** | Free tags for filtering. | Etiquetas libres para filtrar. |
 | **Rating** | Personal 0.5–5.0 star rating (half-star steps). | Puntaje personal de 0.5 a 5.0 estrellas (medio punto). |
 | **Franchise** | Franchise name — items sharing the same franchise auto-appear together in the timeline. | Nombre de la franquicia — los ítems que comparten franquicia aparecen juntos en el timeline automáticamente. |
-| **Related items** | Manually linked items in the same category, with a relation kind (sequel, prequel, side story, spin-off, alt version, adaptation, other). | Ítems del mismo tipo linkeados manualmente, con tipo de relación (secuela, precuela, side story, spin-off, versión alternativa, adaptación, otro). |
-| **Recommendations** | Manually linked items you'd recommend based on this one. | Ítems que recomendarías si te gustó este. |
+| **Related items** | Manually linked items in the same category, each tagged with a relation kind. Available kinds: sequel · prequel · side story · spin-off · standalone expansion · DLC/expansion · remake · remaster · reboot · port · alternative version · same collection · same series · same universe · crossover · adaptation · other. Rendered as a cover-only strip. | Ítems del mismo tipo linkeados manualmente, cada uno etiquetado con un tipo de relación. Tipos disponibles: secuela · precuela · side story · spin-off · expansión standalone · DLC/expansión · remake · remaster · reboot · port · versión alternativa · misma colección · misma serie · mismo universo · crossover · adaptación · otro. Se muestra como fila de covers. |
+| **Recommendations** | Manually linked items you'd recommend based on this one. Cover-only strip in the detail view. | Ítems que recomendarías si te gustó este. Fila de covers en la ficha. |
 | **Review** | Long-form review, with a "contains spoilers" toggle. | Reseña larga, con toggle "contiene spoilers". |
 | **Age rating (ESRB)** | E · E10+ · T · M · AO · RP. | Clasificación por edad. |
 
@@ -42,7 +42,7 @@ Present in almost every category. Presentes en casi todas las categorías.
 | **DLC & Expansions** | List of DLC with independent status per entry. | Lista de DLC con estado independiente por entrada. |
 | **Addons** | Extra add-ons or packs (cosmetics, small extras). | Add-ons o packs (cosméticos, extras chicos). |
 | **Genres** | Genre tags. | Géneros. |
-| **Source** | Original / Remake / Remaster / Port / Sequel / Spin-off / Other. | Original / Remake / Remaster / Port / Secuela / Spin-off / Otro. |
+| **Source** | Original / Remake / Remaster / Reboot / Port / Sequel / Spin-off / Standalone expansion / Expanded (Definitive edition) / Collection (Compilation) / Other. | Original / Remake / Remaster / Reboot / Port / Secuela / Spin-off / Expansión standalone / Edición expandida (Definitive) / Colección (Recopilación) / Otro. |
 | **Banner image / Logo image** | Optional banner and transparent logo used in the detail view header. | Banner y logo transparente opcionales que se muestran en la cabecera de la ficha. |
 | **Completion date** | Date you finished the game. Feeds the "Completed per month" chart in Insights. | Fecha en la que terminaste el juego. Alimenta el gráfico "Completados por mes" en Estadísticas. |
 | **Replay history** | Log of replays with date, rating and notes per session. | Log de replays con fecha, puntaje y notas por sesión. |
@@ -61,6 +61,8 @@ Present in almost every category. Presentes en casi todas las categorías.
 | **Genres** | Genre tags. | Géneros. |
 | **Tracklist** | Numbered tracks with per-track name, artist, duration, favorite ★, personal rating, listened ✓, and lyrics button. | Tracks numerados con nombre, artista, duración, favorito ★, rating personal, escuchado ✓ y botón de lyrics. |
 | **Lyrics (per track)** | Modal to save/read the lyrics of an individual track. | Modal para guardar/leer la letra de un track. |
+| **Single covers** | Gallery of artwork for singles released with their own cover (often before the album). Each entry: title, year, cover image. | Galería de artes de singles que salieron con su propia portada (muchas veces antes del álbum). Cada entrada: título, año, imagen. |
+| **Editions** | Alternate releases of the album (Deluxe, Japan, 10th Anniversary…). Each edition has its own name, optional cover, and its own tracklist (extra or alternate tracks). | Ediciones alternativas del álbum (Deluxe, Japan, 10th Anniversary…). Cada edición tiene su propio nombre, cover opcional y tracklist propia (tracks extra o alternativos). |
 | **Part of album** | If this is a single that belongs to an album — free text for now. | Si es un single que pertenece a un álbum — texto libre. |
 | **Source** | Original / Compilation / Soundtrack / Remaster / Deluxe / Reissue / Other. | Original / Recopilación / Soundtrack / Remaster / Deluxe / Reissue / Otro. |
 | **Listened** | Whether you've listened to the whole thing. | Si lo escuchaste completo. |
@@ -70,8 +72,14 @@ Present in almost every category. Presentes en casi todas las categorías.
 
 | Field | Meaning (EN) | Significado (ES) |
 |---|---|---|
-| **Photo / Banner** | Circular avatar + full-width banner in Spotify-like profile view. | Avatar circular + banner ancho en el perfil estilo Spotify. |
-| **Discography** | Auto-generated list of releases where `artist` matches the artist name. | Lista auto-generada de releases donde `artist` coincida con el nombre. |
+| **Photo / Banner** | Circular avatar + full-width banner in Spotify-like profile view. Avatar also appears on the Artists overview page. | Avatar circular + banner ancho en el perfil estilo Spotify. El avatar también aparece en la vista de Artistas. |
+| **Origin** | Where the artist/band is from (city, country). | De dónde es el artista/banda (ciudad, país). |
+| **Status** | Active / On hiatus / Disbanded / Unknown. | Activo / En hiato / Disuelto / Desconocido. |
+| **Years active** | Start year (from) and end year (to). Empty "to" is shown as "present". | Año de inicio y año de fin. Sin "to" se muestra como "presente". |
+| **Genres** | Genre tags for the artist. | Géneros del artista. |
+| **Labels** | Record labels the artist has been signed to. | Sellos con los que estuvo el artista. |
+| **Members** | Band line-up. Each member has a name, one or more roles (Vocals, Guitar, Bass, Drums, Producer… free-form with autocomplete), and a "Current / Former" flag. Current and former members are shown in separate sections in the detail view. | Formación de la banda. Cada miembro tiene nombre, uno o más roles (Voz, Guitarra, Bajo, Batería, Productor… libre con autocompletado) y un flag "Actual / Ex-miembro". Se muestran en secciones separadas. |
+| **Discography** | Auto-generated list of releases where `artist` matches the artist name, sorted chronologically. | Lista auto-generada de releases donde `artist` coincida con el nombre, ordenada cronológicamente. |
 
 ---
 
@@ -80,7 +88,10 @@ Present in almost every category. Presentes en casi todas las categorías.
 | Field | Meaning (EN) | Significado (ES) |
 |---|---|---|
 | **Directors** | Who directed it. | Quién la dirigió. |
+| **Writers** | Screenwriter(s) / story credit. | Guionistas / crédito de historia. |
 | **Cast** | Main cast. | Elenco principal. |
+| **Production companies** | Studios that produced the film. | Estudios que produjeron la película. |
+| **Distributed by** | Distributor(s) — who handled release/marketing. | Distribuidor(es) — quién manejó estreno/marketing. |
 | **Release year** | Year of release. | Año de estreno. |
 | **Duration** | Runtime in minutes. | Duración en minutos. |
 | **Watched** | Whether you've seen it. | Si la viste. |
@@ -164,7 +175,7 @@ Cuatro sub-bibliotecas independientes bajo un grupo colapsable: **Manga**, **Man
 
 | Concept | EN | ES |
 |---|---|---|
-| **Groups** | User-created collections inside a category, drag-to-reorder. | Colecciones propias del usuario dentro de cada categoría, con reordenamiento manual. |
+| **Groups** | User-created collections inside a category, drag-to-reorder. Each group can have a custom cover image (click the ✎ on the folder card). | Colecciones propias del usuario dentro de cada categoría, con reordenamiento manual. Cada grupo puede tener una portada personalizada (click en el ✎ de la card). |
 | **Board views** | Per-status pages accessible from the sidebar under "Collections". | Vistas por estado, accesibles desde la sidebar bajo "Collections". |
 | **Custom order** | Sort mode `custom` uses the drag order. Persistent per category and per group. | El modo de orden `custom` usa el orden por arrastre. Persistente por categoría y por grupo. |
 | **Insights / Statistics** | Charts and top-N lists per category. | Gráficos y listas top-N por categoría. |
