@@ -24,29 +24,39 @@
     // category is required by Apple for the .dmg installer.
     "category": "public.app-category.productivity",
     "target": [
-      { "target": "dmg", "arch": ["x64", "arm64"] }
+      { "target": "dmg", "arch": ["x64", "arm64"] },
+      { "target": "zip", "arch": ["x64", "arm64"] }
     ],
     "artifactName": "${productName}-Mac-${version}-${arch}.${ext}"
   },
   "win": {
     "icon": "build/icon.ico",
     "target": [
-      {
-        "target": "portable",
-        "arch": [
-          "x64"
-        ]
-      }
-    ],
-    "artifactName": "${productName}-${version}-portable.${ext}"
+      { "target": "portable", "arch": ["x64"] },
+      { "target": "nsis",     "arch": ["x64"] }
+    ]
   },
   "portable": {
     "artifactName": "${productName}-${version}-portable.${ext}"
   },
+  "nsis": {
+    // Classic installer for users who want a Start Menu entry / uninstaller.
+    // Note: NSIS installs writes data.json + assets/ under %APPDATA%\Omnio,
+    // NOT next to the executable — use the portable build for USB-stick mode.
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "artifactName": "${productName}-${version}-setup.${ext}"
+  },
   "linux": {
     "icon": "build/icon.png",
+    "category": "Utility",
     "target": [
-      "AppImage"
+      "AppImage",
+      "deb",
+      "tar.gz"
     ],
     "artifactName": "${productName}-Linux-${version}.${ext}"
   }

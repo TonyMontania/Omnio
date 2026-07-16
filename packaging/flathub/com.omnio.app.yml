@@ -1,0 +1,54 @@
+# Flathub manifest for Omnio.
+# Wraps the upstream AppImage in a Flatpak sandbox — simplest path to Flathub
+# for an Electron app without maintaining an in-repo build.
+#
+# Replace <VERSION> and <SHA256-APPIMAGE> after each GitHub Release, then open
+# a PR against https://github.com/flathub/flathub (new-submissions branch on
+# first submission, then a dedicated repo owned by Flathub).
+app-id: com.omnio.app
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: omnio
+separate-locales: false
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=home
+  - --share=network
+modules:
+  - name: omnio
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 apply_extra.sh /app/bin/apply_extra
+      - install -Dm755 omnio.sh /app/bin/omnio
+      - install -Dm644 com.omnio.app.desktop /app/share/applications/com.omnio.app.desktop
+      - install -Dm644 com.omnio.app.metainfo.xml /app/share/metainfo/com.omnio.app.metainfo.xml
+      - install -Dm644 icon.png /app/share/icons/hicolor/512x512/apps/com.omnio.app.png
+    sources:
+      - type: extra-data
+        filename: Omnio.AppImage
+        url: https://github.com/TonyMontania/Omnio/releases/download/v<VERSION>/Omnio-Linux-<VERSION>.AppImage
+        sha256: <SHA256-APPIMAGE>
+        size: 0
+        only-arches: [x86_64]
+      - type: file
+        path: com.omnio.app.desktop
+      - type: file
+        path: com.omnio.app.metainfo.xml
+      - type: file
+        path: icon.png
+      - type: script
+        dest-filename: apply_extra.sh
+        commands:
+          - chmod +x Omnio.AppImage
+          - ./Omnio.AppImage --appimage-extract >/dev/null
+          - mv squashfs-root extracted
+          - rm Omnio.AppImage
+      - type: script
+        dest-filename: omnio.sh
+        commands:
+          - exec /app/extra/extracted/AppRun "$@"

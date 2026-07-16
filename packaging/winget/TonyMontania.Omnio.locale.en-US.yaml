@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: TonyMontania.Omnio
+PackageVersion: <VERSION>
+PackageLocale: en-US
+Publisher: TonyMontania
+PublisherUrl: https://github.com/TonyMontania
+PublisherSupportUrl: https://github.com/TonyMontania/Omnio/issues
+PackageName: Omnio
+PackageUrl: https://github.com/TonyMontania/Omnio
+License: MIT
+LicenseUrl: https://github.com/TonyMontania/Omnio/blob/main/LICENSE
+ShortDescription: Local-first desktop app to track your hobbies — games, music, movies, series, anime and comics.
+Description: |
+  Omnio is a local-first desktop app to track your hobbies — games, music, movies, series,
+  anime, donghua, manga, manhwa, manhua and western comics — all in one place.
+  No accounts, no telemetry, no cloud. Data lives in data.json and assets/ next to
+  the executable, portable enough to carry on a USB stick.
+Moniker: omnio
+Tags:
+  - hobby
+  - tracker
+  - games
+  - movies
+  - anime
+  - manga
+  - local-first
+  - electron
+ReleaseNotesUrl: https://github.com/TonyMontania/Omnio/releases/tag/v<VERSION>
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

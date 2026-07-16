@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Omnio
+GenericName=Hobby Tracker
+Comment=Local-first tracker for games, music, movies, series, anime and comics
+Exec=omnio %U
+Terminal=false
+Type=Application
+Icon=com.omnio.app
+Categories=Utility;Office;
+StartupWMClass=Omnio
+Keywords=hobby;tracker;games;music;movies;anime;manga;

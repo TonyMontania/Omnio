@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.omnio.app</id>
+  <name>Omnio</name>
+  <summary>Track your hobbies — local-first, no accounts, no cloud</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer_name>Tony Montania</developer_name>
+  <description>
+    <p>
+      Omnio is a local-first desktop app to track your hobbies — games, music, movies,
+      series, anime, donghua, manga, manhwa, manhua and western comics — all in one place.
+      No accounts, no telemetry, no cloud. Data lives in a single data.json file and an
+      assets/ folder, portable enough to carry on a USB stick.
+    </p>
+  </description>
+  <launchable type="desktop-id">com.omnio.app.desktop</launchable>
+  <url type="homepage">https://github.com/TonyMontania/Omnio</url>
+  <url type="bugtracker">https://github.com/TonyMontania/Omnio/issues</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://github.com/user-attachments/assets/f7abdd85-ae6b-4deb-b1c1-00441e0456f3</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="<VERSION>" date="<YYYY-MM-DD>" />
+  </releases>
+</component>

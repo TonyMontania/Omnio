@@ -18,23 +18,80 @@ La interfaz está en inglés. Para una referencia de campo por campo en inglés 
 
 Descargá desde el [último release](https://github.com/TonyMontania/Omnio/releases/latest) y elegí tu plataforma.
 
-**Windows** (`.exe` portable)
+### Windows
+
+**Portable `.exe`** — recomendado (modo pendrive)
 1. Descargá `Omnio-*-portable.exe` y ponelo en la carpeta que quieras.
 2. Doble click para ejecutar. `data.json` y `assets/` se crean al lado en el primer arranque.
 3. Primer arranque: SmartScreen va a mostrar *"Windows protegió tu PC"* — click en **Más información** → **Ejecutar de todos modos**. Es un build sin firmar y open-source; podés inspeccionar el código y buildearlo vos mismo si preferís.
 
-**macOS** (`.dmg`, universal Intel + Apple Silicon)
+**Instalador NSIS `.exe`** — asistente clásico con acceso directo en el menú de inicio y desinstalador.
+1. Descargá `Omnio-*-setup.exe` y ejecutalo.
+2. Los datos van a `%APPDATA%\Omnio` (NO al lado del ejecutable). Si querés el modo portable, usá el build portable.
+
+**winget** — desde cualquier terminal:
+```powershell
+winget install TonyMontania.Omnio
+```
+
+**Scoop** (bucket comunitario, amigable con portables):
+```powershell
+scoop install omnio
+```
+
+**Chocolatey**:
+```powershell
+choco install omnio
+```
+
+### macOS (universal Intel + Apple Silicon)
+
+**`.dmg`** — recomendado
 1. Descargá `Omnio-Mac-*-x64.dmg` (Intel) o `Omnio-Mac-*-arm64.dmg` (Apple Silicon) y arrastrá Omnio.app a Aplicaciones.
 2. Primer arranque: Gatekeeper va a decir *"Omnio no puede abrirse porque Apple no pudo verificarla"*. Para saltear esto:
    - **Click derecho** sobre la app → **Abrir** → confirmar en el diálogo. O:
    - En Terminal: `xattr -cr /Applications/Omnio.app` y abrila normalmente.
 
-**Linux** (`.AppImage`)
+**`.zip`** — arrastrás la `.app` sin tener que montar la imagen. Aplica el mismo paso de Gatekeeper.
+
+**Homebrew Cask**:
+```bash
+brew install --cask omnio
+```
+
+### Linux
+
+**`.AppImage`** — funciona en todas las distros
 1. Descargá `Omnio-Linux-*.AppImage`.
 2. `chmod +x Omnio-Linux-*.AppImage`
 3. Doble click o correlo desde la terminal. Algunas distros necesitan `libfuse2` (`sudo apt install libfuse2` en Debian/Ubuntu).
 
-La carpeta entera (exe/dmg/AppImage + `data.json` + `assets/`) es portable — moverla entre máquinas o meterla en un pendrive y tu biblioteca viaja con vos.
+**Debian / Ubuntu / Mint (`.deb`)**
+```bash
+sudo apt install ./Omnio-Linux-*.deb
+```
+
+**Tarball (`.tar.gz`)** — extraés donde quieras y ejecutás `./omnio`. Portable, sin root.
+
+**Flatpak (Flathub)**
+```bash
+flatpak install flathub com.omnio.app
+flatpak run com.omnio.app
+```
+
+**Snap**
+```bash
+sudo snap install omnio
+```
+
+**Arch / Manjaro (AUR)**
+```bash
+yay -S omnio-bin      # o: paru -S omnio-bin
+```
+
+### Portabilidad
+
+Los builds portable, tarball y AppImage mantienen `data.json` + `assets/` al lado del ejecutable — movés la carpeta entre máquinas o la metés en un pendrive y tu biblioteca viaja con vos. El instalador NSIS, el Cask de Homebrew, el `.deb`, Flatpak, Snap y el AUR siguen la convención de cada SO (`%APPDATA%`, `~/Library/Application Support/Omnio`, `~/.config/Omnio`, etc.); usá **Settings → Data → Export** para mover una biblioteca entre distintos métodos de instalación.
 
 ## Stack técnico
 
@@ -63,6 +120,26 @@ Grupo colapsable en la sidebar con dos sub-bibliotecas independientes (**Anime**
 
 ### Comics & Manga
 4 sub-bibliotecas independientes (Manga, Manhwa, Manhua, Western Comics) con ficha compartida estilo AniList/MAL: authors + artists, géneros, publication status, reading status, capítulos y volúmenes leídos/totales, volume covers en galería, rating, notas. **Extendido**: alternative titles, source, age rating ESRB, magazine/serialization, **lista de capítulos** con read/rating/notas, review con spoilers, reread history, related manga con tipo de relación, franchise timeline, recommendations.
+
+## Sitios recomendados para metadata y arte
+
+Omnio no scrapea nada — todos los campos se llenan a mano. Estos son los sitios que la comunidad usa para conseguir metadata, covers, banners y logos. Abrís uno, copiás lo que necesitás y lo pegás en Omnio.
+
+| Sitio | Ideal para |
+| --- | --- |
+| [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes |
+| [IGDB](https://www.igdb.com/) | Games — metadata (developers, publishers, fechas, géneros) |
+| [VGMdb](https://vgmdb.net/) | Música — soundtracks de videojuegos y ediciones japonesas |
+| [MusicBrainz](https://musicbrainz.org/) | Música — metadata general (artistas, sellos, tracklists) |
+| [Rate Your Music](https://rateyourmusic.com/) | Música — géneros, discografías, ratings |
+| [IMDb](https://www.imdb.com/) | Movies y Series — metadata (cast, directores, guionistas, fechas) |
+| [Movie Poster DB](https://movieposterdb.com/) | Movies, Series y Anime — posters en alta (requiere cuenta) |
+| [Douban](https://m.douban.com/home_guide) | IMDb chino — clave para donghua, C-dramas y cine asiático |
+| [AniList](https://anilist.co/) | Anime, Donghua, Manga, Manhwa, Manhua — metadata + arte |
+| [MyAnimeList](https://myanimelist.net/) | Anime y Manga — metadata, episodios, staff |
+| [AniDB](https://anidb.net/) | Anime — metadata profunda (staff, episodios, relaciones) |
+
+¿Conocés otro sitio que valga la pena? Abrí un issue o un PR.
 
 ## Interfaz
 

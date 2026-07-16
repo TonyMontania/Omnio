@@ -1,0 +1,34 @@
+# Maintainer: Tony Montania <you@example.com>
+pkgname=omnio-bin
+_pkgname=omnio
+pkgver=<VERSION>
+pkgrel=1
+pkgdesc="Local-first desktop app to track hobbies (games, music, movies, series, anime, comics)"
+arch=('x86_64')
+url="https://github.com/TonyMontania/Omnio"
+license=('MIT')
+depends=('fuse2')
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+options=(!strip)
+source=("Omnio-${pkgver}.AppImage::https://github.com/TonyMontania/Omnio/releases/download/v${pkgver}/Omnio-Linux-${pkgver}.AppImage")
+sha256sums=('<SHA256-APPIMAGE>')
+noextract=("Omnio-${pkgver}.AppImage")
+
+package() {
+  install -Dm755 "Omnio-${pkgver}.AppImage" "${pkgdir}/opt/${_pkgname}/Omnio.AppImage"
+  install -dm755 "${pkgdir}/usr/bin"
+  ln -s "/opt/${_pkgname}/Omnio.AppImage" "${pkgdir}/usr/bin/${_pkgname}"
+
+  cd "${srcdir}"
+  ./"Omnio-${pkgver}.AppImage" --appimage-extract 'omnio.desktop' >/dev/null 2>&1 || true
+  ./"Omnio-${pkgver}.AppImage" --appimage-extract 'usr/share/icons/*' >/dev/null 2>&1 || true
+
+  if [ -f squashfs-root/omnio.desktop ]; then
+    sed -i "s|Exec=.*|Exec=/usr/bin/${_pkgname} %U|" squashfs-root/omnio.desktop
+    install -Dm644 squashfs-root/omnio.desktop "${pkgdir}/usr/share/applications/${_pkgname}.desktop"
+  fi
+  if [ -d squashfs-root/usr/share/icons ]; then
+    cp -r squashfs-root/usr/share/icons "${pkgdir}/usr/share/"
+  fi
+}

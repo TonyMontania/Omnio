@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+PackageIdentifier: TonyMontania.Omnio
+PackageVersion: <VERSION>
+InstallerType: nullsoft
+Scope: user
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/TonyMontania/Omnio/releases/download/v<VERSION>/Omnio-<VERSION>-setup.exe
+    InstallerSha256: <SHA256-SETUP-EXE>
+    InstallerType: nullsoft
+  - Architecture: x64
+    InstallerUrl: https://github.com/TonyMontania/Omnio/releases/download/v<VERSION>/Omnio-<VERSION>-portable.exe
+    InstallerSha256: <SHA256-PORTABLE-EXE>
+    InstallerType: portable
+ManifestType: installer
+ManifestVersion: 1.6.0

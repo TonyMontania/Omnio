@@ -62,9 +62,16 @@ jobs:
         shell: bash
         run: |
           mkdir -p staging
+          # Windows
           cp release/*/Omnio-*-portable.exe staging/ 2>/dev/null || true
-          cp release/*/Omnio-Mac-*.dmg staging/ 2>/dev/null || true
+          cp release/*/Omnio-*-setup.exe    staging/ 2>/dev/null || true
+          # macOS
+          cp release/*/Omnio-Mac-*.dmg      staging/ 2>/dev/null || true
+          cp release/*/Omnio-Mac-*.zip      staging/ 2>/dev/null || true
+          # Linux
           cp release/*/Omnio-Linux-*.AppImage staging/ 2>/dev/null || true
+          cp release/*/Omnio-Linux-*.deb      staging/ 2>/dev/null || true
+          cp release/*/Omnio-Linux-*.tar.gz   staging/ 2>/dev/null || true
           echo "--- staged files ---"
           ls -la staging/
 
@@ -81,6 +88,19 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Resolve version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -89,6 +109,24 @@ jobs:
 
       - name: List collected files
         run: ls -la artifacts/
+
+      # Feed the same layout that stamp-packaging.mjs expects locally
+      # (release/<version>/) so the script finds every artifact.
+      - name: Consolidate under release/<version>/
+        run: |
+          mkdir -p "release/${{ steps.version.outputs.version }}"
+          cp artifacts/* "release/${{ steps.version.outputs.version }}/"
+
+      - name: Stamp packaging manifests
+        run: node scripts/stamp-packaging.mjs "${{ steps.version.outputs.version }}"
+
+      - name: Verify no placeholders remain
+        run: node scripts/stamp-packaging.mjs "${{ steps.version.outputs.version }}" --check
+
+      - name: Bundle stamped manifests
+        run: |
+          cd packaging/dist
+          tar -czf "../../artifacts/omnio-packaging-manifests-${{ steps.version.outputs.version }}.tar.gz" "${{ steps.version.outputs.version }}"
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
