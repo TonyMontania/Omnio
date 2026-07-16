@@ -53,6 +53,10 @@
   "linux": {
     "icon": "build/icon.png",
     "category": "Utility",
+    // Required by fpm for the .deb target. Not a real address — just a
+    // syntactically valid placeholder so the build succeeds. Swap for a real
+    // one if/when you want Debian users to have a working contact.
+    "maintainer": "Tony Montania <omnio@users.noreply.github.com>",
     "target": [
       "AppImage",
       "deb",
