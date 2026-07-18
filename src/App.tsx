@@ -63,6 +63,8 @@ import BackupList from './BackupList'
 import DuplicatesModal from './DuplicatesModal'
 import GlobalSearch from './GlobalSearch'
 import BulkActionBar from './BulkActionBar'
+import SteamGridDbPicker from './SteamGridDbPicker'
+import AniListFetcher from './AniListFetcher'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
   InsightsIcon, SettingsIcon, ChevronIcon, FolderIcon,
@@ -151,6 +153,7 @@ interface Settings {
   movieFields: Record<MovieField, boolean>
   animeFields: Record<AnimeField, boolean>
   seriesFields: Record<SeriesField, boolean>
+  sgdbApiKey?: string
 }
 
 interface AppData {
@@ -337,6 +340,8 @@ function App() {
   const [dupOpen, setDupOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
+  const [anilistOpen, setAnilistOpen] = useState<null | 'ANIME' | 'MANGA'>(null)
 
   const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void; suppressible?: boolean } | null>(null)
   const [dontAskAgain, setDontAskAgain] = useState(false)
@@ -993,6 +998,38 @@ function App() {
         setToast(`Deleted ${ids.size} items`)
       },
     )
+  }
+
+  // Merge an AniList-shaped patch into the currently-open editor form.
+  // Kept generic so it covers both anime/donghua and the four manga-likes.
+  const applyAniListPatch = (
+    patch: Partial<Item>,
+    coverPath?: string,
+    bannerPath?: string,
+  ) => {
+    if (patch.title) setTitle(patch.title)
+    if (patch.alternativeTitles) setAlternativeTitles(patch.alternativeTitles)
+    if (patch.genres) setGenres(patch.genres)
+    if (patch.airedFrom) setAiredFrom(patch.airedFrom)
+    if (patch.airedTo) setAiredTo(patch.airedTo)
+    if (patch.releaseDate) setReleaseDate(patch.releaseDate)
+    if (patch.seasonYear) setSeasonYear(patch.seasonYear)
+    if (patch.season) setSeason(patch.season)
+    if (patch.episodeDuration) setEpisodeDuration(patch.episodeDuration)
+    if (patch.studios) setStudios(patch.studios)
+    if (patch.animeFormat) setAnimeFormat(patch.animeFormat)
+    if (patch.animeSource) setAnimeSource(patch.animeSource)
+    if (patch.totalEpisodes) setTotalEpisodes(patch.totalEpisodes)
+    if (patch.totalChapters) setTotalChapters(patch.totalChapters)
+    if (patch.totalVolumes) setTotalVolumesM(patch.totalVolumes)
+    if (patch.description) {
+      if (activeCategory === 'anime' || activeCategory === 'donghua') setAnimeDescription(patch.description)
+      else if (isMangaLike(activeCategory)) setMangaDescription(patch.description)
+      else setDescription(patch.description)
+    }
+    if (coverPath) setCover(coverPath)
+    if (bannerPath) setBannerImage(bannerPath)
+    setToast('AniList data applied')
   }
 
   const openEditFromModal = () => {
@@ -2680,6 +2717,20 @@ function App() {
                       <button type="button" className="secondary-btn" onClick={() => setDupOpen(true)}>Find similar titles</button>
                     </div>
                     <div className="field-group">
+                      <label>Integrations · SteamGridDB API key</label>
+                      <input
+                        type="password"
+                        placeholder="Paste your SteamGridDB key…"
+                        value={settings.sgdbApiKey ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, sgdbApiKey: e.target.value }))}
+                      />
+                      <p className="hint">
+                        Get a free key at <code>steamgriddb.com/profile/preferences/api</code>. Enables
+                        the "↗ SteamGridDB" button next to cover / banner / logo in the game editor.
+                        AniList (anime & manga) needs no key.
+                      </p>
+                    </div>
+                    <div className="field-group">
                       <label>Reset settings</label>
                       <button type="button" className="secondary-btn" onClick={() => askConfirm('Reset all settings to defaults? Your library data won’t be affected.', () => { setSettings(DEFAULT_SETTINGS); setLayout(DEFAULT_SETTINGS.defaultLayout); setToast('Settings reset') })}>Reset to defaults</button>
                     </div>
@@ -2946,6 +2997,9 @@ function App() {
                       />
                       <div className="upload-row">
                         <button type="button" className="upload-btn" onClick={() => fileInputRef.current?.click()}>Upload from PC</button>
+                        {isVideojuegos && <button type="button" className="upload-btn" onClick={() => setSgdbOpen('grids')} title="Fetch from SteamGridDB">↗ SteamGridDB</button>}
+                        {(activeCategory === 'anime' || activeCategory === 'donghua') && <button type="button" className="upload-btn" onClick={() => setAnilistOpen('ANIME')} title="Fetch from AniList">↗ AniList</button>}
+                        {isMangaLike(activeCategory) && <button type="button" className="upload-btn" onClick={() => setAnilistOpen('MANGA')} title="Fetch from AniList">↗ AniList</button>}
                         {cover && <button type="button" className="upload-btn clear" onClick={() => setCover('')}>Clear</button>}
                       </div>
                       <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleCoverFile} />
@@ -2962,6 +3016,7 @@ function App() {
                           />
                           <div className="upload-row">
                             <button type="button" className="upload-btn" onClick={() => bannerFileInputRef.current?.click()}>Upload from PC</button>
+                            <button type="button" className="upload-btn" onClick={() => setSgdbOpen('heroes')} title="Fetch from SteamGridDB">↗ SteamGridDB</button>
                             {bannerImage && <button type="button" className="upload-btn clear" onClick={() => setBannerImage('')}>Clear</button>}
                           </div>
                           <input type="file" accept="image/*" ref={bannerFileInputRef} style={{ display: 'none' }} onChange={handleBannerFile} />
@@ -2975,6 +3030,7 @@ function App() {
                           />
                           <div className="upload-row">
                             <button type="button" className="upload-btn" onClick={() => logoFileInputRef.current?.click()}>Upload from PC</button>
+                            <button type="button" className="upload-btn" onClick={() => setSgdbOpen('logos')} title="Fetch from SteamGridDB">↗ SteamGridDB</button>
                             {logoImage && <button type="button" className="upload-btn clear" onClick={() => setLogoImage('')}>Clear</button>}
                           </div>
                           <input type="file" accept="image/*" ref={logoFileInputRef} style={{ display: 'none' }} onChange={handleLogoFile} />
@@ -4323,6 +4379,31 @@ function App() {
         onAddToGroup={bulkAddToGroup}
         onDelete={bulkDelete}
       />
+
+      {sgdbOpen && (
+        <SteamGridDbPicker
+          apiKey={settings.sgdbApiKey}
+          initialQuery={title}
+          kind={sgdbOpen}
+          onPick={(rel) => {
+            if (sgdbOpen === 'grids') setCover(rel)
+            else if (sgdbOpen === 'heroes') setBannerImage(rel)
+            else if (sgdbOpen === 'logos') setLogoImage(rel)
+            setToast('Artwork downloaded')
+          }}
+          onClose={() => setSgdbOpen(null)}
+        />
+      )}
+
+      {anilistOpen && (
+        <AniListFetcher
+          initialQuery={title}
+          kind={anilistOpen}
+          categoryId={activeCategory}
+          onApply={applyAniListPatch}
+          onClose={() => setAnilistOpen(null)}
+        />
+      )}
 
       {toast && <Toast message={toast} />}
 

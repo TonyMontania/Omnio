@@ -397,3 +397,202 @@
   font-size: 12px;
 }
 .bulk-clear:hover { background: var(--surface-2); color: var(--text); }
+
+/* ===== Metadata fetchers (SteamGridDB, AniList) ===== */
+.fetch-modal {
+  width: min(760px, 92vw);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+}
+.fetch-modal .modal-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.fetch-modal .modal-header h2 {
+  flex: 1;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text);
+}
+.fetch-modal .modal-body {
+  overflow-y: auto;
+  padding: 14px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fetch-search-row { display: flex; gap: 8px; }
+.fetch-search-row input {
+  flex: 1;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  outline: 0;
+}
+.fetch-search-row input:focus { border-color: var(--accent); }
+
+.fetch-game-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.fetch-game-list li button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.fetch-game-list li button:hover { border-color: var(--accent); }
+.fetch-game-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fetch-game-year {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.fetch-selected-game {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.fetch-selected-game strong { color: var(--text); }
+.fetch-selected-game > span { flex: 1; }
+
+.fetch-asset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+.fetch-asset-grid.heroes { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.fetch-asset-grid.logos  { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.fetch-asset {
+  position: relative;
+  padding: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  display: block;
+}
+.fetch-asset:hover { border-color: var(--accent); }
+.fetch-asset img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background: var(--surface);
+}
+.fetch-asset-grid.heroes .fetch-asset img { aspect-ratio: 92 / 43; }
+.fetch-asset-grid.logos  .fetch-asset img { aspect-ratio: 16 / 9; object-fit: contain; padding: 12px; background: #0d0d10; }
+.fetch-asset.downloading { opacity: 0.6; cursor: wait; }
+.fetch-asset-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* AniList results */
+.anilist-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.anilist-hit {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+.anilist-hit:hover { border-color: var(--accent); }
+.anilist-hit:disabled { opacity: 0.5; cursor: wait; }
+.anilist-thumb {
+  width: 60px;
+  height: 84px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-family: var(--font-display);
+  font-size: 24px;
+}
+.anilist-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.anilist-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.anilist-title { font-size: 14.5px; color: var(--text); font-weight: 500; }
+.anilist-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.03em;
+}
+.anilist-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.anilist-applying {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+}

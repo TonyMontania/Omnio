@@ -182,6 +182,119 @@ ipcMain.handle('image:delete', async (_event, rel: string) => {
 
 ipcMain.handle('storage:root', async () => STORAGE_ROOT)
 
+// ---- External metadata fetchers ----
+// We proxy through the main process so (a) API keys stay out of the renderer's
+// devtools if the user opens them and (b) we avoid CORS entirely. Neither
+// endpoint stores data on our end — we're just forwarding.
+
+const SGDB_BASE = 'https://www.steamgriddb.com/api/v2'
+
+ipcMain.handle('sgdb:search', async (_event, apiKey: string, term: string) => {
+  if (!apiKey || !term.trim()) return { ok: false, error: 'Missing API key or search term' }
+  try {
+    const r = await fetch(`${SGDB_BASE}/search/autocomplete/${encodeURIComponent(term)}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as { data: unknown }
+    return { ok: true, data: json.data }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+ipcMain.handle('sgdb:assets', async (_event, apiKey: string, kind: 'grids' | 'heroes' | 'logos', gameId: number | string) => {
+  if (!apiKey || !gameId) return { ok: false, error: 'Missing API key or game id' }
+  try {
+    const r = await fetch(`${SGDB_BASE}/${kind}/game/${gameId}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as { data: unknown }
+    return { ok: true, data: json.data }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// AniList — GraphQL, no API key required. Type is 'ANIME' or 'MANGA'.
+ipcMain.handle('anilist:search', async (_event, term: string, kind: 'ANIME' | 'MANGA') => {
+  if (!term.trim()) return { ok: false, error: 'Missing search term' }
+  const query = `
+    query ($search: String, $type: MediaType) {
+      Page(page: 1, perPage: 12) {
+        media(search: $search, type: $type) {
+          id
+          title { romaji english native }
+          format
+          status
+          episodes
+          chapters
+          volumes
+          duration
+          season
+          seasonYear
+          startDate { year month day }
+          endDate { year month day }
+          description(asHtml: false)
+          genres
+          studios(isMain: true) { nodes { name } }
+          staff(perPage: 5) { nodes { name { full } } }
+          source
+          countryOfOrigin
+          coverImage { extraLarge large }
+          bannerImage
+          synonyms
+          averageScore
+          siteUrl
+        }
+      }
+    }`
+  try {
+    const r = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ query, variables: { search: term.trim(), type: kind } }),
+    })
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as { data?: { Page?: { media?: unknown[] } }; errors?: { message: string }[] }
+    if (json.errors && json.errors.length) return { ok: false, error: json.errors[0].message }
+    return { ok: true, data: json.data?.Page?.media ?? [] }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// Download a remote image URL and file it into assets/{category}/{kind}/{uuid}.{ext}.
+// Same pipeline as image:save (which takes a data-URL from a file picker) — the
+// difference is fetching bytes from HTTP first. Used by both metadata fetchers.
+const EXT_FROM_URL: Record<string, string> = {
+  png: 'png', jpg: 'jpg', jpeg: 'jpg', webp: 'webp', gif: 'gif', avif: 'avif', bmp: 'bmp', svg: 'svg',
+}
+
+ipcMain.handle('image:download', async (_event, url: string, categoryId: string, kind: string) => {
+  try {
+    const r = await fetch(url)
+    if (!r.ok) return null
+    const ct = r.headers.get('content-type') ?? ''
+    const buf = Buffer.from(await r.arrayBuffer())
+    let ext = EXT_FROM_MIME[ct.split(';')[0].trim()]
+    if (!ext) {
+      const urlExt = url.split('?')[0].split('.').pop()?.toLowerCase() ?? ''
+      ext = EXT_FROM_URL[urlExt] ?? 'bin'
+    }
+    const safeCategory = categoryId.replace(/[^a-z0-9_-]/gi, '')
+    const safeKind = kind.replace(/[^a-z0-9_-]/gi, '')
+    const dir = path.join(ASSETS_ROOT, safeCategory, safeKind)
+    await fs.mkdir(dir, { recursive: true })
+    const filename = `${crypto.randomUUID()}.${ext}`
+    await fs.writeFile(path.join(dir, filename), buf)
+    return `${safeCategory}/${safeKind}/${filename}`
+  } catch {
+    return null
+  }
+})
+
 app.whenReady().then(() => {
   protocol.handle('omnio-asset', (request) => {
     const url = new URL(request.url)
