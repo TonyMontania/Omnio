@@ -55,6 +55,18 @@ function text(node: Element | null, selector: string): string | undefined {
   return t ? t : undefined
 }
 
+// Accepts either the field name MyAnimeList itself exports (series_title,
+// series_animedb_id, series_chapters…) OR the field name the AniList
+// scraper uses (manga_title, manga_mangadb_id, manga_chapters…). Try each
+// in order and return the first hit.
+function textAny(node: Element | null, selectors: string[]): string | undefined {
+  for (const s of selectors) {
+    const v = text(node, s)
+    if (v !== undefined) return v
+  }
+  return undefined
+}
+
 function normalizeDate(s?: string): string | undefined {
   if (!s || s === '0000-00-00') return undefined
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s)
@@ -69,45 +81,57 @@ function parseXml(xml: string): { entries: Parsed[]; error?: string } {
   if (!root) return { entries: [], error: 'Root element <myanimelist> is missing. Is this a MAL/AniList export?' }
   const out: Parsed[] = []
   root.querySelectorAll('anime').forEach((el) => {
-    const title = text(el, 'series_title')
+    const title = textAny(el, ['series_title', 'anime_title'])
     if (!title) return
-    const alt = [text(el, 'series_english'), text(el, 'series_synonyms')].filter(Boolean) as string[]
+    const alt = [
+      textAny(el, ['series_english', 'anime_english']),
+      textAny(el, ['series_synonyms', 'anime_synonyms']),
+    ].filter(Boolean) as string[]
+    const idStr = textAny(el, ['series_animedb_id', 'anime_animedb_id'])
+    const score = textAny(el, ['my_score'])
+    const times = textAny(el, ['my_times_watched'])
     out.push({
       kind: 'anime',
-      id: text(el, 'series_animedb_id') ? parseInt(text(el, 'series_animedb_id')!, 10) : undefined,
+      id: idStr ? parseInt(idStr, 10) : undefined,
       title,
       altTitles: alt,
-      totalEpisodes: text(el, 'series_episodes'),
-      watched: text(el, 'my_watched_episodes'),
-      score: text(el, 'my_score') ? parseFloat(text(el, 'my_score')!) : undefined,
-      status: text(el, 'my_status'),
-      startDate: text(el, 'my_start_date'),
-      finishDate: text(el, 'my_finish_date'),
-      timesConsumed: text(el, 'my_times_watched') ? parseInt(text(el, 'my_times_watched')!, 10) : undefined,
-      tags: text(el, 'my_tags')?.split(',').map((s) => s.trim()).filter(Boolean),
-      notes: text(el, 'my_comments'),
+      totalEpisodes: textAny(el, ['series_episodes', 'anime_episodes']),
+      watched: textAny(el, ['my_watched_episodes']),
+      score: score ? parseFloat(score) : undefined,
+      status: textAny(el, ['my_status']),
+      startDate: textAny(el, ['my_start_date']),
+      finishDate: textAny(el, ['my_finish_date']),
+      timesConsumed: times ? parseInt(times, 10) : undefined,
+      tags: textAny(el, ['my_tags'])?.split(',').map((s) => s.trim()).filter(Boolean),
+      notes: textAny(el, ['my_comments']),
     })
   })
   root.querySelectorAll('manga').forEach((el) => {
-    const title = text(el, 'series_title')
+    const title = textAny(el, ['series_title', 'manga_title'])
     if (!title) return
-    const alt = [text(el, 'series_english'), text(el, 'series_synonyms')].filter(Boolean) as string[]
+    const alt = [
+      textAny(el, ['series_english', 'manga_english']),
+      textAny(el, ['series_synonyms', 'manga_synonyms']),
+    ].filter(Boolean) as string[]
+    const idStr = textAny(el, ['series_mangadb_id', 'manga_mangadb_id'])
+    const score = textAny(el, ['my_score'])
+    const times = textAny(el, ['my_times_read'])
     out.push({
       kind: 'manga',
-      id: text(el, 'series_mangadb_id') ? parseInt(text(el, 'series_mangadb_id')!, 10) : undefined,
+      id: idStr ? parseInt(idStr, 10) : undefined,
       title,
       altTitles: alt,
-      totalChapters: text(el, 'series_chapters'),
-      totalVolumes: text(el, 'series_volumes'),
-      readChapters: text(el, 'my_read_chapters'),
-      readVolumes: text(el, 'my_read_volumes'),
-      score: text(el, 'my_score') ? parseFloat(text(el, 'my_score')!) : undefined,
-      status: text(el, 'my_status'),
-      startDate: text(el, 'my_start_date'),
-      finishDate: text(el, 'my_finish_date'),
-      timesConsumed: text(el, 'my_times_read') ? parseInt(text(el, 'my_times_read')!, 10) : undefined,
-      tags: text(el, 'my_tags')?.split(',').map((s) => s.trim()).filter(Boolean),
-      notes: text(el, 'my_comments'),
+      totalChapters: textAny(el, ['series_chapters', 'manga_chapters']),
+      totalVolumes: textAny(el, ['series_volumes', 'manga_volumes']),
+      readChapters: textAny(el, ['my_read_chapters']),
+      readVolumes: textAny(el, ['my_read_volumes']),
+      score: score ? parseFloat(score) : undefined,
+      status: textAny(el, ['my_status']),
+      startDate: textAny(el, ['my_start_date']),
+      finishDate: textAny(el, ['my_finish_date']),
+      timesConsumed: times ? parseInt(times, 10) : undefined,
+      tags: textAny(el, ['my_tags'])?.split(',').map((s) => s.trim()).filter(Boolean),
+      notes: textAny(el, ['my_comments']),
     })
   })
   return { entries: out }
@@ -166,7 +190,14 @@ export default function MalImporter({ existingItems, onImport, onClose }: Props)
     const txt = await f.text()
     const r = parseXml(txt)
     if (r.error) { setError(r.error); return }
-    if (r.entries.length === 0) { setError('No <anime> or <manga> entries found.'); return }
+    if (r.entries.length === 0) {
+      const doc = new DOMParser().parseFromString(txt, 'application/xml')
+      const rawCount = doc.querySelectorAll('anime, manga').length
+      setError(rawCount > 0
+        ? `Found ${rawCount} <anime>/<manga> element(s) but none had a title — this XML uses field names Omnio doesn't recognize.`
+        : 'No <anime> or <manga> entries found.')
+      return
+    }
     setParsed(r.entries)
   }
 
@@ -195,8 +226,9 @@ export default function MalImporter({ existingItems, onImport, onClose }: Props)
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Export your list from MAL (Profile → Export → Anime / Manga List) or AniList,
-            unzip the resulting <code>.gz</code> if needed, and pick the <code>.xml</code> here.
+            Works with the native MyAnimeList export (Profile → Export) and with the AniList
+            scraper's <code>_anilistanime</code> / <code>_anilistmanga</code> XML. Unzip the
+            <code>.gz</code> if you got one and pick the <code>.xml</code> here.
             Imported items land in the <em>Anime</em> and <em>Manga</em> libraries with title,
             episodes/chapters, rating, status, start/finish dates, tags and notes filled in.
             Covers and descriptions can be added afterwards using the AniList metadata fetcher.
