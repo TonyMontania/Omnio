@@ -65,6 +65,9 @@ import GlobalSearch from './GlobalSearch'
 import BulkActionBar from './BulkActionBar'
 import SteamGridDbPicker from './SteamGridDbPicker'
 import AniListFetcher from './AniListFetcher'
+import MalImporter from './MalImporter'
+import YearlyWrapped from './YearlyWrapped'
+import { buildStaticSiteHtml } from './exportSite'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
   InsightsIcon, SettingsIcon, ChevronIcon, FolderIcon,
@@ -343,6 +346,9 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
   const [anilistOpen, setAnilistOpen] = useState<null | 'ANIME' | 'MANGA'>(null)
+  const [malOpen, setMalOpen] = useState(false)
+  const [wrappedOpen, setWrappedOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   // ---- Undo / redo of library mutations ----
   // We snapshot items+collections+artists on every observable change and
@@ -591,7 +597,6 @@ function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subView, specialView])
 
   // Track library mutations and stash them on a bounded history stack.
@@ -646,6 +651,10 @@ function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+    // closePanel / closeArtistPanel change on every render but that would
+    // cause the listener to rebind constantly; the closure captures the
+    // latest versions each time this effect re-runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alertMsg, confirmState, viewingGame, viewingMusic, viewingManga, viewingMovie, viewingAnime, viewingSeries, viewingArtist, artistPanelOpen, panelOpen])
 
   useEffect(() => {
@@ -2777,6 +2786,30 @@ function App() {
                       <button type="button" className="secondary-btn" onClick={() => setDupOpen(true)}>Find similar titles</button>
                     </div>
                     <div className="field-group">
+                      <label>Import from other trackers</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={() => setMalOpen(true)}>Import MAL / AniList XML</button>
+                      </div>
+                      <p className="hint">Bulk-load anime and manga you already tracked elsewhere.</p>
+                    </div>
+                    <div className="field-group">
+                      <label>Share your library</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={() => setWrappedOpen(true)}>Yearly wrapped</button>
+                        <button type="button" className="secondary-btn" disabled={exporting} onClick={async () => {
+                          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Choose where to export your Omnio site')
+                          if (!dir) return
+                          setExporting(true)
+                          const html = buildStaticSiteHtml(items, musicArtists, 'My Omnio Library')
+                          const r = await window.ipcRenderer.invoke('export:site', dir, html)
+                          setExporting(false)
+                          if (r?.ok) setToast(`Exported to ${r.path}`)
+                          else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
+                        }}>{exporting ? 'Exporting…' : 'Export as HTML'}</button>
+                      </div>
+                      <p className="hint">Wrapped is a year-in-review view. Export builds a standalone <code>index.html</code> and copies your <code>assets/</code> folder — send the folder to a friend and it just opens.</p>
+                    </div>
+                    <div className="field-group">
                       <label>Integrations · SteamGridDB API key</label>
                       <input
                         type="password"
@@ -4463,6 +4496,21 @@ function App() {
           onApply={applyAniListPatch}
           onClose={() => setAnilistOpen(null)}
         />
+      )}
+
+      {malOpen && (
+        <MalImporter
+          existingItems={items}
+          onImport={(newItems) => {
+            setItems((all) => [...all, ...newItems])
+            setToast(`Imported ${newItems.length} items`)
+          }}
+          onClose={() => setMalOpen(false)}
+        />
+      )}
+
+      {wrappedOpen && (
+        <YearlyWrapped items={items} onClose={() => setWrappedOpen(false)} />
       )}
 
       {toast && <Toast message={toast} />}

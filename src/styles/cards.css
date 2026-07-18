@@ -28,6 +28,16 @@
 .empty-state p { margin: 0; color: var(--text-dim); font-size: 13.5px; max-width: 380px; }
 .empty-state button { margin-top: 6px; }
 
+/* Modern virtualization: skip layout + paint work for off-screen cards.
+   `contain-intrinsic-size` reserves scroll height for the placeholder.
+   Kicks in automatically on Chrome/Electron; harmless where unsupported. */
+.list > .item-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 260px 320px;
+}
+.list.grid > .item-card { contain-intrinsic-size: 200px 300px; }
+.list > .item-card.compact { contain-intrinsic-size: auto 48px; }
+
 .item-card {
   position: relative;
   display: flex;

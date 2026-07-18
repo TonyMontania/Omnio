@@ -182,6 +182,37 @@ ipcMain.handle('image:delete', async (_event, rel: string) => {
 
 ipcMain.handle('storage:root', async () => STORAGE_ROOT)
 
+// Dialog helpers — main-process only, so surfaced through IPC for the
+// renderer's export flows.
+import { dialog } from 'electron'
+
+ipcMain.handle('dialog:pick-directory', async (_event, title?: string) => {
+  const r = await dialog.showOpenDialog({
+    title: title ?? 'Choose a folder',
+    properties: ['openDirectory', 'createDirectory'],
+  })
+  if (r.canceled || r.filePaths.length === 0) return null
+  return r.filePaths[0]
+})
+
+// Static-site export: write index.html into targetDir and mirror the
+// assets/ folder alongside so the exported page renders with real covers
+// even when the user zips and hands it to a friend.
+ipcMain.handle('export:site', async (_event, targetDir: string, htmlContent: string) => {
+  try {
+    await fs.mkdir(targetDir, { recursive: true })
+    await fs.writeFile(path.join(targetDir, 'index.html'), htmlContent, 'utf-8')
+    // Copy assets/ recursively — falls back gracefully if not present.
+    const dstAssets = path.join(targetDir, 'assets')
+    try {
+      await fs.cp(ASSETS_ROOT, dstAssets, { recursive: true, force: true })
+    } catch { /* nothing to copy is fine */ }
+    return { ok: true, path: targetDir }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 // ---- External metadata fetchers ----
 // We proxy through the main process so (a) API keys stay out of the renderer's
 // devtools if the user opens them and (b) we avoid CORS entirely. Neither

@@ -20,7 +20,11 @@
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  /* Hide overflow on the shell so header + footer stay pinned while only
+     the body scrolls. This keeps Delete / Cancel / Save visible from any
+     scroll position in every editor (games, music, movies, series, anime,
+     manga, artist), which was previously buried at the very bottom. */
+  overflow: hidden;
   z-index: 60;
 }
 
@@ -65,7 +69,15 @@ body.resizing-panel * { user-select: none !important; }
 }
 .edit-btn:hover { background: var(--accent); color: #1a1408; }
 
-.panel-body { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+.panel-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
 
 .view-title { margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--text); }
 .view-line { margin: 0; font-size: 13px; color: var(--text-dim); }
@@ -99,6 +111,8 @@ body.resizing-panel * { user-select: none !important; }
   justify-content: space-between;
   padding: 16px 22px;
   border-top: 1px solid var(--border-soft);
+  background: var(--surface);
+  box-shadow: 0 -10px 24px -14px rgba(0, 0, 0, 0.6);
   flex-shrink: 0;
 }
 
