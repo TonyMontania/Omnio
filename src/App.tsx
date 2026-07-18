@@ -72,6 +72,7 @@ import {
 
 // Editors and pickers used inside detail modals and the toolbar
 import DistChart from './insights/DistChart'
+import Heatmap from './insights/Heatmap'
 import RatingPicker from './components/editors/RatingPicker'
 import PlatformEditor from './components/editors/PlatformEditor'
 import GameSubItems from './components/editors/GameSubItems'
@@ -343,6 +344,16 @@ function App() {
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
   const [anilistOpen, setAnilistOpen] = useState<null | 'ANIME' | 'MANGA'>(null)
 
+  // ---- Undo / redo of library mutations ----
+  // We snapshot items+collections+artists on every observable change and
+  // let Ctrl+Z pop back through them. Deliberately limited to library data
+  // — settings, panel state and modal state are not undoable.
+  interface HistorySnap { items: Item[]; collections: Collection[]; artists: MusicArtist[] }
+  const historyRef = useRef<HistorySnap[]>([])
+  const redoRef = useRef<HistorySnap[]>([])
+  const skipHistoryRef = useRef(false)
+  const prevSnapRef = useRef<HistorySnap | null>(null)
+
   const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void; suppressible?: boolean } | null>(null)
   const [dontAskAgain, setDontAskAgain] = useState(false)
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
@@ -560,17 +571,63 @@ function App() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey
+      const inField = (e.target as HTMLElement | null)?.matches?.('input, textarea, [contenteditable="true"]')
       if (mod && e.key.toLowerCase() === 'f' && subView === 'items' && specialView === 'none') {
         e.preventDefault()
         searchInputRef.current?.focus()
       } else if (mod && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setSearchOpen(true)
+      } else if (mod && !e.shiftKey && e.key.toLowerCase() === 'z' && !inField) {
+        e.preventDefault()
+        undo()
+      } else if (mod && e.shiftKey && e.key.toLowerCase() === 'z' && !inField) {
+        e.preventDefault()
+        redo()
+      } else if (mod && e.key.toLowerCase() === 'y' && !inField) {
+        e.preventDefault()
+        redo()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subView, specialView])
+
+  // Track library mutations and stash them on a bounded history stack.
+  // Only fires for real content edits (items/collections/artists), not
+  // settings or UI state.
+  useEffect(() => {
+    if (!loaded) return
+    if (skipHistoryRef.current) { skipHistoryRef.current = false; prevSnapRef.current = { items, collections, artists: musicArtists }; return }
+    if (prevSnapRef.current) {
+      historyRef.current.push(prevSnapRef.current)
+      if (historyRef.current.length > 40) historyRef.current.shift()
+      redoRef.current = []
+    }
+    prevSnapRef.current = { items, collections, artists: musicArtists }
+  }, [items, collections, musicArtists, loaded])
+
+  const undo = () => {
+    const prev = historyRef.current.pop()
+    if (!prev) { setToast('Nothing to undo'); return }
+    if (prevSnapRef.current) redoRef.current.push(prevSnapRef.current)
+    skipHistoryRef.current = true
+    setItems(prev.items)
+    setCollections(prev.collections)
+    setMusicArtists(prev.artists)
+    setToast('Undone')
+  }
+  const redo = () => {
+    const next = redoRef.current.pop()
+    if (!next) { setToast('Nothing to redo'); return }
+    if (prevSnapRef.current) historyRef.current.push(prevSnapRef.current)
+    skipHistoryRef.current = true
+    setItems(next.items)
+    setCollections(next.collections)
+    setMusicArtists(next.artists)
+    setToast('Redone')
+  }
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -2151,6 +2208,9 @@ function App() {
                 <button className={chartMode === 'bar' ? 'active' : ''} onClick={() => setChartMode('bar')}>▤ Bar</button>
               </div>
               <DistChart data={getDistribution(statsCategory, items.filter((i) => i.categoryId === statsCategory))} mode={chartMode} />
+
+              <Heatmap items={items.filter((i) => i.categoryId === statsCategory)} />
+
               <div className="stats-bar">
                 {getCategoryStats(statsCategory, items.filter((i) => i.categoryId === statsCategory)).map((s) => (
                   <div key={s.label} className="stat-pill">
