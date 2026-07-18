@@ -248,6 +248,21 @@ ipcMain.handle('sgdb:assets', async (_event, apiKey: string, kind: 'grids' | 'he
   }
 })
 
+// Jikan v4 — unofficial MyAnimeList proxy, no API key required.
+// kind is 'anime' or 'manga'; docs: https://docs.api.jikan.moe
+ipcMain.handle('jikan:search', async (_event, term: string, kind: 'anime' | 'manga') => {
+  if (!term.trim()) return { ok: false, error: 'Missing search term' }
+  try {
+    const url = `https://api.jikan.moe/v4/${kind}?q=${encodeURIComponent(term.trim())}&limit=12&sfw=false`
+    const r = await fetch(url)
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as { data?: unknown[] }
+    return { ok: true, data: json.data ?? [] }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 // AniList — GraphQL, no API key required. Type is 'ANIME' or 'MANGA'.
 ipcMain.handle('anilist:search', async (_event, term: string, kind: 'ANIME' | 'MANGA') => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }

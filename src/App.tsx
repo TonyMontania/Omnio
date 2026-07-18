@@ -65,6 +65,7 @@ import GlobalSearch from './GlobalSearch'
 import BulkActionBar from './BulkActionBar'
 import SteamGridDbPicker from './SteamGridDbPicker'
 import AniListFetcher from './AniListFetcher'
+import JikanFetcher from './JikanFetcher'
 import MalImporter from './MalImporter'
 import YearlyWrapped from './YearlyWrapped'
 import { buildStaticSiteHtml } from './exportSite'
@@ -167,6 +168,10 @@ interface AppData {
   settings?: Settings
   customOrders?: Record<string, string[]>
 }
+
+// Displayed in Settings → Data → About. Sourced from package.json so the
+// About string can't drift from the packaged version number.
+const APP_VERSION = __APP_VERSION__
 
 const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS }
 
@@ -346,6 +351,7 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
   const [anilistOpen, setAnilistOpen] = useState<null | 'ANIME' | 'MANGA'>(null)
+  const [jikanOpen, setJikanOpen] = useState<null | 'anime' | 'manga'>(null)
   const [malOpen, setMalOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -2834,7 +2840,7 @@ function App() {
                     <div className="field-group">
                       <label>About</label>
                       <div className="about-box">
-                        <p className="about-title">Omnio <span className="about-version">v0.1</span></p>
+                        <p className="about-title">Omnio <span className="about-version">v{APP_VERSION}</span></p>
                         <p className="about-tagline">A personal hobby backlog tracker for games, music, movies, series, anime and comics.</p>
                         <p className="about-line">Local-only. No accounts, no telemetry, no cloud. Your data lives in this machine.</p>
                         <p className="about-line about-stack">Built with Electron · React · Vite · TypeScript</p>
@@ -3091,8 +3097,14 @@ function App() {
                       <div className="upload-row">
                         <button type="button" className="upload-btn" onClick={() => fileInputRef.current?.click()}>Upload from PC</button>
                         {isVideojuegos && <button type="button" className="upload-btn" onClick={() => setSgdbOpen('grids')} title="Fetch from SteamGridDB">↗ SteamGridDB</button>}
-                        {(activeCategory === 'anime' || activeCategory === 'donghua') && <button type="button" className="upload-btn" onClick={() => setAnilistOpen('ANIME')} title="Fetch from AniList">↗ AniList</button>}
-                        {isMangaLike(activeCategory) && <button type="button" className="upload-btn" onClick={() => setAnilistOpen('MANGA')} title="Fetch from AniList">↗ AniList</button>}
+                        {(activeCategory === 'anime' || activeCategory === 'donghua') && <>
+                          <button type="button" className="upload-btn" onClick={() => setAnilistOpen('ANIME')} title="Fetch from AniList">↗ AniList</button>
+                          <button type="button" className="upload-btn" onClick={() => setJikanOpen('anime')} title="Fetch from MyAnimeList (Jikan)">↗ MAL</button>
+                        </>}
+                        {isMangaLike(activeCategory) && <>
+                          <button type="button" className="upload-btn" onClick={() => setAnilistOpen('MANGA')} title="Fetch from AniList">↗ AniList</button>
+                          <button type="button" className="upload-btn" onClick={() => setJikanOpen('manga')} title="Fetch from MyAnimeList (Jikan)">↗ MAL</button>
+                        </>}
                         {cover && <button type="button" className="upload-btn clear" onClick={() => setCover('')}>Clear</button>}
                       </div>
                       <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleCoverFile} />
@@ -4495,6 +4507,16 @@ function App() {
           categoryId={activeCategory}
           onApply={applyAniListPatch}
           onClose={() => setAnilistOpen(null)}
+        />
+      )}
+
+      {jikanOpen && (
+        <JikanFetcher
+          initialQuery={title}
+          kind={jikanOpen}
+          categoryId={activeCategory}
+          onApply={applyAniListPatch}
+          onClose={() => setJikanOpen(null)}
         />
       )}
 

@@ -104,10 +104,10 @@ Los builds portable, tarball y AppImage mantienen `data.json` + `assets/` al lad
 ## Categorías
 
 ### Games (Videojuegos)
-Ficha estilo infinitebacklog: banner + logo, cover, descripción, **múltiples developers y publishers**, **plataformas libres** (creás las que quieras, con sugerencias y autocompletado), ownership, status (Backlog / Playing / Played / Completed / Dropped), tiempo jugado, rating (medio punto), **logros desbloqueados / totales**, DLC/Expansions y Addons con status propio, notas mini-markdown, tags. **Extendido**: alternative titles, source (Original / Remake / Remaster / Reboot / Port / Sequel / Spin-off / Standalone expansion / Expanded / Collection), age rating ESRB, franchise, review con toggle de spoilers, replay history, related games con set completo de tipos de relación (sequel, prequel, standalone, DLC, remake, reboot, port, collection, same universe, crossover…), franchise timeline auto, recommendations.
+Ficha estilo infinitebacklog: banner + logo, cover, descripción, **múltiples developers y publishers**, **plataformas libres** (creás las que quieras, con sugerencias y autocompletado), ownership, status (Backlog / Playing / Played / Completed / Dropped), tiempo jugado, rating (medio punto), **logros desbloqueados / totales**, DLC/Expansions y Addons con status propio, notas mini-markdown, tags. **Extendido**: alternative titles, source (Original / Remake / Remaster / Reboot / Port / Sequel / Spin-off / Standalone expansion / Expanded / Collection), **edición** (texto libre — Standard, Deluxe, Collector's, lo que sea), age rating ESRB, franchise, review con toggle de spoilers, replay history, related games con set completo de tipos de relación (sequel, prequel, standalone, DLC, remake, reboot, port, collection, same universe, crossover…), franchise timeline auto, recommendations.
 
 ### Music (Música)
-Fichas por tipo (Single / EP / Album / OST / Live / Recopilation), tracklist con rating por track, favorito, listened y **botón de Lyrics por canción** (modal para leer/editar la letra). Duración total auto (formatos álbum-like). **Galería de single covers** — arte separado para singles con portada propia (título + año + imagen). **Editions** — Deluxe, Japan, Anniversary y demás, cada una con su cover propio y su tracklist propia (tracks extra o alternativos). Perfil de Artista estilo Spotify: banner + avatar circular (también en la vista de Artistas), discografía cronológica, rating promedio, **info de banda** (origen, estado, años activos, géneros, sellos, miembros actuales + ex-miembros con roles por integrante). Collections Listened / Not listened. **Extendido**: alternative titles, source, producers, review con spoilers, listen history, related albums, recommendations.
+Fichas por tipo (Single / EP / Album / OST / Live / Recopilation), tracklist con rating por track, favorito, listened y **botón de Lyrics por canción** (modal para leer/editar la letra). Duración total auto (formatos álbum-like). **Galería de single covers** — arte separado para singles con portada propia (título + año + imagen). **Editions** — Deluxe, Japan, Anniversary y demás, cada una con su cover propio y su tracklist propia (tracks extra o alternativos). Perfil de Artista estilo Spotify: banner + avatar circular (también en la vista de Artistas), discografía cronológica, rating promedio, **info de banda** (origen, estado, años activos, géneros, sellos, miembros actuales + ex-miembros con roles por integrante **y fechas de entrada / salida**). Collections Listened / Not listened. **Extendido**: alternative titles, source, producers, review con spoilers, listen history, related albums, recommendations.
 
 ### Movies (Películas)
 Directors, **writers (guionistas)**, cast, **production companies**, **distributed by**, franchise, watched + rewatch count, review con toggle de spoilers, backdrop image. **Extendido**: alternative titles, source (Original / Book / Comic / Game / True story / Remake / Sequel), content rating, watched where, rewatch history log completo, related movies, franchise timeline, recommendations.
@@ -121,25 +121,27 @@ Grupo colapsable en la sidebar con dos sub-bibliotecas independientes (**Anime**
 ### Comics & Manga
 4 sub-bibliotecas independientes (Manga, Manhwa, Manhua, Western Comics) con ficha compartida estilo AniList/MAL: authors + artists, géneros, publication status, reading status, capítulos y volúmenes leídos/totales, volume covers en galería, rating, notas. **Extendido**: alternative titles, source, age rating ESRB, magazine/serialization, **lista de capítulos** con read/rating/notas, review con spoilers, reread history, related manga con tipo de relación, franchise timeline, recommendations.
 
-## Sitios recomendados para metadata y arte
+## Fuentes de metadata y arte
 
-Omnio no scrapea nada — todos los campos se llenan a mano. Estos son los sitios que la comunidad usa para conseguir metadata, covers, banners y logos. Abrís uno, copiás lo que necesitás y lo pegás en Omnio.
+Tres fuentes vienen integradas en los editores — click **↗ SteamGridDB / ↗ AniList / ↗ MAL** al lado del campo de cover para buscar, elegir y auto-completar. El resto son referencia manual: abrís, copiás, pegás.
 
-| Sitio | Ideal para |
-| --- | --- |
-| [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes |
-| [IGDB](https://www.igdb.com/) | Games — metadata (developers, publishers, fechas, géneros) |
-| [VGMdb](https://vgmdb.net/) | Música — soundtracks de videojuegos y ediciones japonesas |
-| [MusicBrainz](https://musicbrainz.org/) | Música — metadata general (artistas, sellos, tracklists) |
-| [Rate Your Music](https://rateyourmusic.com/) | Música — géneros, discografías, ratings |
-| [IMDb](https://www.imdb.com/) | Movies y Series — metadata (cast, directores, guionistas, fechas) |
-| [Movie Poster DB](https://movieposterdb.com/) | Movies, Series y Anime — posters en alta (requiere cuenta) |
-| [Douban](https://m.douban.com/home_guide) | IMDb chino — clave para donghua, C-dramas y cine asiático |
-| [AniList](https://anilist.co/) | Anime, Donghua, Manga, Manhwa, Manhua — metadata + arte |
-| [MyAnimeList](https://myanimelist.net/) | Anime y Manga — metadata, episodios, staff |
-| [AniDB](https://anidb.net/) | Anime — metadata profunda (staff, episodios, relaciones) |
+| Sitio | Ideal para | En la app |
+| --- | --- | --- |
+| [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes | **↗ Integrado** (necesita API key gratis, ver Settings → Data → Integrations) |
+| [AniList](https://anilist.co/) | Anime, Donghua, Manga, Manhwa, Manhua — metadata + cover + banner | **↗ Integrado** (sin API key) |
+| [MyAnimeList](https://myanimelist.net/) vía [Jikan](https://jikan.moe/) | Anime y Manga — metadata, cover, autores, magazine | **↗ Integrado** (sin API key) |
+| [IGDB](https://www.igdb.com/) | Games — metadata (developers, publishers, fechas, géneros) | Referencia manual |
+| [VGMdb](https://vgmdb.net/) | Música — soundtracks de videojuegos y ediciones japonesas | Referencia manual |
+| [MusicBrainz](https://musicbrainz.org/) | Música — metadata general (artistas, sellos, tracklists) | Referencia manual |
+| [Rate Your Music](https://rateyourmusic.com/) | Música — géneros, discografías, ratings | Referencia manual |
+| [IMDb](https://www.imdb.com/) | Movies y Series — metadata (cast, directores, guionistas, fechas) | Referencia manual |
+| [Movie Poster DB](https://movieposterdb.com/) | Movies, Series y Anime — posters en alta (requiere cuenta) | Referencia manual |
+| [Douban](https://m.douban.com/home_guide) | IMDb chino — clave para donghua, C-dramas y cine asiático | Referencia manual |
+| [AniDB](https://anidb.net/) | Anime — metadata profunda (staff, episodios, relaciones) | Referencia manual — la API existe pero pide registro de cliente + rate-limit duro de 2s |
 
-¿Conocés otro sitio que valga la pena? Abrí un issue o un PR.
+**Import masivo**: ¿ya venías trackeando anime/manga en otro lado? Settings → Data → **Import MAL / AniList XML** carga un export entero de una. Funciona con el export nativo de MyAnimeList y con el exportador AniList de [malscraper.azurewebsites.net](https://malscraper.azurewebsites.net/).
+
+¿Conocés otro sitio que valga la pena integrar? Abrí un issue o un PR.
 
 ## Interfaz
 
@@ -160,11 +162,11 @@ Organizado en tabs:
 - **Behavior**: Confirm before deleting, Startup category.
 - **Libraries**: Toggles individuales para cada una de las 9 categorías.
 - **Card Fields**: qué campos mostrar en las cards por categoría (Games, Music, Manga/etc., Movies, Anime, Series).
-- **Data**: Export / Import backup JSON, Reset settings to defaults, Delete all data, About.
+- **Data**: Export / Import backup JSON, snapshots automáticos (5 rotados con restore de 1 click), Find similar titles (detector de duplicados fuzzy), Import from MyAnimeList / AniList XML, Export as HTML (site estático shareable), Yearly wrapped (recap del año), API key de SteamGridDB, Reset settings to defaults, Delete all data, About.
 
 ## Estadísticas por categoría
 
-Todas las categorías tienen distribución de status (pie/bar), top rated, y actividad de "completados por mes". Además:
+Todas las categorías tienen distribución de status (pie/bar), un **heatmap anual estilo GitHub** basado en fechas de completado, top rated, y actividad de "completados por mes". Además:
 
 - **Games**: Top developers, Top publishers, Top platforms, Top genres.
 - **Music**: Top artists, Top genres, Top labels, Listens per month.
@@ -173,11 +175,15 @@ Todas las categorías tienen distribución de status (pie/bar), top rated, y act
 - **Series**: Episodes watched per month, Top networks, Top actors, Total watch time.
 - **Manga/Manhwa/Manhua/Comics**: Chapters read per month, Top authors, Top artists, Top magazines.
 
+**Yearly wrapped** (Settings → Data) resume cualquier año punta a punta: totales por categoría, horas jugadas, episodios vistos, capítulos leídos, rating promedio, mes más activo, top 5 rated, top devs / studios / genres.
+
 ## Funciones transversales
 
 - **Tags** libres por ítem.
 - **Groups**: colecciones propias del usuario dentro de cada categoría, con reordenamiento manual por arrastre. **Cada grupo puede tener su portada personalizada** (click en el ✎ de la card).
-- **Buscador** por título (Ctrl+F).
+- **Buscador** por título en la librería actual (Ctrl+F) y **búsqueda global** en todas las categorías + artistas (Ctrl+K) — command palette con navegación por teclado.
+- **Acciones masivas**: Shift+click en cards para seleccionar varias. Aparece una pill flotante con cambiar status, agregar/quitar tag, agregar a grupo, borrar — todo con un solo confirm.
+- **Undo / redo** para cada mutación de la librería: Ctrl+Z / Ctrl+Shift+Z (o Ctrl+Y). 40 pasos de historia in-memory cubriendo items, grupos y artistas.
 - **Filtros** por tags + específicos por categoría (status, plataforma, género).
 - **Órdenes**: alfabético, más reciente, rating, y órdenes específicos por categoría (tiempo jugado, fecha, status, manual, por artista, duración, episodios vistos, capítulos leídos).
 - **Related items**: sistema manual de linkeo entre ítems de la misma categoría con set completo de tipos de relación — sequel, prequel, side story, spin-off, standalone expansion, DLC/expansión, remake, remaster, reboot, port, alt version, same collection, same series, same universe, crossover, adaptation, other. Clickeable en la ficha. Se muestra como grid de covers.
@@ -194,13 +200,18 @@ Todas las categorías tienen distribución de status (pie/bar), top rated, y act
   - **Library groups / artists**: header + tabs fijos, el grid de folders scrollea.
   - **Boards por status**: header (+ toolbar en Games) fijos, la lista scrollea.
   - **Statistics / Settings**: solo el header fijo — las tabs de categoría/settings + contenido scrollean juntos.
+- **Editor con footer fijo**: Delete, Cancel y Save siempre visibles mientras scrolleás el formulario — nunca enterrados abajo del todo.
+- **Virtualización**: las cards fuera de pantalla usan `content-visibility: auto` para que scrollear una grid de 500+ items siga siendo fluido.
 
 ## Storage y portabilidad
 
 **Archivos**:
 ```
-Omnio-0.1.0-portable.exe   ← el ejecutable
+Omnio-0.1.6-portable.exe   ← el ejecutable
 data.json                   ← toda la data
+data.backup-1.json          ← último save (rotado 1→5)
+…
+data.backup-5.json          ← snapshot más viejo que se conserva
 assets/                     ← imágenes locales
   anime/cover/
   videojuegos/cover/
@@ -221,6 +232,8 @@ assets/                     ← imágenes locales
 - Cuando subís una imagen desde tu PC, se decodifica y se escribe a disco en `assets/{categoría}/{tipo}/{uuid}.{ext}`. En el `data.json` queda solo el path relativo — nada de data URLs pesados embebidos.
 - Un custom protocol `omnio-asset://` sirve las imágenes al renderer con guard anti-path-traversal.
 - **Migración automática**: la primera vez que abrís la app con esta versión y tenías covers/banners/logos guardados como data URLs, todos se extraen a disco automáticamente y el `data.json` se reescribe con paths relativos.
+- **Backups rotativos**: cada save arranca con una rotación — `data.json` pasa a `data.backup-1.json`, los snapshots más viejos bajan un slot, y el quinto se descarta. Restaurás cualquiera desde Settings → Data → Automatic snapshots; la librería actual se preserva en `data.pre-restore.json` primero, así nada se destruye jamás.
+- **Site export**: Settings → Data → Export as HTML elige una carpeta, escribe un `index.html` autocontenido y copia tu carpeta `assets/` al lado. Mandás la carpeta como está y se abre en cualquier navegador.
 
 **Portable de verdad**: podés meter la carpeta completa en un pendrive y llevarlo. Toda tu data + imágenes viajan con el ejecutable.
 
