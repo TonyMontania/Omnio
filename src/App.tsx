@@ -59,6 +59,10 @@ import MovieDetailModal from './MovieDetailModal'
 import AnimeDetailModal from './AnimeDetailModal'
 import SeriesDetailModal from './SeriesDetailModal'
 import Toast from './Toast'
+import BackupList from './BackupList'
+import DuplicatesModal from './DuplicatesModal'
+import GlobalSearch from './GlobalSearch'
+import BulkActionBar from './BulkActionBar'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
   InsightsIcon, SettingsIcon, ChevronIcon, FolderIcon,
@@ -330,6 +334,9 @@ function App() {
   const [chartMode, setChartMode] = useState<'pie' | 'bar'>('pie')
   const [customOrders, setCustomOrders] = useState<Record<string, string[]>>({})
   const [toast, setToast] = useState<string | null>(null)
+  const [dupOpen, setDupOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void; suppressible?: boolean } | null>(null)
   const [dontAskAgain, setDontAskAgain] = useState(false)
@@ -547,9 +554,13 @@ function App() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && subView === 'items' && specialView === 'none') {
+      const mod = e.ctrlKey || e.metaKey
+      if (mod && e.key.toLowerCase() === 'f' && subView === 'items' && specialView === 'none') {
         e.preventDefault()
         searchInputRef.current?.focus()
+      } else if (mod && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
       }
     }
     window.addEventListener('keydown', handler)
@@ -914,6 +925,74 @@ function App() {
     if (item.categoryId === 'series') { setViewingSeries(item); return }
     loadItemIntoForm(item)
     setPanelOpen(true)
+  }
+
+  // Global search / cross-category open: switches category first so the
+  // sidebar reflects where the item lives, then hands off to the normal
+  // detail-modal flow. Also closes any open modals so we land clean.
+  const navigateToItem = (item: Item) => {
+    setViewingGame(null); setViewingMusic(null); setViewingManga(null)
+    setViewingMovie(null); setViewingAnime(null); setViewingSeries(null); setViewingArtist(null)
+    setActiveCategory(item.categoryId)
+    setActiveCollectionId(null)
+    setSpecialView('none')
+    setSubView('items')
+    setTimeout(() => openEditPanel(item), 0)
+  }
+
+  const navigateToArtist = (a: MusicArtist) => {
+    setViewingGame(null); setViewingMusic(null); setViewingManga(null)
+    setViewingMovie(null); setViewingAnime(null); setViewingSeries(null)
+    setActiveCategory('musica')
+    setSubView('items')
+    setSpecialView('none')
+    setViewingArtist(a)
+  }
+
+  // === Bulk selection ===
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  const clearSelection = () => setSelectedIds(new Set())
+
+  const applyToSelected = (updater: (item: Item) => Partial<Item>) => {
+    setItems((all) => all.map((it) => selectedIds.has(it.id) ? { ...it, ...updater(it) } : it))
+  }
+  const bulkAddTag = (op: 'add' | 'remove', tag: string) => {
+    setItems((all) => all.map((it) => {
+      if (!selectedIds.has(it.id)) return it
+      const cur = new Set(it.tags ?? [])
+      if (op === 'add') cur.add(tag)
+      else cur.delete(tag)
+      const arr = Array.from(cur)
+      return { ...it, tags: arr.length ? arr : undefined }
+    }))
+    setToast(op === 'add' ? `Tag "${tag}" added to ${selectedIds.size} items` : `Tag "${tag}" removed from ${selectedIds.size} items`)
+  }
+  const bulkAddToGroup = (collectionId: string) => {
+    setCollections((all) => all.map((c) => {
+      if (c.id !== collectionId) return c
+      const merged = Array.from(new Set([...c.itemIds, ...Array.from(selectedIds)]))
+      return { ...c, itemIds: merged }
+    }))
+    setToast(`Added ${selectedIds.size} items to group`)
+  }
+  const bulkDelete = () => {
+    askConfirm(
+      `Delete ${selectedIds.size} items? This cannot be undone. Group memberships and related-item links will be cleaned up automatically.`,
+      () => {
+        const ids = new Set(selectedIds)
+        setItems((all) => all.filter((it) => !ids.has(it.id)))
+        setCollections((all) => all.map((c) => ({ ...c, itemIds: c.itemIds.filter((id) => !ids.has(id)) })))
+        clearSelection()
+        setToast(`Deleted ${ids.size} items`)
+      },
+    )
   }
 
   const openEditFromModal = () => {
@@ -2584,6 +2663,23 @@ function App() {
                       </div>
                     </div>
                     <div className="field-group">
+                      <label>Automatic snapshots</label>
+                      <BackupList
+                        onRestore={(file) => askConfirm(
+                          `Restore "${file}"? Your current library will be moved to data.pre-restore.json before it's replaced. You'll need to restart Omnio to see the restored data.`,
+                          async () => {
+                            const ok = await window.ipcRenderer.invoke('data:restore-backup', file)
+                            if (ok) setToast('Restored — restart Omnio to load the snapshot')
+                            else setToast('Restore failed')
+                          },
+                        )}
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label>Data quality</label>
+                      <button type="button" className="secondary-btn" onClick={() => setDupOpen(true)}>Find similar titles</button>
+                    </div>
+                    <div className="field-group">
                       <label>Reset settings</label>
                       <button type="button" className="secondary-btn" onClick={() => askConfirm('Reset all settings to defaults? Your library data won’t be affected.', () => { setSettings(DEFAULT_SETTINGS); setLayout(DEFAULT_SETTINGS.defaultLayout); setToast('Settings reset') })}>Reset to defaults</button>
                     </div>
@@ -2793,6 +2889,9 @@ function App() {
                         layout={layout}
                         onOpen={openEditPanel}
                         onDelete={handleDelete}
+                        onToggleSelect={toggleSelect}
+                        selected={selectedIds.has(item.id)}
+                        selectionActive={selectedIds.size > 0}
                         draggableEnabled={sortBy === 'custom'}
                         onDragStartItem={setDraggedId}
                         onDropItem={activeCollection ? handleReorder : handleReorderCategory}
@@ -4196,6 +4295,34 @@ function App() {
           </aside>
         </>
       )}
+
+      <GlobalSearch
+        open={searchOpen}
+        items={items}
+        artists={musicArtists}
+        onClose={() => setSearchOpen(false)}
+        onOpenItem={navigateToItem}
+        onOpenArtist={navigateToArtist}
+      />
+
+      {dupOpen && (
+        <DuplicatesModal
+          items={items}
+          onOpenItem={navigateToItem}
+          onClose={() => setDupOpen(false)}
+        />
+      )}
+
+      <BulkActionBar
+        items={items}
+        selectedIds={selectedIds}
+        collections={collections}
+        onClear={clearSelection}
+        onApplyStatus={applyToSelected}
+        onApplyTag={bulkAddTag}
+        onAddToGroup={bulkAddToGroup}
+        onDelete={bulkDelete}
+      />
 
       {toast && <Toast message={toast} />}
 

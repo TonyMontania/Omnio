@@ -98,9 +98,50 @@ const EXT_FROM_MIME: Record<string, string> = {
   'image/bmp': 'bmp',
 }
 
+// Keep the last N snapshots of data.json rotated next to it. Cheap
+// insurance against corruption, buggy edits, or accidental resets — the
+// user can copy `data.backup-1.json` over `data.json` and be back where
+// they were on their previous save.
+const BACKUP_COUNT = 5
+
+async function rotateBackups(): Promise<void> {
+  const dir = path.dirname(DATA_FILE)
+  const backupPath = (n: number) => path.join(dir, `data.backup-${n}.json`)
+  // backup-(N-1) → backup-N, dropping the oldest.
+  for (let i = BACKUP_COUNT; i > 1; i--) {
+    try { await fs.rename(backupPath(i - 1), backupPath(i)) } catch { /* absent is fine */ }
+  }
+  // current data.json → backup-1 (skip if there's no current file yet).
+  try { await fs.copyFile(DATA_FILE, backupPath(1)) } catch { /* first-ever save */ }
+}
+
 ipcMain.handle('data:save', async (_event, data: unknown) => {
   await fs.mkdir(path.dirname(DATA_FILE), { recursive: true })
+  await rotateBackups()
   await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8')
+  return true
+})
+
+ipcMain.handle('data:list-backups', async () => {
+  const dir = path.dirname(DATA_FILE)
+  const results: { file: string; mtime: number; size: number }[] = []
+  for (let i = 1; i <= BACKUP_COUNT; i++) {
+    const p = path.join(dir, `data.backup-${i}.json`)
+    try {
+      const st = await fs.stat(p)
+      results.push({ file: `data.backup-${i}.json`, mtime: st.mtimeMs, size: st.size })
+    } catch { /* missing backup slot */ }
+  }
+  return results
+})
+
+ipcMain.handle('data:restore-backup', async (_event, filename: string) => {
+  if (!/^data\.backup-[1-5]\.json$/.test(filename)) return false
+  const src = path.join(path.dirname(DATA_FILE), filename)
+  try {
+    await fs.copyFile(DATA_FILE, path.join(path.dirname(DATA_FILE), `data.pre-restore.json`))
+  } catch { /* no current file, nothing to preserve */ }
+  await fs.copyFile(src, DATA_FILE)
   return true
 })
 

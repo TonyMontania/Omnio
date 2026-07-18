@@ -8,6 +8,9 @@ interface Props {
   layout: 'list' | 'grid' | 'compact'
   onOpen: (item: Item) => void
   onDelete: (item: Item) => void
+  onToggleSelect?: (id: string) => void
+  selected?: boolean
+  selectionActive?: boolean
   draggableEnabled?: boolean
   onDragStartItem?: (id: string) => void
   onDropItem?: (id: string) => void
@@ -19,7 +22,14 @@ interface Props {
   seriesFields?: Record<SeriesField, boolean>
 }
 
-export default function ItemCard({ item, layout, onOpen, onDelete, draggableEnabled, onDragStartItem, onDropItem, gameFields, musicFields, mangaFields, movieFields, animeFields, seriesFields }: Props) {
+export default function ItemCard({ item, layout, onOpen, onDelete, onToggleSelect, selected, selectionActive, draggableEnabled, onDragStartItem, onDropItem, gameFields, musicFields, mangaFields, movieFields, animeFields, seriesFields }: Props) {
+  // Shift+click always toggles selection. Once any card is selected,
+  // plain clicks also toggle so the user can keep going without holding
+  // shift each time (macOS Finder pattern).
+  const handleClick = (e: React.MouseEvent) => {
+    if (onToggleSelect && (e.shiftKey || selectionActive)) onToggleSelect(item.id)
+    else onOpen(item)
+  }
   const isGame = item.categoryId === 'videojuegos'
   const isMusic = item.categoryId === 'musica'
   const isManga = isMangaLike(item.categoryId)
@@ -56,7 +66,8 @@ export default function ItemCard({ item, layout, onOpen, onDelete, draggableEnab
 
   if (layout === 'compact') {
     return (
-      <div className="item-card compact" onClick={() => onOpen(item)} {...dragProps}>
+      <div className={`item-card compact${selected ? ' selected' : ''}`} onClick={handleClick} {...dragProps}>
+        {selected && <span className="card-check" aria-hidden>✓</span>}
         <div className="compact-cover">
           {item.cover ? <img src={assetSrc(item.cover)} alt={item.title} /> : <div className="cover-placeholder small">{item.title.charAt(0).toUpperCase()}</div>}
         </div>
@@ -70,7 +81,8 @@ export default function ItemCard({ item, layout, onOpen, onDelete, draggableEnab
   }
 
   return (
-    <div className="item-card" onClick={() => onOpen(item)} {...dragProps}>
+    <div className={`item-card${selected ? ' selected' : ''}`} onClick={handleClick} {...dragProps}>
+      {selected && <span className="card-check" aria-hidden>✓</span>}
       <div className={isMusic ? 'cover-wrap square' : 'cover-wrap'}>
         {item.cover ? (
           <img src={assetSrc(item.cover)} alt={item.title} />
