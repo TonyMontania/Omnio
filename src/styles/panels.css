@@ -39,6 +39,7 @@
 
 .edit-columns {
   position: relative;
+  height: calc(95vh - 130px);
   min-height: 0;
   overflow: hidden;
 }
