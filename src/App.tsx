@@ -3296,7 +3296,10 @@ function App() {
             <>
                 <div className="edit-columns">
                 <aside className="edit-preview-col">
-                  <span className="edit-preview-label">Live preview</span>
+                  <div className="edit-preview-topbar">
+                    <span className="edit-preview-label">Live preview</span>
+                    {editingItem && <span className="edit-preview-added">Added {new Date(editingItem.createdAt).toLocaleDateString()}</span>}
+                  </div>
                   <div className="edit-preview-toggle">
                     <button type="button" className={editPreviewMode === 'card' ? 'active' : ''} onClick={() => setEditPreviewMode('card')}>Card</button>
                     <button type="button" className={editPreviewMode === 'detail' ? 'active' : ''} onClick={() => setEditPreviewMode('detail')}>Detail</button>
@@ -3519,8 +3522,6 @@ function App() {
                       </div>
                     </div>
                   )}
-                  <span className="edit-preview-hint">Preview updates as you edit fields on the right</span>
-                  {editingItem && <p className="added-date">Added: {new Date(editingItem.createdAt).toLocaleDateString()}</p>}
                 </aside>
                 <div className="edit-form-col">
 
