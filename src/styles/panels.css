@@ -38,22 +38,19 @@
 }
 
 .edit-columns {
-  position: relative;
-  height: calc(95vh - 130px);
-  min-height: 0;
+  display: flex;
   overflow: hidden;
 }
 
 .edit-preview-col {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
   width: 400px;
+  flex-shrink: 0;
+  height: calc(95vh - 130px);
+  max-height: calc(95vh - 130px);
   padding: 22px 20px;
   border-right: 1px solid var(--border-soft);
   background: var(--surface);
-  overflow-y: auto;
+  overflow-y: scroll;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
@@ -254,11 +251,10 @@
 }
 
 .edit-form-col {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 400px;
-  right: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: calc(95vh - 130px);
+  max-height: calc(95vh - 130px);
   padding: 22px 24px;
   overflow-y: auto;
 }
