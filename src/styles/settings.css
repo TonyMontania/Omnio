@@ -36,7 +36,24 @@
 .library-toggle-icon { display: inline-flex; width: 20px; color: var(--text-dim); }
 .library-toggle-icon svg { width: 18px; height: 18px; }
 
-.settings-form { display: flex; flex-direction: column; gap: 20px; max-width: 420px; }
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  /* Fill the content area (users asked for full-width settings). Keep an
+     upper bound so text inputs / lists don't stretch to 2000px on ultrawide
+     monitors — content-heavy items like the theme grid handle wider space
+     via their own responsive grids inside. */
+  width: 100%;
+  max-width: none;
+}
+.settings-form .field-group { max-width: 900px; }
+.settings-form .field-group input[type="text"],
+.settings-form .field-group input[type="url"],
+.settings-form .field-group input[type="password"],
+.settings-form .field-group input:not([type]),
+.settings-form .field-group select,
+.settings-form .field-group textarea { max-width: 560px; }
 .settings-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .secondary-btn {

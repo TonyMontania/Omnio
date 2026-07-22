@@ -468,6 +468,276 @@ ipcMain.handle('jikan:search', async (_event, term: string, kind: 'anime' | 'man
   }
 })
 
+// Kitsu — free, no-key anime/manga fallback. JSON:API spec: everything
+// is under attributes and relationships are separate. Useful when AniList
+// or MAL miss a title (region-specific, obscure, or older entries).
+const KITSU_BASE = 'https://kitsu.io/api/edge'
+
+ipcMain.handle('kitsu:search', async (_event, term: string, kind: 'anime' | 'manga') => {
+  if (!term.trim()) return { ok: false, error: 'Missing search term' }
+  try {
+    const params = new URLSearchParams()
+    params.set('filter[text]', term.trim())
+    params.set('page[limit]', '15')
+    const url = `${KITSU_BASE}/${kind}?${params.toString()}`
+    const r = await fetch(url, { headers: { Accept: 'application/vnd.api+json' } })
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as { data?: unknown[]; errors?: { title?: string; detail?: string }[] }
+    if (json.errors && json.errors.length) return { ok: false, error: json.errors[0].detail ?? json.errors[0].title ?? 'Kitsu error' }
+    return { ok: true, data: json.data ?? [] }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// MangaDex — open, no-key manga metadata for manga (ja), manhwa (ko),
+// manhua (zh) and everything else. Includes[] joins cover_art / author /
+// artist so a single request has everything we need to build a patch.
+const MD_BASE = 'https://api.mangadex.org'
+const MD_UA = 'Omnio/0.1 ( https://github.com/TonyMontania/Omnio )'
+
+ipcMain.handle('mangadex:search', async (_event, term: string) => {
+  if (!term.trim()) return { ok: false, error: 'Missing search term' }
+  try {
+    const params = new URLSearchParams({ title: term.trim(), limit: '15' })
+    // Multiple `includes[]` values must be repeated, not comma-joined.
+    for (const inc of ['cover_art', 'author', 'artist']) params.append('includes[]', inc)
+    const url = `${MD_BASE}/manga?${params.toString()}`
+    const r = await fetch(url, { headers: { 'User-Agent': MD_UA, Accept: 'application/json' } })
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as { data?: unknown[]; result?: string; errors?: { detail?: string }[] }
+    if (json.result === 'error') return { ok: false, error: json.errors?.[0]?.detail ?? 'MangaDex returned an error' }
+    return { ok: true, data: json.data ?? [] }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// ComicVine (GameSpot) — comics metadata (Marvel, DC, Image, indies).
+// Requires a free API key from comicvine.gamespot.com/api/. Rate-limit
+// is soft (~200 req/hr per key). "Volume" is ComicVine's word for series.
+const CV_BASE = 'https://comicvine.gamespot.com/api'
+const CV_UA = 'Omnio/0.1 ( https://github.com/TonyMontania/Omnio )'
+
+ipcMain.handle('comicvine:search', async (_event, apiKey: string, term: string) => {
+  if (!apiKey || !term.trim()) return { ok: false, error: 'Missing API key or search term' }
+  try {
+    const url = `${CV_BASE}/search/?api_key=${encodeURIComponent(apiKey)}&format=json&resources=volume&query=${encodeURIComponent(term.trim())}&limit=15&field_list=id,name,deck,start_year,count_of_issues,publisher,image,api_detail_url`
+    const r = await fetch(url, { headers: { 'User-Agent': CV_UA, Accept: 'application/json' } })
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as { results?: unknown[]; error?: string; status_code?: number }
+    if (json.error && json.error !== 'OK') return { ok: false, error: json.error }
+    return { ok: true, data: json.results ?? [] }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+ipcMain.handle('comicvine:volume', async (_event, apiKey: string, id: number | string) => {
+  if (!apiKey || !id) return { ok: false, error: 'Missing API key or volume id' }
+  try {
+    // Volume ids are prefixed 4050- in ComicVine's canonical URL scheme.
+    const url = `${CV_BASE}/volume/4050-${id}/?api_key=${encodeURIComponent(apiKey)}&format=json&field_list=id,name,deck,description,start_year,count_of_issues,publisher,image,person_credits,character_credits`
+    const r = await fetch(url, { headers: { 'User-Agent': CV_UA, Accept: 'application/json' } })
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as { results?: unknown; error?: string }
+    if (json.error && json.error !== 'OK') return { ok: false, error: json.error }
+    return { ok: true, data: json.results }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// MusicBrainz — open-source music metadata. No API key, but the rate
+// limit is 1 request per IP per second and a descriptive User-Agent is
+// required. Cover Art Archive (CAA) is the sister service that hosts
+// artwork keyed by the MusicBrainz Release MBID.
+const MB_UA = 'Omnio/0.1 ( https://github.com/TonyMontania/Omnio )'
+const MB_BASE = 'https://musicbrainz.org/ws/2'
+
+// Cheap per-endpoint throttler: never fires two MB requests within 1s.
+let mbLastCall = 0
+async function mbThrottle(): Promise<void> {
+  const wait = 1050 - (Date.now() - mbLastCall)
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+  mbLastCall = Date.now()
+}
+
+ipcMain.handle('mb:search', async (_event, term: string) => {
+  if (!term.trim()) return { ok: false, error: 'Missing search term' }
+  await mbThrottle()
+  try {
+    // release-group covers albums/EPs/singles/soundtracks as a unit
+    // (versus release, which is one specific pressing / country release).
+    const url = `${MB_BASE}/release-group?query=${encodeURIComponent(term.trim())}&limit=15&fmt=json`
+    const r = await fetch(url, { headers: { 'User-Agent': MB_UA, Accept: 'application/json' } })
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as { 'release-groups'?: unknown[] }
+    return { ok: true, data: json['release-groups'] ?? [] }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// Fetches one release (specific pressing) so we can read the tracklist.
+// If callers pass a release-group id, we resolve to the first release
+// inside it first. `inc` lists what MB should join in the response.
+ipcMain.handle('mb:release-group-details', async (_event, releaseGroupId: string) => {
+  if (!releaseGroupId) return { ok: false, error: 'Missing release-group id' }
+  await mbThrottle()
+  try {
+    // Step 1: find releases in this group; MB returns them sorted, and the
+    // first Official one usually has the standard tracklist.
+    const rgUrl = `${MB_BASE}/release?release-group=${encodeURIComponent(releaseGroupId)}&fmt=json&limit=25`
+    const rg = await fetch(rgUrl, { headers: { 'User-Agent': MB_UA, Accept: 'application/json' } })
+    if (!rg.ok) return { ok: false, error: `HTTP ${rg.status}` }
+    const rgJson = await rg.json() as { releases?: { id: string; status?: string; date?: string; 'track-count'?: number }[] }
+    const releases = rgJson.releases ?? []
+    const chosen = releases.find((r) => r.status === 'Official') ?? releases[0]
+    if (!chosen) return { ok: false, error: 'No releases found in group' }
+
+    await mbThrottle()
+    const relUrl = `${MB_BASE}/release/${chosen.id}?fmt=json&inc=recordings+artist-credits+labels+release-groups+media`
+    const rel = await fetch(relUrl, { headers: { 'User-Agent': MB_UA, Accept: 'application/json' } })
+    if (!rel.ok) return { ok: false, error: `HTTP ${rel.status}` }
+    return { ok: true, data: await rel.json(), chosenReleaseId: chosen.id, releaseGroupId }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// VGMdb doesn't publish an official API — the community runs
+// https://vgmdb.info as a JSON proxy of the site. Free, no key, but
+// availability isn't guaranteed. Category coverage: game soundtracks,
+// anime OSTs and Japanese releases.
+const VGMDB_BASE = 'https://vgmdb.info'
+
+ipcMain.handle('vgmdb:search', async (_event, term: string) => {
+  if (!term.trim()) return { ok: false, error: 'Missing search term' }
+  try {
+    const url = `${VGMDB_BASE}/search/albums/${encodeURIComponent(term.trim())}?format=json`
+    const r = await fetch(url)
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as { results?: { albums?: unknown[] } }
+    return { ok: true, data: json.results?.albums ?? [] }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+ipcMain.handle('vgmdb:album', async (_event, link: string) => {
+  // The search results carry a `link` like "album/12345". vgmdb.info
+  // resolves those to the details endpoint at the same path.
+  if (!link) return { ok: false, error: 'Missing album link' }
+  try {
+    const url = `${VGMDB_BASE}/${link.replace(/^\/+/, '')}?format=json`
+    const r = await fetch(url)
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    return { ok: true, data: await r.json() }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// IGDB (Twitch) — the industry-standard games metadata source. Auth is a
+// two-step: exchange Client ID + Secret for a bearer token at Twitch's
+// OAuth endpoint (60-day expiry), then hit api.igdb.com/v4 with the token
+// plus the same Client ID. Token is cached in-memory for the session.
+
+let igdbToken: { access_token: string; expires_at: number } | null = null
+
+async function ensureIgdbToken(clientId: string, clientSecret: string): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
+  if (!clientId || !clientSecret) return { ok: false, error: 'Missing IGDB Client ID or Secret' }
+  if (igdbToken && igdbToken.expires_at > Date.now() + 60_000) {
+    return { ok: true, token: igdbToken.access_token }
+  }
+  try {
+    const url = `https://id.twitch.tv/oauth2/token?client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&grant_type=client_credentials`
+    const r = await fetch(url, { method: 'POST' })
+    if (!r.ok) {
+      const t = await r.text().catch(() => '')
+      igdbToken = null
+      return { ok: false, error: `Twitch OAuth HTTP ${r.status}${t ? `: ${t.slice(0, 120)}` : ''}` }
+    }
+    const j = await r.json() as { access_token: string; expires_in: number }
+    igdbToken = { access_token: j.access_token, expires_at: Date.now() + (j.expires_in ?? 3600) * 1000 }
+    return { ok: true, token: j.access_token }
+  } catch (e) {
+    igdbToken = null
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
+// IGDB uses Apicalypse — a SQL-ish body language. The search endpoint alone
+// only returns id/name; we ask for the joined fields we care about in a
+// single call to avoid a follow-up "details" round-trip like TMDb needs.
+const IGDB_FIELDS = [
+  'name', 'summary', 'first_release_date',
+  'cover.image_id',
+  'artworks.image_id', 'screenshots.image_id',
+  'involved_companies.company.name',
+  'involved_companies.developer', 'involved_companies.publisher',
+  'platforms.name', 'genres.name',
+  'franchises.name', 'collection.name',
+  'total_rating',
+].join(',')
+
+ipcMain.handle('igdb:search', async (_event, clientId: string, clientSecret: string, term: string) => {
+  if (!term.trim()) return { ok: false, error: 'Missing search term' }
+  const auth = await ensureIgdbToken(clientId, clientSecret)
+  if (!auth.ok) return auth
+  const safeTerm = term.trim().replace(/"/g, '\\"')
+  const body = `search "${safeTerm}"; fields ${IGDB_FIELDS}; limit 12;`
+  try {
+    const r = await fetch('https://api.igdb.com/v4/games', {
+      method: 'POST',
+      headers: {
+        'Client-ID': clientId,
+        'Authorization': `Bearer ${auth.token}`,
+        'Accept': 'application/json',
+      },
+      body,
+    })
+    if (!r.ok) return { ok: false, error: `IGDB HTTP ${r.status}` }
+    const data = await r.json() as unknown[]
+    return { ok: true, data }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// TMDb — the standard Movies + TV metadata source. Requires a free v3 API
+// key (themoviedb.org/settings/api). Kind is 'movie' or 'tv'.
+const TMDB_BASE = 'https://api.themoviedb.org/3'
+
+ipcMain.handle('tmdb:search', async (_event, apiKey: string, term: string, kind: 'movie' | 'tv') => {
+  if (!apiKey || !term.trim()) return { ok: false, error: 'Missing API key or search term' }
+  try {
+    const url = `${TMDB_BASE}/search/${kind}?api_key=${encodeURIComponent(apiKey)}&query=${encodeURIComponent(term.trim())}&include_adult=false`
+    const r = await fetch(url)
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as { results?: unknown[] }
+    return { ok: true, data: json.results ?? [] }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// Full details include credits (cast+crew) and images. TV details also carry
+// each season's number/episode_count/air_date/poster_path so we can build
+// the app's Season[] list without a second call.
+ipcMain.handle('tmdb:details', async (_event, apiKey: string, kind: 'movie' | 'tv', id: number | string) => {
+  if (!apiKey || !id) return { ok: false, error: 'Missing API key or id' }
+  try {
+    const url = `${TMDB_BASE}/${kind}/${id}?api_key=${encodeURIComponent(apiKey)}&append_to_response=credits,images,external_ids`
+    const r = await fetch(url)
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    return { ok: true, data: await r.json() }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 // AniList — GraphQL, no API key required. Type is 'ANIME' or 'MANGA'.
 ipcMain.handle('anilist:search', async (_event, term: string, kind: 'ANIME' | 'MANGA') => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }

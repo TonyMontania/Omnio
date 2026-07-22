@@ -69,6 +69,13 @@ const GlobalSearch      = lazy(() => import('./GlobalSearch'))
 const SteamGridDbPicker = lazy(() => import('./SteamGridDbPicker'))
 const AniListFetcher    = lazy(() => import('./AniListFetcher'))
 const JikanFetcher      = lazy(() => import('./JikanFetcher'))
+const TmdbFetcher       = lazy(() => import('./TmdbFetcher'))
+const IgdbFetcher       = lazy(() => import('./IgdbFetcher'))
+const MusicBrainzFetcher = lazy(() => import('./MusicBrainzFetcher'))
+const VgmdbFetcher      = lazy(() => import('./VgmdbFetcher'))
+const ComicVineFetcher  = lazy(() => import('./ComicVineFetcher'))
+const MangaDexFetcher   = lazy(() => import('./MangaDexFetcher'))
+const KitsuFetcher      = lazy(() => import('./KitsuFetcher'))
 const MalImporter       = lazy(() => import('./MalImporter'))
 const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 import { buildStaticSiteHtml } from './exportSite'
@@ -163,6 +170,10 @@ interface Settings {
   animeFields: Record<AnimeField, boolean>
   seriesFields: Record<SeriesField, boolean>
   sgdbApiKey?: string
+  tmdbApiKey?: string
+  igdbClientId?: string
+  igdbClientSecret?: string
+  comicvineApiKey?: string
 }
 
 interface AppData {
@@ -356,6 +367,13 @@ function App() {
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
   const [anilistOpen, setAnilistOpen] = useState<null | 'ANIME' | 'MANGA'>(null)
   const [jikanOpen, setJikanOpen] = useState<null | 'anime' | 'manga'>(null)
+  const [tmdbOpen, setTmdbOpen] = useState<null | 'movie' | 'tv'>(null)
+  const [igdbOpen, setIgdbOpen] = useState(false)
+  const [mbOpen, setMbOpen] = useState(false)
+  const [vgmdbOpen, setVgmdbOpen] = useState(false)
+  const [comicvineOpen, setComicvineOpen] = useState(false)
+  const [mangadexOpen, setMangadexOpen] = useState(false)
+  const [kitsuOpen, setKitsuOpen] = useState<null | 'anime' | 'manga'>(null)
   const [malOpen, setMalOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -1080,12 +1098,14 @@ function App() {
     )
   }
 
-  // Merge an AniList-shaped patch into the currently-open editor form.
-  // Kept generic so it covers both anime/donghua and the four manga-likes.
-  const applyAniListPatch = (
+  // Merge a fetched Partial<Item> patch into the currently-open editor form.
+  // Handles the union of AniList / Jikan / TMDb output — each source only
+  // populates the fields it knows about, and we just set what's present.
+  const applyFetchedPatch = (
     patch: Partial<Item>,
     coverPath?: string,
     bannerPath?: string,
+    sourceLabel = 'Metadata',
   ) => {
     if (patch.title) setTitle(patch.title)
     if (patch.alternativeTitles) setAlternativeTitles(patch.alternativeTitles)
@@ -1102,6 +1122,55 @@ function App() {
     if (patch.totalEpisodes) setTotalEpisodes(patch.totalEpisodes)
     if (patch.totalChapters) setTotalChapters(patch.totalChapters)
     if (patch.totalVolumes) setTotalVolumesM(patch.totalVolumes)
+
+    // Movies / Series (TMDb)
+    if (patch.movieDescription) setMovieDescription(patch.movieDescription)
+    if (patch.seriesDescription) setSeriesDescription(patch.seriesDescription)
+    if (patch.cast) setCast(patch.cast)
+    if (patch.directors) setDirectors(patch.directors)
+    if (patch.writers) setWriters(patch.writers)
+    if (patch.showrunners) setShowrunners(patch.showrunners)
+    if (patch.productionCompanies) setProductionCompanies(patch.productionCompanies)
+    if (patch.network !== undefined) setNetwork(patch.network ?? '')
+    if (patch.country !== undefined) setCountry(patch.country ?? '')
+    if (patch.language !== undefined) setLanguage(patch.language ?? '')
+    if (patch.seriesFormat) setSeriesFormat(patch.seriesFormat)
+    if (patch.duration) setDuration(patch.duration)
+    if (patch.hasSeasons !== undefined) setHasSeasons(patch.hasSeasons)
+    if (patch.seasons) setSeasons(patch.seasons)
+
+    // Music (MusicBrainz, VGMdb)
+    if (patch.artist !== undefined) setArtist(patch.artist ?? '')
+    if (patch.releaseYear) setReleaseYear(patch.releaseYear)
+    if (patch.musicType) setMusicType(patch.musicType)
+    if (patch.musicSource) setMusicSource(patch.musicSource)
+    if (patch.label !== undefined) setLabel(patch.label ?? '')
+    if (patch.producers) setProducers(patch.producers)
+    if (patch.hasTracks !== undefined) setHasTracks(patch.hasTracks)
+    if (patch.tracks) setTracks(patch.tracks)
+
+    // Games (IGDB)
+    if (patch.devs) setDevs(patch.devs)
+    if (patch.publishers) setPublishers(patch.publishers)
+    if (patch.platforms) setPlatforms(patch.platforms)
+    if (patch.franchise !== undefined) setFranchise(patch.franchise ?? '')
+
+    // Comics / Manga family (ComicVine, later MangaDex)
+    if (patch.authors) setMangaAuthors(patch.authors)
+    if (patch.mangaArtists) setMangaArtists(patch.mangaArtists)
+    if (patch.mangaDescription) setMangaDescription(patch.mangaDescription)
+    if (patch.totalChapters) setTotalChapters(patch.totalChapters)
+    if (patch.totalVolumes) setTotalVolumesM(patch.totalVolumes)
+    if (patch.magazine !== undefined) setMagazine(patch.magazine ?? '')
+    if (patch.pubStatus) setPubStatus(patch.pubStatus)
+    if (patch.mangaSource) setMangaSource(patch.mangaSource)
+
+    // Explicit description fields (Kitsu passes them typed rather than
+    // routing through the generic description key).
+    if (patch.animeDescription) setAnimeDescription(patch.animeDescription)
+    if (patch.mangaDescription && !patch.description) setMangaDescription(patch.mangaDescription)
+    if (patch.airingStatus) setAiringStatus(patch.airingStatus)
+
     if (patch.description) {
       if (activeCategory === 'anime' || activeCategory === 'donghua') setAnimeDescription(patch.description)
       else if (isMangaLike(activeCategory)) setMangaDescription(patch.description)
@@ -1109,8 +1178,12 @@ function App() {
     }
     if (coverPath) setCover(coverPath)
     if (bannerPath) setBannerImage(bannerPath)
-    setToast('AniList data applied')
+    setToast(`${sourceLabel} data applied`)
   }
+
+  // Keep the old name as a thin wrapper so existing callers don't move.
+  const applyAniListPatch = (patch: Partial<Item>, coverPath?: string, bannerPath?: string) =>
+    applyFetchedPatch(patch, coverPath, bannerPath, 'AniList')
 
   const openEditFromModal = () => {
     if (!viewingGame) return
@@ -2827,6 +2900,54 @@ function App() {
                       <p className="hint">Wrapped is a year-in-review view. Export builds a standalone <code>index.html</code> and copies your <code>assets/</code> folder — send the folder to a friend and it just opens.</p>
                     </div>
                     <div className="field-group">
+                      <label>Integrations · ComicVine API key (Western Comics)</label>
+                      <input
+                        type="password"
+                        placeholder="Paste your ComicVine key…"
+                        value={settings.comicvineApiKey ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, comicvineApiKey: e.target.value }))}
+                      />
+                      <p className="hint">
+                        Register a free key at <code>comicvine.gamespot.com/api/</code>. Enables
+                        the "↗ ComicVine" button in the Western Comics editor. Covers Marvel,
+                        DC, Image and indie publishers.
+                      </p>
+                    </div>
+                    <div className="field-group">
+                      <label>Integrations · IGDB (Games) — Twitch Client ID + Secret</label>
+                      <input
+                        type="text"
+                        placeholder="Client ID"
+                        value={settings.igdbClientId ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, igdbClientId: e.target.value }))}
+                      />
+                      <input
+                        type="password"
+                        placeholder="Client Secret"
+                        value={settings.igdbClientSecret ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, igdbClientSecret: e.target.value }))}
+                        style={{ marginTop: 6 }}
+                      />
+                      <p className="hint">
+                        Create a free Twitch app at <code>dev.twitch.tv/console/apps</code> (category
+                        "Application Integration", any localhost redirect URL). Enables the
+                        "↗ IGDB" button next to the cover in the Game editor.
+                      </p>
+                    </div>
+                    <div className="field-group">
+                      <label>Integrations · TMDb API key (Movies + Series)</label>
+                      <input
+                        type="password"
+                        placeholder="Paste your TMDb v3 API key…"
+                        value={settings.tmdbApiKey ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, tmdbApiKey: e.target.value }))}
+                      />
+                      <p className="hint">
+                        Get a free v3 key at <code>themoviedb.org/settings/api</code>. Enables
+                        the "↗ TMDb" button next to the cover field in the Movie and Series editors.
+                      </p>
+                    </div>
+                    <div className="field-group">
                       <label>Integrations · SteamGridDB API key</label>
                       <input
                         type="password"
@@ -3111,10 +3232,28 @@ function App() {
                         {(activeCategory === 'anime' || activeCategory === 'donghua') && <>
                           <button type="button" className="upload-btn" onClick={() => setAnilistOpen('ANIME')} title="Fetch from AniList">↗ AniList</button>
                           <button type="button" className="upload-btn" onClick={() => setJikanOpen('anime')} title="Fetch from MyAnimeList (Jikan)">↗ MAL</button>
+                          <button type="button" className="upload-btn" onClick={() => setKitsuOpen('anime')} title="Fetch from Kitsu (fallback)">↗ Kitsu</button>
                         </>}
                         {isMangaLike(activeCategory) && <>
                           <button type="button" className="upload-btn" onClick={() => setAnilistOpen('MANGA')} title="Fetch from AniList">↗ AniList</button>
                           <button type="button" className="upload-btn" onClick={() => setJikanOpen('manga')} title="Fetch from MyAnimeList (Jikan)">↗ MAL</button>
+                          {activeCategory !== 'comics_west' && (<>
+                            <button type="button" className="upload-btn" onClick={() => setMangadexOpen(true)} title="Fetch from MangaDex">↗ MangaDex</button>
+                            <button type="button" className="upload-btn" onClick={() => setKitsuOpen('manga')} title="Fetch from Kitsu (fallback)">↗ Kitsu</button>
+                          </>)}
+                          {activeCategory === 'comics_west' && (
+                            <button type="button" className="upload-btn" onClick={() => setComicvineOpen(true)} title="Fetch from ComicVine">↗ ComicVine</button>
+                          )}
+                        </>}
+                        {activeCategory === 'peliculas' && (
+                          <button type="button" className="upload-btn" onClick={() => setTmdbOpen('movie')} title="Fetch from TMDb">↗ TMDb</button>
+                        )}
+                        {activeCategory === 'series' && (
+                          <button type="button" className="upload-btn" onClick={() => setTmdbOpen('tv')} title="Fetch from TMDb">↗ TMDb</button>
+                        )}
+                        {activeCategory === 'musica' && <>
+                          <button type="button" className="upload-btn" onClick={() => setMbOpen(true)} title="Fetch from MusicBrainz + Cover Art Archive">↗ MusicBrainz</button>
+                          <button type="button" className="upload-btn" onClick={() => setVgmdbOpen(true)} title="Fetch from VGMdb (game/anime OSTs)">↗ VGMdb</button>
                         </>}
                         {cover && <button type="button" className="upload-btn clear" onClick={() => setCover('')}>Clear</button>}
                       </div>
@@ -4534,6 +4673,71 @@ function App() {
           categoryId={activeCategory}
           onApply={applyAniListPatch}
           onClose={() => setJikanOpen(null)}
+        />
+      )}
+
+      {tmdbOpen && (
+        <TmdbFetcher
+          apiKey={settings.tmdbApiKey}
+          initialQuery={title}
+          kind={tmdbOpen}
+          categoryId={activeCategory}
+          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'TMDb')}
+          onClose={() => setTmdbOpen(null)}
+        />
+      )}
+
+      {igdbOpen && (
+        <IgdbFetcher
+          clientId={settings.igdbClientId}
+          clientSecret={settings.igdbClientSecret}
+          initialQuery={title}
+          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'IGDB')}
+          onClose={() => setIgdbOpen(false)}
+        />
+      )}
+
+      {mbOpen && (
+        <MusicBrainzFetcher
+          initialQuery={title}
+          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'MusicBrainz')}
+          onClose={() => setMbOpen(false)}
+        />
+      )}
+
+      {vgmdbOpen && (
+        <VgmdbFetcher
+          initialQuery={title}
+          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'VGMdb')}
+          onClose={() => setVgmdbOpen(false)}
+        />
+      )}
+
+      {comicvineOpen && (
+        <ComicVineFetcher
+          apiKey={settings.comicvineApiKey}
+          initialQuery={title}
+          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'ComicVine')}
+          onClose={() => setComicvineOpen(false)}
+        />
+      )}
+
+      {mangadexOpen && (
+        <MangaDexFetcher
+          initialQuery={title}
+          categoryId={activeCategory}
+          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'MangaDex')}
+          onClose={() => setMangadexOpen(false)}
+        />
+      )}
+
+      {kitsuOpen && (
+        <KitsuFetcher
+          initialQuery={title}
+          kind={kitsuOpen}
+          categoryId={activeCategory}
+          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'Kitsu')}
+          onClose={() => setKitsuOpen(null)}
         />
       )}
 

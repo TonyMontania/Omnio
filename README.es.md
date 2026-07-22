@@ -147,21 +147,26 @@ Grupo colapsable en la sidebar con dos sub-bibliotecas independientes (**Anime**
 
 ## Fuentes de metadata y arte
 
-Tres fuentes vienen integradas en los editores — click **↗ SteamGridDB / ↗ AniList / ↗ MAL** al lado del campo de cover para buscar, elegir y auto-completar. El resto son referencia manual: abrís, copiás, pegás.
+Nueve fuentes vienen integradas directamente en los editores — click en el botón **↗** al lado del cover para buscar, elegir y auto-rellenar. Las keys van en **Settings → Data → Integrations**; las marcadas *sin key* funcionan out-of-the-box. Covers y banners se bajan a `assets/` al aplicar.
 
-| Sitio | Ideal para | En la app |
-| --- | --- | --- |
-| [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes | **↗ Integrado** (necesita API key gratis, ver Settings → Data → Integrations) |
-| [AniList](https://anilist.co/) | Anime, Donghua, Manga, Manhwa, Manhua — metadata + cover + banner | **↗ Integrado** (sin API key) |
-| [MyAnimeList](https://myanimelist.net/) vía [Jikan](https://jikan.moe/) | Anime y Manga — metadata, cover, autores, magazine | **↗ Integrado** (sin API key) |
-| [IGDB](https://www.igdb.com/) | Games — metadata (developers, publishers, fechas, géneros) | Referencia manual |
-| [VGMdb](https://vgmdb.net/) | Música — soundtracks de videojuegos y ediciones japonesas | Referencia manual |
-| [MusicBrainz](https://musicbrainz.org/) | Música — metadata general (artistas, sellos, tracklists) | Referencia manual |
-| [Rate Your Music](https://rateyourmusic.com/) | Música — géneros, discografías, ratings | Referencia manual |
-| [IMDb](https://www.imdb.com/) | Movies y Series — metadata (cast, directores, guionistas, fechas) | Referencia manual |
-| [Movie Poster DB](https://movieposterdb.com/) | Movies, Series y Anime — posters en alta (requiere cuenta) | Referencia manual |
-| [Douban](https://m.douban.com/home_guide) | IMDb chino — clave para donghua, C-dramas y cine asiático | Referencia manual |
-| [AniDB](https://anidb.net/) | Anime — metadata profunda (staff, episodios, relaciones) | Referencia manual — la API existe pero pide registro de cliente + rate-limit duro de 2s |
+| Fuente | Librería | En la app | Auth |
+| --- | --- | --- | --- |
+| [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes | **↗ Integrado** | API key gratis |
+| [IGDB](https://www.igdb.com/) (via Twitch) | Games — metadata completa: devs, publishers, plataformas, géneros, franchises, fechas | **↗ Integrado** | Twitch Client ID + Secret (gratis) |
+| [TMDb](https://www.themoviedb.org/) | Movies + Series — cast, crew, seasons, cover, backdrop, fechas, géneros, networks | **↗ Integrado** | v3 API key gratis |
+| [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Música — releases, tracklists, artistas, sellos + cover | **↗ Integrado** | sin key |
+| [VGMdb](https://vgmdb.net/) (via [vgmdb.info](https://vgmdb.info/)) | Música — soundtracks de games y anime, ediciones japonesas | **↗ Integrado** | sin key |
+| [AniList](https://anilist.co/) | Anime · Donghua · Manga · Manhwa · Manhua — metadata + cover + banner | **↗ Integrado** | sin key |
+| [MyAnimeList](https://myanimelist.net/) vía [Jikan](https://jikan.moe/) | Anime · Manga — metadata, cover, autores, magazine | **↗ Integrado** | sin key |
+| [Kitsu](https://kitsu.app/) | Anime · Manga fallback cuando AniList/MAL no encuentran algo | **↗ Integrado** | sin key |
+| [MangaDex](https://mangadex.org/) | Manga · Manhwa · Manhua — incluye títulos obscuros + scanlations | **↗ Integrado** | sin key |
+| [ComicVine](https://comicvine.gamespot.com/) | Western Comics — Marvel, DC, Image, indies + créditos de creators | **↗ Integrado** | API key gratis |
+| [Rate Your Music](https://rateyourmusic.com/) | Música — géneros, discografías, ratings | Referencia manual | — |
+| [IMDb](https://www.imdb.com/) | Movies & Series — sin API pública gratis; TMDb cubre lo mismo | Referencia manual | — |
+| [Movie Poster DB](https://movieposterdb.com/) | Posters en alta cuando los de TMDb no alcanzan | Referencia manual | cuenta |
+| [Douban](https://m.douban.com/home_guide) | IMDb chino — donghua, C-dramas, cine asiático | Referencia manual | — |
+| [AniDB](https://anidb.net/) | Anime — metadata profunda | Referencia manual — la API pide registro de cliente + rate-limit duro de 2s; AniList/MAL/Kitsu cubren el mismo terreno | — |
+| [Discogs](https://www.discogs.com/) | Música — releases físicas, vinilo, ediciones | Referencia manual | — |
 
 **Import masivo**: ¿ya venías trackeando anime/manga en otro lado? Settings → Data → **Import MAL / AniList XML** carga un export entero de una. Funciona con el export nativo de MyAnimeList y con el exportador AniList de [malscraper.azurewebsites.net](https://malscraper.azurewebsites.net/).
 
