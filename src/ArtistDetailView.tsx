@@ -1,4 +1,5 @@
-import type { Item, MusicArtist } from './types'
+import { useState } from 'react'
+import type { Item, MusicArtist, MusicField } from './types'
 import { assetSrc, getBandStatusLabel } from './types'
 import ItemCard from './ItemCard'
 
@@ -11,13 +12,31 @@ interface Props {
   onEdit: () => void
   onOpenItem: (item: Item) => void
   onDeleteItem: (item: Item) => void
+  musicFields?: Record<MusicField, boolean>
 }
 
-export default function ArtistDetailView({ artist, items, layout, onSetLayout, onBack, onEdit, onOpenItem, onDeleteItem }: Props) {
+type SortMode = 'recent' | 'alpha' | 'rating' | 'yearDesc' | 'yearAsc' | 'duration'
+
+export default function ArtistDetailView({ artist, items, layout, onSetLayout, onBack, onEdit, onOpenItem, onDeleteItem, musicFields }: Props) {
+  const [search, setSearch] = useState('')
+  const [sortMode, setSortMode] = useState<SortMode>('yearDesc')
+
+  const pickYear = (i: Item) => {
+    if (i.releaseDate) return new Date(i.releaseDate).getFullYear()
+    return parseInt(i.releaseYear || '0', 10) || 0
+  }
+  const pickDuration = (i: Item) => {
+    if (!i.tracks) return 0
+    return i.tracks.reduce((a, t) => a + (parseInt(t.duration || '0', 10) || 0), 0)
+  }
   const sortedItems = [...items].sort((a, b) => {
-    const da = a.releaseDate ? new Date(a.releaseDate).getTime() : parseInt(a.releaseYear || '0', 10) * 10000000000
-    const db = b.releaseDate ? new Date(b.releaseDate).getTime() : parseInt(b.releaseYear || '0', 10) * 10000000000
-    return db - da
+    if (sortMode === 'alpha') return a.title.localeCompare(b.title)
+    if (sortMode === 'rating') return (b.rating || 0) - (a.rating || 0)
+    if (sortMode === 'recent') return b.createdAt - a.createdAt
+    if (sortMode === 'yearAsc') return (pickYear(a) || 9999) - (pickYear(b) || 9999)
+    if (sortMode === 'duration') return pickDuration(b) - pickDuration(a)
+    // yearDesc default
+    return pickYear(b) - pickYear(a)
   })
 
   const ratedItems = items.filter((i) => i.rating)
@@ -120,11 +139,30 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
         </div>
       </div>
 
+      <div className="toolbar">
+        <input
+          className="search-input"
+          placeholder="Search by title..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select className="sort-select" value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)}>
+          <option value="yearDesc">Release year ↓</option>
+          <option value="yearAsc">Release year ↑</option>
+          <option value="recent">Most recent</option>
+          <option value="alpha">Alphabetical</option>
+          <option value="rating">Rating</option>
+          <option value="duration">Duration (longest)</option>
+        </select>
+      </div>
+
       <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
         {sortedItems.length === 0 && <p className="empty">Nothing from this artist yet.</p>}
-        {sortedItems.map((item) => (
-          <ItemCard key={item.id} item={item} layout={layout} onOpen={onOpenItem} onDelete={onDeleteItem} />
-        ))}
+        {sortedItems
+          .filter((item) => !search.trim() || item.title.toLowerCase().includes(search.trim().toLowerCase()))
+          .map((item) => (
+            <ItemCard key={item.id} item={item} layout={layout} onOpen={onOpenItem} onDelete={onDeleteItem} musicFields={musicFields} />
+          ))}
       </div>
     </div>
   )

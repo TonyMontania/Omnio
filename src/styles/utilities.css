@@ -18,24 +18,25 @@
 .link-btn:hover { color: var(--accent); text-decoration-color: var(--accent); }
 
 /* ===== BackupList ===== */
+.backup-list { max-width: 560px; }
 .backup-list-items {
   list-style: none;
   margin: 6px 0 8px;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 .backup-list-items li {
   display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  gap: 12px;
+  grid-template-columns: minmax(110px, 1fr) auto auto auto;
+  gap: 10px;
   align-items: center;
-  padding: 8px 12px;
+  padding: 6px 10px;
   background: var(--surface-2);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 .backup-list-items .backup-file { font-family: var(--font-mono); color: var(--text); }
 .backup-list-items .backup-when {

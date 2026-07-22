@@ -121,16 +121,21 @@ type SortBy =
   // Music
   | 'artist'
 
-type ThemeName = 'dark' | 'light' | 'dark-amoled' | 'nord' | 'gruvbox-dark' | 'solarized-dark'
+type ThemeName = 'dark' | 'light' | 'dark-amoled' | 'nord' | 'gruvbox-dark' | 'solarized-dark' | 'dracula' | 'tokyo-night' | 'catppuccin' | 'rose-pine' | 'everforest'
 type AccentName = 'default' | 'amber' | 'red' | 'blue' | 'green' | 'purple' | 'teal' | 'pink'
 
-const THEME_OPTIONS: { value: ThemeName; label: string; swatch: string[] }[] = [
-  { value: 'dark', label: 'Dark', swatch: ['#14151a', '#1b1c23', '#c9a227'] },
-  { value: 'light', label: 'Light', swatch: ['#f5f3ee', '#ffffff', '#a8791b'] },
-  { value: 'dark-amoled', label: 'AMOLED', swatch: ['#000000', '#0a0a0a', '#c9a227'] },
-  { value: 'nord', label: 'Nord', swatch: ['#2e3440', '#3b4252', '#88c0d0'] },
-  { value: 'gruvbox-dark', label: 'Gruvbox', swatch: ['#282828', '#3c3836', '#d79921'] },
-  { value: 'solarized-dark', label: 'Solarized', swatch: ['#002b36', '#073642', '#b58900'] },
+const THEME_OPTIONS: { value: ThemeName; label: string; family: string; swatch: string[] }[] = [
+  { value: 'dark', label: 'Dark', family: 'Original', swatch: ['#14151a', '#1b1c23', '#c9a227'] },
+  { value: 'light', label: 'Light', family: 'Original', swatch: ['#f5f3ee', '#ffffff', '#a8791b'] },
+  { value: 'dark-amoled', label: 'AMOLED', family: 'Original', swatch: ['#000000', '#0a0a0a', '#c9a227'] },
+  { value: 'nord', label: 'Nord', family: 'Cool', swatch: ['#2e3440', '#3b4252', '#88c0d0'] },
+  { value: 'tokyo-night', label: 'Tokyo Night', family: 'Cool', swatch: ['#1a1b26', '#24283b', '#7aa2f7'] },
+  { value: 'solarized-dark', label: 'Solarized', family: 'Cool', swatch: ['#002b36', '#073642', '#b58900'] },
+  { value: 'dracula', label: 'Dracula', family: 'Vibrant', swatch: ['#282a36', '#44475a', '#bd93f9'] },
+  { value: 'catppuccin', label: 'Catppuccin', family: 'Vibrant', swatch: ['#1e1e2e', '#313244', '#cba6f7'] },
+  { value: 'rose-pine', label: 'Rosé Pine', family: 'Vibrant', swatch: ['#191724', '#26233a', '#ebbcba'] },
+  { value: 'gruvbox-dark', label: 'Gruvbox', family: 'Warm', swatch: ['#282828', '#3c3836', '#d79921'] },
+  { value: 'everforest', label: 'Everforest', family: 'Warm', swatch: ['#2d353b', '#3d484d', '#a7c080'] },
 ]
 
 const ACCENT_OPTIONS: { value: AccentName; label: string; swatch: string }[] = [
@@ -2093,6 +2098,7 @@ function App() {
               onEdit={() => openArtistEditPanel(viewingArtist)}
               onOpenItem={openEditPanel}
               onDeleteItem={handleDelete}
+              musicFields={settings.musicFields}
             />
           ) : (
             <>
@@ -2141,14 +2147,15 @@ function App() {
             </>
           )}
 
-          {specialView === 'musicBoard' && (
-            <>
+          {specialView === 'musicBoard' && (() => {
+            const list = filterAndSort(musicList.filter((m) => musicBoardFilter === 'listened' ? m.consumed : !m.consumed), search, [], [], [], [], sortBy)
+            return (<>
               <div className="content-header">
                 <div className="page-title">
                   <span className="page-icon">{musicBoardFilter === 'listened' ? '✓' : '○'}</span>
                   <div>
                     <h1>{musicBoardFilter === 'listened' ? 'Listened' : 'Not listened'}</h1>
-                    <span className="page-count">{musicList.filter((m) => (musicBoardFilter === 'listened' ? m.consumed : !m.consumed)).length} items</span>
+                    <span className="page-count">{list.length} items</span>
                   </div>
                 </div>
                 <div className="header-actions">
@@ -2159,25 +2166,38 @@ function App() {
                   </div>
                 </div>
               </div>
+              <div className="toolbar">
+                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                  <option value="recent">Most recent</option>
+                  <option value="alpha">Alphabetical</option>
+                  <option value="rating">Rating</option>
+                  <option value="artist">By artist</option>
+                  <option value="yearAsc">Release year ↑</option>
+                  <option value="yearDesc">Release year ↓</option>
+                  <option value="duration">Duration (longest)</option>
+                </select>
+              </div>
               <div className="content-scroll">
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {musicList.filter((m) => (musicBoardFilter === 'listened' ? m.consumed : !m.consumed)).length === 0 && <p className="empty">Nothing here.</p>}
-                {musicList.filter((m) => (musicBoardFilter === 'listened' ? m.consumed : !m.consumed)).map((m) => (
+                {list.length === 0 && <p className="empty">Nothing here.</p>}
+                {list.map((m) => (
                   <ItemCard key={m.id} item={m} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} musicFields={settings.musicFields} />
                 ))}
               </div>
               </div>
-            </>
-          )}
+            </>)
+          })()}
 
-          {specialView === 'mangaBoard' && (
-            <>
+          {specialView === 'mangaBoard' && (() => {
+            const list = filterAndSort(itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === mangaBoardStatus), search, [], [], [], [], sortBy)
+            return (<>
               <div className="content-header">
                 <div className="page-title">
                   <span className="page-icon"><MangaStatusIcon value={mangaBoardStatus} /></span>
                   <div>
                     <h1>{getMangaStatus(mangaBoardStatus).label}</h1>
-                    <span className="page-count">{itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === mangaBoardStatus).length} items</span>
+                    <span className="page-count">{list.length} items</span>
                   </div>
                 </div>
                 <div className="header-actions">
@@ -2188,25 +2208,38 @@ function App() {
                   </div>
                 </div>
               </div>
+              <div className="toolbar">
+                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                  <option value="recent">Most recent</option>
+                  <option value="alpha">Alphabetical</option>
+                  <option value="rating">Rating</option>
+                  <option value="chapters">Chapters read</option>
+                  <option value="mangaStatus">Status</option>
+                  <option value="yearAsc">Release year ↑</option>
+                  <option value="yearDesc">Release year ↓</option>
+                </select>
+              </div>
               <div className="content-scroll">
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === mangaBoardStatus).length === 0 && <p className="empty">Nothing here.</p>}
-                {itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === mangaBoardStatus).map((i) => (
+                {list.length === 0 && <p className="empty">Nothing here.</p>}
+                {list.map((i) => (
                   <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} mangaFields={settings.mangaFields} />
                 ))}
               </div>
               </div>
-            </>
-          )}
+            </>)
+          })()}
 
-          {specialView === 'moviesBoard' && (
-            <>
+          {specialView === 'moviesBoard' && (() => {
+            const list = filterAndSort(itemsInCategory.filter((i) => moviesBoardFilter === 'watched' ? i.consumed : !i.consumed), search, [], [], [], [], sortBy)
+            return (<>
               <div className="content-header">
                 <div className="page-title">
                   <span className="page-icon">{moviesBoardFilter === 'watched' ? '✓' : '○'}</span>
                   <div>
                     <h1>{moviesBoardFilter === 'watched' ? 'Watched' : 'Not watched'}</h1>
-                    <span className="page-count">{itemsInCategory.filter((i) => (moviesBoardFilter === 'watched' ? i.consumed : !i.consumed)).length} items</span>
+                    <span className="page-count">{list.length} items</span>
                   </div>
                 </div>
                 <div className="header-actions">
@@ -2217,25 +2250,37 @@ function App() {
                   </div>
                 </div>
               </div>
+              <div className="toolbar">
+                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                  <option value="recent">Most recent</option>
+                  <option value="alpha">Alphabetical</option>
+                  <option value="rating">Rating</option>
+                  <option value="yearAsc">Release year ↑</option>
+                  <option value="yearDesc">Release year ↓</option>
+                  <option value="duration">Duration (longest)</option>
+                </select>
+              </div>
               <div className="content-scroll">
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {itemsInCategory.filter((i) => (moviesBoardFilter === 'watched' ? i.consumed : !i.consumed)).length === 0 && <p className="empty">Nothing here.</p>}
-                {itemsInCategory.filter((i) => (moviesBoardFilter === 'watched' ? i.consumed : !i.consumed)).map((i) => (
+                {list.length === 0 && <p className="empty">Nothing here.</p>}
+                {list.map((i) => (
                   <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} movieFields={settings.movieFields} />
                 ))}
               </div>
               </div>
-            </>
-          )}
+            </>)
+          })()}
 
-          {specialView === 'animeBoard' && (
-            <>
+          {specialView === 'animeBoard' && (() => {
+            const list = filterAndSort(itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === animeBoardStatus), search, [], [], [], [], sortBy)
+            return (<>
               <div className="content-header">
                 <div className="page-title">
                   <span className="page-icon"><AnimeStatusIcon value={animeBoardStatus} /></span>
                   <div>
                     <h1>{getAnimeStatus(animeBoardStatus).label}</h1>
-                    <span className="page-count">{itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === animeBoardStatus).length} items</span>
+                    <span className="page-count">{list.length} items</span>
                   </div>
                 </div>
                 <div className="header-actions">
@@ -2246,25 +2291,39 @@ function App() {
                   </div>
                 </div>
               </div>
+              <div className="toolbar">
+                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                  <option value="recent">Most recent</option>
+                  <option value="alpha">Alphabetical</option>
+                  <option value="rating">Rating</option>
+                  <option value="episodes">Episodes watched</option>
+                  <option value="animeStatus">Status</option>
+                  <option value="yearAsc">Release year ↑</option>
+                  <option value="yearDesc">Release year ↓</option>
+                  <option value="duration">Duration (longest)</option>
+                </select>
+              </div>
               <div className="content-scroll">
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === animeBoardStatus).length === 0 && <p className="empty">Nothing here.</p>}
-                {itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === animeBoardStatus).map((i) => (
+                {list.length === 0 && <p className="empty">Nothing here.</p>}
+                {list.map((i) => (
                   <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} animeFields={settings.animeFields} />
                 ))}
               </div>
               </div>
-            </>
-          )}
+            </>)
+          })()}
 
-          {specialView === 'seriesBoard' && (
-            <>
+          {specialView === 'seriesBoard' && (() => {
+            const list = filterAndSort(itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === seriesBoardStatus), search, [], [], [], [], sortBy)
+            return (<>
               <div className="content-header">
                 <div className="page-title">
                   <span className="page-icon"><AnimeStatusIcon value={seriesBoardStatus} /></span>
                   <div>
                     <h1>{getSeriesStatus(seriesBoardStatus).label}</h1>
-                    <span className="page-count">{itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === seriesBoardStatus).length} items</span>
+                    <span className="page-count">{list.length} items</span>
                   </div>
                 </div>
                 <div className="header-actions">
@@ -2275,16 +2334,28 @@ function App() {
                   </div>
                 </div>
               </div>
+              <div className="toolbar">
+                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                  <option value="recent">Most recent</option>
+                  <option value="alpha">Alphabetical</option>
+                  <option value="rating">Rating</option>
+                  <option value="episodes">Episodes watched</option>
+                  <option value="seriesStatus">Status</option>
+                  <option value="yearAsc">Release year ↑</option>
+                  <option value="yearDesc">Release year ↓</option>
+                </select>
+              </div>
               <div className="content-scroll">
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === seriesBoardStatus).length === 0 && <p className="empty">Nothing here.</p>}
-                {itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === seriesBoardStatus).map((i) => (
+                {list.length === 0 && <p className="empty">Nothing here.</p>}
+                {list.map((i) => (
                   <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} seriesFields={settings.seriesFields} />
                 ))}
               </div>
               </div>
-            </>
-          )}
+            </>)
+          })()}
 
           {specialView === 'stats' && (
             <>
@@ -2669,29 +2740,39 @@ function App() {
                   <div><h1>Settings</h1></div>
                 </div>
               </div>
-              <div className="content-scroll">
-              <div className="sub-tabs">
-                <button className={settingsTab === 'appearance' ? 'sub-tab active' : 'sub-tab'} onClick={() => setSettingsTab('appearance')}>Appearance</button>
-                <button className={settingsTab === 'behavior' ? 'sub-tab active' : 'sub-tab'} onClick={() => setSettingsTab('behavior')}>Behavior</button>
-                <button className={settingsTab === 'libraries' ? 'sub-tab active' : 'sub-tab'} onClick={() => setSettingsTab('libraries')}>Libraries</button>
-                <button className={settingsTab === 'cards' ? 'sub-tab active' : 'sub-tab'} onClick={() => setSettingsTab('cards')}>Card Fields</button>
-                <button className={settingsTab === 'data' ? 'sub-tab active' : 'sub-tab'} onClick={() => setSettingsTab('data')}>Data</button>
-              </div>
+              <div className="settings-layout">
+              <aside className="settings-sidebar">
+                <button className={settingsTab === 'appearance' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('appearance')}><span className="settings-nav-icon">🎨</span>Appearance</button>
+                <button className={settingsTab === 'behavior' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('behavior')}><span className="settings-nav-icon">⚙</span>Behavior</button>
+                <button className={settingsTab === 'libraries' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('libraries')}><span className="settings-nav-icon">📚</span>Libraries</button>
+                <button className={settingsTab === 'cards' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('cards')}><span className="settings-nav-icon">▦</span>Card Fields</button>
+                <button className={settingsTab === 'data' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('data')}><span className="settings-nav-icon">⌘</span>Data</button>
+              </aside>
+              <div className="settings-main">
               <div className="settings-form">
                 {settingsTab === 'appearance' && (
                   <>
                     <div className="field-group">
                       <label>Theme</label>
-                      <div className="theme-grid">
-                        {THEME_OPTIONS.map((th) => (
-                          <button key={th.value} type="button" className={settings.theme === th.value ? 'theme-swatch active' : 'theme-swatch'} onClick={() => setSettings((s) => ({ ...s, theme: th.value }))}>
-                            <div className="theme-swatch-preview">
-                              {th.swatch.map((c, idx) => <span key={idx} style={{ background: c }} />)}
+                      {['Original', 'Cool', 'Vibrant', 'Warm'].map((family) => {
+                        const themes = THEME_OPTIONS.filter((th) => th.family === family)
+                        if (themes.length === 0) return null
+                        return (
+                          <div key={family} className="theme-family">
+                            <span className="theme-family-label">{family}</span>
+                            <div className="theme-grid">
+                              {themes.map((th) => (
+                                <button key={th.value} type="button" className={settings.theme === th.value ? 'theme-swatch active' : 'theme-swatch'} onClick={() => setSettings((s) => ({ ...s, theme: th.value }))}>
+                                  <div className="theme-swatch-preview">
+                                    {th.swatch.map((c, idx) => <span key={idx} style={{ background: c }} />)}
+                                  </div>
+                                  <span className="theme-swatch-label">{th.label}</span>
+                                </button>
+                              ))}
                             </div>
-                            <span className="theme-swatch-label">{th.label}</span>
-                          </button>
-                        ))}
-                      </div>
+                          </div>
+                        )
+                      })}
                     </div>
                     <div className="field-group">
                       <label>Accent color</label>
@@ -2982,6 +3063,7 @@ function App() {
                 )}
               </div>
               </div>
+              </div>
             </>
           )}
 
@@ -3214,6 +3296,87 @@ function App() {
                   {editingItem && <p className="added-date">Added: {new Date(editingItem.createdAt).toLocaleDateString()}</p>}
 
                   <div className="form">
+                    <div className="metadata-sources-panel">
+                      <div className="metadata-sources-header">
+                        <span className="metadata-sources-title">↗ Fetch metadata</span>
+                        <span className="metadata-sources-hint">Auto-fills title, cover, and category-specific fields</span>
+                      </div>
+                      <div className="metadata-sources-grid">
+                        {isVideojuegos && <>
+                          <button type="button" className="metadata-source-btn" onClick={() => setIgdbOpen(true)}>
+                            <span className="ms-name">↗ IGDB</span>
+                            <span className="ms-desc">Full metadata — devs, publishers, platforms, genres</span>
+                          </button>
+                          <button type="button" className="metadata-source-btn" onClick={() => setSgdbOpen('grids')}>
+                            <span className="ms-name">↗ SteamGridDB</span>
+                            <span className="ms-desc">Community covers, banners, logos</span>
+                          </button>
+                        </>}
+                        {(activeCategory === 'anime' || activeCategory === 'donghua') && <>
+                          <button type="button" className="metadata-source-btn" onClick={() => setAnilistOpen('ANIME')}>
+                            <span className="ms-name">↗ AniList</span>
+                            <span className="ms-desc">Metadata + cover + banner</span>
+                          </button>
+                          <button type="button" className="metadata-source-btn" onClick={() => setJikanOpen('anime')}>
+                            <span className="ms-name">↗ MyAnimeList</span>
+                            <span className="ms-desc">Via Jikan — metadata + cover</span>
+                          </button>
+                          <button type="button" className="metadata-source-btn" onClick={() => setKitsuOpen('anime')}>
+                            <span className="ms-name">↗ Kitsu</span>
+                            <span className="ms-desc">Fallback when other sources miss it</span>
+                          </button>
+                        </>}
+                        {isMangaLike(activeCategory) && <>
+                          <button type="button" className="metadata-source-btn" onClick={() => setAnilistOpen('MANGA')}>
+                            <span className="ms-name">↗ AniList</span>
+                            <span className="ms-desc">Metadata + cover</span>
+                          </button>
+                          <button type="button" className="metadata-source-btn" onClick={() => setJikanOpen('manga')}>
+                            <span className="ms-name">↗ MyAnimeList</span>
+                            <span className="ms-desc">Via Jikan — authors + magazine</span>
+                          </button>
+                          {activeCategory !== 'comics_west' && <>
+                            <button type="button" className="metadata-source-btn" onClick={() => setMangadexOpen(true)}>
+                              <span className="ms-name">↗ MangaDex</span>
+                              <span className="ms-desc">Deep catalog incl. obscure titles</span>
+                            </button>
+                            <button type="button" className="metadata-source-btn" onClick={() => setKitsuOpen('manga')}>
+                              <span className="ms-name">↗ Kitsu</span>
+                              <span className="ms-desc">Fallback when other sources miss it</span>
+                            </button>
+                          </>}
+                          {activeCategory === 'comics_west' && (
+                            <button type="button" className="metadata-source-btn" onClick={() => setComicvineOpen(true)}>
+                              <span className="ms-name">↗ ComicVine</span>
+                              <span className="ms-desc">Marvel, DC, Image, indies + creator credits</span>
+                            </button>
+                          )}
+                        </>}
+                        {activeCategory === 'peliculas' && (
+                          <button type="button" className="metadata-source-btn" onClick={() => setTmdbOpen('movie')}>
+                            <span className="ms-name">↗ TMDb</span>
+                            <span className="ms-desc">Cast, crew, backdrop, dates, genres</span>
+                          </button>
+                        )}
+                        {activeCategory === 'series' && (
+                          <button type="button" className="metadata-source-btn" onClick={() => setTmdbOpen('tv')}>
+                            <span className="ms-name">↗ TMDb</span>
+                            <span className="ms-desc">Cast, seasons, network, dates, genres</span>
+                          </button>
+                        )}
+                        {activeCategory === 'musica' && <>
+                          <button type="button" className="metadata-source-btn" onClick={() => setMbOpen(true)}>
+                            <span className="ms-name">↗ MusicBrainz</span>
+                            <span className="ms-desc">Releases, tracklist, artists + Cover Art</span>
+                          </button>
+                          <button type="button" className="metadata-source-btn" onClick={() => setVgmdbOpen(true)}>
+                            <span className="ms-name">↗ VGMdb</span>
+                            <span className="ms-desc">Game & anime soundtracks, JP releases</span>
+                          </button>
+                        </>}
+                      </div>
+                    </div>
+
                     <div className="field-group">
                       <label>Title</label>
                       <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -3228,33 +3391,6 @@ function App() {
                       />
                       <div className="upload-row">
                         <button type="button" className="upload-btn" onClick={() => fileInputRef.current?.click()}>Upload from PC</button>
-                        {isVideojuegos && <button type="button" className="upload-btn" onClick={() => setSgdbOpen('grids')} title="Fetch from SteamGridDB">↗ SteamGridDB</button>}
-                        {(activeCategory === 'anime' || activeCategory === 'donghua') && <>
-                          <button type="button" className="upload-btn" onClick={() => setAnilistOpen('ANIME')} title="Fetch from AniList">↗ AniList</button>
-                          <button type="button" className="upload-btn" onClick={() => setJikanOpen('anime')} title="Fetch from MyAnimeList (Jikan)">↗ MAL</button>
-                          <button type="button" className="upload-btn" onClick={() => setKitsuOpen('anime')} title="Fetch from Kitsu (fallback)">↗ Kitsu</button>
-                        </>}
-                        {isMangaLike(activeCategory) && <>
-                          <button type="button" className="upload-btn" onClick={() => setAnilistOpen('MANGA')} title="Fetch from AniList">↗ AniList</button>
-                          <button type="button" className="upload-btn" onClick={() => setJikanOpen('manga')} title="Fetch from MyAnimeList (Jikan)">↗ MAL</button>
-                          {activeCategory !== 'comics_west' && (<>
-                            <button type="button" className="upload-btn" onClick={() => setMangadexOpen(true)} title="Fetch from MangaDex">↗ MangaDex</button>
-                            <button type="button" className="upload-btn" onClick={() => setKitsuOpen('manga')} title="Fetch from Kitsu (fallback)">↗ Kitsu</button>
-                          </>)}
-                          {activeCategory === 'comics_west' && (
-                            <button type="button" className="upload-btn" onClick={() => setComicvineOpen(true)} title="Fetch from ComicVine">↗ ComicVine</button>
-                          )}
-                        </>}
-                        {activeCategory === 'peliculas' && (
-                          <button type="button" className="upload-btn" onClick={() => setTmdbOpen('movie')} title="Fetch from TMDb">↗ TMDb</button>
-                        )}
-                        {activeCategory === 'series' && (
-                          <button type="button" className="upload-btn" onClick={() => setTmdbOpen('tv')} title="Fetch from TMDb">↗ TMDb</button>
-                        )}
-                        {activeCategory === 'musica' && <>
-                          <button type="button" className="upload-btn" onClick={() => setMbOpen(true)} title="Fetch from MusicBrainz + Cover Art Archive">↗ MusicBrainz</button>
-                          <button type="button" className="upload-btn" onClick={() => setVgmdbOpen(true)} title="Fetch from VGMdb (game/anime OSTs)">↗ VGMdb</button>
-                        </>}
                         {cover && <button type="button" className="upload-btn clear" onClick={() => setCover('')}>Clear</button>}
                       </div>
                       <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleCoverFile} />

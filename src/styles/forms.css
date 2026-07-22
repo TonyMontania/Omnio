@@ -48,7 +48,68 @@
 .pill.static { cursor: default; }
 .pill.static:hover { color: var(--text-dim); background: var(--surface-2); border-color: var(--border); }
 
-.upload-row { display: flex; gap: 8px; margin-top: 6px; }
+.upload-row { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+
+.metadata-sources-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, var(--accent-soft) 0%, var(--surface-2) 100%);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  width: 100%;
+}
+.metadata-sources-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.metadata-sources-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+}
+.metadata-sources-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+.metadata-sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+.metadata-source-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.metadata-source-btn:hover {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+.metadata-source-btn .ms-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.metadata-source-btn .ms-desc {
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.3;
+}
 
 .upload-btn {
   align-self: flex-start;
