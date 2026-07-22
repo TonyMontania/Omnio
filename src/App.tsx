@@ -350,8 +350,7 @@ function App() {
   const [draggedId, setDraggedId] = useState<string | null>(null)
 
   const [panelOpen, setPanelOpen] = useState(false)
-  const [panelWidth, setPanelWidth] = useState(720)
-  const resizingRef = useRef(false)
+  const [editPreviewMode, setEditPreviewMode] = useState<'card' | 'detail'>('card')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewingGame, setViewingGame] = useState<Item | null>(null)
   const [viewingMusic, setViewingMusic] = useState<Item | null>(null)
@@ -697,29 +696,6 @@ function App() {
     const t = setTimeout(() => setToast(null), 2000)
     return () => clearTimeout(t)
   }, [toast])
-  useEffect(() => {
-    const handleMove = (e: MouseEvent) => {
-      if (!resizingRef.current) return
-      const newWidth = (window.innerWidth - e.clientX) * 2
-      setPanelWidth(Math.min(1100, Math.max(420, newWidth)))
-    }
-    const handleUp = () => {
-      resizingRef.current = false
-      document.body.classList.remove('resizing-panel')
-    }
-    window.addEventListener('mousemove', handleMove)
-    window.addEventListener('mouseup', handleUp)
-    return () => {
-      window.removeEventListener('mousemove', handleMove)
-      window.removeEventListener('mouseup', handleUp)
-    }
-  }, [])
-
-  const startPanelResize = () => {
-    resizingRef.current = true
-    document.body.classList.add('resizing-panel')
-  }
-
   useEffect(() => {
     if (COMIC_CATEGORY_IDS.includes(activeCategory)) setComicsOpen(true)
   }, [activeCategory])
@@ -1227,6 +1203,37 @@ function App() {
   }
 
   const closePanel = () => { setPanelOpen(false); setEditingId(null); resetForm() }
+
+  const buildPreviewItem = (): Item => ({
+    id: editingId || 'preview',
+    categoryId: activeCategory,
+    title: title || 'Untitled',
+    cover,
+    notes: description,
+    tags,
+    rating: rating || undefined,
+    createdAt: editingItem?.createdAt || Date.now(),
+    gameStatus: gameStatus || undefined,
+    playTime: playTime || undefined,
+    devs: devs.length > 0 ? devs : undefined,
+    publishers: publishers.length > 0 ? publishers : undefined,
+    platforms: platforms.length > 0 ? platforms : undefined,
+    genres: genres.length > 0 ? genres : undefined,
+    bannerImage: bannerImage || undefined,
+    logoImage: logoImage || undefined,
+    artist: artist || undefined,
+    musicType: musicType || undefined,
+    releaseYear: releaseYear || undefined,
+    releaseDate: releaseDate || undefined,
+    consumed: consumed || undefined,
+    mangaStatus: readingStatus || undefined,
+    chaptersRead: chaptersRead || undefined,
+    chaptersTotal: totalChapters || undefined,
+    watchStatus: watchStatus || undefined,
+    episodesWatched: episodesWatched || undefined,
+    episodesTotal: totalEpisodes || undefined,
+    seriesStatus: seriesStatus || undefined,
+  } as Item)
 
   const handleCoverFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -3279,8 +3286,7 @@ function App() {
         {panelOpen && (
           <>
             <div className="panel-backdrop">
-            <aside className="detail-panel" style={{ width: panelWidth }}>
-              <div className="panel-resize-handle" onMouseDown={startPanelResize} />
+            <aside className="detail-panel fullscreen">
               <div className="panel-header">
               <h3>{editingId ? `Edit ${current?.label}` : `Add ${current?.label}`}</h3>
               <div className="panel-header-actions">
@@ -3288,12 +3294,62 @@ function App() {
               </div>
             </div>
             <>
-                <div className="panel-body">
-                  <div className={activeCategory === 'musica' ? 'cover-preview square' : 'cover-preview'}>
-                    {cover ? <img src={assetSrc(cover)} alt="" /> : <div className="cover-preview-placeholder">No cover</div>}
+                <div className="edit-columns">
+                <aside className="edit-preview-col">
+                  <span className="edit-preview-label">Live preview</span>
+                  <div className="edit-preview-toggle">
+                    <button type="button" className={editPreviewMode === 'card' ? 'active' : ''} onClick={() => setEditPreviewMode('card')}>Card</button>
+                    <button type="button" className={editPreviewMode === 'detail' ? 'active' : ''} onClick={() => setEditPreviewMode('detail')}>Detail</button>
                   </div>
-
+                  {editPreviewMode === 'card' ? (
+                    <div className="edit-preview-frame card-mode">
+                      <ItemCard
+                        item={buildPreviewItem()}
+                        layout="grid"
+                        onOpen={() => { /* preview only */ }}
+                        onDelete={() => { /* preview only */ }}
+                        gameFields={settings.gameFields}
+                        musicFields={settings.musicFields}
+                        mangaFields={settings.mangaFields}
+                        movieFields={settings.movieFields}
+                        animeFields={settings.animeFields}
+                        seriesFields={settings.seriesFields}
+                      />
+                    </div>
+                  ) : (
+                    <div className="edit-preview-frame">
+                      <div className="edit-preview-detail">
+                        {(isVideojuegos && bannerImage) ? (
+                          <div className="pd-banner"><img src={assetSrc(bannerImage)} alt="" /></div>
+                        ) : isVideojuegos ? (
+                          <div className="pd-banner">No banner</div>
+                        ) : null}
+                        <div className="pd-cover-row">
+                          <div className={activeCategory === 'musica' ? 'pd-cover square' : 'pd-cover'}>
+                            {cover ? <img src={assetSrc(cover)} alt="" /> : <span>{(title || '?').charAt(0).toUpperCase()}</span>}
+                          </div>
+                          <div className="pd-info">
+                            <h3 className="pd-title">{title || 'Untitled'}</h3>
+                            {activeCategory === 'musica' && artist && <p className="pd-line">{artist}</p>}
+                            {rating > 0 && <p className="pd-line">★ {rating}</p>}
+                            {releaseDate && <p className="pd-line">{new Date(releaseDate).getFullYear()}</p>}
+                            {!releaseDate && releaseYear && <p className="pd-line">{releaseYear}</p>}
+                            {isVideojuegos && playTime && <p className="pd-line">{playTime}h played</p>}
+                          </div>
+                        </div>
+                        {description && <p className="pd-desc">{description}</p>}
+                        {tags.length > 0 && (
+                          <div className="pd-tags">
+                            {tags.map((t) => <span key={t} className="pd-tag">{t}</span>)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <span className="edit-preview-hint">Preview updates as you edit fields on the right</span>
                   {editingItem && <p className="added-date">Added: {new Date(editingItem.createdAt).toLocaleDateString()}</p>}
+                </aside>
+                <div className="edit-form-col">
 
                   <div className="form">
                     <div className="metadata-sources-panel">
@@ -3377,11 +3433,18 @@ function App() {
                       </div>
                     </div>
 
+                    <div className="form-section-header">
+                      <span className="form-section-title">Basic info</span>
+                    </div>
                     <div className="field-group">
                       <label>Title</label>
                       <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
                     </div>
 
+                    <div className="form-section-header">
+                      <span className="form-section-title">Media</span>
+                      <span className="form-section-hint">Cover · banner · logo</span>
+                    </div>
                     <div className="field-group">
                       <label>Cover</label>
                       <input
@@ -4509,6 +4572,9 @@ function App() {
                   </>
                 )}
 
+                    <div className="form-section-header">
+                      <span className="form-section-title">Notes, tags & groups</span>
+                    </div>
                     <div className="field-group">
                       <label>{activeCategory === 'peliculas' ? 'Review' : 'Notes (supports **bold**, *italic*, and "- " lists)'}</label>
                       <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
@@ -4535,6 +4601,7 @@ function App() {
                       onRemove={(i) => setTags((prev) => prev.filter((_, idx) => idx !== i))}
                     />
                   </div>
+                </div>
                 </div>
 
                 <div className="panel-footer">
