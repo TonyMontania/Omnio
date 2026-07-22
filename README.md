@@ -10,7 +10,7 @@
 
 ![Omnio screenshot](https://github.com/user-attachments/assets/f7abdd85-ae6b-4deb-b1c1-00441e0456f3)
 
-**Omnio** is a local-first desktop app to track your hobbies — games, music, movies, series, anime, donghua, manga, manhwa, manhua and western comics — all in one place. No accounts, no telemetry, no cloud. Your data lives in a `data/` folder next to the executable, portable enough to carry on a USB stick.
+**Omnio** is a local desktop app to track your hobbies — games, music, movies, series, anime, donghua, manga, manhwa, manhua and western comics — all in one place. No accounts, no telemetry, no cloud. Your data lives in a `data/` folder next to the executable, portable enough to carry on a USB stick.
 
 The UI is in English. For a field-by-field reference in English and Spanish, see [`docs/FIELDS.md`](docs/FIELDS.md).
 
