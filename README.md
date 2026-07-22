@@ -24,7 +24,7 @@ The UI is in English. For a field-by-field reference in English and Spanish, see
 - **5 rotating snapshots** auto-taken on each save; 1-click restore
 - **Yearly heatmap + Wrapped** end-of-year recap in Statistics
 - **Static HTML export** to share your library as a folder anyone can open
-- **Six themes**, eight accents, density + font-size controls, six-language-neutral iconography
+- **11 themes**, eight accents, density + font-size controls, six-language-neutral iconography
 
 ## Contents
 
@@ -174,7 +174,7 @@ Got another site worth integrating? Open an issue or a PR.
 
 ## UI
 
-- **6 themes**: Dark (default), Light, Dark AMOLED, Nord, Gruvbox, Solarized Dark. Via `data-theme`.
+- **11 themes** grouped by family: Dark (default), Light, Dark AMOLED, Nord, Tokyo Night, Solarized Dark, Dracula, Catppuccin Mocha, Rosé Pine, Gruvbox, Everforest. Via `data-theme`.
 - **8 independent accents**: theme default, amber, red, blue, green, purple, teal, pink. Via `data-accent`.
 - **Density**: Comfortable / Compact (reduces paddings and font sizes).
 - **Font size**: Small / Medium / Large (global zoom).
