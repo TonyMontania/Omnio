@@ -10,9 +10,33 @@
 
 ![Captura de Omnio](https://github.com/user-attachments/assets/f7abdd85-ae6b-4deb-b1c1-00441e0456f3)
 
-**Omnio** es una aplicación de escritorio local-first para trackear tus hobbies — videojuegos, música, películas, series, anime, donghua, manga, manhwa, manhua y cómics occidentales — todo en un solo lugar. Sin cuentas, sin telemetría, sin nube. Tus datos viven en `data.json` y `assets/` al lado del ejecutable, así que es lo suficientemente portable para llevarla en un pendrive.
+**Omnio** es una aplicación de escritorio local-first para trackear tus hobbies — videojuegos, música, películas, series, anime, donghua, manga, manhwa, manhua y cómics occidentales — todo en un solo lugar. Sin cuentas, sin telemetría, sin nube. Tus datos viven en una carpeta `data/` al lado del ejecutable, portable para llevarla en un pendrive.
 
 La interfaz está en inglés. Para una referencia de campo por campo en inglés y español, ver [`docs/FIELDS.md`](docs/FIELDS.md).
+
+## Destacado
+
+- **10 librerías** con campos ricos por categoría (ver [Categorías](#categorías))
+- **3 fuentes de metadata integradas**: SteamGridDB para arte de games, AniList y MyAnimeList (vía Jikan) para anime/manga (ver [Fuentes de metadata](#fuentes-de-metadata-y-arte))
+- **Import masivo** desde exports XML de MyAnimeList / AniList
+- **Búsqueda global Ctrl+K**, acciones masivas (Shift+click), undo/redo (Ctrl+Z)
+- **Storage por slice** desde 0.1.7: un JSON por librería; editar un juego solo reescribe `games.json` y la corrupción de un archivo no afecta al resto
+- **5 snapshots rotativos** en cada save; restore de 1 click
+- **Heatmap anual + Yearly Wrapped** en Statistics
+- **Export a HTML estático** para compartir tu biblioteca como carpeta que abre cualquier navegador
+- **Seis temas**, ocho accents, controles de density y font-size, iconografía monocromática
+
+## Contenido
+
+- [Instalación](#instalación)
+- [Categorías](#categorías)
+- [Fuentes de metadata y arte](#fuentes-de-metadata-y-arte)
+- [Funciones transversales](#funciones-transversales)
+- [Estadísticas](#estadísticas-por-categoría)
+- [Settings](#settings)
+- [Interfaz](#interfaz)
+- [Storage y portabilidad](#storage-y-portabilidad)
+- [Desarrollo](#desarrollo)
 
 ## Instalación
 

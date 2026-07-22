@@ -10,9 +10,33 @@
 
 ![Omnio screenshot](https://github.com/user-attachments/assets/f7abdd85-ae6b-4deb-b1c1-00441e0456f3)
 
-**Omnio** is a local-first desktop app to track your hobbies — games, music, movies, series, anime, donghua, manga, manhwa, manhua and western comics — all in one place. No accounts, no telemetry, no cloud. Your data lives in `data.json` and `assets/` next to the executable, so it's portable enough to carry on a USB stick.
+**Omnio** is a local-first desktop app to track your hobbies — games, music, movies, series, anime, donghua, manga, manhwa, manhua and western comics — all in one place. No accounts, no telemetry, no cloud. Your data lives in a `data/` folder next to the executable, portable enough to carry on a USB stick.
 
 The UI is in English. For a field-by-field reference in English and Spanish, see [`docs/FIELDS.md`](docs/FIELDS.md).
+
+## Highlights
+
+- **10 libraries** with rich per-category fields (see [Categories](#categories))
+- **3 metadata sources wired in-app**: SteamGridDB for game art, AniList and MyAnimeList (via Jikan) for anime/manga (see [Metadata sources](#metadata--artwork-sources))
+- **Bulk import** from MyAnimeList / AniList XML exports
+- **Global search Ctrl+K**, bulk actions (Shift+click), undo/redo (Ctrl+Z)
+- **Split storage** since 0.1.7: one JSON per library slice, editing one game only rewrites `games.json`, corruption of one file leaves the rest intact
+- **5 rotating snapshots** auto-taken on each save; 1-click restore
+- **Yearly heatmap + Wrapped** end-of-year recap in Statistics
+- **Static HTML export** to share your library as a folder anyone can open
+- **Six themes**, eight accents, density + font-size controls, six-language-neutral iconography
+
+## Contents
+
+- [Install](#install)
+- [Categories](#categories)
+- [Metadata & artwork sources](#metadata--artwork-sources)
+- [Power features](#cross-cutting-features)
+- [Statistics](#statistics-per-category)
+- [Settings](#settings)
+- [UI](#ui)
+- [Storage & portability](#storage--portability)
+- [Development](#development)
 
 ## Install
 
@@ -91,13 +115,13 @@ yay -S omnio-bin      # or: paru -S omnio-bin
 
 ### Portability
 
-The portable, tarball and AppImage builds keep `data.json` + `assets/` next to the executable — move the folder between machines or drop it on a USB stick and your library travels with you. The NSIS installer, Homebrew Cask, `.deb`, Flatpak, Snap and AUR builds follow each OS's standard data location (`%APPDATA%`, `~/Library/Application Support/Omnio`, `~/.config/Omnio`, etc.); use **Settings → Data → Export** to move a library between install methods.
+The portable, tarball and AppImage builds keep `data/` + `assets/` next to the executable — move the folder between machines or drop it on a USB stick and your library travels with you. The NSIS installer, Homebrew Cask, `.deb`, Flatpak, Snap and AUR builds follow each OS's standard data location (`%APPDATA%`, `~/Library/Application Support/Omnio`, `~/.config/Omnio`, etc.); use **Settings → Data → Export** to move a library between install methods.
 
 ## Tech stack
 
 - **Electron 30** + **React 18** + **Vite 5** + **TypeScript 5**
 - Main process under `electron/`, renderer under `src/`
-- Local storage: a single `data.json` + an `assets/` folder holding images per category/kind
+- Local storage: split JSON per category under `data/` + an `assets/` folder holding images per category/kind. Editing one item only rewrites its slice; on-demand modals are code-split via React.lazy so the initial bundle stays lean and cold-start is fast
 - No backend, no external APIs
 - Typography: Fraunces (display) + Inter (body) + IBM Plex Mono (labels/data)
 

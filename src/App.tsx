@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, ChangeEvent } from 'react'
+import { useState, useEffect, useRef, ChangeEvent, Suspense, lazy } from 'react'
 
 // Category metadata (Games / Music / Movies / Series / Anime & Donghua / Comics & Manga family)
 import {
@@ -49,25 +49,28 @@ import {
   getMoviesWatchedPerMonth, getMangaChaptersPerMonth, getMusicListensPerMonth,
   getDistribution,
 } from './insights/stats'
-// UI: category-specific detail modals + shared building blocks
+// UI: category-specific detail modals + shared building blocks.
+// Every on-demand modal is code-split via React.lazy so the initial
+// bundle stays lean — the app boots faster and users only pay for a
+// modal's JS the first time they open it (imperceptible on local disk).
 import ItemCard from './ItemCard'
-import GameDetailModal from './GameDetailModal'
-import MusicDetailModal from './MusicDetailModal'
-import ArtistDetailView from './ArtistDetailView'
-import MangaDetailModal from './MangaDetailModal'
-import MovieDetailModal from './MovieDetailModal'
-import AnimeDetailModal from './AnimeDetailModal'
-import SeriesDetailModal from './SeriesDetailModal'
 import Toast from './Toast'
 import BackupList from './BackupList'
-import DuplicatesModal from './DuplicatesModal'
-import GlobalSearch from './GlobalSearch'
 import BulkActionBar from './BulkActionBar'
-import SteamGridDbPicker from './SteamGridDbPicker'
-import AniListFetcher from './AniListFetcher'
-import JikanFetcher from './JikanFetcher'
-import MalImporter from './MalImporter'
-import YearlyWrapped from './YearlyWrapped'
+const GameDetailModal   = lazy(() => import('./GameDetailModal'))
+const MusicDetailModal  = lazy(() => import('./MusicDetailModal'))
+const ArtistDetailView  = lazy(() => import('./ArtistDetailView'))
+const MangaDetailModal  = lazy(() => import('./MangaDetailModal'))
+const MovieDetailModal  = lazy(() => import('./MovieDetailModal'))
+const AnimeDetailModal  = lazy(() => import('./AnimeDetailModal'))
+const SeriesDetailModal = lazy(() => import('./SeriesDetailModal'))
+const DuplicatesModal   = lazy(() => import('./DuplicatesModal'))
+const GlobalSearch      = lazy(() => import('./GlobalSearch'))
+const SteamGridDbPicker = lazy(() => import('./SteamGridDbPicker'))
+const AniListFetcher    = lazy(() => import('./AniListFetcher'))
+const JikanFetcher      = lazy(() => import('./JikanFetcher'))
+const MalImporter       = lazy(() => import('./MalImporter'))
+const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 import { buildStaticSiteHtml } from './exportSite'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
@@ -1696,6 +1699,7 @@ function App() {
   }
 
   return (
+    <Suspense fallback={null}>
     <div
       className="app"
       data-theme={settings.theme}
@@ -4562,6 +4566,7 @@ function App() {
         </div>
       )}
     </div>
+    </Suspense>
   )
 }
 

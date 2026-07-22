@@ -69,7 +69,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleSelec
       <div className={`item-card compact${selected ? ' selected' : ''}`} onClick={handleClick} {...dragProps}>
         {selected && <span className="card-check" aria-hidden>✓</span>}
         <div className="compact-cover">
-          {item.cover ? <img src={assetSrc(item.cover)} alt={item.title} /> : <div className="cover-placeholder small">{item.title.charAt(0).toUpperCase()}</div>}
+          {item.cover ? <img src={assetSrc(item.cover)} alt={item.title} loading="lazy" decoding="async" /> : <div className="cover-placeholder small">{item.title.charAt(0).toUpperCase()}</div>}
         </div>
         {showTitle && <span className="compact-title">{item.title}</span>}
         {isMusic && mf!.artist && item.artist && <span className="compact-line">{item.artist}</span>}
@@ -85,7 +85,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleSelec
       {selected && <span className="card-check" aria-hidden>✓</span>}
       <div className={isMusic ? 'cover-wrap square' : 'cover-wrap'}>
         {item.cover ? (
-          <img src={assetSrc(item.cover)} alt={item.title} />
+          <img src={assetSrc(item.cover)} alt={item.title} loading="lazy" decoding="async" />
         ) : (
           <div className="cover-placeholder">{item.title.charAt(0).toUpperCase()}</div>
         )}

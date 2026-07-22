@@ -117,6 +117,24 @@ const CATEGORY_IDS = [
   'manga', 'manhwa', 'manhua', 'comics_west',
 ] as const
 
+// The internal categoryId (kept in every item.categoryId, in customOrders keys,
+// and in dozens of activeCategory === 'videojuegos' branches) stays untouched.
+// This map only decides what the file on disk is called, so the folder reads
+// as English rather than a mix of English + Spanish.
+const CATEGORY_FILENAME: Record<string, string> = {
+  videojuegos: 'games',
+  musica: 'music',
+  peliculas: 'movies',
+  anime: 'anime',
+  donghua: 'donghua',
+  series: 'series',
+  manga: 'manga',
+  manhwa: 'manhwa',
+  manhua: 'manhua',
+  comics_west: 'comics_west',
+}
+const fileForCategory = (cat: string) => `${CATEGORY_FILENAME[cat] ?? cat}.json`
+
 const TOP_SLICES = ['collections', 'artists', 'settings', 'customOrders'] as const
 
 // Slice → last-written SHA1. Used to skip writes for unchanged files so a
@@ -140,11 +158,38 @@ async function writeIfChanged(filepath: string, content: string): Promise<boolea
   return true
 }
 
+// One-shot rename: 0.1.7 wrote files by categoryId (videojuegos.json etc);
+// 0.1.7.1+ uses English names (games.json etc). Runs before any read/write
+// so callers don't have to know about both layouts.
+async function renameLegacyCategoryFiles(): Promise<void> {
+  const renames: [string, string][] = [
+    ['videojuegos.json', 'games.json'],
+    ['musica.json',       'music.json'],
+    ['peliculas.json',    'movies.json'],
+  ]
+  const rename = async (dir: string) => {
+    for (const [oldName, newName] of renames) {
+      const oldP = path.join(dir, oldName)
+      const newP = path.join(dir, newName)
+      if (await fileExists(oldP) && !await fileExists(newP)) {
+        try { await fs.rename(oldP, newP) } catch { /* non-fatal */ }
+      }
+    }
+  }
+  await rename(DATA_DIR)
+  // Also fix snapshot dirs so restores keep working.
+  for (let i = 1; i <= BACKUP_COUNT; i++) {
+    const slot = path.join(BACKUPS_DIR, String(i))
+    if (await fileExists(slot)) await rename(slot)
+  }
+}
+
 async function readSplitData(): Promise<Record<string, unknown> | null> {
   if (!await fileExists(DATA_DIR)) return null
+  await renameLegacyCategoryFiles()
   const items: unknown[] = []
   for (const cat of CATEGORY_IDS) {
-    const p = path.join(DATA_DIR, `${cat}.json`)
+    const p = path.join(DATA_DIR, fileForCategory(cat))
     try {
       const raw = await fs.readFile(p, 'utf-8')
       const parsed = JSON.parse(raw)
@@ -196,7 +241,7 @@ async function writeSplitData(payload: Record<string, unknown>): Promise<void> {
     }
     for (const cat of CATEGORY_IDS) {
       plans.push({
-        path: path.join(DATA_DIR, `${cat}.json`),
+        path: path.join(DATA_DIR, fileForCategory(cat)),
         content: JSON.stringify(bySlice[cat], null, 2),
       })
     }
