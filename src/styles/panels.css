@@ -38,17 +38,18 @@
 .edit-columns {
   flex: 1 1 auto;
   min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(320px, 420px) 1fr;
-  gap: 0;
+  display: flex;
   overflow: hidden;
 }
 
 .edit-preview-col {
+  flex: 0 0 400px;
+  height: 100%;
   padding: 22px 20px;
   border-right: 1px solid var(--border-soft);
   background: var(--surface);
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
   min-width: 0;
   display: flex;
@@ -250,6 +251,8 @@
 }
 
 .edit-form-col {
+  flex: 1 1 auto;
+  height: 100%;
   padding: 22px 24px;
   overflow-y: auto;
   min-width: 0;
