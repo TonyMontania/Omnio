@@ -85,6 +85,7 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
                     <div key={m.id} className="artist-member-row">
                       <span className="m-name">{m.name}</span>
                       {m.roles.length > 0 && <span className="m-roles">— {m.roles.join(', ')}</span>}
+                      {m.joinedIn && <span className="m-period">· {m.joinedIn} – present</span>}
                     </div>
                   ))}
                 </div>
@@ -97,6 +98,9 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
                       <div key={m.id} className="artist-member-row former">
                         <span className="m-name">{m.name}</span>
                         {m.roles.length > 0 && <span className="m-roles">— {m.roles.join(', ')}</span>}
+                        {(m.joinedIn || m.leftIn) && (
+                          <span className="m-period">· {m.joinedIn || '?'} – {m.leftIn || '?'}</span>
+                        )}
                       </div>
                     ))}
                   </div>

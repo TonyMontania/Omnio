@@ -45,6 +45,16 @@ export interface DlcEntry {
   status: GameStatus
 }
 
+// A game bundled inside another (Metal Gear Solid HD Collection contains
+// MGS2 + MGS3, etc.). Kept intentionally light — the parent Item already
+// carries the shared metadata; each sub-entry only needs a cover + own status.
+export interface BundleGame {
+  id: string
+  name: string
+  cover?: string           // relative asset path (assets/videojuegos/bundle/…) or URL
+  status: GameStatus
+}
+
 export interface MangaVolume {
   id: string
   number: string
@@ -141,6 +151,8 @@ export interface BandMember {
   name: string
   roles: string[]
   former?: boolean
+  joinedIn?: string        // free-text year: "1998", "March 2003", "?"
+  leftIn?: string          // only meaningful when former=true
 }
 
 export interface MusicArtist {
@@ -194,6 +206,8 @@ export interface Item {
   dlcList?: DlcEntry[]
   hasAddons?: boolean
   addonsList?: DlcEntry[]
+  isBundle?: boolean
+  bundleContents?: BundleGame[]
   releaseYear?: string
   duration?: string
   consumed?: boolean

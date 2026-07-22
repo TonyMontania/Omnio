@@ -53,6 +53,22 @@ export default function BandMembersEditor({ members, onChange }: {
               >{m.former ? 'Former' : 'Current'}</button>
               <button type="button" className="track-remove" onClick={() => removeMember(m.id)}>✕</button>
             </div>
+            <div className="band-member-period">
+              <input
+                className="band-member-year"
+                placeholder="Joined (e.g. 1998)"
+                value={m.joinedIn ?? ''}
+                onChange={(e) => patchMember(m.id, { joinedIn: e.target.value })}
+              />
+              {m.former && (
+                <input
+                  className="band-member-year"
+                  placeholder="Left (e.g. 2004)"
+                  value={m.leftIn ?? ''}
+                  onChange={(e) => patchMember(m.id, { leftIn: e.target.value })}
+                />
+              )}
+            </div>
             {m.roles.length > 0 && (
               <div className="tag-pill-list">
                 {m.roles.map((r) => (

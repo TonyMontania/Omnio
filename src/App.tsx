@@ -10,7 +10,7 @@ import {
 import type {
   Item, Collection, Unit, MusicArtist,
   Platform, Ownership, GameStatus, GameField, GameSource,
-  MusicType, MusicField, MusicSource, Track, DlcEntry,
+  MusicType, MusicField, MusicSource, Track, DlcEntry, BundleGame,
   MangaStatus, MangaField, MangaSource, MangaVolume, Chapter, PublicationStatus,
   AnimeStatus, AnimeField, AnimeSource, AnimeFormat, AnimeSeason, AiringStatus, Demographic, Episode,
   SeriesStatus, SeriesField, SeriesFormat, Season,
@@ -80,6 +80,7 @@ import Heatmap from './insights/Heatmap'
 import RatingPicker from './components/editors/RatingPicker'
 import PlatformEditor from './components/editors/PlatformEditor'
 import GameSubItems from './components/editors/GameSubItems'
+import BundleGamesEditor from './components/editors/BundleGamesEditor'
 import VolumeCoverEditor from './components/editors/VolumeCoverEditor'
 import TrackListEditor from './components/editors/TrackListEditor'
 import RelatedListEditor from './components/editors/RelatedListEditor'
@@ -394,6 +395,8 @@ function App() {
   const [dlcList, setDlcList] = useState<DlcEntry[]>([])
   const [hasAddons, setHasAddons] = useState(false)
   const [addonsList, setAddonsList] = useState<DlcEntry[]>([])
+  const [isBundle, setIsBundle] = useState(false)
+  const [bundleContents, setBundleContents] = useState<BundleGame[]>([])
 
   const [releaseYear, setReleaseYear] = useState('')
   const [duration, setDuration] = useState('')
@@ -743,7 +746,7 @@ function App() {
     setTitle(''); setCover(''); setNotes(''); setTags([]); setRating(0); setFinishedAt('')
     setDevs([]); setPublishers([]); setAchievementsUnlocked(''); setAchievementsTotal(''); setReleaseDate(''); setBannerImage(''); setLogoImage(''); setDescription('')
     setPlatforms([]); setOwnership(''); setGameStatus('backlog'); setPlayTime('')
-    setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([])
+    setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([]); setIsBundle(false); setBundleContents([])
     setReleaseYear(''); setDuration(''); setConsumed(false); setArtist(''); setMusicType('')
     setGenres([]); setLabel(''); setPartOfAlbum(''); setHasTracks(false); setTracks([]); setSingleCovers([]); setEditions([])
     setMusicSource(''); setProducers([]); setMusicReview('')
@@ -895,6 +898,8 @@ function App() {
     setDlcList(item.dlcList ?? [])
     setHasAddons(item.hasAddons ?? false)
     setAddonsList(item.addonsList ?? [])
+    setIsBundle(item.isBundle ?? false)
+    setBundleContents(item.bundleContents ?? [])
     setReleaseYear(item.releaseYear ?? '')
     setDuration(item.duration ?? '')
     setConsumed(item.consumed ?? false)
@@ -1196,6 +1201,8 @@ function App() {
         dlcList: hasDlc && dlcList.length > 0 ? dlcList : undefined,
         hasAddons,
         addonsList: hasAddons && addonsList.length > 0 ? addonsList : undefined,
+        isBundle,
+        bundleContents: isBundle && bundleContents.length > 0 ? bundleContents : undefined,
         alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
         gameSource: gameSource || undefined,
         ageRating: ageRating || undefined,
@@ -2778,7 +2785,7 @@ function App() {
                       <label>Automatic snapshots</label>
                       <BackupList
                         onRestore={(file) => askConfirm(
-                          `Restore "${file}"? Your current library will be moved to data.pre-restore.json before it's replaced. You'll need to restart Omnio to see the restored data.`,
+                          `Restore ${file}? Your current library will be copied to data.pre-restore/ before it's replaced. You'll need to restart Omnio to see the restored data.`,
                           async () => {
                             const ok = await window.ipcRenderer.invoke('data:restore-backup', file)
                             if (ok) setToast('Restored — restart Omnio to load the snapshot')
@@ -3220,6 +3227,12 @@ function App() {
                           onRemove={(id) => setAddonsList((prev) => prev.filter((d) => d.id !== id))}
                           onStatusChange={(id, s) => setAddonsList((prev) => prev.map((d) => (d.id === id ? { ...d, status: s } : d)))}
                           showStatus={false}
+                        />
+                        <BundleGamesEditor
+                          enabled={isBundle}
+                          onToggle={(v) => { setIsBundle(v); if (!v) setBundleContents([]) }}
+                          entries={bundleContents}
+                          onChange={setBundleContents}
                         />
                         <div className="field-group">
                           <label>Rating</label>

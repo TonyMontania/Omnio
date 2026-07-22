@@ -104,10 +104,10 @@ The portable, tarball and AppImage builds keep `data.json` + `assets/` next to t
 ## Categories
 
 ### Games
-Infinitebacklog-style card: banner + logo, cover, description, **multiple developers and publishers**, **free-form platforms** (create your own, with suggestions + autocomplete), ownership, status (Backlog / Playing / Played / Completed / Dropped), time played, half-step rating, **achievements unlocked / total**, DLC/Expansions and Addons with their own status, mini-markdown notes, tags. **Extended**: alternative titles, source (Original / Remake / Remaster / Reboot / Port / Sequel / Spin-off / Standalone expansion / Expanded / Collection), **edition** (free-text — Standard, Deluxe, Collector's, whatever), ESRB age rating, franchise, review with spoiler toggle, replay history, related games with rich relation kinds (sequel, prequel, standalone, DLC, remake, reboot, port, collection, same universe, crossover…), auto franchise timeline, recommendations.
+Infinitebacklog-style card: banner + logo, cover, description, **multiple developers and publishers**, **free-form platforms** (create your own, with suggestions + autocomplete), ownership, status (Backlog / Playing / Played / Completed / Dropped), time played, half-step rating, **achievements unlocked / total**, DLC/Expansions and Addons with their own status, **bundle contents** (for collections like MGS HD Collection — each sub-game has its own cover and status you can track independently), mini-markdown notes, tags. **Extended**: alternative titles, source (Original / Remake / Remaster / Reboot / Port / Sequel / Spin-off / Standalone expansion / Expanded / Collection), **edition** (free-text — Standard, Deluxe, Collector's, whatever), ESRB age rating, franchise, review with spoiler toggle, replay history, related games with rich relation kinds (sequel, prequel, standalone, DLC, remake, reboot, port, collection, same universe, crossover…), auto franchise timeline, recommendations.
 
 ### Music
-Cards per type (Single / EP / Album / OST / Live / Compilation), tracklist with per-track rating, favorite, listened, and a **per-track Lyrics button** (modal to read/edit lyrics). Auto-computed total duration for album-like types. **Single covers gallery** — separate artwork for singles released before/around the album (title + year + image). **Editions** — Deluxe, Japan, Anniversary and others, each with its own cover image and its own tracklist (extra or alternate tracks). Spotify-style Artist profile: banner + circular avatar (shown on the Artists overview too), chronological discography, average rating, **band info** (origin, status, years active, genres, labels, current + former members with per-member roles **and join / leave dates**). Listened / Not listened collections. **Extended**: alternative titles, source, producers, review with spoilers, listen history, related albums, recommendations.
+Cards per type (Single / EP / Album / OST / Live / Compilation), tracklist with per-track rating, favorite, listened, and a **per-track Lyrics button** (modal to read/edit lyrics). Auto-computed total duration for album-like types. **Single covers gallery** — separate artwork for singles released before/around the album (title + year + image). **Editions** — Deluxe, Japan, Anniversary and others, each with its own cover image and its own tracklist (extra or alternate tracks). Spotify-style Artist profile: banner + circular avatar (shown on the Artists overview too), chronological discography, average rating, **band info** (origin, status, years active, genres, labels, current + former members with per-member roles **and join / leave years**). Listened / Not listened collections. **Extended**: alternative titles, source, producers, review with spoilers, listen history, related albums, recommendations.
 
 ### Movies
 Directors, **writers**, cast, **production companies**, **distributed by**, franchise, watched + rewatch count, review with spoiler toggle, backdrop image. **Extended**: alternative titles, source (Original / Book / Comic / Game / True story / Remake / Sequel), content rating, watched where, full rewatch history log, related movies, franchise timeline, recommendations.
@@ -207,16 +207,30 @@ Every category has status distribution (pie/bar), a **GitHub-style yearly heatma
 
 **Files**:
 ```
-Omnio-0.1.6-portable.exe   ← the executable
-data.json                   ← all data
-data.backup-1.json          ← last save (rotated 1→5)
-…
-data.backup-5.json          ← oldest kept snapshot
+Omnio-0.1.7-portable.exe   ← the executable
+data/
+  videojuegos.json          ← items with categoryId 'videojuegos'
+  musica.json               ← items with categoryId 'musica'
+  peliculas.json            ← …one file per category
+  series.json
+  anime.json
+  donghua.json
+  manga.json
+  manhwa.json
+  manhua.json
+  comics_west.json
+  collections.json          ← groups
+  artists.json              ← music artist profiles
+  settings.json             ← preferences
+  customOrders.json         ← per-category custom sort orders
+  backups/
+    1/  … 5/                ← 5 rotating full-directory snapshots
 assets/                     ← local images
   anime/cover/
   videojuegos/cover/
   videojuegos/banner/
   videojuegos/logo/
+  videojuegos/bundle/       ← thumbnails for bundle contents
   peliculas/cover/
   peliculas/banner/
   musica/cover/
@@ -228,11 +242,12 @@ assets/                     ← local images
 ```
 
 **How it works**:
-- In the portable build, `data.json` and `assets/` live in the same folder as the `.exe` (via `PORTABLE_EXECUTABLE_DIR` on Windows).
-- When you upload an image from your PC, it's decoded and written to disk at `assets/{category}/{kind}/{uuid}.{ext}`. The `data.json` only stores the relative path — no heavy data URLs embedded.
+- In the portable build, `data/` and `assets/` live in the same folder as the `.exe` (via `PORTABLE_EXECUTABLE_DIR` on Windows).
+- **Split storage** (0.1.7+): each library is its own `.json` file — editing a game only rewrites `videojuegos.json`, not everything else. Every write is content-hashed so unchanged slices are skipped entirely. Corruption of one file leaves the rest intact.
+- **Automatic migration**: on the first boot of 0.1.7+, if you had the legacy single `data.json`, it's split into `data/` automatically and the original is renamed to `data.pre-split.json` as a safety net.
+- When you upload an image from your PC, it's decoded and written to disk at `assets/{category}/{kind}/{uuid}.{ext}`. The JSON files only store the relative path — no heavy data URLs embedded.
 - A custom `omnio-asset://` protocol serves images to the renderer with a path-traversal guard.
-- **Automatic migration**: the first time you open the app with this version, if you had covers/banners/logos stored as data URLs, they're extracted to disk and `data.json` is rewritten with relative paths.
-- **Rolling backups**: every save is preceded by a rotation — `data.json` becomes `data.backup-1.json`, older snapshots shift down, and the fifth one is dropped. Restore any of them from Settings → Data → Automatic snapshots; the current library is preserved to `data.pre-restore.json` first, so nothing is ever destroyed.
+- **Rolling backups**: every save that actually changes anything rotates the snapshot ring — slot 1 gets a fresh directory copy of the current data, slots 2–5 shift down, the fifth is dropped. Restore any of them from Settings → Data → Automatic snapshots; the current library is copied to `data.pre-restore/` first, so nothing is ever destroyed.
 - **Site export**: Settings → Data → Export as HTML picks a folder, writes a standalone `index.html` and copies your `assets/` next to it. Send the folder as-is, open with any browser.
 
 **Truly portable**: drop the whole folder onto a USB stick and take it with you. All your data + images travel with the executable.

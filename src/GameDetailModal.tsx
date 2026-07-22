@@ -139,6 +139,29 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             )}
           </div>
 
+          {item.bundleContents && item.bundleContents.length > 0 && (
+            <div className="field-group">
+              <label>Bundle contents</label>
+              <div className="bundle-view-grid">
+                {item.bundleContents.map((b) => (
+                  <div key={b.id} className="bundle-view-card">
+                    <div className="bundle-view-cover">
+                      {b.cover
+                        ? <img src={assetSrc(b.cover)} alt={b.name} />
+                        : <span>{b.name.charAt(0).toUpperCase()}</span>}
+                    </div>
+                    <div className="bundle-view-text">
+                      <div className="bundle-view-name">{b.name}</div>
+                      <span className="pill static">
+                        <GameStatusIcon value={b.status} /> {getGameStatus(b.status).label}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {((item.dlcList && item.dlcList.length > 0) || (item.addonsList && item.addonsList.length > 0)) && (
             <div className="dlc-addons-row">
               {item.dlcList && item.dlcList.length > 0 && (
