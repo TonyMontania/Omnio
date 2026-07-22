@@ -2749,9 +2749,9 @@ function App() {
               </div>
               <div className="settings-layout">
               <aside className="settings-sidebar">
-                <button className={settingsTab === 'appearance' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('appearance')}><span className="settings-nav-icon">🎨</span>Appearance</button>
+                <button className={settingsTab === 'appearance' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('appearance')}><span className="settings-nav-icon">◐</span>Appearance</button>
                 <button className={settingsTab === 'behavior' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('behavior')}><span className="settings-nav-icon">⚙</span>Behavior</button>
-                <button className={settingsTab === 'libraries' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('libraries')}><span className="settings-nav-icon">📚</span>Libraries</button>
+                <button className={settingsTab === 'libraries' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('libraries')}><span className="settings-nav-icon">☰</span>Libraries</button>
                 <button className={settingsTab === 'cards' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('cards')}><span className="settings-nav-icon">▦</span>Card Fields</button>
                 <button className={settingsTab === 'data' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('data')}><span className="settings-nav-icon">⌘</span>Data</button>
               </aside>
@@ -3319,30 +3319,203 @@ function App() {
                   ) : (
                     <div className="edit-preview-frame">
                       <div className="edit-preview-detail">
-                        {(isVideojuegos && bannerImage) ? (
-                          <div className="pd-banner"><img src={assetSrc(bannerImage)} alt="" /></div>
-                        ) : isVideojuegos ? (
-                          <div className="pd-banner">No banner</div>
-                        ) : null}
+                        {(isVideojuegos || activeCategory === 'peliculas' || activeCategory === 'series') && (
+                          bannerImage || movieBanner
+                            ? <div className="pd-banner"><img src={assetSrc(bannerImage || movieBanner)} alt="" />
+                                {isVideojuegos && logoImage && (
+                                  <img className="pd-logo" src={assetSrc(logoImage)} alt="" />
+                                )}
+                              </div>
+                            : <div className="pd-banner">No banner
+                                {isVideojuegos && logoImage && (
+                                  <img className="pd-logo" src={assetSrc(logoImage)} alt="" />
+                                )}
+                              </div>
+                        )}
+                        {isVideojuegos && logoImage && !bannerImage && (
+                          <div className="pd-logo-row"><img src={assetSrc(logoImage)} alt="" /></div>
+                        )}
                         <div className="pd-cover-row">
                           <div className={activeCategory === 'musica' ? 'pd-cover square' : 'pd-cover'}>
                             {cover ? <img src={assetSrc(cover)} alt="" /> : <span>{(title || '?').charAt(0).toUpperCase()}</span>}
                           </div>
                           <div className="pd-info">
                             <h3 className="pd-title">{title || 'Untitled'}</h3>
-                            {activeCategory === 'musica' && artist && <p className="pd-line">{artist}</p>}
+                            {alternativeTitles.length > 0 && (
+                              <p className="pd-line pd-alt">{alternativeTitles.join(' · ')}</p>
+                            )}
+                            {activeCategory === 'musica' && artist && <p className="pd-line pd-strong">{artist}</p>}
                             {rating > 0 && <p className="pd-line">★ {rating}</p>}
-                            {releaseDate && <p className="pd-line">{new Date(releaseDate).getFullYear()}</p>}
-                            {!releaseDate && releaseYear && <p className="pd-line">{releaseYear}</p>}
+                            {(() => {
+                              const parts: string[] = []
+                              if (releaseDate) parts.push(String(new Date(releaseDate).getFullYear()))
+                              else if (releaseYear) parts.push(releaseYear)
+                              if (activeCategory === 'musica' && musicType) parts.push(musicType)
+                              if (activeCategory === 'peliculas' && duration) parts.push(`${duration} min`)
+                              return parts.length > 0 ? <p className="pd-line">{parts.join(' · ')}</p> : null
+                            })()}
                             {isVideojuegos && playTime && <p className="pd-line">{playTime}h played</p>}
+                            {isVideojuegos && gameStatus && <p className="pd-line pd-status">{gameStatus.replace('_', ' ')}</p>}
+                            {activeCategory === 'peliculas' && consumed && <p className="pd-line pd-status">Watched{timesWatched && ` · ${timesWatched}x`}</p>}
+                            {(activeCategory === 'anime' || activeCategory === 'donghua') && (
+                              <>
+                                {watchStatus && <p className="pd-line pd-status">{watchStatus.replace(/_/g, ' ')}</p>}
+                                {(episodesWatched || totalEpisodes) && <p className="pd-line">Episodes: {episodesWatched || '0'}{totalEpisodes && ` / ${totalEpisodes}`}</p>}
+                              </>
+                            )}
+                            {activeCategory === 'series' && (
+                              <>
+                                {seriesStatus && <p className="pd-line pd-status">{seriesStatus.replace(/_/g, ' ')}</p>}
+                                {(episodesWatched || totalEpisodes) && <p className="pd-line">Episodes: {episodesWatched || '0'}{totalEpisodes && ` / ${totalEpisodes}`}</p>}
+                              </>
+                            )}
+                            {isMangaLike(activeCategory) && (
+                              <>
+                                {readingStatus && <p className="pd-line pd-status">{readingStatus.replace(/_/g, ' ')}</p>}
+                                {(chaptersRead || totalChapters) && <p className="pd-line">Chapters: {chaptersRead || '0'}{totalChapters && ` / ${totalChapters}`}</p>}
+                                {(volumesRead || totalVolumesM) && <p className="pd-line">Volumes: {volumesRead || '0'}{totalVolumesM && ` / ${totalVolumesM}`}</p>}
+                              </>
+                            )}
+                            {activeCategory === 'musica' && consumed && <p className="pd-line pd-status">Listened</p>}
                           </div>
                         </div>
-                        {description && <p className="pd-desc">{description}</p>}
+
+                        {/* Category-specific field rows */}
+                        {isVideojuegos && (
+                          <div className="pd-fields">
+                            {devs.length > 0 && <div className="pd-field-row"><span className="pd-key">Developers</span><span className="pd-val">{devs.join(', ')}</span></div>}
+                            {publishers.length > 0 && <div className="pd-field-row"><span className="pd-key">Publishers</span><span className="pd-val">{publishers.join(', ')}</span></div>}
+                            {platforms.length > 0 && <div className="pd-field-row"><span className="pd-key">Platforms</span><span className="pd-val">{platforms.join(', ')}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {ownership && <div className="pd-field-row"><span className="pd-key">Ownership</span><span className="pd-val">{ownership}</span></div>}
+                            {gameSource && <div className="pd-field-row"><span className="pd-key">Source</span><span className="pd-val">{gameSource}</span></div>}
+                            {franchise && <div className="pd-field-row"><span className="pd-key">Franchise</span><span className="pd-val">{franchise}</span></div>}
+                            {(achievementsUnlocked || achievementsTotal) && <div className="pd-field-row"><span className="pd-key">Achievements</span><span className="pd-val">{achievementsUnlocked || '0'} / {achievementsTotal || '?'}</span></div>}
+                            {ageRating && <div className="pd-field-row"><span className="pd-key">Age rating</span><span className="pd-val">{ageRating}</span></div>}
+                            {hasDlc && dlcList.length > 0 && <div className="pd-field-row"><span className="pd-key">DLC</span><span className="pd-val">{dlcList.length}</span></div>}
+                            {hasAddons && addonsList.length > 0 && <div className="pd-field-row"><span className="pd-key">Addons</span><span className="pd-val">{addonsList.length}</span></div>}
+                            {isBundle && bundleContents.length > 0 && <div className="pd-field-row"><span className="pd-key">Bundle</span><span className="pd-val">{bundleContents.length} games</span></div>}
+                          </div>
+                        )}
+
+                        {activeCategory === 'musica' && (
+                          <div className="pd-fields">
+                            {musicSource && <div className="pd-field-row"><span className="pd-key">Source</span><span className="pd-val">{musicSource}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {label && <div className="pd-field-row"><span className="pd-key">Label</span><span className="pd-val">{label}</span></div>}
+                            {producers.length > 0 && <div className="pd-field-row"><span className="pd-key">Producers</span><span className="pd-val">{producers.join(', ')}</span></div>}
+                            {partOfAlbum && <div className="pd-field-row"><span className="pd-key">Part of</span><span className="pd-val">{partOfAlbum}</span></div>}
+                            {hasTracks && tracks.length > 0 && <div className="pd-field-row"><span className="pd-key">Tracks</span><span className="pd-val">{tracks.length}</span></div>}
+                            {editions.length > 0 && <div className="pd-field-row"><span className="pd-key">Editions</span><span className="pd-val">{editions.length}</span></div>}
+                            {singleCovers.length > 0 && <div className="pd-field-row"><span className="pd-key">Singles</span><span className="pd-val">{singleCovers.length}</span></div>}
+                          </div>
+                        )}
+
+                        {activeCategory === 'peliculas' && (
+                          <div className="pd-fields">
+                            {directors.length > 0 && <div className="pd-field-row"><span className="pd-key">Directors</span><span className="pd-val">{directors.join(', ')}</span></div>}
+                            {writers.length > 0 && <div className="pd-field-row"><span className="pd-key">Writers</span><span className="pd-val">{writers.join(', ')}</span></div>}
+                            {cast.length > 0 && <div className="pd-field-row"><span className="pd-key">Cast</span><span className="pd-val">{cast.slice(0, 6).join(', ')}{cast.length > 6 && ` +${cast.length - 6}`}</span></div>}
+                            {productionCompanies.length > 0 && <div className="pd-field-row"><span className="pd-key">Production</span><span className="pd-val">{productionCompanies.join(', ')}</span></div>}
+                            {distributors.length > 0 && <div className="pd-field-row"><span className="pd-key">Distributed by</span><span className="pd-val">{distributors.join(', ')}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {movieSource && <div className="pd-field-row"><span className="pd-key">Source</span><span className="pd-val">{movieSource}</span></div>}
+                            {franchise && <div className="pd-field-row"><span className="pd-key">Franchise</span><span className="pd-val">{franchise}</span></div>}
+                            {contentRating && <div className="pd-field-row"><span className="pd-key">Content rating</span><span className="pd-val">{contentRating}</span></div>}
+                            {watchedWhere && <div className="pd-field-row"><span className="pd-key">Watched on</span><span className="pd-val">{watchedWhere}</span></div>}
+                          </div>
+                        )}
+
+                        {activeCategory === 'series' && (
+                          <div className="pd-fields">
+                            {directors.length > 0 && <div className="pd-field-row"><span className="pd-key">Directors</span><span className="pd-val">{directors.join(', ')}</span></div>}
+                            {showrunners.length > 0 && <div className="pd-field-row"><span className="pd-key">Showrunners</span><span className="pd-val">{showrunners.join(', ')}</span></div>}
+                            {writers.length > 0 && <div className="pd-field-row"><span className="pd-key">Writers</span><span className="pd-val">{writers.join(', ')}</span></div>}
+                            {cast.length > 0 && <div className="pd-field-row"><span className="pd-key">Cast</span><span className="pd-val">{cast.slice(0, 6).join(', ')}{cast.length > 6 && ` +${cast.length - 6}`}</span></div>}
+                            {network && <div className="pd-field-row"><span className="pd-key">Network</span><span className="pd-val">{network}</span></div>}
+                            {country && <div className="pd-field-row"><span className="pd-key">Country</span><span className="pd-val">{country}</span></div>}
+                            {language && <div className="pd-field-row"><span className="pd-key">Language</span><span className="pd-val">{language}</span></div>}
+                            {seriesFormat && <div className="pd-field-row"><span className="pd-key">Format</span><span className="pd-val">{seriesFormat}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {contentRating && <div className="pd-field-row"><span className="pd-key">Content rating</span><span className="pd-val">{contentRating}</span></div>}
+                            {hasSeasons && seasons.length > 0 && <div className="pd-field-row"><span className="pd-key">Seasons</span><span className="pd-val">{seasons.length}</span></div>}
+                          </div>
+                        )}
+
+                        {(activeCategory === 'anime' || activeCategory === 'donghua') && (
+                          <div className="pd-fields">
+                            {studios.length > 0 && <div className="pd-field-row"><span className="pd-key">Studios</span><span className="pd-val">{studios.join(', ')}</span></div>}
+                            {animeFormat && <div className="pd-field-row"><span className="pd-key">Format</span><span className="pd-val">{animeFormat}</span></div>}
+                            {airingStatus && <div className="pd-field-row"><span className="pd-key">Airing</span><span className="pd-val">{airingStatus}</span></div>}
+                            {(season || seasonYear) && <div className="pd-field-row"><span className="pd-key">Season</span><span className="pd-val">{season} {seasonYear}</span></div>}
+                            {demographic && <div className="pd-field-row"><span className="pd-key">Demographic</span><span className="pd-val">{demographic}</span></div>}
+                            {animeSource && <div className="pd-field-row"><span className="pd-key">Source</span><span className="pd-val">{animeSource}</span></div>}
+                            {ageRating && <div className="pd-field-row"><span className="pd-key">Age rating</span><span className="pd-val">{ageRating}</span></div>}
+                            {episodeDuration && <div className="pd-field-row"><span className="pd-key">Ep. duration</span><span className="pd-val">{episodeDuration} min</span></div>}
+                            {(airedFrom || airedTo) && <div className="pd-field-row"><span className="pd-key">Aired</span><span className="pd-val">{airedFrom || '?'} → {airedTo || '?'}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {favoriteEpisode && <div className="pd-field-row"><span className="pd-key">Fav episode</span><span className="pd-val">#{favoriteEpisode}{favoriteEpisodeNote && ` — ${favoriteEpisodeNote}`}</span></div>}
+                            {hasEpisodes && episodes.length > 0 && <div className="pd-field-row"><span className="pd-key">Episode list</span><span className="pd-val">{episodes.length}</span></div>}
+                          </div>
+                        )}
+
+                        {isMangaLike(activeCategory) && (
+                          <div className="pd-fields">
+                            {mangaAuthors.length > 0 && <div className="pd-field-row"><span className="pd-key">Authors</span><span className="pd-val">{mangaAuthors.join(', ')}</span></div>}
+                            {mangaArtists.length > 0 && <div className="pd-field-row"><span className="pd-key">Artists</span><span className="pd-val">{mangaArtists.join(', ')}</span></div>}
+                            {magazine && <div className="pd-field-row"><span className="pd-key">Magazine</span><span className="pd-val">{magazine}</span></div>}
+                            {pubStatus && <div className="pd-field-row"><span className="pd-key">Publication</span><span className="pd-val">{pubStatus.replace(/_/g, ' ')}</span></div>}
+                            {mangaSource && <div className="pd-field-row"><span className="pd-key">Source</span><span className="pd-val">{mangaSource}</span></div>}
+                            {(startYear || endYear) && <div className="pd-field-row"><span className="pd-key">Ran</span><span className="pd-val">{startYear || '?'} → {endYear || 'present'}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {ageRating && <div className="pd-field-row"><span className="pd-key">Age rating</span><span className="pd-val">{ageRating}</span></div>}
+                            {volumeCovers.length > 0 && <div className="pd-field-row"><span className="pd-key">Vol. covers</span><span className="pd-val">{volumeCovers.length}</span></div>}
+                            {hasChapters && chapters.length > 0 && <div className="pd-field-row"><span className="pd-key">Chapter list</span><span className="pd-val">{chapters.length}</span></div>}
+                          </div>
+                        )}
+
+                        {(description || mangaDescription || movieDescription || animeDescription || seriesDescription) && (
+                          <div className="pd-section">
+                            <span className="pd-section-label">Description</span>
+                            <p className="pd-desc">{description || mangaDescription || movieDescription || animeDescription || seriesDescription}</p>
+                          </div>
+                        )}
+
+                        {(gameReview || musicReview || movieReview || animeReview || seriesReview || mangaReview) && (
+                          <div className="pd-section">
+                            <span className="pd-section-label">Review{hasSpoilers ? ' — contains spoilers' : ''}</span>
+                            <p className="pd-desc">{gameReview || musicReview || movieReview || animeReview || seriesReview || mangaReview}</p>
+                          </div>
+                        )}
+
+                        {notes && (
+                          <div className="pd-section">
+                            <span className="pd-section-label">Notes</span>
+                            <div className="pd-desc" dangerouslySetInnerHTML={{ __html: renderMiniMarkdown(notes) }} />
+                          </div>
+                        )}
+
+                        {relatedItems.length > 0 && (
+                          <div className="pd-field-row"><span className="pd-key">Related</span><span className="pd-val">{relatedItems.length} item{relatedItems.length !== 1 ? 's' : ''}</span></div>
+                        )}
+                        {recommendedItems.length > 0 && (
+                          <div className="pd-field-row"><span className="pd-key">Recommendations</span><span className="pd-val">{recommendedItems.length}</span></div>
+                        )}
+                        {rewatches.length > 0 && (
+                          <div className="pd-field-row"><span className="pd-key">History log</span><span className="pd-val">{rewatches.length} entr{rewatches.length !== 1 ? 'ies' : 'y'}</span></div>
+                        )}
+
                         {tags.length > 0 && (
                           <div className="pd-tags">
                             {tags.map((t) => <span key={t} className="pd-tag">{t}</span>)}
                           </div>
                         )}
+                        {editingId && (() => {
+                          const groups = categoryCollections.filter((c) => c.itemIds.includes(editingId))
+                          return groups.length > 0 ? (
+                            <div className="pd-field-row"><span className="pd-key">Groups</span><span className="pd-val">{groups.map((g) => g.name).join(', ')}</span></div>
+                          ) : null
+                        })()}
                       </div>
                     </div>
                   )}
