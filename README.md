@@ -17,7 +17,7 @@ The UI is in English. For a field-by-field reference in English and Spanish, see
 ## Highlights
 
 - **10 libraries** with rich per-category fields (see [Categories](#categories))
-- **3 metadata sources wired in-app**: SteamGridDB for game art, AniList and MyAnimeList (via Jikan) for anime/manga (see [Metadata sources](#metadata--artwork-sources))
+- **9 metadata sources wired in-app** covering every library — SteamGridDB + IGDB (games), TMDb (movies + series), MusicBrainz/CAA + VGMdb (music), AniList + MAL + Kitsu (anime), MangaDex + ComicVine for the comics family (see [Metadata sources](#metadata--artwork-sources))
 - **Bulk import** from MyAnimeList / AniList XML exports
 - **Global search Ctrl+K**, bulk actions (Shift+click), undo/redo (Ctrl+Z)
 - **Split storage** since 0.1.7: one JSON per library slice, editing one game only rewrites `games.json`, corruption of one file leaves the rest intact
@@ -147,21 +147,26 @@ Four independent sub-libraries (Manga, Manhwa, Manhua, Western Comics) sharing a
 
 ## Metadata & artwork sources
 
-Three sources are wired into the editors — click **↗ SteamGridDB / ↗ AniList / ↗ MAL** next to the cover field to search, pick, and auto-fill. The rest are manual reference: open, copy, paste.
+Nine sources are wired directly into the editors — click the **↗** button next to the cover field to search, pick, and auto-fill. Keys go in **Settings → Data → Integrations**; sources marked *no key* work out of the box. Covers/banners are downloaded to `assets/` on the fly.
 
-| Site | Best for | In-app |
-| --- | --- | --- |
-| [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes | **↗ Integrated** (needs free API key, see Settings → Data → Integrations) |
-| [AniList](https://anilist.co/) | Anime, Donghua, Manga, Manhwa, Manhua — metadata + cover + banner | **↗ Integrated** (no API key) |
-| [MyAnimeList](https://myanimelist.net/) via [Jikan](https://jikan.moe/) | Anime & Manga — metadata, cover, authors, magazine | **↗ Integrated** (no API key) |
-| [IGDB](https://www.igdb.com/) | Games — metadata (developers, publishers, release dates, genres) | Manual reference |
-| [VGMdb](https://vgmdb.net/) | Music — game soundtracks and Japanese releases | Manual reference |
-| [MusicBrainz](https://musicbrainz.org/) | Music — general metadata (artists, labels, tracklists) | Manual reference |
-| [Rate Your Music](https://rateyourmusic.com/) | Music — genres, discographies, ratings | Manual reference |
-| [IMDb](https://www.imdb.com/) | Movies & Series — metadata (cast, directors, writers, dates) | Manual reference |
-| [Movie Poster DB](https://movieposterdb.com/) | Movies, Series & Anime — high-res posters (account required) | Manual reference |
-| [Douban](https://m.douban.com/home_guide) | Chinese-language IMDb — great for donghua, C-dramas and Asian cinema | Manual reference |
-| [AniDB](https://anidb.net/) | Anime — deep metadata (staff, episodes, relations) | Manual reference — API exists but requires client registration + strict 2s rate limit |
+| Source | Library | In-app | Auth |
+| --- | --- | --- | --- |
+| [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes | **↗ Integrated** | free API key |
+| [IGDB](https://www.igdb.com/) (via Twitch) | Games — full metadata: devs, publishers, platforms, genres, franchises, dates | **↗ Integrated** | Twitch Client ID + Secret (free) |
+| [TMDb](https://www.themoviedb.org/) | Movies + Series — cast, crew, seasons, cover, backdrop, dates, genres, networks | **↗ Integrated** | free v3 API key |
+| [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Music — releases, tracklists, artists, labels + cover | **↗ Integrated** | no key |
+| [VGMdb](https://vgmdb.net/) (via [vgmdb.info](https://vgmdb.info/)) | Music — game & anime soundtracks, Japanese releases | **↗ Integrated** | no key |
+| [AniList](https://anilist.co/) | Anime · Donghua · Manga · Manhwa · Manhua — metadata + cover + banner | **↗ Integrated** | no key |
+| [MyAnimeList](https://myanimelist.net/) via [Jikan](https://jikan.moe/) | Anime · Manga — metadata, cover, authors, magazine | **↗ Integrated** | no key |
+| [Kitsu](https://kitsu.app/) | Anime · Manga fallback when AniList/MAL miss a title | **↗ Integrated** | no key |
+| [MangaDex](https://mangadex.org/) | Manga · Manhwa · Manhua — including obscure titles + scanlations | **↗ Integrated** | no key |
+| [ComicVine](https://comicvine.gamespot.com/) | Western Comics — Marvel, DC, Image, indies + creator credits | **↗ Integrated** | free API key |
+| [Rate Your Music](https://rateyourmusic.com/) | Music — genres, discographies, ratings | Manual reference | — |
+| [IMDb](https://www.imdb.com/) | Movies & Series — no public free API; TMDb covers the same ground | Manual reference | — |
+| [Movie Poster DB](https://movieposterdb.com/) | Higher-res posters when TMDb's aren't enough | Manual reference | account |
+| [Douban](https://m.douban.com/home_guide) | Chinese-language IMDb — donghua, C-dramas, Asian cinema | Manual reference | — |
+| [AniDB](https://anidb.net/) | Anime — deep metadata | Manual reference — the API needs client registration + a hard 2s rate limit; AniList/MAL/Kitsu already cover the same ground | — |
+| [Discogs](https://www.discogs.com/) | Music — physical releases, vinyl, editions | Manual reference | — |
 
 **Bulk import**: already tracking anime/manga elsewhere? Settings → Data → **Import MAL / AniList XML** loads a full export in one go. Works with MyAnimeList's native export and the [malscraper.azurewebsites.net](https://malscraper.azurewebsites.net/) AniList exporter.
 
