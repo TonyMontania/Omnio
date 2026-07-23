@@ -135,6 +135,12 @@ const CATEGORY_FILENAME: Record<string, string> = {
 }
 const fileForCategory = (cat: string) => `${CATEGORY_FILENAME[cat] ?? cat}.json`
 
+// Same map is applied to assets/ folder names. Existing users' JSON stores
+// image paths like "videojuegos/cover/xxx.jpg"; migrateLegacyAssetFolders()
+// renames the folders and rewrites those paths so nothing 404s post-migrate.
+const CATEGORY_ASSET_FOLDER: Record<string, string> = CATEGORY_FILENAME
+const assetFolderForCategory = (cat: string) => CATEGORY_ASSET_FOLDER[cat] ?? cat
+
 const TOP_SLICES = ['collections', 'artists', 'settings', 'customOrders'] as const
 
 // Slice → last-written SHA1. Used to skip writes for unchanged files so a
@@ -184,9 +190,52 @@ async function renameLegacyCategoryFiles(): Promise<void> {
   }
 }
 
+// One-shot rename: pre-0.2.1 stored asset folders as assets/videojuegos,
+// assets/musica, assets/peliculas (Spanish, matching internal categoryIds).
+// 0.2.1+ uses English names to match the split data files. Rename the
+// folders AND rewrite the relative paths inside every category JSON so
+// existing covers/banners/logos keep resolving.
+async function renameLegacyAssetFolders(): Promise<void> {
+  const renames: [string, string][] = [
+    ['videojuegos', 'games'],
+    ['musica',       'music'],
+    ['peliculas',    'movies'],
+  ]
+  for (const [oldName, newName] of renames) {
+    const oldP = path.join(ASSETS_ROOT, oldName)
+    const newP = path.join(ASSETS_ROOT, newName)
+    if (await fileExists(oldP) && !await fileExists(newP)) {
+      try { await fs.rename(oldP, newP) } catch { /* non-fatal */ }
+    }
+  }
+  // Rewrite paths inside every category JSON. Match at the start of any
+  // string field to avoid mangling arbitrary text; paths look like
+  // "videojuegos/cover/xxx.jpg".
+  for (const cat of CATEGORY_IDS) {
+    const p = path.join(DATA_DIR, fileForCategory(cat))
+    let raw: string
+    try { raw = await fs.readFile(p, 'utf-8') } catch { continue }
+    let changed = raw
+    for (const [oldName, newName] of renames) {
+      // Only rewrite when the folder name appears as an asset-path prefix
+      // (inside quotes, followed by /). Leaves item titles / descriptions
+      // that happen to contain the word untouched.
+      const re = new RegExp(`"${oldName}/`, 'g')
+      changed = changed.replace(re, `"${newName}/`)
+    }
+    if (changed !== raw) {
+      try {
+        await fs.writeFile(p, changed, 'utf-8')
+        lastHashes[p] = sha1(changed)
+      } catch { /* non-fatal */ }
+    }
+  }
+}
+
 async function readSplitData(): Promise<Record<string, unknown> | null> {
   if (!await fileExists(DATA_DIR)) return null
   await renameLegacyCategoryFiles()
+  await renameLegacyAssetFolders()
   const items: unknown[] = []
   for (const cat of CATEGORY_IDS) {
     const p = path.join(DATA_DIR, fileForCategory(cat))
@@ -365,7 +414,7 @@ ipcMain.handle('image:save', async (_event, categoryId: string, kind: string, da
   const mime = match[1]
   const ext = EXT_FROM_MIME[mime] ?? 'bin'
   const buf = Buffer.from(match[2], 'base64')
-  const safeCategory = categoryId.replace(/[^a-z0-9_-]/gi, '')
+  const safeCategory = assetFolderForCategory(categoryId).replace(/[^a-z0-9_-]/gi, '')
   const safeKind = kind.replace(/[^a-z0-9_-]/gi, '')
   const dir = path.join(ASSETS_ROOT, safeCategory, safeKind)
   await fs.mkdir(dir, { recursive: true })
@@ -455,17 +504,30 @@ ipcMain.handle('sgdb:assets', async (_event, apiKey: string, kind: 'grids' | 'he
 
 // Jikan v4 — unofficial MyAnimeList proxy, no API key required.
 // kind is 'anime' or 'manga'; docs: https://docs.api.jikan.moe
+// Jikan is a free community proxy over the real MAL API and returns 504
+// (upstream timeout) intermittently, especially for manga. Retry a few
+// times with backoff on transient errors before surfacing the failure.
 ipcMain.handle('jikan:search', async (_event, term: string, kind: 'anime' | 'manga') => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  try {
-    const url = `https://api.jikan.moe/v4/${kind}?q=${encodeURIComponent(term.trim())}&limit=12&sfw=false`
-    const r = await fetch(url)
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const json = await r.json() as { data?: unknown[] }
-    return { ok: true, data: json.data ?? [] }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
+  const url = `https://api.jikan.moe/v4/${kind}?q=${encodeURIComponent(term.trim())}&limit=12&sfw=false`
+  const isRetryable = (status: number) => status === 504 || status === 502 || status === 503 || status === 429 || status === 408
+  const maxAttempts = 3
+  let lastError = 'Search failed'
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const r = await fetch(url)
+      if (r.ok) {
+        const json = await r.json() as { data?: unknown[] }
+        return { ok: true, data: json.data ?? [] }
+      }
+      lastError = `HTTP ${r.status}${r.status === 504 ? ' — MAL upstream timed out, retry in a moment' : ''}`
+      if (!isRetryable(r.status)) return { ok: false, error: lastError }
+    } catch (e) {
+      lastError = (e as Error).message
+    }
+    if (attempt < maxAttempts - 1) await new Promise((res) => setTimeout(res, 800 * (attempt + 1)))
   }
+  return { ok: false, error: lastError }
 })
 
 // Kitsu — free, no-key anime/manga fallback. JSON:API spec: everything
@@ -804,7 +866,7 @@ ipcMain.handle('image:download', async (_event, url: string, categoryId: string,
       const urlExt = url.split('?')[0].split('.').pop()?.toLowerCase() ?? ''
       ext = EXT_FROM_URL[urlExt] ?? 'bin'
     }
-    const safeCategory = categoryId.replace(/[^a-z0-9_-]/gi, '')
+    const safeCategory = assetFolderForCategory(categoryId).replace(/[^a-z0-9_-]/gi, '')
     const safeKind = kind.replace(/[^a-z0-9_-]/gi, '')
     const dir = path.join(ASSETS_ROOT, safeCategory, safeKind)
     await fs.mkdir(dir, { recursive: true })

@@ -49,10 +49,14 @@
   display: grid;
   grid-template-columns: 220px 1fr;
   gap: 0;
-  width: 100%;
+  width: calc(100% + 64px);
   flex: 1;
   min-height: 0;
   margin: 0 -32px;
+}
+.app[data-density="compact"] .settings-layout {
+  width: calc(100% + 40px);
+  margin: 0 -20px;
 }
 .settings-sidebar {
   display: flex;

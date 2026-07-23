@@ -369,6 +369,7 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
+  const [bundleSgdbFor, setBundleSgdbFor] = useState<null | { entryId: string; title: string }>(null)
   const [anilistOpen, setAnilistOpen] = useState<null | 'ANIME' | 'MANGA'>(null)
   const [jikanOpen, setJikanOpen] = useState<null | 'anime' | 'manga'>(null)
   const [tmdbOpen, setTmdbOpen] = useState<null | 'movie' | 'tv'>(null)
@@ -3532,16 +3533,12 @@ function App() {
                         <span className="metadata-sources-hint">Auto-fills title, cover, and category-specific fields</span>
                       </div>
                       <div className="metadata-sources-grid">
-                        {isVideojuegos && <>
+                        {isVideojuegos && (
                           <button type="button" className="metadata-source-btn" onClick={() => setIgdbOpen(true)}>
                             <span className="ms-name">↗ IGDB</span>
                             <span className="ms-desc">Full metadata — devs, publishers, platforms, genres</span>
                           </button>
-                          <button type="button" className="metadata-source-btn" onClick={() => setSgdbOpen('grids')}>
-                            <span className="ms-name">↗ SteamGridDB</span>
-                            <span className="ms-desc">Community covers, banners, logos</span>
-                          </button>
-                        </>}
+                        )}
                         {(activeCategory === 'anime' || activeCategory === 'donghua') && <>
                           <button type="button" className="metadata-source-btn" onClick={() => setAnilistOpen('ANIME')}>
                             <span className="ms-name">↗ AniList</span>
@@ -3628,6 +3625,7 @@ function App() {
                       />
                       <div className="upload-row">
                         <button type="button" className="upload-btn" onClick={() => fileInputRef.current?.click()}>Upload from PC</button>
+                        {isVideojuegos && <button type="button" className="upload-btn" onClick={() => setSgdbOpen('grids')} title="Fetch from SteamGridDB">↗ SteamGridDB</button>}
                         {cover && <button type="button" className="upload-btn clear" onClick={() => setCover('')}>Clear</button>}
                       </div>
                       <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleCoverFile} />
@@ -3668,6 +3666,10 @@ function App() {
 
                     {isVideojuegos && (
                       <>
+                        <div className="form-section-header">
+                          <span className="form-section-title">Game details</span>
+                          <span className="form-section-hint">Devs, publishers, platforms, franchise</span>
+                        </div>
                         <TagEditor
                           label="Developers"
                           placeholder="Add developer"
@@ -3749,6 +3751,7 @@ function App() {
                           onToggle={(v) => { setIsBundle(v); if (!v) setBundleContents([]) }}
                           entries={bundleContents}
                           onChange={setBundleContents}
+                          onRequestSgdb={(entryId, title) => setBundleSgdbFor({ entryId, title })}
                         />
                         <div className="field-group">
                           <label>Rating</label>
@@ -3837,6 +3840,10 @@ function App() {
                     )}
                     {activeCategory === 'peliculas' && (
                       <>
+                        <div className="form-section-header">
+                          <span className="form-section-title">Movie details</span>
+                          <span className="form-section-hint">Cast, crew, backdrop, franchise</span>
+                        </div>
                         <div className="field-group">
                           <label>Backdrop image</label>
                           <input
@@ -4004,6 +4011,10 @@ function App() {
 
                     {isSeriesLike && (
                   <>
+                    <div className="form-section-header">
+                      <span className="form-section-title">Series details</span>
+                      <span className="form-section-hint">Cast, crew, network, seasons</span>
+                    </div>
                     <div className="field-group">
                       <label>Description</label>
                       <textarea value={seriesDescription} onChange={(e) => setSeriesDescription(e.target.value)} rows={3} />
@@ -4180,6 +4191,10 @@ function App() {
 
                 {isAnime && (
                   <>
+                    <div className="form-section-header">
+                      <span className="form-section-title">{activeCategory === 'donghua' ? 'Donghua' : 'Anime'} details</span>
+                      <span className="form-section-hint">Studios, format, airing, episodes</span>
+                    </div>
                     <TagEditor
                       label="Studios"
                       placeholder="Add studio"
@@ -4396,6 +4411,10 @@ function App() {
 
                 {isManga && (
                   <>
+                    <div className="form-section-header">
+                      <span className="form-section-title">Publication details</span>
+                      <span className="form-section-hint">Authors, artists, chapters, magazine</span>
+                    </div>
                     <TagEditor
                       label="Authors"
                       placeholder="Add author"
@@ -4577,6 +4596,10 @@ function App() {
 
                     {activeCategory === 'musica' && (
                   <>
+                    <div className="form-section-header">
+                      <span className="form-section-title">Music details</span>
+                      <span className="form-section-hint">Artist, tracklist, editions, singles</span>
+                    </div>
                     <div className="field-group">
                       <label>Artist</label>
                       <input value={artist} onChange={(e) => setArtist(e.target.value)} />
@@ -5030,6 +5053,20 @@ function App() {
             setToast('Artwork downloaded')
           }}
           onClose={() => setSgdbOpen(null)}
+        />
+      )}
+
+      {bundleSgdbFor && (
+        <SteamGridDbPicker
+          apiKey={settings.sgdbApiKey}
+          initialQuery={bundleSgdbFor.title}
+          kind="grids"
+          saveAsKind="bundle"
+          onPick={(rel) => {
+            setBundleContents((prev) => prev.map((b) => b.id === bundleSgdbFor.entryId ? { ...b, cover: rel } : b))
+            setToast('Bundle cover downloaded')
+          }}
+          onClose={() => setBundleSgdbFor(null)}
         />
       )}
 

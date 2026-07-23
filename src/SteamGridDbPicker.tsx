@@ -13,6 +13,9 @@ interface Props {
   kind: Kind
   onPick: (relativePath: string) => void
   onClose: () => void
+  // Override the on-disk asset folder (defaults to KIND_TO_LOCAL[kind]).
+  // Used for bundle sub-covers which live under assets/videojuegos/bundle/.
+  saveAsKind?: string
 }
 
 interface Game {
@@ -43,7 +46,7 @@ const KIND_TO_LOCAL: Record<Kind, string> = {
   logos: 'logo',
 }
 
-export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, onClose }: Props) {
+export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, onClose, saveAsKind }: Props) {
   const [query, setQuery] = useState(initialQuery ?? '')
   const [games, setGames] = useState<Game[]>([])
   const [gameSearchLoading, setGameSearchLoading] = useState(false)
@@ -93,7 +96,7 @@ export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, 
 
   const pickAsset = async (a: Asset) => {
     setDownloading(a.id)
-    const rel = await window.ipcRenderer.invoke('image:download', a.url, 'videojuegos', KIND_TO_LOCAL[kind])
+    const rel = await window.ipcRenderer.invoke('image:download', a.url, 'videojuegos', saveAsKind ?? KIND_TO_LOCAL[kind])
     setDownloading(null)
     if (rel) { onPick(rel); onClose() }
     else alert('Download failed. Try another asset or check your connection.')

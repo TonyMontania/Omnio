@@ -7,12 +7,13 @@ import type { BundleGame, GameStatus } from '../../types'
 import { assetSrc, GAME_STATUS_OPTIONS } from '../../types'
 
 export default function BundleGamesEditor({
-  enabled, onToggle, entries, onChange,
+  enabled, onToggle, entries, onChange, onRequestSgdb,
 }: {
   enabled: boolean
   onToggle: (v: boolean) => void
   entries: BundleGame[]
   onChange: (next: BundleGame[]) => void
+  onRequestSgdb?: (entryId: string, title: string) => void
 }) {
   const [draft, setDraft] = useState('')
 
@@ -47,7 +48,7 @@ export default function BundleGamesEditor({
           {entries.length > 0 && (
             <div className="bundle-rows">
               {entries.map((e) => (
-                <BundleRow key={e.id} entry={e} onPatch={(p) => patch(e.id, p)} onRemove={() => remove(e.id)} />
+                <BundleRow key={e.id} entry={e} onPatch={(p) => patch(e.id, p)} onRemove={() => remove(e.id)} onRequestSgdb={onRequestSgdb} />
               ))}
             </div>
           )}
@@ -57,10 +58,11 @@ export default function BundleGamesEditor({
   )
 }
 
-function BundleRow({ entry, onPatch, onRemove }: {
+function BundleRow({ entry, onPatch, onRemove, onRequestSgdb }: {
   entry: BundleGame
   onPatch: (patch: Partial<BundleGame>) => void
   onRemove: () => void
+  onRequestSgdb?: (entryId: string, title: string) => void
 }) {
   const fileInput = useRef<HTMLInputElement>(null)
 
@@ -102,6 +104,9 @@ function BundleRow({ entry, onPatch, onRemove }: {
           <button type="button" className="upload-btn" onClick={() => fileInput.current?.click()}>
             {entry.cover ? 'Change cover' : 'Upload cover'}
           </button>
+          {onRequestSgdb && (
+            <button type="button" className="upload-btn" onClick={() => onRequestSgdb(entry.id, entry.name)} title="Fetch from SteamGridDB">↗ SteamGridDB</button>
+          )}
           {entry.cover && (
             <button type="button" className="upload-btn clear" onClick={() => onPatch({ cover: undefined })}>Clear</button>
           )}
