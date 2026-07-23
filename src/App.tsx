@@ -77,6 +77,7 @@ const ComicVineFetcher  = lazy(() => import('./ComicVineFetcher'))
 const MangaDexFetcher   = lazy(() => import('./MangaDexFetcher'))
 const KitsuFetcher      = lazy(() => import('./KitsuFetcher'))
 const MalImporter       = lazy(() => import('./MalImporter'))
+const GenericImporter   = lazy(() => import('./GenericImporter'))
 const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 import { buildStaticSiteHtml } from './exportSite'
 import {
@@ -417,6 +418,7 @@ function App() {
   const [mangadexOpen, setMangadexOpen] = useState(false)
   const [kitsuOpen, setKitsuOpen] = useState<null | 'anime' | 'manga'>(null)
   const [malOpen, setMalOpen] = useState(false)
+  const [genericImportOpen, setGenericImportOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
@@ -3024,8 +3026,9 @@ function App() {
                       <label>Import from other trackers</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={() => setMalOpen(true)}>Import MAL / AniList XML</button>
+                        <button type="button" className="secondary-btn" onClick={() => setGenericImportOpen(true)}>Import Excel / CSV / Notion / TXT</button>
                       </div>
-                      <p className="hint">Bulk-load anime and manga you already tracked elsewhere.</p>
+                      <p className="hint">Bulk-load titles from other places. MAL/AniList uses the XML export; the generic importer takes an .xlsx, .csv (including Notion database exports), .tsv or .txt file with one title per line.</p>
                     </div>
                     <div className="field-group">
                       <label>Share your library</label>
@@ -5246,6 +5249,16 @@ function App() {
             setToast(`Imported ${newItems.length} items`)
           }}
           onClose={() => setMalOpen(false)}
+        />
+      )}
+
+      {genericImportOpen && (
+        <GenericImporter
+          onImport={(newItems) => {
+            setItems((all) => [...all, ...newItems])
+            setToast(`Imported ${newItems.length} items`)
+          }}
+          onClose={() => setGenericImportOpen(false)}
         />
       )}
 
