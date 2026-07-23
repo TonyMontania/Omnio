@@ -375,6 +375,14 @@ function App() {
   const [updateCheckState, setUpdateCheckState] = useState<'idle' | 'checking' | 'up-to-date' | 'error'>('idle')
   const [updateCheckError, setUpdateCheckError] = useState<string | null>(null)
   const [updateBannerDismissed, setUpdateBannerDismissed] = useState(false)
+  const [updateInstallKind, setUpdateInstallKind] = useState<string>('unknown')
+  type DownloadState =
+    | { phase: 'idle' }
+    | { phase: 'downloading'; received: number; total: number }
+    | { phase: 'done'; path: string; size: number }
+    | { phase: 'error'; message: string }
+  const [downloadState, setDownloadState] = useState<DownloadState>({ phase: 'idle' })
+  const [updateModalOpen, setUpdateModalOpen] = useState(false)
 
   const runUpdateCheck = async (silent: boolean) => {
     if (!silent) setUpdateCheckState('checking')
@@ -386,13 +394,14 @@ function App() {
     }
     if (r.hasUpdate) {
       // Point the user at the exact asset that matches their install kind.
-      const installKind = await window.ipcRenderer.invoke('updates:install-kind') as { assetHint?: string } | null
+      const installKind = await window.ipcRenderer.invoke('updates:install-kind') as { kind?: string; assetHint?: string } | null
       let matchedAssetUrl: string | undefined
       let matchedAssetName: string | undefined
       if (installKind?.assetHint && Array.isArray(r.assets)) {
         const hit = (r.assets as { name: string; url: string }[]).find((a) => a.name.toLowerCase().endsWith(installKind.assetHint!.toLowerCase()))
         if (hit) { matchedAssetUrl = hit.url; matchedAssetName = hit.name }
       }
+      setUpdateInstallKind(installKind?.kind ?? 'unknown')
       setUpdateInfo({ current: r.current, latest: r.latest, htmlUrl: r.htmlUrl, publishedAt: r.publishedAt, notes: r.notes, matchedAssetUrl, matchedAssetName })
       setUpdateBannerDismissed(false)
       if (!silent) setUpdateCheckState('idle')
@@ -408,6 +417,43 @@ function App() {
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    const handler = (_ev: unknown, p: { received: number; total: number }) => {
+      setDownloadState((s) => s.phase === 'downloading' ? { phase: 'downloading', received: p.received, total: p.total } : s)
+    }
+    window.ipcRenderer.on('updates:progress', handler)
+    return () => { window.ipcRenderer.off('updates:progress', handler) }
+  }, [])
+
+  const startAssistedDownload = async () => {
+    if (!updateInfo?.matchedAssetUrl || !updateInfo.matchedAssetName) return
+    setUpdateModalOpen(true)
+    setDownloadState({ phase: 'downloading', received: 0, total: 0 })
+    const r = await window.ipcRenderer.invoke('updates:download', updateInfo.matchedAssetUrl, updateInfo.matchedAssetName)
+    if (!r?.ok) {
+      setDownloadState({ phase: 'error', message: r?.error ?? 'Download failed' })
+      return
+    }
+    setDownloadState({ phase: 'done', path: r.path, size: r.size })
+  }
+
+  const finalizeUpdate = async () => {
+    if (downloadState.phase !== 'done') return
+    if (updateInstallKind === 'win-nsis') {
+      await window.ipcRenderer.invoke('updates:launch-installer', downloadState.path)
+    } else if (updateInstallKind === 'linux-appimage') {
+      const r = await window.ipcRenderer.invoke('updates:appimage-swap', downloadState.path)
+      if (!r?.ok) setDownloadState({ phase: 'error', message: r?.error ?? 'AppImage swap failed' })
+    } else if (updateInstallKind === 'mac-arm64' || updateInstallKind === 'mac-x64') {
+      await window.ipcRenderer.invoke('updates:open-dmg', downloadState.path)
+      setUpdateModalOpen(false)
+    } else {
+      // Portable / unknown → reveal in explorer, user runs manually.
+      await window.ipcRenderer.invoke('updates:reveal', downloadState.path)
+      setUpdateModalOpen(false)
+    }
+  }
   const [anilistOpen, setAnilistOpen] = useState<null | 'ANIME' | 'MANGA'>(null)
   const [jikanOpen, setJikanOpen] = useState<null | 'anime' | 'manga'>(null)
   const [tmdbOpen, setTmdbOpen] = useState<null | 'movie' | 'tv'>(null)
@@ -1857,12 +1903,12 @@ function App() {
             <span className="update-banner-title">Omnio {updateInfo.latest} is available</span>
             <span className="update-banner-sub">
               You're on {updateInfo.current}.
-              {updateInfo.matchedAssetName ? ` Download matches your build: ${updateInfo.matchedAssetName}.` : ' Pick the build for your platform on the release page.'}
+              {updateInfo.matchedAssetName ? ` Update from within the app: ${updateInfo.matchedAssetName}.` : ' Pick the build for your platform on the release page.'}
             </span>
           </div>
           <div className="update-banner-actions">
             {updateInfo.matchedAssetUrl && (
-              <button type="button" className="update-banner-btn primary" onClick={() => window.ipcRenderer.invoke('updates:open-url', updateInfo.matchedAssetUrl!)}>Download</button>
+              <button type="button" className="update-banner-btn primary" onClick={startAssistedDownload}>Update</button>
             )}
             <button type="button" className={updateInfo.matchedAssetUrl ? 'update-banner-btn ghost' : 'update-banner-btn primary'} onClick={() => window.ipcRenderer.invoke('updates:open-url', updateInfo.htmlUrl)}>Release page</button>
             <button type="button" className="update-banner-btn ghost" onClick={() => setUpdateBannerDismissed(true)}>Later</button>
@@ -3133,8 +3179,8 @@ function App() {
                           {updateCheckState === 'checking' ? 'Checking…' : 'Check for updates'}
                         </button>
                         {updateInfo?.matchedAssetUrl && (
-                          <button type="button" className="secondary-btn" onClick={() => window.ipcRenderer.invoke('updates:open-url', updateInfo.matchedAssetUrl!)}>
-                            ⬇ Download {updateInfo.matchedAssetName}
+                          <button type="button" className="secondary-btn" onClick={startAssistedDownload}>
+                            ⬇ Update to {updateInfo.latest}
                           </button>
                         )}
                         {updateInfo && (
@@ -5309,6 +5355,57 @@ function App() {
       )}
 
       {toast && <Toast message={toast} />}
+
+      {updateModalOpen && updateInfo && (
+        <div className="modal-overlay" onClick={() => downloadState.phase !== 'downloading' && setUpdateModalOpen(false)}>
+          <div className="modal-box" style={{ width: 440 }} onClick={(e) => e.stopPropagation()}>
+            <p className="modal-brand">Update to Omnio {updateInfo.latest}</p>
+            {downloadState.phase === 'downloading' && (() => {
+              const pct = downloadState.total > 0 ? Math.floor((downloadState.received / downloadState.total) * 100) : 0
+              const mb = (n: number) => (n / (1024 * 1024)).toFixed(1)
+              return (
+                <>
+                  <p className="modal-message">Downloading {updateInfo.matchedAssetName}…</p>
+                  <div className="update-progress"><div className="update-progress-bar" style={{ width: `${pct}%` }} /></div>
+                  <p className="hint" style={{ marginTop: 8 }}>
+                    {mb(downloadState.received)} MB{downloadState.total > 0 ? ` / ${mb(downloadState.total)} MB` : ''} · {pct}%
+                  </p>
+                </>
+              )
+            })()}
+            {downloadState.phase === 'done' && (
+              <>
+                <p className="modal-message">
+                  Download complete.{' '}
+                  {updateInstallKind === 'win-nsis' && 'Click Install to launch the setup — Windows will show a SmartScreen prompt because the build is unsigned.'}
+                  {updateInstallKind === 'win-portable' && 'The new portable exe is in your Downloads folder. Close Omnio and run it to finish the update.'}
+                  {(updateInstallKind === 'mac-arm64' || updateInstallKind === 'mac-x64') && 'Click Open DMG to mount the disk image. Drag Omnio.app to Applications like a normal install.'}
+                  {updateInstallKind === 'linux-appimage' && 'Click Replace and relaunch to make the new AppImage the active one.'}
+                  {updateInstallKind === 'unknown' && 'The file is in your Downloads folder.'}
+                </p>
+                <div className="modal-actions">
+                  <button className="ghost" onClick={() => setUpdateModalOpen(false)}>Close</button>
+                  <button className="primary" onClick={finalizeUpdate}>
+                    {updateInstallKind === 'win-nsis' ? 'Install now' :
+                      updateInstallKind === 'linux-appimage' ? 'Replace and relaunch' :
+                      (updateInstallKind === 'mac-arm64' || updateInstallKind === 'mac-x64') ? 'Open DMG' :
+                      'Reveal in folder'}
+                  </button>
+                </div>
+              </>
+            )}
+            {downloadState.phase === 'error' && (
+              <>
+                <p className="modal-message" style={{ color: 'var(--danger)' }}>Download failed: {downloadState.message}</p>
+                <div className="modal-actions">
+                  <button className="ghost" onClick={() => setUpdateModalOpen(false)}>Close</button>
+                  <button className="primary" onClick={startAssistedDownload}>Retry</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {alertMsg && (
         <div className="modal-overlay">

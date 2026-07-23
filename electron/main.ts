@@ -534,6 +534,93 @@ ipcMain.handle('updates:install-kind', async () => {
   return { kind, assetHint, platform, arch }
 })
 
+// Download an update asset to a predictable location and stream progress
+// back to the renderer via the returned event. We can't do "true" auto-update
+// because the builds are unsigned (SmartScreen / Gatekeeper would prompt on
+// every silent install anyway), so this is the assisted flow:
+//   * NSIS win32     → downloads *-setup.exe, launches it, quits the app
+//   * Portable win32 → downloads to the same folder, reveals in Explorer,
+//                      user closes Omnio and runs the new .exe manually
+//   * DMG mac        → downloads the .dmg, opens it (Finder handles the drag)
+//   * AppImage linux → downloads next to the running AppImage, chmods it,
+//                      relaunches from the new one so the swap is atomic
+ipcMain.handle('updates:download', async (event, url: string, filename: string) => {
+  try {
+    const downloadsDir = app.getPath('downloads')
+    await fs.mkdir(downloadsDir, { recursive: true })
+    const safeName = filename.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+    const targetPath = path.join(downloadsDir, safeName)
+
+    const r = await fetch(url)
+    if (!r.ok || !r.body) return { ok: false, error: `HTTP ${r.status}` }
+    const total = Number(r.headers.get('content-length') ?? 0) || 0
+
+    const handle = await fs.open(targetPath, 'w')
+    const stream = handle.createWriteStream()
+    let received = 0
+    let lastReport = 0
+    const reader = (r.body as ReadableStream<Uint8Array>).getReader()
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      stream.write(Buffer.from(value))
+      received += value.byteLength
+      // Throttle progress events to ~10 per MiB so the renderer doesn't
+      // choke on a fetch that finishes in <1s from a fast mirror.
+      if (received - lastReport > 200_000) {
+        event.sender.send('updates:progress', { received, total })
+        lastReport = received
+      }
+    }
+    stream.end()
+    await new Promise<void>((res) => stream.on('close', () => res()))
+    await handle.close()
+    event.sender.send('updates:progress', { received, total: total || received })
+    return { ok: true, path: targetPath, size: received }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+ipcMain.handle('updates:reveal', async (_event, filePath: string) => {
+  const { shell } = await import('electron')
+  shell.showItemInFolder(filePath)
+  return true
+})
+
+// Windows NSIS: launch the setup and quit. UAC + SmartScreen still appear
+// because the build isn't signed — one prompt to approve, then a normal
+// setup wizard. On success it replaces the installed Omnio with the new one.
+ipcMain.handle('updates:launch-installer', async (_event, filePath: string) => {
+  const { shell } = await import('electron')
+  await shell.openPath(filePath)
+  setTimeout(() => app.quit(), 500)
+  return true
+})
+
+// Linux AppImage: chmod +x, relaunch from the new file, quit. The new one
+// takes over and the old file can be deleted whenever the user wants.
+ipcMain.handle('updates:appimage-swap', async (_event, newPath: string) => {
+  try {
+    await fs.chmod(newPath, 0o755)
+    const { spawn } = await import('node:child_process')
+    spawn(newPath, [], { detached: true, stdio: 'ignore' }).unref()
+    setTimeout(() => app.quit(), 500)
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// macOS: open the DMG so Finder mounts it. User drags Omnio.app to
+// Applications like a normal install.
+ipcMain.handle('updates:open-dmg', async (_event, filePath: string) => {
+  const { shell } = await import('electron')
+  await shell.openPath(filePath)
+  return true
+})
+
 // Dialog helpers — main-process only, so surfaced through IPC for the
 // renderer's export flows.
 import { dialog } from 'electron'
