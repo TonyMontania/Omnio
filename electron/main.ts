@@ -436,6 +436,104 @@ ipcMain.handle('image:delete', async (_event, rel: string) => {
 
 ipcMain.handle('storage:root', async () => STORAGE_ROOT)
 
+// -----------------------------------------------------------------------------
+// Update check. We don't ship electron-updater because the builds are unsigned
+// (portable EXE, DMG without notarisation, AppImage) and every auto-updater
+// stack assumes signed artifacts and a publish server. Instead we poll the
+// GitHub Releases API, compare semver against APP_VERSION and let the user
+// download the right variant themselves. This works uniformly for portable,
+// NSIS, DMG, AppImage, .deb — whichever build they installed from.
+//
+// Runs opportunistically at boot (renderer decides when) and on demand from
+// Settings → Data → Check for updates.
+// -----------------------------------------------------------------------------
+
+const GITHUB_LATEST_RELEASE = 'https://api.github.com/repos/TonyMontania/Omnio/releases/latest'
+
+function parseSemver(v: string): number[] | null {
+  const clean = v.trim().replace(/^v/i, '')
+  const parts = clean.split('.').map((n) => parseInt(n, 10))
+  if (parts.some((n) => Number.isNaN(n))) return null
+  while (parts.length < 3) parts.push(0)
+  return parts.slice(0, 3)
+}
+
+function isNewer(latest: string, current: string): boolean {
+  const a = parseSemver(latest)
+  const b = parseSemver(current)
+  if (!a || !b) return false
+  for (let i = 0; i < 3; i++) {
+    if (a[i] > b[i]) return true
+    if (a[i] < b[i]) return false
+  }
+  return false
+}
+
+interface ReleaseAsset { name: string; browser_download_url: string; size: number }
+interface GithubRelease {
+  tag_name: string
+  name?: string
+  html_url: string
+  body?: string
+  published_at?: string
+  prerelease?: boolean
+  draft?: boolean
+  assets?: ReleaseAsset[]
+}
+
+ipcMain.handle('updates:check', async (_event, currentVersion: string) => {
+  try {
+    const r = await fetch(GITHUB_LATEST_RELEASE, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Omnio-update-check' },
+    })
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const json = await r.json() as GithubRelease
+    if (json.draft || json.prerelease) return { ok: true, hasUpdate: false, current: currentVersion, latest: json.tag_name }
+    const hasUpdate = isNewer(json.tag_name, currentVersion)
+    return {
+      ok: true,
+      hasUpdate,
+      current: currentVersion,
+      latest: json.tag_name,
+      htmlUrl: json.html_url,
+      publishedAt: json.published_at,
+      notes: json.body,
+      assets: (json.assets ?? []).map((a) => ({ name: a.name, url: a.browser_download_url, size: a.size })),
+    }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+ipcMain.handle('updates:open-url', async (_event, url: string) => {
+  const { shell } = await import('electron')
+  await shell.openExternal(url)
+  return true
+})
+
+// Which build did the user actually install? We use this to point them at the
+// matching asset from the release page instead of a generic "open release" —
+// portable users get portable, NSIS users get setup, DMG users get DMG, etc.
+ipcMain.handle('updates:install-kind', async () => {
+  const platform = process.platform
+  const arch = process.arch
+  const isPortableWin = platform === 'win32' && !!process.env.PORTABLE_EXECUTABLE_DIR
+  let kind = 'unknown'
+  let assetHint = ''
+  if (platform === 'win32') {
+    if (isPortableWin) { kind = 'win-portable'; assetHint = '-portable.exe' }
+    else { kind = 'win-nsis'; assetHint = '-setup.exe' }
+  } else if (platform === 'darwin') {
+    kind = arch === 'arm64' ? 'mac-arm64' : 'mac-x64'
+    assetHint = arch === 'arm64' ? '-arm64.dmg' : '-x64.dmg'
+  } else if (platform === 'linux') {
+    // Best-effort: default to AppImage. .deb / Flatpak / Snap users have their
+    // own package manager anyway and shouldn't rely on our downloader.
+    kind = 'linux-appimage'; assetHint = '.AppImage'
+  }
+  return { kind, assetHint, platform, arch }
+})
+
 // Dialog helpers — main-process only, so surfaced through IPC for the
 // renderer's export flows.
 import { dialog } from 'electron'

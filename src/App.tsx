@@ -370,6 +370,43 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
   const [bundleSgdbFor, setBundleSgdbFor] = useState<null | { entryId: string; title: string }>(null)
+  const [updateInfo, setUpdateInfo] = useState<null | { current: string; latest: string; htmlUrl: string; publishedAt?: string; notes?: string; matchedAssetUrl?: string; matchedAssetName?: string }>(null)
+  const [updateCheckState, setUpdateCheckState] = useState<'idle' | 'checking' | 'up-to-date' | 'error'>('idle')
+  const [updateCheckError, setUpdateCheckError] = useState<string | null>(null)
+  const [updateBannerDismissed, setUpdateBannerDismissed] = useState(false)
+
+  const runUpdateCheck = async (silent: boolean) => {
+    if (!silent) setUpdateCheckState('checking')
+    setUpdateCheckError(null)
+    const r = await window.ipcRenderer.invoke('updates:check', APP_VERSION)
+    if (!r?.ok) {
+      if (!silent) { setUpdateCheckState('error'); setUpdateCheckError(r?.error ?? 'Check failed') }
+      return
+    }
+    if (r.hasUpdate) {
+      // Point the user at the exact asset that matches their install kind.
+      const installKind = await window.ipcRenderer.invoke('updates:install-kind') as { assetHint?: string } | null
+      let matchedAssetUrl: string | undefined
+      let matchedAssetName: string | undefined
+      if (installKind?.assetHint && Array.isArray(r.assets)) {
+        const hit = (r.assets as { name: string; url: string }[]).find((a) => a.name.toLowerCase().endsWith(installKind.assetHint!.toLowerCase()))
+        if (hit) { matchedAssetUrl = hit.url; matchedAssetName = hit.name }
+      }
+      setUpdateInfo({ current: r.current, latest: r.latest, htmlUrl: r.htmlUrl, publishedAt: r.publishedAt, notes: r.notes, matchedAssetUrl, matchedAssetName })
+      setUpdateBannerDismissed(false)
+      if (!silent) setUpdateCheckState('idle')
+    } else {
+      setUpdateInfo(null)
+      if (!silent) setUpdateCheckState('up-to-date')
+    }
+  }
+
+  useEffect(() => {
+    // Silent check once at boot; renderer decides when so we don't block startup.
+    const t = setTimeout(() => { runUpdateCheck(true) }, 1500)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [anilistOpen, setAnilistOpen] = useState<null | 'ANIME' | 'MANGA'>(null)
   const [jikanOpen, setJikanOpen] = useState<null | 'anime' | 'manga'>(null)
   const [tmdbOpen, setTmdbOpen] = useState<null | 'movie' | 'tv'>(null)
@@ -1794,6 +1831,25 @@ function App() {
       data-font-size={settings.fontSize}
       data-motion={settings.motion}
     >
+      {updateInfo && !updateBannerDismissed && (
+        <div className="update-banner">
+          <span className="update-banner-icon">↗</span>
+          <div className="update-banner-body">
+            <span className="update-banner-title">Omnio {updateInfo.latest} is available</span>
+            <span className="update-banner-sub">
+              You're on {updateInfo.current}.
+              {updateInfo.matchedAssetName ? ` Download matches your build: ${updateInfo.matchedAssetName}.` : ' Pick the build for your platform on the release page.'}
+            </span>
+          </div>
+          <div className="update-banner-actions">
+            {updateInfo.matchedAssetUrl && (
+              <button type="button" className="update-banner-btn primary" onClick={() => window.ipcRenderer.invoke('updates:open-url', updateInfo.matchedAssetUrl!)}>Download</button>
+            )}
+            <button type="button" className={updateInfo.matchedAssetUrl ? 'update-banner-btn ghost' : 'update-banner-btn primary'} onClick={() => window.ipcRenderer.invoke('updates:open-url', updateInfo.htmlUrl)}>Release page</button>
+            <button type="button" className="update-banner-btn ghost" onClick={() => setUpdateBannerDismissed(true)}>Later</button>
+          </div>
+        </div>
+      )}
       <div className="body">
         {!settings.sidebarHidden && (
         <nav className={settings.sidebarCompact ? 'sidebar sidebar-icons' : 'sidebar'}>
@@ -3049,6 +3105,33 @@ function App() {
                         the "↗ SteamGridDB" button next to cover / banner / logo in the game editor.
                         AniList (anime & manga) needs no key.
                       </p>
+                    </div>
+                    <div className="field-group">
+                      <label>Updates</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={() => runUpdateCheck(false)} disabled={updateCheckState === 'checking'}>
+                          {updateCheckState === 'checking' ? 'Checking…' : 'Check for updates'}
+                        </button>
+                        {updateInfo?.matchedAssetUrl && (
+                          <button type="button" className="secondary-btn" onClick={() => window.ipcRenderer.invoke('updates:open-url', updateInfo.matchedAssetUrl!)}>
+                            ⬇ Download {updateInfo.matchedAssetName}
+                          </button>
+                        )}
+                        {updateInfo && (
+                          <button type="button" className="secondary-btn" onClick={() => window.ipcRenderer.invoke('updates:open-url', updateInfo.htmlUrl)}>
+                            ↗ Open release page
+                          </button>
+                        )}
+                      </div>
+                      {updateCheckState === 'up-to-date' && !updateInfo && (
+                        <p className="hint">You're on the latest — v{APP_VERSION}.</p>
+                      )}
+                      {updateCheckState === 'error' && (
+                        <p className="hint" style={{ color: 'var(--danger)' }}>Couldn't reach GitHub: {updateCheckError}</p>
+                      )}
+                      {updateInfo && (
+                        <p className="hint">Omnio {updateInfo.latest} released. You're on {updateInfo.current}. Downloads work for portable, NSIS, DMG, AppImage — pick your build on the release page.</p>
+                      )}
                     </div>
                     <div className="field-group">
                       <label>Reset settings</label>

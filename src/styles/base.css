@@ -48,6 +48,38 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .app { height: 100vh; display: flex; flex-direction: column; background: var(--bg); color: var(--text); }
 .body { flex: 1; display: flex; overflow: hidden; }
 
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  background: linear-gradient(90deg, var(--accent-soft) 0%, var(--surface-2) 100%);
+  border-bottom: 1px solid var(--accent);
+  flex-shrink: 0;
+}
+.update-banner-icon {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.update-banner-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.update-banner-title { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.update-banner-sub { font-size: 12px; color: var(--text-dim); }
+.update-banner-actions { display: flex; gap: 8px; }
+.update-banner-btn {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.update-banner-btn.primary { background: var(--accent); color: #1a1408; border-color: var(--accent); font-weight: 600; }
+.update-banner-btn.primary:hover { background: var(--accent-hover); }
+.update-banner-btn.ghost { background: transparent; color: var(--text-dim); border-color: var(--border); }
+.update-banner-btn.ghost:hover { color: var(--text); }
+
 .toast {
   position: fixed;
   bottom: 24px;
