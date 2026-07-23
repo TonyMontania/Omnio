@@ -89,6 +89,7 @@ import {
 import DistChart from './insights/DistChart'
 import Heatmap from './insights/Heatmap'
 import RatingPicker from './components/editors/RatingPicker'
+import AnimeItemPicker from './components/editors/AnimeItemPicker'
 import PlatformEditor from './components/editors/PlatformEditor'
 import GameSubItems from './components/editors/GameSubItems'
 import BundleGamesEditor from './components/editors/BundleGamesEditor'
@@ -581,6 +582,7 @@ function App() {
   const [movieSource, setMovieSource] = useState<MovieSource | ''>('')
   const [movieReview, setMovieReview] = useState('')
   const [gameSource, setGameSource] = useState<GameSource | ''>('')
+  const [originalWorkId, setOriginalWorkId] = useState<string>('')
   const [gameReview, setGameReview] = useState('')
   const [franchise, setFranchise] = useState('')
   const [watchedWhere, setWatchedWhere] = useState<WatchLocation | ''>('')
@@ -843,7 +845,7 @@ function App() {
     setMangaAuthors([]); setMangaArtists([]); setVolumeCovers([]); setMangaDescription(''); setPubStatus(''); setReadingStatus('plan_to_read')
     setMangaSource(''); setMagazine(''); setMangaReview(''); setHasChapters(false); setChapters([])
     setMovieSource(''); setMovieReview('')
-    setGameSource(''); setGameReview('')
+    setGameSource(''); setOriginalWorkId(''); setGameReview('')
     setDirectors([]); setCast([]); setProductionCompanies([]); setDistributors([]); setMovieDescription(''); setFranchise(''); setWatchedWhere(''); setMovieBanner(''); setHasSpoilers(false); setTimesWatched('')
     setStudios([]); setAnimeFormat(''); setAiringStatus(''); setWatchStatus('plan_to_watch'); setEpisodesWatched(''); setTotalEpisodes(''); setAnimeDescription('')
     setSeason(''); setSeasonYear(''); setDemographic('')
@@ -1018,6 +1020,7 @@ function App() {
     setMovieSource(item.movieSource ?? '')
     setMovieReview(item.movieReview ?? '')
     setGameSource(item.gameSource ?? '')
+    setOriginalWorkId(item.originalWorkId ?? '')
     setGameReview(item.gameReview ?? '')
     setMangaArtists(item.mangaArtists ?? [])
     setVolumeCovers(item.volumeCovers ?? [])
@@ -1238,6 +1241,7 @@ function App() {
     if (patch.publishers) setPublishers(patch.publishers)
     if (patch.platforms) setPlatforms(patch.platforms)
     if (patch.franchise !== undefined) setFranchise(patch.franchise ?? '')
+    if (patch.ageRating) setAgeRating(patch.ageRating)
 
     // Comics / Manga family (ComicVine, later MangaDex)
     if (patch.authors) setMangaAuthors(patch.authors)
@@ -1396,6 +1400,7 @@ function App() {
         bundleContents: isBundle && bundleContents.length > 0 ? bundleContents : undefined,
         alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
         gameSource: gameSource || undefined,
+        originalWorkId: originalWorkId || undefined,
         ageRating: ageRating || undefined,
         genres: genres.length > 0 ? genres : undefined,
         gameReview: gameReview.trim() || undefined,
@@ -3940,6 +3945,31 @@ function App() {
                             </select>
                           </div>
                         </div>
+
+                        {gameSource && gameSource !== 'original' && gameSource !== 'other' && (() => {
+                          const linked = items.find((i) => i.id === originalWorkId)
+                          return (
+                            <div className="field-group">
+                              <label>Original work</label>
+                              {linked ? (
+                                <div className="tag-pill-list">
+                                  <span className="tag-pill">
+                                    {linked.title}
+                                    <button type="button" onClick={() => setOriginalWorkId('')}>✕</button>
+                                  </span>
+                                </div>
+                              ) : (
+                                <AnimeItemPicker
+                                  options={items.filter((i) => i.categoryId === 'videojuegos' && i.id !== editingId)}
+                                  excludeIds={[]}
+                                  onPick={(id) => setOriginalWorkId(id)}
+                                  placeholder="Search another game to link as the original…"
+                                />
+                              )}
+                              <p className="hint">Points at the game this one derives from — e.g. Freedom Cry is a standalone expansion of AC IV: Black Flag. Both cards will show the link.</p>
+                            </div>
+                          )
+                        })()}
                         <div className="field-group">
                           <label>Franchise</label>
                           <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. The Legend of Zelda" />

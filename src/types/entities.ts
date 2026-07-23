@@ -4,7 +4,7 @@
 export type Platform = string
 export type Ownership = 'owned' | 'shared' | 'subscription' | 'unlicensed'
 export type GameStatus = 'backlog' | 'playing' | 'played' | 'completed' | 'dropped'
-export type GameSource = 'original' | 'remake' | 'remaster' | 'reboot' | 'port' | 'sequel' | 'spinoff' | 'standalone' | 'expanded' | 'collection' | 'other'
+export type GameSource = 'original' | 'remake' | 'remaster' | 'reimagined' | 'reboot' | 'port' | 'sequel' | 'spinoff' | 'standalone' | 'expanded' | 'collection' | 'other'
 export type GameField = 'title' | 'status' | 'playTime' | 'rating' | 'tags'
 
 export type MusicType = 'single' | 'ep' | 'album' | 'ost' | 'live' | 'recopilation'
@@ -278,6 +278,10 @@ export interface Item {
   productionCompanies?: string[]
   distributors?: string[]
   gameSource?: GameSource
+  // If this game derives from another (remake, port, expanded, standalone,
+  // reimagined, sequel etc.), point at the parent item so the two show as
+  // connected on both sides.
+  originalWorkId?: string
   gameReview?: string
   mangaDescription?: string
   directors?: string[]

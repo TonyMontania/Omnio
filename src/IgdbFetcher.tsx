@@ -4,7 +4,7 @@
 // genres, franchises, release date and average rating.
 
 import { useEffect, useMemo, useState } from 'react'
-import type { Item } from './types'
+import type { Item, AgeRating } from './types'
 
 interface Props {
   clientId?: string
@@ -18,10 +18,13 @@ interface Company { name: string }
 interface InvolvedCompany { company?: Company; developer?: boolean; publisher?: boolean }
 interface Named { name: string }
 interface ImageRef { image_id: string }
+interface AltName { name: string; comment?: string }
+interface AgeRatingRef { rating: number; category: number }
 interface Game {
   id: number
   name: string
   summary?: string
+  storyline?: string
   first_release_date?: number   // unix seconds
   cover?: ImageRef
   artworks?: ImageRef[]
@@ -31,7 +34,39 @@ interface Game {
   genres?: Named[]
   franchises?: Named[]
   collection?: Named
+  alternative_names?: AltName[]
+  age_ratings?: AgeRatingRef[]
+  game_modes?: Named[]
+  themes?: Named[]
   total_rating?: number
+}
+
+// IGDB age_ratings.category: 1=ESRB, 2=PEGI, 3=CERO, 4=USK, 5=GRAC, 6=CLASS_IND, 7=ACB
+// ESRB rating codes → our AgeRating union.
+const ESRB_MAP: Record<number, AgeRating> = {
+  6: 'rp',   // RP
+  7: 'e',    // EC → E (Early Childhood merged into E)
+  8: 'e',    // E
+  9: 'e10',  // E10+
+  10: 't',   // T
+  11: 'm',   // M
+  12: 'ao',  // AO
+}
+// PEGI codes as a fallback so European entries still fill something.
+const PEGI_MAP: Record<number, AgeRating> = {
+  1: 'e',    // PEGI 3
+  2: 'e10',  // PEGI 7
+  3: 't',    // PEGI 12
+  4: 't',    // PEGI 16
+  5: 'm',    // PEGI 18
+}
+function pickAgeRating(refs?: AgeRatingRef[]): AgeRating | undefined {
+  if (!refs || refs.length === 0) return undefined
+  const esrb = refs.find((r) => r.category === 1)
+  if (esrb) { const m = ESRB_MAP[esrb.rating]; if (m) return m }
+  const pegi = refs.find((r) => r.category === 2)
+  if (pegi) return PEGI_MAP[pegi.rating]
+  return undefined
 }
 
 // IGDB image sizes: t_cover_big (264x374), t_720p, t_1080p, t_original,
@@ -49,15 +84,34 @@ function gameToPatch(g: Game): Partial<Item> {
   const inv = g.involved_companies ?? []
   const devs = inv.filter((c) => c.developer && c.company?.name).map((c) => c.company!.name)
   const pubs = inv.filter((c) => c.publisher && c.company?.name).map((c) => c.company!.name)
+  // Combine summary + storyline so long-form background isn't lost when IGDB
+  // splits them (Yakuza-style games often have their real plot in storyline).
+  const description = [g.summary, g.storyline].filter(Boolean).join('\n\n') || undefined
+  // Alternative names include regional titles, subtitles and internal codenames.
+  // Dedup by lowercased name and skip the main title so it isn't listed twice.
+  const altSet = new Set<string>()
+  for (const n of g.alternative_names ?? []) {
+    if (!n?.name) continue
+    if (n.name.toLowerCase() === g.name.toLowerCase()) continue
+    altSet.add(n.name)
+  }
+  // Genres + themes both feed the app's genre tags — themes carry things
+  // like "Open world" or "Stealth" that aren't in the tighter genre list.
+  const genresPlusThemes = [
+    ...(g.genres ?? []).map((x) => x.name),
+    ...(g.themes ?? []).map((x) => x.name),
+  ].filter(Boolean)
   return {
     title: g.name,
-    description: g.summary,
+    description,
     releaseDate: isoDateFromUnix(g.first_release_date),
     devs: devs.length ? Array.from(new Set(devs)) : undefined,
     publishers: pubs.length ? Array.from(new Set(pubs)) : undefined,
     platforms: g.platforms?.map((p) => p.name),
-    genres: g.genres?.map((x) => x.name),
+    genres: genresPlusThemes.length ? Array.from(new Set(genresPlusThemes)) : undefined,
     franchise: g.franchises?.[0]?.name || g.collection?.name,
+    alternativeTitles: altSet.size > 0 ? Array.from(altSet) : undefined,
+    ageRating: pickAgeRating(g.age_ratings),
   }
 }
 
@@ -130,9 +184,10 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
             </p>
           )}
           <p className="hint" style={{ marginTop: 0 }}>
-            Applying overwrites title, description, cover, banner (first artwork or screenshot),
-            release date, developers, publishers, platforms, genres and franchise. Rating,
-            time played, achievements, notes and status are left alone.
+            Applying overwrites title, alternative titles, description (summary + storyline),
+            cover, banner (first artwork or screenshot), release date, developers, publishers,
+            platforms, genres + themes, franchise/series and age rating (ESRB, falls back to
+            PEGI). Rating, time played, achievements, notes and status are left alone.
           </p>
 
           <div className="fetch-search-row">

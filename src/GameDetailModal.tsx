@@ -26,6 +26,8 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
     : []
   const relatedResolved = (item.relatedItems ?? []).map((r) => ({ rel: r, ref: allGames.find((a) => a.id === r.itemId) })).filter((x) => x.ref)
   const recommendedResolved = (item.recommendedItems ?? []).map((id) => allGames.find((a) => a.id === id)).filter((x): x is Item => !!x)
+  const originalWork = item.originalWorkId ? allGames.find((a) => a.id === item.originalWorkId) : null
+  const derivedWorks = allGames.filter((a) => a.originalWorkId === item.id)
 
   return (
     <div className="game-page">
@@ -242,6 +244,36 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
                       ? <img src={assetSrc(ref!.cover)} alt={ref!.title} />
                       : <div className="cover-strip-placeholder">{ref!.title.slice(0, 2).toUpperCase()}</div>}
                     <span className="cover-strip-badge">{getRelationLabel(rel.relation)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {originalWork && (
+            <div className="field-group">
+              <label>Original work</label>
+              <div className="cover-strip">
+                <button type="button" className="cover-strip-item" onClick={() => onNavigate(originalWork.id)} title={originalWork.title}>
+                  {originalWork.cover
+                    ? <img src={assetSrc(originalWork.cover)} alt={originalWork.title} />
+                    : <div className="cover-strip-placeholder">{originalWork.title.slice(0, 2).toUpperCase()}</div>}
+                  <span className="cover-strip-title">{originalWork.title}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {derivedWorks.length > 0 && (
+            <div className="field-group">
+              <label>Derived works</label>
+              <div className="cover-strip">
+                {derivedWorks.map((d) => (
+                  <button key={d.id} type="button" className="cover-strip-item" onClick={() => onNavigate(d.id)} title={d.title}>
+                    {d.cover
+                      ? <img src={assetSrc(d.cover)} alt={d.title} />
+                      : <div className="cover-strip-placeholder">{d.title.slice(0, 2).toUpperCase()}</div>}
+                    <span className="cover-strip-title">{d.title}{d.gameSource ? ` · ${getGameSourceLabel(d.gameSource)}` : ''}</span>
                   </button>
                 ))}
               </div>

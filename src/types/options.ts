@@ -65,6 +65,7 @@ export const GAME_SOURCE_OPTIONS: { value: GameSource; label: string }[] = [
   { value: 'original', label: 'Original' },
   { value: 'remake', label: 'Remake' },
   { value: 'remaster', label: 'Remaster' },
+  { value: 'reimagined', label: 'Reimagined' },
   { value: 'reboot', label: 'Reboot' },
   { value: 'port', label: 'Port' },
   { value: 'sequel', label: 'Sequel' },

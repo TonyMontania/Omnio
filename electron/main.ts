@@ -919,13 +919,16 @@ async function ensureIgdbToken(clientId: string, clientSecret: string): Promise<
 // only returns id/name; we ask for the joined fields we care about in a
 // single call to avoid a follow-up "details" round-trip like TMDb needs.
 const IGDB_FIELDS = [
-  'name', 'summary', 'first_release_date',
+  'name', 'summary', 'storyline', 'first_release_date',
   'cover.image_id',
   'artworks.image_id', 'screenshots.image_id',
   'involved_companies.company.name',
   'involved_companies.developer', 'involved_companies.publisher',
   'platforms.name', 'genres.name',
   'franchises.name', 'collection.name',
+  'alternative_names.name', 'alternative_names.comment',
+  'age_ratings.rating', 'age_ratings.category',
+  'game_modes.name', 'themes.name',
   'total_rating',
 ].join(',')
 
