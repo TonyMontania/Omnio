@@ -419,6 +419,7 @@ function App() {
   const [kitsuOpen, setKitsuOpen] = useState<null | 'anime' | 'manga'>(null)
   const [malOpen, setMalOpen] = useState(false)
   const [genericImportOpen, setGenericImportOpen] = useState(false)
+  const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
@@ -1105,6 +1106,22 @@ function App() {
       return { ...c, itemIds: merged }
     }))
     setToast(`Added ${selectedIds.size} items to group`)
+  }
+  const bulkMoveToLibrary = (targetCategoryId: string) => {
+    const targetLabel = CATEGORIES.find((c) => c.id === targetCategoryId)?.label ?? targetCategoryId
+    const count = selectedIds.size
+    askConfirm(
+      `Move ${count} item${count === 1 ? '' : 's'} to ${targetLabel}? Category-specific fields (like game platforms or manga chapters) stay on the item so nothing is lost if you move it back later — they just stop showing until then.`,
+      () => {
+        const ids = new Set(selectedIds)
+        setItems((all) => all.map((it) => ids.has(it.id) ? { ...it, categoryId: targetCategoryId } : it))
+        // Group memberships stay bound to the source category, so remove
+        // moved items from any group whose categoryId no longer matches.
+        setCollections((all) => all.map((c) => c.categoryId === targetCategoryId ? c : { ...c, itemIds: c.itemIds.filter((id) => !ids.has(id)) }))
+        clearSelection()
+        setToast(`Moved ${count} item${count === 1 ? '' : 's'} to ${targetLabel}`)
+      },
+    )
   }
   const bulkDelete = () => {
     askConfirm(
@@ -4889,6 +4906,30 @@ function App() {
 
                 <div className="panel-footer">
                   {editingId && <button className="danger" onClick={handleDeleteFromPanel}>Delete</button>}
+                  {editingId && (
+                    <div className="bulk-drop">
+                      <button type="button" className="ghost" onClick={() => setMoveMenuOpen((v) => !v)}>Move to library ▾</button>
+                      {moveMenuOpen && (
+                        <div className="bulk-menu">
+                          {CATEGORIES.filter((c) => c.id !== activeCategory).map((c) => (
+                            <button key={c.id} type="button" onClick={() => {
+                              setMoveMenuOpen(false)
+                              askConfirm(
+                                `Move "${title || 'this item'}" to ${c.label}? Category-specific fields stay on the item and reappear if you move it back.`,
+                                () => {
+                                  if (!editingId) return
+                                  setItems((all) => all.map((it) => it.id === editingId ? { ...it, categoryId: c.id } : it))
+                                  setCollections((all) => all.map((col) => col.categoryId === c.id ? col : { ...col, itemIds: col.itemIds.filter((id) => id !== editingId) }))
+                                  setToast(`Moved to ${c.label}`)
+                                  closePanel()
+                                },
+                              )
+                            }}>{c.label}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="panel-footer-right">
                     <button className="ghost" onClick={closePanel}>Cancel</button>
                     <button className="primary" onClick={handleSave}>{editingId ? 'Save changes' : 'Add'}</button>
@@ -5124,6 +5165,7 @@ function App() {
         onApplyStatus={applyToSelected}
         onApplyTag={bulkAddTag}
         onAddToGroup={bulkAddToGroup}
+        onMoveToLibrary={bulkMoveToLibrary}
         onDelete={bulkDelete}
       />
 

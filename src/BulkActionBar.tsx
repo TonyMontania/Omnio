@@ -8,7 +8,7 @@ import {
   GAME_STATUS_OPTIONS, MANGA_STATUS_OPTIONS, ANIME_STATUS_OPTIONS, SERIES_STATUS_OPTIONS,
   isMangaLike,
 } from './types'
-import { isAnimeLikeCategory } from './categories'
+import { CATEGORIES, isAnimeLikeCategory } from './categories'
 
 interface Props {
   items: Item[]                       // full library
@@ -17,15 +17,16 @@ interface Props {
   onApplyStatus: (updater: (item: Item) => Partial<Item>) => void
   onApplyTag: (op: 'add' | 'remove', tag: string) => void
   onAddToGroup: (collectionId: string) => void
+  onMoveToLibrary: (targetCategoryId: string) => void
   onDelete: () => void
   collections: Collection[]
 }
 
 export default function BulkActionBar({
   items, selectedIds, onClear,
-  onApplyStatus, onApplyTag, onAddToGroup, onDelete, collections,
+  onApplyStatus, onApplyTag, onAddToGroup, onMoveToLibrary, onDelete, collections,
 }: Props) {
-  const [menu, setMenu] = useState<null | 'status' | 'tag-add' | 'tag-remove' | 'group'>(null)
+  const [menu, setMenu] = useState<null | 'status' | 'tag-add' | 'tag-remove' | 'group' | 'move'>(null)
   const [draft, setDraft] = useState('')
 
   const selected = useMemo(
@@ -119,6 +120,16 @@ export default function BulkActionBar({
               )}
             </div>
           )}
+          <div className="bulk-drop">
+            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'move' ? null : 'move')}>Move to library ▾</button>
+            {menu === 'move' && (
+              <div className="bulk-menu">
+                {CATEGORIES.filter((c) => c.id !== singleCategory).map((c) => (
+                  <button key={c.id} type="button" onClick={() => { onMoveToLibrary(c.id); setMenu(null) }}>{c.label}</button>
+                ))}
+              </div>
+            )}
+          </div>
           <button type="button" className="danger-btn" onClick={onDelete}>Delete</button>
         </div>
         <button type="button" className="bulk-clear" onClick={onClear} title="Clear selection (Esc)">✕</button>
