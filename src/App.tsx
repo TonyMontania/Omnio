@@ -355,6 +355,7 @@ function App() {
   const [editPreviewMode, setEditPreviewMode] = useState<'card' | 'detail'>('card')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewingGame, setViewingGame] = useState<Item | null>(null)
+  const savedScrollRef = useRef<number>(0)
   const [viewingMusic, setViewingMusic] = useState<Item | null>(null)
   const [viewingManga, setViewingManga] = useState<Item | null>(null)
   const [viewingMovie, setViewingMovie] = useState<Item | null>(null)
@@ -1090,7 +1091,28 @@ function App() {
     setStartDate(item.startDate ?? '')
   }
 
+  // When every detail view closes and the list JSX remounts, restore the
+  // scroll position we snapshotted before opening the detail. Uses rAF so it
+  // runs after the DOM has painted the list at scrollTop 0.
+  useEffect(() => {
+    const anyOpen = viewingGame || viewingMusic || viewingManga || viewingMovie || viewingAnime || viewingSeries || viewingArtist
+    if (anyOpen) return
+    if (savedScrollRef.current <= 0) return
+    const target = savedScrollRef.current
+    let cancelled = false
+    requestAnimationFrame(() => {
+      if (cancelled) return
+      const el = document.querySelector('main.content .content-scroll') as HTMLElement | null
+      if (el) el.scrollTop = target
+    })
+    return () => { cancelled = true }
+  }, [viewingGame, viewingMusic, viewingManga, viewingMovie, viewingAnime, viewingSeries, viewingArtist])
+
   const openEditPanel = (item: Item) => {
+    // Snapshot the list's scroll position so we can put the user back where
+    // they were after they close the detail view.
+    const el = document.querySelector('main.content .content-scroll') as HTMLElement | null
+    savedScrollRef.current = el?.scrollTop ?? 0
     if (item.categoryId === 'videojuegos') { setViewingGame(item); return }
     if (item.categoryId === 'musica') { setViewingMusic(item); return }
     if (isMangaLike(item.categoryId)) { setViewingManga(item); return }

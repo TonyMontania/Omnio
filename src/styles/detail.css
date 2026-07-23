@@ -40,7 +40,7 @@
 
 .game-modal-body { position: relative; padding: 28px 32px 32px; }
 
-.game-modal-main { display: flex; gap: 24px; }
+.game-modal-main { display: flex; gap: 24px; align-items: flex-start; }
 
 .game-modal-cover {
   width: 180px;
