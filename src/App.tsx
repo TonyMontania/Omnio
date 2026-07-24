@@ -90,6 +90,7 @@ import DistChart from './insights/DistChart'
 import Heatmap from './insights/Heatmap'
 import RatingPicker from './components/editors/RatingPicker'
 import AnimeItemPicker from './components/editors/AnimeItemPicker'
+import { pickImageToDataUrl } from './utils/files'
 import PlatformEditor from './components/editors/PlatformEditor'
 import GameSubItems from './components/editors/GameSubItems'
 import BundleGamesEditor from './components/editors/BundleGamesEditor'
@@ -600,13 +601,7 @@ function App() {
   const [timesWatched, setTimesWatched] = useState('')
   const movieBannerFileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleMovieBannerFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => { if (typeof reader.result === 'string') setMovieBanner(reader.result) }
-    reader.readAsDataURL(file)
-  }
+  const handleMovieBannerFile = pickImageToDataUrl(setMovieBanner)
   const [pubStatus, setPubStatus] = useState<PublicationStatus | ''>('')
   const [readingStatus, setReadingStatus] = useState<MangaStatus>('plan_to_read')
   const [chaptersRead, setChaptersRead] = useState('')
@@ -616,7 +611,6 @@ function App() {
   const [startDate, setStartDate] = useState('')
   const [startYear, setStartYear] = useState('')
   const [endYear, setEndYear] = useState('')
-  const [totalSubUnits, setTotalSubUnits] = useState('')
   const [units, setUnits] = useState<Unit[]>([])
 
   useEffect(() => {
@@ -853,7 +847,7 @@ function App() {
     setReleaseYear(''); setDuration(''); setConsumed(false); setArtist(''); setMusicType('')
     setGenres([]); setLabel(''); setPartOfAlbum(''); setHasTracks(false); setTracks([]); setSingleCovers([]); setEditions([])
     setMusicSource(''); setProducers([]); setMusicReview('')
-    setUnitCount(''); setStartYear(''); setEndYear(''); setTotalSubUnits(''); setUnits([])
+    setUnitCount(''); setStartYear(''); setEndYear(''); setUnits([])
     setMangaAuthors([]); setMangaArtists([]); setVolumeCovers([]); setMangaDescription(''); setPubStatus(''); setReadingStatus('plan_to_read')
     setMangaSource(''); setMagazine(''); setMangaReview(''); setHasChapters(false); setChapters([])
     setMovieSource(''); setMovieReview('')
@@ -911,21 +905,8 @@ function App() {
     setEditingArtistId(null)
   }
 
-  const handleArtistPhotoFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => { if (typeof reader.result === 'string') setArtistPhotoField(reader.result) }
-    reader.readAsDataURL(file)
-  }
-
-  const handleArtistBannerFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => { if (typeof reader.result === 'string') setArtistBannerField(reader.result) }
-    reader.readAsDataURL(file)
-  }
+  const handleArtistPhotoFile  = pickImageToDataUrl(setArtistPhotoField)
+  const handleArtistBannerFile = pickImageToDataUrl(setArtistBannerField)
 
   const handleSaveArtistEdit = async () => {
     if (!artistNameField.trim() || !editingArtistId) return
@@ -1021,7 +1002,6 @@ function App() {
     setUnitCount(item.unitCount ?? '')
     setStartYear(item.startYear ?? '')
     setEndYear(item.endYear ?? '')
-    setTotalSubUnits(item.totalSubUnits ?? '')
     setUnits(item.units ?? [])
     setMangaAuthors(item.authors ?? [])
     setMangaSource(item.mangaSource ?? '')
@@ -1391,29 +1371,9 @@ function App() {
     chaptersRead, totalChapters, watchStatus, episodesWatched, totalEpisodes, seriesStatus,
   ])
 
-  const handleCoverFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => { if (typeof reader.result === 'string') setCover(reader.result) }
-    reader.readAsDataURL(file)
-  }
-
-  const handleBannerFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => { if (typeof reader.result === 'string') setBannerImage(reader.result) }
-    reader.readAsDataURL(file)
-  }
-
-  const handleLogoFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => { if (typeof reader.result === 'string') setLogoImage(reader.result) }
-    reader.readAsDataURL(file)
-  }
+  const handleCoverFile  = pickImageToDataUrl(setCover)
+  const handleBannerFile = pickImageToDataUrl(setBannerImage)
+  const handleLogoFile   = pickImageToDataUrl(setLogoImage)
 
   const buildItemFromForm = (id: string, createdAt: number): Item => {
     const base: Item = {
@@ -1497,7 +1457,6 @@ function App() {
         unitCount: useSeasons ? String(seasons.length) : (unitCount || undefined),
         startYear: startYear || undefined,
         endYear: endYear || undefined,
-        totalSubUnits: totalSubUnits || undefined,
         units: useSeasons ? undefined : (units.length > 0 ? units : undefined),
         seriesStatus,
         seriesFormat: seriesFormat || undefined,
@@ -1838,13 +1797,7 @@ function App() {
     setCollectionCoverField('')
   }
 
-  const handleCollectionCoverFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => { if (typeof reader.result === 'string') setCollectionCoverField(reader.result) }
-    reader.readAsDataURL(file)
-  }
+  const handleCollectionCoverFile = pickImageToDataUrl(setCollectionCoverField)
 
   const handleSaveCollectionEdit = async () => {
     if (!collectionNameField.trim() || !editingCollectionId) return

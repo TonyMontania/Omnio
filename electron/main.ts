@@ -721,34 +721,50 @@ ipcMain.handle('export:site', async (_event, targetDir: string, htmlContent: str
 // devtools if the user opens them and (b) we avoid CORS entirely. Neither
 // endpoint stores data on our end — we're just forwarding.
 
+// Every fetcher shares the same skeleton: build URL, fetch, translate HTTP or
+// JSON-level errors into a { ok, data | error } envelope the renderer can
+// pattern-match on. proxyJson factors that out — each handler drops to 1-4
+// lines and reads like the URL it wraps.
+async function proxyJson<T = unknown>(
+  url: string,
+  opts?: {
+    method?: string
+    headers?: Record<string, string>
+    body?: string
+    pick?: (json: unknown) => T | undefined
+    softError?: (json: unknown) => string | null | undefined
+    httpErrorPrefix?: string
+  },
+): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  try {
+    const r = await fetch(url, { method: opts?.method, headers: opts?.headers, body: opts?.body })
+    if (!r.ok) return { ok: false, error: `${opts?.httpErrorPrefix ?? 'HTTP'} ${r.status}` }
+    const json = await r.json() as unknown
+    const soft = opts?.softError?.(json)
+    if (soft) return { ok: false, error: soft }
+    const picked = opts?.pick ? opts.pick(json) : (json as T)
+    return { ok: true, data: (picked ?? [] as unknown) as T }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
 const SGDB_BASE = 'https://www.steamgriddb.com/api/v2'
 
 ipcMain.handle('sgdb:search', async (_event, apiKey: string, term: string) => {
   if (!apiKey || !term.trim()) return { ok: false, error: 'Missing API key or search term' }
-  try {
-    const r = await fetch(`${SGDB_BASE}/search/autocomplete/${encodeURIComponent(term)}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    })
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const json = await r.json() as { data: unknown }
-    return { ok: true, data: json.data }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  return proxyJson(`${SGDB_BASE}/search/autocomplete/${encodeURIComponent(term)}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    pick: (j) => (j as { data?: unknown }).data,
+  })
 })
 
 ipcMain.handle('sgdb:assets', async (_event, apiKey: string, kind: 'grids' | 'heroes' | 'logos', gameId: number | string) => {
   if (!apiKey || !gameId) return { ok: false, error: 'Missing API key or game id' }
-  try {
-    const r = await fetch(`${SGDB_BASE}/${kind}/game/${gameId}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    })
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const json = await r.json() as { data: unknown }
-    return { ok: true, data: json.data }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  return proxyJson(`${SGDB_BASE}/${kind}/game/${gameId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    pick: (j) => (j as { data?: unknown }).data,
+  })
 })
 
 // Jikan v4 — unofficial MyAnimeList proxy, no API key required.
@@ -786,19 +802,17 @@ const KITSU_BASE = 'https://kitsu.io/api/edge'
 
 ipcMain.handle('kitsu:search', async (_event, term: string, kind: 'anime' | 'manga') => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  try {
-    const params = new URLSearchParams()
-    params.set('filter[text]', term.trim())
-    params.set('page[limit]', '15')
-    const url = `${KITSU_BASE}/${kind}?${params.toString()}`
-    const r = await fetch(url, { headers: { Accept: 'application/vnd.api+json' } })
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const json = await r.json() as { data?: unknown[]; errors?: { title?: string; detail?: string }[] }
-    if (json.errors && json.errors.length) return { ok: false, error: json.errors[0].detail ?? json.errors[0].title ?? 'Kitsu error' }
-    return { ok: true, data: json.data ?? [] }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  const params = new URLSearchParams()
+  params.set('filter[text]', term.trim())
+  params.set('page[limit]', '15')
+  return proxyJson(`${KITSU_BASE}/${kind}?${params.toString()}`, {
+    headers: { Accept: 'application/vnd.api+json' },
+    pick: (j) => (j as { data?: unknown[] }).data,
+    softError: (j) => {
+      const errs = (j as { errors?: { title?: string; detail?: string }[] }).errors
+      return errs && errs.length ? (errs[0].detail ?? errs[0].title ?? 'Kitsu error') : null
+    },
+  })
 })
 
 // MangaDex — open, no-key manga metadata for manga (ja), manhwa (ko),
@@ -809,19 +823,17 @@ const MD_UA = 'Omnio/0.1 ( https://github.com/TonyMontania/Omnio )'
 
 ipcMain.handle('mangadex:search', async (_event, term: string) => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  try {
-    const params = new URLSearchParams({ title: term.trim(), limit: '15' })
-    // Multiple `includes[]` values must be repeated, not comma-joined.
-    for (const inc of ['cover_art', 'author', 'artist']) params.append('includes[]', inc)
-    const url = `${MD_BASE}/manga?${params.toString()}`
-    const r = await fetch(url, { headers: { 'User-Agent': MD_UA, Accept: 'application/json' } })
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const json = await r.json() as { data?: unknown[]; result?: string; errors?: { detail?: string }[] }
-    if (json.result === 'error') return { ok: false, error: json.errors?.[0]?.detail ?? 'MangaDex returned an error' }
-    return { ok: true, data: json.data ?? [] }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  const params = new URLSearchParams({ title: term.trim(), limit: '15' })
+  // Multiple `includes[]` values must be repeated, not comma-joined.
+  for (const inc of ['cover_art', 'author', 'artist']) params.append('includes[]', inc)
+  return proxyJson(`${MD_BASE}/manga?${params.toString()}`, {
+    headers: { 'User-Agent': MD_UA, Accept: 'application/json' },
+    pick: (j) => (j as { data?: unknown[] }).data,
+    softError: (j) => {
+      const r = (j as { result?: string; errors?: { detail?: string }[] })
+      return r.result === 'error' ? (r.errors?.[0]?.detail ?? 'MangaDex returned an error') : null
+    },
+  })
 })
 
 // ComicVine (GameSpot) — comics metadata (Marvel, DC, Image, indies).
@@ -830,33 +842,27 @@ ipcMain.handle('mangadex:search', async (_event, term: string) => {
 const CV_BASE = 'https://comicvine.gamespot.com/api'
 const CV_UA = 'Omnio/0.1 ( https://github.com/TonyMontania/Omnio )'
 
+const cvSoftError = (j: unknown): string | null => {
+  const err = (j as { error?: string }).error
+  return err && err !== 'OK' ? err : null
+}
+const cvHeaders = { 'User-Agent': CV_UA, Accept: 'application/json' }
+
 ipcMain.handle('comicvine:search', async (_event, apiKey: string, term: string) => {
   if (!apiKey || !term.trim()) return { ok: false, error: 'Missing API key or search term' }
-  try {
-    const url = `${CV_BASE}/search/?api_key=${encodeURIComponent(apiKey)}&format=json&resources=volume&query=${encodeURIComponent(term.trim())}&limit=15&field_list=id,name,deck,start_year,count_of_issues,publisher,image,api_detail_url`
-    const r = await fetch(url, { headers: { 'User-Agent': CV_UA, Accept: 'application/json' } })
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const json = await r.json() as { results?: unknown[]; error?: string; status_code?: number }
-    if (json.error && json.error !== 'OK') return { ok: false, error: json.error }
-    return { ok: true, data: json.results ?? [] }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  return proxyJson(
+    `${CV_BASE}/search/?api_key=${encodeURIComponent(apiKey)}&format=json&resources=volume&query=${encodeURIComponent(term.trim())}&limit=15&field_list=id,name,deck,start_year,count_of_issues,publisher,image,api_detail_url`,
+    { headers: cvHeaders, pick: (j) => (j as { results?: unknown[] }).results, softError: cvSoftError },
+  )
 })
 
 ipcMain.handle('comicvine:volume', async (_event, apiKey: string, id: number | string) => {
   if (!apiKey || !id) return { ok: false, error: 'Missing API key or volume id' }
-  try {
-    // Volume ids are prefixed 4050- in ComicVine's canonical URL scheme.
-    const url = `${CV_BASE}/volume/4050-${id}/?api_key=${encodeURIComponent(apiKey)}&format=json&field_list=id,name,deck,description,start_year,count_of_issues,publisher,image,person_credits,character_credits`
-    const r = await fetch(url, { headers: { 'User-Agent': CV_UA, Accept: 'application/json' } })
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const json = await r.json() as { results?: unknown; error?: string }
-    if (json.error && json.error !== 'OK') return { ok: false, error: json.error }
-    return { ok: true, data: json.results }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  // Volume ids are prefixed 4050- in ComicVine's canonical URL scheme.
+  return proxyJson(
+    `${CV_BASE}/volume/4050-${id}/?api_key=${encodeURIComponent(apiKey)}&format=json&field_list=id,name,deck,description,start_year,count_of_issues,publisher,image,person_credits,character_credits`,
+    { headers: cvHeaders, pick: (j) => (j as { results?: unknown }).results, softError: cvSoftError },
+  )
 })
 
 // MusicBrainz — open-source music metadata. No API key, but the rate
@@ -874,20 +880,17 @@ async function mbThrottle(): Promise<void> {
   mbLastCall = Date.now()
 }
 
+const mbHeaders = { 'User-Agent': MB_UA, Accept: 'application/json' }
+
 ipcMain.handle('mb:search', async (_event, term: string) => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
   await mbThrottle()
-  try {
-    // release-group covers albums/EPs/singles/soundtracks as a unit
-    // (versus release, which is one specific pressing / country release).
-    const url = `${MB_BASE}/release-group?query=${encodeURIComponent(term.trim())}&limit=15&fmt=json`
-    const r = await fetch(url, { headers: { 'User-Agent': MB_UA, Accept: 'application/json' } })
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const json = await r.json() as { 'release-groups'?: unknown[] }
-    return { ok: true, data: json['release-groups'] ?? [] }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  // release-group covers albums/EPs/singles/soundtracks as a unit
+  // (versus release, which is one specific pressing / country release).
+  return proxyJson(`${MB_BASE}/release-group?query=${encodeURIComponent(term.trim())}&limit=15&fmt=json`, {
+    headers: mbHeaders,
+    pick: (j) => (j as { 'release-groups'?: unknown[] })['release-groups'],
+  })
 })
 
 // Fetches one release (specific pressing) so we can read the tracklist.
@@ -925,29 +928,16 @@ const VGMDB_BASE = 'https://vgmdb.info'
 
 ipcMain.handle('vgmdb:search', async (_event, term: string) => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  try {
-    const url = `${VGMDB_BASE}/search/albums/${encodeURIComponent(term.trim())}?format=json`
-    const r = await fetch(url)
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const json = await r.json() as { results?: { albums?: unknown[] } }
-    return { ok: true, data: json.results?.albums ?? [] }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  return proxyJson(`${VGMDB_BASE}/search/albums/${encodeURIComponent(term.trim())}?format=json`, {
+    pick: (j) => (j as { results?: { albums?: unknown[] } }).results?.albums,
+  })
 })
 
 ipcMain.handle('vgmdb:album', async (_event, link: string) => {
   // The search results carry a `link` like "album/12345". vgmdb.info
   // resolves those to the details endpoint at the same path.
   if (!link) return { ok: false, error: 'Missing album link' }
-  try {
-    const url = `${VGMDB_BASE}/${link.replace(/^\/+/, '')}?format=json`
-    const r = await fetch(url)
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    return { ok: true, data: await r.json() }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  return proxyJson(`${VGMDB_BASE}/${link.replace(/^\/+/, '')}?format=json`)
 })
 
 // IGDB (Twitch) — the industry-standard games metadata source. Auth is a
@@ -1004,23 +994,16 @@ ipcMain.handle('igdb:search', async (_event, clientId: string, clientSecret: str
   const auth = await ensureIgdbToken(clientId, clientSecret)
   if (!auth.ok) return auth
   const safeTerm = term.trim().replace(/"/g, '\\"')
-  const body = `search "${safeTerm}"; fields ${IGDB_FIELDS}; limit 12;`
-  try {
-    const r = await fetch('https://api.igdb.com/v4/games', {
-      method: 'POST',
-      headers: {
-        'Client-ID': clientId,
-        'Authorization': `Bearer ${auth.token}`,
-        'Accept': 'application/json',
-      },
-      body,
-    })
-    if (!r.ok) return { ok: false, error: `IGDB HTTP ${r.status}` }
-    const data = await r.json() as unknown[]
-    return { ok: true, data }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  return proxyJson('https://api.igdb.com/v4/games', {
+    method: 'POST',
+    headers: {
+      'Client-ID': clientId,
+      'Authorization': `Bearer ${auth.token}`,
+      'Accept': 'application/json',
+    },
+    body: `search "${safeTerm}"; fields ${IGDB_FIELDS}; limit 12;`,
+    httpErrorPrefix: 'IGDB HTTP',
+  })
 })
 
 // TMDb — the standard Movies + TV metadata source. Requires a free v3 API
@@ -1029,15 +1012,10 @@ const TMDB_BASE = 'https://api.themoviedb.org/3'
 
 ipcMain.handle('tmdb:search', async (_event, apiKey: string, term: string, kind: 'movie' | 'tv') => {
   if (!apiKey || !term.trim()) return { ok: false, error: 'Missing API key or search term' }
-  try {
-    const url = `${TMDB_BASE}/search/${kind}?api_key=${encodeURIComponent(apiKey)}&query=${encodeURIComponent(term.trim())}&include_adult=false`
-    const r = await fetch(url)
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const json = await r.json() as { results?: unknown[] }
-    return { ok: true, data: json.results ?? [] }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  return proxyJson(
+    `${TMDB_BASE}/search/${kind}?api_key=${encodeURIComponent(apiKey)}&query=${encodeURIComponent(term.trim())}&include_adult=false`,
+    { pick: (j) => (j as { results?: unknown[] }).results },
+  )
 })
 
 // Full details include credits (cast+crew) and images. TV details also carry
@@ -1045,20 +1023,13 @@ ipcMain.handle('tmdb:search', async (_event, apiKey: string, term: string, kind:
 // the app's Season[] list without a second call.
 ipcMain.handle('tmdb:details', async (_event, apiKey: string, kind: 'movie' | 'tv', id: number | string) => {
   if (!apiKey || !id) return { ok: false, error: 'Missing API key or id' }
-  try {
-    const url = `${TMDB_BASE}/${kind}/${id}?api_key=${encodeURIComponent(apiKey)}&append_to_response=credits,images,external_ids`
-    const r = await fetch(url)
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    return { ok: true, data: await r.json() }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  return proxyJson(`${TMDB_BASE}/${kind}/${id}?api_key=${encodeURIComponent(apiKey)}&append_to_response=credits,images,external_ids`)
 })
 
 // AniList — GraphQL, no API key required. Type is 'ANIME' or 'MANGA'.
 ipcMain.handle('anilist:search', async (_event, term: string, kind: 'ANIME' | 'MANGA') => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  const query = `
+  const q = `
     query ($search: String, $type: MediaType) {
       Page(page: 1, perPage: 12) {
         media(search: $search, type: $type) {
@@ -1088,19 +1059,16 @@ ipcMain.handle('anilist:search', async (_event, term: string, kind: 'ANIME' | 'M
         }
       }
     }`
-  try {
-    const r = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables: { search: term.trim(), type: kind } }),
-    })
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const json = await r.json() as { data?: { Page?: { media?: unknown[] } }; errors?: { message: string }[] }
-    if (json.errors && json.errors.length) return { ok: false, error: json.errors[0].message }
-    return { ok: true, data: json.data?.Page?.media ?? [] }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  return proxyJson('https://graphql.anilist.co', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ query: q, variables: { search: term.trim(), type: kind } }),
+    pick: (j) => (j as { data?: { Page?: { media?: unknown[] } } }).data?.Page?.media,
+    softError: (j) => {
+      const errs = (j as { errors?: { message: string }[] }).errors
+      return errs && errs.length ? errs[0].message : null
+    },
+  })
 })
 
 // Download a remote image URL and file it into assets/{category}/{kind}/{uuid}.{ext}.

@@ -5,6 +5,7 @@
 import { useRef, useState } from 'react'
 import type { BundleGame, GameStatus } from '../../types'
 import { assetSrc, GAME_STATUS_OPTIONS } from '../../types'
+import { pickImageToDataUrl } from '../../utils/files'
 
 export default function BundleGamesEditor({
   enabled, onToggle, entries, onChange, onRequestSgdb,
@@ -66,18 +67,10 @@ function BundleRow({ entry, onPatch, onRemove, onRequestSgdb }: {
 }) {
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const uploadCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (!f) return
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const dataUrl = String(reader.result)
-      const rel = await window.ipcRenderer.invoke('image:save', 'videojuegos', 'bundle', dataUrl)
-      if (rel) onPatch({ cover: rel })
-    }
-    reader.readAsDataURL(f)
-    e.target.value = ''
-  }
+  const uploadCover = pickImageToDataUrl(async (dataUrl) => {
+    const rel = await window.ipcRenderer.invoke('image:save', 'videojuegos', 'bundle', dataUrl)
+    if (rel) onPatch({ cover: rel })
+  })
 
   const cover = assetSrc(entry.cover)
   return (

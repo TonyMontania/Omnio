@@ -298,6 +298,5 @@ export interface Item {
   unitCount?: string
   startYear?: string
   endYear?: string
-  totalSubUnits?: string
   units?: Unit[]
 }

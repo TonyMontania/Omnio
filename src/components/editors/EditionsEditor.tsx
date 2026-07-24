@@ -2,10 +2,11 @@
 // Each edition can carry its own cover and its own set of extra/alternate
 // tracks, reusing the same TrackListEditor as the main tracklist.
 
-import { useState, useRef, ChangeEvent } from 'react'
+import { useState, useRef } from 'react'
 import type { AlbumEdition, Track } from '../../types'
 import { assetSrc } from '../../types'
 import TrackListEditor from './TrackListEditor'
+import { pickImageToDataUrl } from '../../utils/files'
 
 export default function EditionsEditor({ editions, mainArtist, onChange }: {
   editions: AlbumEdition[]
@@ -33,13 +34,7 @@ export default function EditionsEditor({ editions, mainArtist, onChange }: {
     patchEdition(id, { tracks: updater(ed.tracks ?? []) })
   }
 
-  const handleCoverFile = (id: string, e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => { if (typeof reader.result === 'string') patchEdition(id, { cover: reader.result }) }
-    reader.readAsDataURL(file)
-  }
+  const handleCoverFile = (id: string) => pickImageToDataUrl((data) => patchEdition(id, { cover: data }))
 
   return (
     <div className="editions-editor">
@@ -77,7 +72,7 @@ export default function EditionsEditor({ editions, mainArtist, onChange }: {
                   <div className="upload-row">
                     <button type="button" className="upload-btn" onClick={() => fileRefs.current[ed.id]?.click()}>Upload cover</button>
                     {ed.cover && <button type="button" className="upload-btn clear" onClick={() => patchEdition(ed.id, { cover: undefined })}>Clear</button>}
-                    <input type="file" accept="image/*" ref={(el) => { fileRefs.current[ed.id] = el }} style={{ display: 'none' }} onChange={(e) => handleCoverFile(ed.id, e)} />
+                    <input type="file" accept="image/*" ref={(el) => { fileRefs.current[ed.id] = el }} style={{ display: 'none' }} onChange={handleCoverFile(ed.id)} />
                   </div>
                 </div>
                 <TrackListEditor

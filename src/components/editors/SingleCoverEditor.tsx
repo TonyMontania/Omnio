@@ -1,9 +1,10 @@
 // Gallery of single artworks for an album — singles that shipped with their
 // own cover art (often before the album). Mirrors the manga VolumeCoverEditor.
 
-import { useState, useRef, ChangeEvent } from 'react'
+import { useState, useRef } from 'react'
 import type { SingleCover } from '../../types'
 import { assetSrc } from '../../types'
+import { pickImageToDataUrl } from '../../utils/files'
 
 export default function SingleCoverEditor({ singles, onAdd, onRemove }: {
   singles: SingleCover[]
@@ -15,13 +16,7 @@ export default function SingleCoverEditor({ singles, onAdd, onRemove }: {
   const [cover, setCover] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => { if (typeof reader.result === 'string') setCover(reader.result) }
-    reader.readAsDataURL(file)
-  }
+  const handleFile = pickImageToDataUrl(setCover)
 
   const handleAdd = () => {
     if (!name.trim() || !cover) return

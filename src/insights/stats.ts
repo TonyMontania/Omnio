@@ -101,6 +101,20 @@ export function getTopRated(list: Item[], limit = 5): Item[] {
 }
 
 // ---- "Top N by frequency" families ----
+// Two shapes cover every stat: either the item exposes an array (studios,
+// cast, genres, directors, devs, publishers, platforms, authors, mangaArtists)
+// or a single scalar (network, label, magazine). One helper each keeps the
+// callsites tiny and lets new "top X" queries land in a single line.
+function topByArray(list: Item[], get: (i: Item) => string[] | undefined, limit: number): { name: string; count: number }[] {
+  const counts = new Map<string, number>()
+  for (const i of list) for (const v of get(i) ?? []) counts.set(v, (counts.get(v) ?? 0) + 1)
+  return Array.from(counts, ([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, limit)
+}
+function topByScalar(list: Item[], get: (i: Item) => string | undefined, limit: number): { name: string; count: number }[] {
+  const counts = new Map<string, number>()
+  for (const i of list) { const v = get(i); if (v) counts.set(v, (counts.get(v) ?? 0) + 1) }
+  return Array.from(counts, ([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, limit)
+}
 
 export function getTopArtists(artists: MusicArtist[], list: Item[], limit = 5): { name: string; count: number }[] {
   return artists
@@ -109,221 +123,59 @@ export function getTopArtists(artists: MusicArtist[], list: Item[], limit = 5): 
     .sort((a, b) => b.count - a.count)
     .slice(0, limit)
 }
-
-export function getTopStudios(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => i.studios?.forEach((s) => counts.set(s, (counts.get(s) ?? 0) + 1)))
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
-
-export function getTopNetworks(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => { if (i.network) counts.set(i.network, (counts.get(i.network) ?? 0) + 1) })
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
-
-export function getTopActors(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => i.cast?.forEach((c) => counts.set(c, (counts.get(c) ?? 0) + 1)))
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
-
-export function getTopGenres(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => i.genres?.forEach((g) => counts.set(g, (counts.get(g) ?? 0) + 1)))
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
-
-export function getTopDirectors(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => i.directors?.forEach((d) => counts.set(d, (counts.get(d) ?? 0) + 1)))
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
-
-export function getTopDevs(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => i.devs?.forEach((d) => counts.set(d, (counts.get(d) ?? 0) + 1)))
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
-
-export function getTopPublishers(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => i.publishers?.forEach((p) => counts.set(p, (counts.get(p) ?? 0) + 1)))
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
-
-export function getTopPlatforms(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => i.platforms?.forEach((p) => counts.set(p, (counts.get(p) ?? 0) + 1)))
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
-
-export function getTopMusicLabels(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => { if (i.label) counts.set(i.label, (counts.get(i.label) ?? 0) + 1) })
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
-
-export function getTopMangaAuthors(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => i.authors?.forEach((a) => counts.set(a, (counts.get(a) ?? 0) + 1)))
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
-
-export function getTopMangaArtists(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => i.mangaArtists?.forEach((a) => counts.set(a, (counts.get(a) ?? 0) + 1)))
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
-
-export function getTopMagazines(list: Item[], limit = 5): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  list.forEach((i) => { if (i.magazine) counts.set(i.magazine, (counts.get(i.magazine) ?? 0) + 1) })
-  return Array.from(counts, ([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-}
+export const getTopStudios       = (list: Item[], limit = 5) => topByArray(list, (i) => i.studios, limit)
+export const getTopActors        = (list: Item[], limit = 5) => topByArray(list, (i) => i.cast, limit)
+export const getTopGenres        = (list: Item[], limit = 5) => topByArray(list, (i) => i.genres, limit)
+export const getTopDirectors     = (list: Item[], limit = 5) => topByArray(list, (i) => i.directors, limit)
+export const getTopDevs          = (list: Item[], limit = 5) => topByArray(list, (i) => i.devs, limit)
+export const getTopPublishers    = (list: Item[], limit = 5) => topByArray(list, (i) => i.publishers, limit)
+export const getTopPlatforms     = (list: Item[], limit = 5) => topByArray(list, (i) => i.platforms, limit)
+export const getTopMangaAuthors  = (list: Item[], limit = 5) => topByArray(list, (i) => i.authors, limit)
+export const getTopMangaArtists  = (list: Item[], limit = 5) => topByArray(list, (i) => i.mangaArtists, limit)
+export const getTopNetworks      = (list: Item[], limit = 5) => topByScalar(list, (i) => i.network, limit)
+export const getTopMusicLabels   = (list: Item[], limit = 5) => topByScalar(list, (i) => i.label, limit)
+export const getTopMagazines     = (list: Item[], limit = 5) => topByScalar(list, (i) => i.magazine, limit)
 
 // ---- Activity per month (last 12 months, oldest first) ----
+// One shared bucket walker: given a source of Date-like strings per item, we
+// count how many fall into each of the trailing 12 months. Every stat below
+// is a one-line adapter picking a different source.
 
-// The "per month" functions all share the same 12-month bucket structure
-// but each reads a different date source (finishedAt, episodes[].watchedDate,
-// chapters[].readDate, rewatches[].date). Kept as separate functions so
-// each call site says exactly what it's counting.
-
-export function getMonthlyActivity(list: Item[]): { label: string; value: number }[] {
-  const months: { label: string; key: string }[] = []
+function last12Months(): { label: string; key: string }[] {
   const now = new Date()
+  const out: { label: string; key: string }[] = []
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    months.push({ label: d.toLocaleDateString('en-US', { month: 'short' }), key: `${d.getFullYear()}-${d.getMonth()}` })
+    out.push({ label: d.toLocaleDateString('en-US', { month: 'short' }), key: `${d.getFullYear()}-${d.getMonth()}` })
   }
-  return months.map((m) => ({
-    label: m.label,
-    value: list.filter((i) => {
-      if (!i.finishedAt) return false
-      const d = new Date(i.finishedAt)
-      return `${d.getFullYear()}-${d.getMonth()}` === m.key
-    }).length,
-  }))
+  return out
+}
+function monthKey(iso: string | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return `${d.getFullYear()}-${d.getMonth()}`
+}
+function bucketByMonth(list: Item[], collectDates: (i: Item) => (string | undefined)[]): { label: string; value: number }[] {
+  const months = last12Months()
+  const counts = new Map(months.map((m) => [m.key, 0]))
+  for (const i of list) {
+    for (const raw of collectDates(i)) {
+      const k = monthKey(raw)
+      if (k && counts.has(k)) counts.set(k, counts.get(k)! + 1)
+    }
+  }
+  return months.map((m) => ({ label: m.label, value: counts.get(m.key) ?? 0 }))
 }
 
-export function getAnimeEpisodesPerMonth(list: Item[]): { label: string; value: number }[] {
-  const months: { label: string; key: string }[] = []
-  const now = new Date()
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    months.push({ label: d.toLocaleDateString('en-US', { month: 'short' }), key: `${d.getFullYear()}-${d.getMonth()}` })
-  }
-  const allEpisodes = list.flatMap((i) => i.episodes ?? [])
-  return months.map((m) => ({
-    label: m.label,
-    value: allEpisodes.filter((e) => {
-      if (!e.watched || !e.watchedDate) return false
-      const d = new Date(e.watchedDate)
-      return `${d.getFullYear()}-${d.getMonth()}` === m.key
-    }).length,
-  }))
-}
-
-export function getSeriesEpisodesPerMonth(list: Item[]): { label: string; value: number }[] {
-  const months: { label: string; key: string }[] = []
-  const now = new Date()
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    months.push({ label: d.toLocaleDateString('en-US', { month: 'short' }), key: `${d.getFullYear()}-${d.getMonth()}` })
-  }
-  const allEpisodes = list.flatMap((i) => (i.seasons ?? []).flatMap((s) => s.episodes ?? []))
-  return months.map((m) => ({
-    label: m.label,
-    value: allEpisodes.filter((e) => {
-      if (!e.watched || !e.watchedDate) return false
-      const d = new Date(e.watchedDate)
-      return `${d.getFullYear()}-${d.getMonth()}` === m.key
-    }).length,
-  }))
-}
-
-// Counts each rewatch date as a separate watch, plus the primary finishedAt.
-export function getMoviesWatchedPerMonth(list: Item[]): { label: string; value: number }[] {
-  const months: { label: string; key: string }[] = []
-  const now = new Date()
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    months.push({ label: d.toLocaleDateString('en-US', { month: 'short' }), key: `${d.getFullYear()}-${d.getMonth()}` })
-  }
-  return months.map((m) => ({
-    label: m.label,
-    value: list.reduce((acc, i) => {
-      const primary = i.finishedAt && `${new Date(i.finishedAt).getFullYear()}-${new Date(i.finishedAt).getMonth()}` === m.key ? 1 : 0
-      const extra = (i.rewatches ?? []).filter((r) => {
-        if (!r.date) return false
-        const d = new Date(r.date)
-        return `${d.getFullYear()}-${d.getMonth()}` === m.key
-      }).length
-      return acc + primary + extra
-    }, 0),
-  }))
-}
-
-export function getMangaChaptersPerMonth(list: Item[]): { label: string; value: number }[] {
-  const months: { label: string; key: string }[] = []
-  const now = new Date()
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    months.push({ label: d.toLocaleDateString('en-US', { month: 'short' }), key: `${d.getFullYear()}-${d.getMonth()}` })
-  }
-  const allChapters = list.flatMap((i) => i.chapters ?? [])
-  return months.map((m) => ({
-    label: m.label,
-    value: allChapters.filter((c) => {
-      if (!c.read || !c.readDate) return false
-      const d = new Date(c.readDate)
-      return `${d.getFullYear()}-${d.getMonth()}` === m.key
-    }).length,
-  }))
-}
-
+export const getMonthlyActivity        = (list: Item[]) => bucketByMonth(list, (i) => [i.finishedAt])
+export const getAnimeEpisodesPerMonth  = (list: Item[]) => bucketByMonth(list, (i) => (i.episodes ?? []).filter((e) => e.watched).map((e) => e.watchedDate))
+export const getSeriesEpisodesPerMonth = (list: Item[]) => bucketByMonth(list, (i) => (i.seasons ?? []).flatMap((s) => (s.episodes ?? []).filter((e) => e.watched).map((e) => e.watchedDate)))
+export const getMangaChaptersPerMonth  = (list: Item[]) => bucketByMonth(list, (i) => (i.chapters ?? []).filter((c) => c.read).map((c) => c.readDate))
 // Music re-uses the rewatches[] field to store listen sessions.
-export function getMusicListensPerMonth(list: Item[]): { label: string; value: number }[] {
-  const months: { label: string; key: string }[] = []
-  const now = new Date()
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    months.push({ label: d.toLocaleDateString('en-US', { month: 'short' }), key: `${d.getFullYear()}-${d.getMonth()}` })
-  }
-  const allSessions = list.flatMap((i) => i.rewatches ?? [])
-  return months.map((m) => ({
-    label: m.label,
-    value: allSessions.filter((r) => {
-      if (!r.date) return false
-      const d = new Date(r.date)
-      return `${d.getFullYear()}-${d.getMonth()}` === m.key
-    }).length,
-  }))
-}
+export const getMusicListensPerMonth   = (list: Item[]) => bucketByMonth(list, (i) => (i.rewatches ?? []).map((r) => r.date))
+// Movies count both the primary finishedAt and every rewatch entry.
+export const getMoviesWatchedPerMonth  = (list: Item[]) => bucketByMonth(list, (i) => [i.finishedAt, ...(i.rewatches ?? []).map((r) => r.date)])
 
 // ---- Status distribution (pie / bar chart data) ----
 
