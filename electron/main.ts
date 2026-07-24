@@ -991,7 +991,10 @@ const IGDB_FIELDS = [
   'platforms.name', 'genres.name',
   'franchises.name', 'collection.name',
   'alternative_names.name', 'alternative_names.comment',
-  'age_ratings.rating', 'age_ratings.category',
+  // IGDB has been shifting age_rating fields between enums and strings across
+  // API versions. Ask for the whole nested object so both shapes reach the
+  // renderer and pickAgeRating can pick whichever key exists.
+  'age_ratings.*',
   'game_modes.name', 'themes.name',
   'total_rating',
 ].join(',')

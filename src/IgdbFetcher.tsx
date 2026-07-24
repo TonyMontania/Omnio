@@ -19,7 +19,18 @@ interface InvolvedCompany { company?: Company; developer?: boolean; publisher?: 
 interface Named { name: string }
 interface ImageRef { image_id: string }
 interface AltName { name: string; comment?: string }
-interface AgeRatingRef { rating: number; category: number }
+// IGDB API v4 originally returned age_ratings as { category:number, rating:number }.
+// Recent revisions also expose { rating_category:number|string, rating:number|string }
+// and a synonym key `organization`. We accept every shape and normalize below.
+interface AgeRatingRef {
+  category?: number | string
+  rating?: number | string
+  rating_category?: number | string
+  rating_content_descriptions?: unknown[]
+  organization?: number | string
+  synopsis?: string
+  checksum?: string
+}
 interface Game {
   id: number
   name: string
@@ -41,31 +52,58 @@ interface Game {
   total_rating?: number
 }
 
-// IGDB age_ratings.category: 1=ESRB, 2=PEGI, 3=CERO, 4=USK, 5=GRAC, 6=CLASS_IND, 7=ACB
-// ESRB rating codes → our AgeRating union.
-const ESRB_MAP: Record<number, AgeRating> = {
-  6: 'rp',   // RP
-  7: 'e',    // EC → E (Early Childhood merged into E)
-  8: 'e',    // E
-  9: 'e10',  // E10+
-  10: 't',   // T
-  11: 'm',   // M
-  12: 'ao',  // AO
+// IGDB has two coexisting encodings for age_ratings:
+//   Legacy: category enum (1=ESRB, 2=PEGI…) + rating enum (8=E, 9=E10+…)
+//   Newer:  category and rating are strings ("ESRB", "M") OR nested inside
+//           rating_category with a numeric or string identifier.
+// We normalize every combination into our AgeRating union.
+const ESRB_NUM: Record<number, AgeRating> = {
+  6: 'rp', 7: 'e', 8: 'e', 9: 'e10', 10: 't', 11: 'm', 12: 'ao',
 }
-// PEGI codes as a fallback so European entries still fill something.
-const PEGI_MAP: Record<number, AgeRating> = {
-  1: 'e',    // PEGI 3
-  2: 'e10',  // PEGI 7
-  3: 't',    // PEGI 12
-  4: 't',    // PEGI 16
-  5: 'm',    // PEGI 18
+const PEGI_NUM: Record<number, AgeRating> = {
+  1: 'e', 2: 'e10', 3: 't', 4: 't', 5: 'm',
+}
+const ESRB_STR: Record<string, AgeRating> = {
+  'rp': 'rp', 'ec': 'e', 'e': 'e', 'e10': 'e10', 'e10+': 'e10',
+  't': 't', 'm': 'm', 'ao': 'ao',
+}
+const PEGI_STR: Record<string, AgeRating> = {
+  'pegi 3': 'e', 'pegi 7': 'e10', 'pegi 12': 't', 'pegi 16': 't', 'pegi 18': 'm',
+  '3': 'e', '7': 'e10', '12': 't', '16': 't', '18': 'm',
+}
+function categoryOf(r: AgeRatingRef): number | string | undefined {
+  return r.category ?? r.rating_category ?? r.organization
+}
+function isESRB(cat: number | string | undefined): boolean {
+  return cat === 1 || (typeof cat === 'string' && cat.toLowerCase().includes('esrb'))
+}
+function isPEGI(cat: number | string | undefined): boolean {
+  return cat === 2 || (typeof cat === 'string' && cat.toLowerCase().includes('pegi'))
+}
+function mapESRB(rating: number | string | undefined): AgeRating | undefined {
+  if (typeof rating === 'number') return ESRB_NUM[rating]
+  if (typeof rating === 'string') return ESRB_STR[rating.toLowerCase().trim().replace(/^esrb[\s:]*/i, '')]
+  return undefined
+}
+function mapPEGI(rating: number | string | undefined): AgeRating | undefined {
+  if (typeof rating === 'number') return PEGI_NUM[rating]
+  if (typeof rating === 'string') return PEGI_STR[rating.toLowerCase().trim().replace(/^pegi[\s:]*/i, 'pegi ')]
+  return undefined
 }
 function pickAgeRating(refs?: AgeRatingRef[]): AgeRating | undefined {
   if (!refs || refs.length === 0) return undefined
-  const esrb = refs.find((r) => r.category === 1)
-  if (esrb) { const m = ESRB_MAP[esrb.rating]; if (m) return m }
-  const pegi = refs.find((r) => r.category === 2)
-  if (pegi) return PEGI_MAP[pegi.rating]
+  for (const r of refs) {
+    if (isESRB(categoryOf(r))) {
+      const m = mapESRB(r.rating)
+      if (m) return m
+    }
+  }
+  for (const r of refs) {
+    if (isPEGI(categoryOf(r))) {
+      const m = mapPEGI(r.rating)
+      if (m) return m
+    }
+  }
   return undefined
 }
 
@@ -162,6 +200,13 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
       ? await window.ipcRenderer.invoke('image:download', bannerUrl, 'videojuegos', 'banner') as string | null
       : null
 
+    // Dev-tools breadcrumb: if the age rating still doesn't apply for some
+    // titles, open DevTools (Ctrl+Shift+I) and look at this object — IGDB
+    // occasionally ships shapes not covered by the maps in pickAgeRating.
+    if (g.age_ratings && g.age_ratings.length > 0) {
+      // eslint-disable-next-line no-console
+      console.debug('[IGDB] age_ratings raw:', g.age_ratings)
+    }
     const patch = gameToPatch(g)
     setApplying(null)
     onApply(patch, coverPath || undefined, bannerPath || undefined)
