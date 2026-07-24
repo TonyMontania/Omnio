@@ -9,12 +9,13 @@ import { GameStatusIcon } from '../../icons'
 
 export default function FiltersDropdown({
   availableTags, filterTags, onToggleTag, showStatus, filterStatus, onToggleStatus, showPlatform, availablePlatforms, filterPlatforms, onTogglePlatform,
-  showGenre, availableGenres, filterGenres, onToggleGenre, onClear,
+  showGenre, availableGenres, filterGenres, onToggleGenre, minRating, onSetMinRating, onClear,
 }: {
   availableTags: string[]; filterTags: string[]; onToggleTag: (t: string) => void
   showStatus: boolean; filterStatus: GameStatus[]; onToggleStatus: (s: GameStatus) => void
   showPlatform: boolean; availablePlatforms: Platform[]; filterPlatforms: Platform[]; onTogglePlatform: (p: Platform) => void
   showGenre: boolean; availableGenres: string[]; filterGenres: string[]; onToggleGenre: (g: string) => void
+  minRating: number; onSetMinRating: (n: number) => void
   onClear: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -28,7 +29,7 @@ export default function FiltersDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const activeCount = filterTags.length + filterStatus.length + filterPlatforms.length + filterGenres.length
+  const activeCount = filterTags.length + filterStatus.length + filterPlatforms.length + filterGenres.length + (minRating > 0 ? 1 : 0)
 
   return (
     <div className="filters-wrap" ref={ref}>
@@ -78,6 +79,16 @@ export default function FiltersDropdown({
               </div>
             </div>
           )}
+          <div className="filters-section">
+            <span className="filters-label">Minimum rating</span>
+            <div className="dropdown-pills">
+              {[0, 3, 3.5, 4, 4.5, 5].map((r) => (
+                <button key={r} type="button" className={minRating === r ? 'pill active' : 'pill'} onClick={() => onSetMinRating(r)}>
+                  {r === 0 ? 'Any' : `★ ${r}+`}
+                </button>
+              ))}
+            </div>
+          </div>
           {activeCount > 0 && <button type="button" className="clear-filters" onClick={onClear}>Clear filters</button>}
         </div>
       )}

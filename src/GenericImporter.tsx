@@ -23,6 +23,7 @@ import {
 } from './types'
 
 interface Props {
+  existingItems: Item[]
   onImport: (items: Item[]) => void
   onClose: () => void
 }
@@ -209,12 +210,13 @@ const FIELD_LABELS: Record<FieldTarget, string> = {
   playTime: 'Time played',
 }
 
-export default function GenericImporter({ onImport, onClose }: Props) {
+export default function GenericImporter({ existingItems, onImport, onClose }: Props) {
   const [table, setTable] = useState<ParsedTable | null>(null)
   const [filename, setFilename] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [mapping, setMapping] = useState<FieldTarget[]>([])
   const [targetCategory, setTargetCategory] = useState(CATEGORIES[0].id)
+  const [skipExisting, setSkipExisting] = useState(true)
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null); setTable(null)
@@ -228,10 +230,20 @@ export default function GenericImporter({ onImport, onClose }: Props) {
   }
 
   const preview = useMemo(() => (table ? table.rows.slice(0, 5) : []), [table])
-  const readyItems = useMemo(() => {
+  const parsedItems = useMemo(() => {
     if (!table) return []
     return table.rows.map((r) => toItem(r, mapping, targetCategory)).filter((i): i is Item => i !== null)
   }, [table, mapping, targetCategory])
+  const existingKeys = useMemo(() => {
+    const s = new Set<string>()
+    for (const it of existingItems) s.add(`${it.categoryId}::${it.title.toLowerCase().trim()}`)
+    return s
+  }, [existingItems])
+  const readyItems = useMemo(() => {
+    if (!skipExisting) return parsedItems
+    return parsedItems.filter((i) => !existingKeys.has(`${i.categoryId}::${i.title.toLowerCase().trim()}`))
+  }, [parsedItems, skipExisting, existingKeys])
+  const dupCount = parsedItems.length - readyItems.length
 
   const doImport = () => { onImport(readyItems); onClose() }
 
@@ -303,12 +315,17 @@ export default function GenericImporter({ onImport, onClose }: Props) {
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <label className="mal-skip" style={{ marginTop: 8 }}>
+                <input type="checkbox" checked={skipExisting} onChange={(e) => setSkipExisting(e.target.checked)} />
+                Skip titles already in the target library (case-insensitive match)
+              </label>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
                 <button type="button" className="secondary-btn" onClick={onClose}>Cancel</button>
                 <button type="button" onClick={doImport} disabled={!hasTitle || readyItems.length === 0}
                   style={{ background: 'var(--accent)', color: '#1a1408', padding: '8px 16px', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600 }}>
                   Import {readyItems.length} items
                 </button>
+                {dupCount > 0 && <span className="hint">{dupCount} skipped as duplicates</span>}
               </div>
               {!hasTitle && <p className="hint" style={{ color: 'var(--danger)' }}>Map at least one column to <em>Title</em>.</p>}
             </>

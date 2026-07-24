@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, ChangeEvent, Suspense, lazy } from 'react'
+import { useState, useEffect, useMemo, useRef, ChangeEvent, Suspense, lazy } from 'react'
 
 // Category metadata (Games / Music / Movies / Series / Anime & Donghua / Comics & Manga family)
 import {
@@ -243,16 +243,22 @@ function statusRank<T extends string>(value: T | undefined, fallback: T, options
   return idx < 0 ? options.length : idx
 }
 
-function filterAndSort(list: Item[], search: string, filterTags: string[], filterStatus: GameStatus[], filterPlatforms: Platform[], filterGenres: string[], sortBy: SortBy | null, customOrder: string[] = []): Item[] {
+function filterAndSort(list: Item[], search: string, filterTags: string[], filterStatus: GameStatus[], filterPlatforms: Platform[], filterGenres: string[], sortBy: SortBy | null, customOrder: string[] = [], minRating = 0): Item[] {
   let result = list
   if (search.trim()) {
     const q = search.trim().toLowerCase()
-    result = result.filter((i) => i.title.toLowerCase().includes(q))
+    result = result.filter((i) => {
+      if (i.title.toLowerCase().includes(q)) return true
+      if (i.alternativeTitles?.some((a) => a.toLowerCase().includes(q))) return true
+      if (i.artist?.toLowerCase().includes(q)) return true
+      return false
+    })
   }
   if (filterTags.length > 0) result = result.filter((i) => i.tags?.some((t) => filterTags.includes(t)))
   if (filterStatus.length > 0) result = result.filter((i) => filterStatus.includes(i.gameStatus || 'backlog'))
   if (filterPlatforms.length > 0) result = result.filter((i) => i.platforms?.some((p) => filterPlatforms.includes(p)))
   if (filterGenres.length > 0) result = result.filter((i) => i.genres?.some((g) => filterGenres.includes(g)))
+  if (minRating > 0) result = result.filter((i) => (i.rating ?? 0) >= minRating)
   if (!sortBy) return result
   const arr = [...result]
   // Universal
@@ -348,6 +354,7 @@ function App() {
   const [filterStatus, setFilterStatus] = useState<GameStatus[]>([])
   const [filterPlatforms, setFilterPlatforms] = useState<Platform[]>([])
   const [filterGenres, setFilterGenres] = useState<string[]>([])
+  const [minRating, setMinRating] = useState<number>(0)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [draggedId, setDraggedId] = useState<string | null>(null)
 
@@ -470,6 +477,7 @@ function App() {
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [exportScope, setExportScope] = useState<string>('all')
 
   // ---- Undo / redo of library mutations ----
   // We snapshot items+collections+artists on every observable change and
@@ -831,7 +839,10 @@ function App() {
   // Inside a collection, `custom` order reads the collection's own itemIds
   // list; outside, it reads the per-category custom order map.
   const effectiveCustomOrder = activeCollection ? activeCollection.itemIds : (customOrders[activeCategory] || [])
-  const visibleItems = filterAndSort(scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder)
+  const visibleItems = useMemo(
+    () => filterAndSort(scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating),
+    [scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating],
+  )
   const editingItem = items.find((i) => i.id === editingId) || null
 
   const resetForm = () => {
@@ -1264,6 +1275,15 @@ function App() {
     if (patch.platforms) setPlatforms(patch.platforms)
     if (patch.franchise !== undefined) setFranchise(patch.franchise ?? '')
     if (patch.ageRating) setAgeRating(patch.ageRating)
+    // If IGDB gave us a franchise and the user already has other games in it,
+    // hint that so they know Omnio's franchise timeline will pick this up.
+    if (patch.franchise && activeCategory === 'videojuegos') {
+      const siblings = items.filter((i) => i.categoryId === 'videojuegos' && i.franchise === patch.franchise && i.id !== editingId)
+      if (siblings.length > 0) {
+        setToast(`${sourceLabel} applied · ${siblings.length} other ${siblings.length === 1 ? 'game' : 'games'} in "${patch.franchise}"`)
+        return
+      }
+    }
 
     // Comics / Manga family (ComicVine, later MangaDex)
     if (patch.authors) setMangaAuthors(patch.authors)
@@ -1333,7 +1353,9 @@ function App() {
 
   const closePanel = () => { setPanelOpen(false); setEditingId(null); resetForm() }
 
-  const buildPreviewItem = (): Item => ({
+  // Rebuilds only when any field the preview reads actually changes, so
+  // typing a description doesn't rebuild the object 20 times per second.
+  const previewItem = useMemo<Item>(() => ({
     id: editingId || 'preview',
     categoryId: activeCategory,
     title: title || 'Untitled',
@@ -1362,7 +1384,12 @@ function App() {
     episodesWatched: episodesWatched || undefined,
     episodesTotal: totalEpisodes || undefined,
     seriesStatus: seriesStatus || undefined,
-  } as Item)
+  } as Item), [
+    editingId, editingItem, activeCategory, title, cover, description, tags, rating,
+    gameStatus, playTime, devs, publishers, platforms, genres, bannerImage, logoImage,
+    artist, musicType, releaseYear, releaseDate, consumed, readingStatus,
+    chaptersRead, totalChapters, watchStatus, episodesWatched, totalEpisodes, seriesStatus,
+  ])
 
   const handleCoverFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -3109,6 +3136,30 @@ function App() {
                       />
                     </div>
                     <div className="field-group">
+                      <label>Remote backup</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={async () => {
+                          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Choose a folder inside Dropbox / OneDrive / Drive')
+                          if (!dir) return
+                          const r = await window.ipcRenderer.invoke('storage:copy-data-to', dir)
+                          if (r?.ok) setToast(`Copied ${r.files} files to ${r.path}`)
+                          else setToast(`Backup failed: ${r?.error ?? 'unknown'}`)
+                        }}>Copy library to folder…</button>
+                      </div>
+                      <p className="hint">Pick a folder inside your cloud storage (Dropbox, OneDrive, Google Drive) — Omnio writes a timestamped copy of <code>data/</code> and <code>assets/</code> there and the cloud service handles the upload. Stays local-first; you keep the master copy on this machine.</p>
+                    </div>
+                    <div className="field-group">
+                      <label>Clean migration leftovers</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={async () => {
+                          const r = await window.ipcRenderer.invoke('storage:cleanup-migration-artifacts')
+                          if (r?.removed > 0) setToast(`Freed ${(r.bytes / 1024).toFixed(1)} KB`)
+                          else setToast('Nothing to clean')
+                        }}>Delete pre-split / pre-restore backups</button>
+                      </div>
+                      <p className="hint">One-shot safety nets from previous upgrades and restore operations (<code>data.pre-split.json</code>, <code>data.pre-restore/</code>). Rotating snapshots above are untouched.</p>
+                    </div>
+                    <div className="field-group">
                       <label>Data quality</label>
                       <button type="button" className="secondary-btn" onClick={() => setDupOpen(true)}>Find similar titles</button>
                     </div>
@@ -3124,18 +3175,27 @@ function App() {
                       <label>Share your library</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={() => setWrappedOpen(true)}>Yearly wrapped</button>
+                        <select value={exportScope} onChange={(e) => setExportScope(e.target.value)} style={{ maxWidth: 200 }}>
+                          <option value="all">All libraries</option>
+                          {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((c) => (
+                            <option key={c.id} value={c.id}>{c.label} only</option>
+                          ))}
+                        </select>
                         <button type="button" className="secondary-btn" disabled={exporting} onClick={async () => {
                           const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Choose where to export your Omnio site')
                           if (!dir) return
                           setExporting(true)
-                          const html = buildStaticSiteHtml(items, musicArtists, 'My Omnio Library')
+                          const scopedItems = exportScope === 'all' ? items : items.filter((i) => i.categoryId === exportScope)
+                          const scopedArtists = exportScope === 'musica' || exportScope === 'all' ? musicArtists : []
+                          const scopeLabel = exportScope === 'all' ? 'My Omnio Library' : `My ${CATEGORIES.find((c) => c.id === exportScope)?.label ?? ''} library`
+                          const html = buildStaticSiteHtml(scopedItems, scopedArtists, scopeLabel)
                           const r = await window.ipcRenderer.invoke('export:site', dir, html)
                           setExporting(false)
                           if (r?.ok) setToast(`Exported to ${r.path}`)
                           else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
                         }}>{exporting ? 'Exporting…' : 'Export as HTML'}</button>
                       </div>
-                      <p className="hint">Wrapped is a year-in-review view. Export builds a standalone <code>index.html</code> and copies your <code>assets/</code> folder — send the folder to a friend and it just opens.</p>
+                      <p className="hint">Wrapped is a year-in-review view. Export builds a standalone <code>index.html</code> and copies your <code>assets/</code> folder — send the folder to a friend and it just opens. Scope defaults to the whole library; pick a single library to share just that one.</p>
                     </div>
                     <div className="field-group">
                       <label>Integrations · ComicVine API key (Western Comics)</label>
@@ -3407,7 +3467,9 @@ function App() {
                       availableGenres={availableGenres}
                       filterGenres={filterGenres}
                       onToggleGenre={(g) => setFilterGenres((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g])}
-                      onClear={() => { setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]) }}
+                      minRating={minRating}
+                      onSetMinRating={setMinRating}
+                      onClear={() => { setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]); setMinRating(0) }}
                     />
                   </div>
 
@@ -3484,7 +3546,7 @@ function App() {
                   {editPreviewMode === 'card' ? (
                     <div className="edit-preview-frame card-mode">
                       <ItemCard
-                        item={buildPreviewItem()}
+                        item={previewItem}
                         layout="grid"
                         onOpen={() => { /* preview only */ }}
                         onDelete={() => { /* preview only */ }}
@@ -5394,6 +5456,7 @@ function App() {
 
       {genericImportOpen && (
         <GenericImporter
+          existingItems={items}
           onImport={(newItems) => {
             setItems((all) => [...all, ...newItems])
             setToast(`Imported ${newItems.length} items`)

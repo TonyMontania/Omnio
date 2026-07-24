@@ -196,6 +196,11 @@ async function renameLegacyCategoryFiles(): Promise<void> {
 // folders AND rewrite the relative paths inside every category JSON so
 // existing covers/banners/logos keep resolving.
 async function renameLegacyAssetFolders(): Promise<void> {
+  // Marker file skips the entire scan on subsequent boots so we don't
+  // re-check three folder names + rewrite ten JSONs on every launch after
+  // the first-run migration.
+  const marker = path.join(DATA_DIR, '.assets-migrated')
+  if (await fileExists(marker)) return
   const renames: [string, string][] = [
     ['videojuegos', 'games'],
     ['musica',       'music'],
@@ -230,6 +235,9 @@ async function renameLegacyAssetFolders(): Promise<void> {
       } catch { /* non-fatal */ }
     }
   }
+  // Drop the marker last so a crash mid-migration leaves it absent and the
+  // migration retries on next boot.
+  try { await fs.writeFile(marker, new Date().toISOString(), 'utf-8') } catch { /* non-fatal */ }
 }
 
 async function readSplitData(): Promise<Record<string, unknown> | null> {
@@ -435,6 +443,62 @@ ipcMain.handle('image:delete', async (_event, rel: string) => {
 })
 
 ipcMain.handle('storage:root', async () => STORAGE_ROOT)
+
+// Copy the current data/ directory to a user-chosen folder (Dropbox,
+// OneDrive, Google Drive, etc.). Everything stays local-only; the cloud
+// service does its own sync when it detects new files. Runs on demand from
+// Settings → Data → Remote backup.
+ipcMain.handle('storage:copy-data-to', async (_event, targetDir: string) => {
+  try {
+    if (!targetDir) return { ok: false, error: 'No folder chosen' }
+    const dest = path.join(targetDir, `omnio-backup-${new Date().toISOString().slice(0, 10)}`)
+    await fs.mkdir(dest, { recursive: true })
+    const entries = await fs.readdir(DATA_DIR, { withFileTypes: true })
+    let files = 0
+    for (const e of entries) {
+      if (!e.isFile()) continue
+      if (!e.name.endsWith('.json')) continue
+      await fs.copyFile(path.join(DATA_DIR, e.name), path.join(dest, e.name))
+      files++
+    }
+    // Include assets so a cold restore on a new machine has covers too.
+    try {
+      await fs.cp(ASSETS_ROOT, path.join(dest, 'assets'), { recursive: true, force: false, errorOnExist: false })
+    } catch { /* assets dir may not exist yet */ }
+    return { ok: true, path: dest, files }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// Frees disk from old one-shot migration / restore safety nets that pile up
+// as the user experiments with restores. Never touches the live data/ or the
+// numbered snapshots under data/backups/.
+ipcMain.handle('storage:cleanup-migration-artifacts', async () => {
+  const paths = [
+    path.join(STORAGE_ROOT, 'data.pre-split.json'),
+    path.join(STORAGE_ROOT, 'data.pre-restore'),
+  ]
+  let removed = 0
+  let bytes = 0
+  for (const p of paths) {
+    try {
+      const stat = await fs.stat(p)
+      if (stat.isDirectory()) {
+        const entries = await fs.readdir(p, { withFileTypes: true })
+        for (const e of entries) {
+          try { const s = await fs.stat(path.join(p, e.name)); bytes += s.size } catch { /* skip */ }
+        }
+        await fs.rm(p, { recursive: true, force: true })
+      } else {
+        bytes += stat.size
+        await fs.unlink(p)
+      }
+      removed++
+    } catch { /* absent = nothing to do */ }
+  }
+  return { removed, bytes }
+})
 
 // -----------------------------------------------------------------------------
 // Update check. We don't ship electron-updater because the builds are unsigned

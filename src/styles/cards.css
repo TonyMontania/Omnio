@@ -48,6 +48,7 @@
   padding: 12px;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  contain: layout paint;
 }
 
 .item-card:hover { border-color: var(--accent); background: var(--surface-hover); }
