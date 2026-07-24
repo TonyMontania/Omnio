@@ -18,13 +18,16 @@ The UI is in English. For a field-by-field reference in English and Spanish, see
 
 - **10 libraries** with rich per-category fields (see [Categories](#categories))
 - **9 metadata sources wired in-app** covering every library — SteamGridDB + IGDB (games), TMDb (movies + series), MusicBrainz/CAA + VGMdb (music), AniList + MAL + Kitsu (anime), MangaDex + ComicVine for the comics family (see [Metadata sources](#metadata--artwork-sources))
-- **Bulk import** from MyAnimeList / AniList XML exports
+- **Full-screen edit modal** with live preview (card / detail) that updates as you type, plus a consolidated metadata-fetch panel at the top
+- **Move items between libraries** (bulk or single) — reassign a manga to manhwa, an anime to donghua, or anything to anything without re-typing
+- **Bulk import**: MyAnimeList / AniList XML plus a generic importer for `.xlsx`, `.csv` (Notion database exports work as-is), `.tsv` and `.txt`
+- **In-app updater** — silent check at boot, banner + Settings button, downloads the exact asset that matches your install kind (portable/NSIS/DMG/AppImage) with a progress bar; AppImage relaunches automatically after swap
 - **Global search Ctrl+K**, bulk actions (Shift+click), undo/redo (Ctrl+Z)
 - **Split storage** since 0.1.7: one JSON per library slice, editing one game only rewrites `games.json`, corruption of one file leaves the rest intact
 - **5 rotating snapshots** auto-taken on each save; 1-click restore
 - **Yearly heatmap + Wrapped** end-of-year recap in Statistics
 - **Static HTML export** to share your library as a folder anyone can open
-- **11 themes**, eight accents, density + font-size controls, six-language-neutral iconography
+- **11 themes** grouped by family (Original / Cool / Vibrant / Warm), eight accents, density + font-size controls, six-language-neutral iconography
 
 ## Contents
 
@@ -128,7 +131,7 @@ The portable, tarball and AppImage builds keep `data/` + `assets/` next to the e
 ## Categories
 
 ### Games
-Infinitebacklog-style card: banner + logo, cover, description, **multiple developers and publishers**, **free-form platforms** (create your own, with suggestions + autocomplete), ownership, status (Backlog / Playing / Played / Completed / Dropped), time played, half-step rating, **achievements unlocked / total**, DLC/Expansions and Addons with their own status, **bundle contents** (for collections like MGS HD Collection — each sub-game has its own cover and status you can track independently), mini-markdown notes, tags. **Extended**: alternative titles, source (Original / Remake / Remaster / Reboot / Port / Sequel / Spin-off / Standalone expansion / Expanded / Collection), **edition** (free-text — Standard, Deluxe, Collector's, whatever), ESRB age rating, franchise, review with spoiler toggle, replay history, related games with rich relation kinds (sequel, prequel, standalone, DLC, remake, reboot, port, collection, same universe, crossover…), auto franchise timeline, recommendations.
+Infinitebacklog-style card: banner + logo, cover, description, **multiple developers and publishers**, **free-form platforms** (create your own, with suggestions + autocomplete), ownership, status (Backlog / Playing / Played / Completed / Dropped), time played, half-step rating, **achievements unlocked / total**, DLC/Expansions and Addons with their own status, **bundle contents** (for collections like MGS HD Collection — each sub-game has its own cover, its own status, and its own SteamGridDB search), mini-markdown notes, tags. **Extended**: alternative titles, source (Original / Remake / Remaster / Reimagined / Reboot / Port / Sequel / Spin-off / Standalone expansion / Expanded / Collection), **edition** (free-text — Standard, Deluxe, Collector's, whatever), ESRB age rating, franchise, **original work link** (shows on both sides — Freedom Cry ↔ AC IV: Black Flag), review with spoiler toggle, replay history, related games with rich relation kinds (sequel, prequel, standalone, DLC, remake, reboot, port, collection, same universe, crossover…), auto franchise timeline, recommendations.
 
 ### Music
 Cards per type (Single / EP / Album / OST / Live / Compilation), tracklist with per-track rating, favorite, listened, and a **per-track Lyrics button** (modal to read/edit lyrics). Auto-computed total duration for album-like types. **Single covers gallery** — separate artwork for singles released before/around the album (title + year + image). **Editions** — Deluxe, Japan, Anniversary and others, each with its own cover image and its own tracklist (extra or alternate tracks). Spotify-style Artist profile: banner + circular avatar (shown on the Artists overview too), chronological discography, average rating, **band info** (origin, status, years active, genres, labels, current + former members with per-member roles **and join / leave years**). Listened / Not listened collections. **Extended**: alternative titles, source, producers, review with spoilers, listen history, related albums, recommendations.
@@ -168,7 +171,9 @@ Nine sources are wired directly into the editors — click the **↗** button ne
 | [AniDB](https://anidb.net/) | Anime — deep metadata | Manual reference — the API needs client registration + a hard 2s rate limit; AniList/MAL/Kitsu already cover the same ground | — |
 | [Discogs](https://www.discogs.com/) | Music — physical releases, vinyl, editions | Manual reference | — |
 
-**Bulk import**: already tracking anime/manga elsewhere? Settings → Data → **Import MAL / AniList XML** loads a full export in one go. Works with MyAnimeList's native export and the [malscraper.azurewebsites.net](https://malscraper.azurewebsites.net/) AniList exporter.
+**Bulk import**: two importers in Settings → Data →
+- **Import MAL / AniList XML** — MyAnimeList's native export and the [malscraper.azurewebsites.net](https://malscraper.azurewebsites.net/) AniList exporter, straight into Anime + Manga.
+- **Import Excel / CSV / Notion / TXT** — pick any library as the destination. Auto-maps common columns (title, rating, status, tags, notes, year, artist, developer, publisher, platform, director, cast, chapters, episodes, hours) in English and Spanish; you can override the mapping per column. Status strings are normalized to the destination library's own vocabulary. Notion database CSV exports work as-is (BOM handled).
 
 Got another site worth integrating? Open an issue or a PR.
 
@@ -191,7 +196,7 @@ Organized in tabs:
 - **Behavior**: Confirm before deleting, Startup category.
 - **Libraries**: Individual toggles for each of the 9 categories.
 - **Card Fields**: which fields to show on cards per category (Games, Music, Manga/etc., Movies, Anime, Series).
-- **Data**: Export / Import backup JSON, automatic snapshots (5 rotated with 1-click restore), Find similar titles (fuzzy duplicate finder), Import from MyAnimeList / AniList XML, Export as HTML (static shareable site), Yearly wrapped (year-in-review), SteamGridDB API key, Reset settings to defaults, Delete all data, About.
+- **Data**: Export / Import backup JSON, automatic snapshots (5 rotated with 1-click restore), Find similar titles (fuzzy duplicate finder), Import from MyAnimeList / AniList XML, Import from Excel / CSV / Notion / TXT, Export as HTML (static shareable site), Yearly wrapped (year-in-review), API keys (SteamGridDB / IGDB / TMDb / ComicVine), **Check for updates** (assisted download that matches your install kind), Reset settings to defaults, Delete all data, About.
 
 ## Statistics per category
 
@@ -211,7 +216,10 @@ Every category has status distribution (pie/bar), a **GitHub-style yearly heatma
 - **Tags** free per item.
 - **Groups**: user-created collections inside each category, drag-to-reorder. **Each group can have its own custom cover image** (click ✎ on the group card).
 - **Search** by title in the current library (Ctrl+F) and **global search** across every category and artist (Ctrl+K) — command-palette style with keyboard nav.
-- **Bulk actions**: Shift+click cards to select many at once. A floating pill offers change status, add/remove tag, add to group, delete — all with a single confirm.
+- **Bulk actions**: Shift+click cards to select many at once. A floating pill offers change status, add/remove tag, add to group, **move to another library**, delete — all with a single confirm.
+- **Move between libraries**: also available as a per-item dropdown on the editor footer. Category-specific fields stay on the item (they reappear if you move it back) so nothing is lost. Great for a manga that turned out to be a manhwa, or reclassifying an anime as donghua.
+- **Live-preview editor**: full-screen edit modal with a sticky preview column on the left (toggle Card / Detail) that mirrors every field as you type — cover, banner + logo overlay, alt titles, status pill, all category-specific meta, review, tags. The form on the right groups fields into Basic info / Media / Game (or Music, Movie, Series, Anime, Publication) details / Notes.
+- **Metadata sources panel** at the top of every editor lists every API wired for the current library (IGDB, TMDb, AniList, MAL, Kitsu, MangaDex, ComicVine, MusicBrainz, VGMdb) with a one-line hint. One click, one modal, autofills the form.
 - **Undo / redo** for every library mutation: Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y). 40-step in-memory history covering items, groups and artists.
 - **Filters** by tags plus category-specific ones (status, platform, genre).
 - **Sort modes**: alphabetical, most recent, rating, plus category-specific ones (time played, date, status, custom drag order, artist, duration, episodes watched, chapters read).
@@ -254,15 +262,15 @@ data/
   customOrders.json         ← per-category custom sort orders
   backups/
     1/  … 5/                ← 5 rotating full-directory snapshots
-assets/                     ← local images
+assets/                     ← local images (English folder names since 0.2.1)
   anime/cover/
-  videojuegos/cover/
-  videojuegos/banner/
-  videojuegos/logo/
-  videojuegos/bundle/       ← thumbnails for bundle contents
-  peliculas/cover/
-  peliculas/banner/
-  musica/cover/
+  games/cover/
+  games/banner/
+  games/logo/
+  games/bundle/             ← thumbnails for bundle contents
+  movies/cover/
+  movies/banner/
+  music/cover/
   series/cover/
   manga/cover/
   manga/volume/
@@ -272,8 +280,8 @@ assets/                     ← local images
 
 **How it works**:
 - In the portable build, `data/` and `assets/` live in the same folder as the `.exe` (via `PORTABLE_EXECUTABLE_DIR` on Windows).
-- **Split storage** (0.1.7+): each library is its own `.json` file — editing a game only rewrites `videojuegos.json`, not everything else. Every write is content-hashed so unchanged slices are skipped entirely. Corruption of one file leaves the rest intact.
-- **Automatic migration**: on the first boot of 0.1.7+, if you had the legacy single `data.json`, it's split into `data/` automatically and the original is renamed to `data.pre-split.json` as a safety net.
+- **Split storage** (0.1.7+): each library is its own `.json` file — editing a game only rewrites `games.json`, not everything else. Every write is content-hashed so unchanged slices are skipped entirely. Corruption of one file leaves the rest intact.
+- **Automatic migration**: on the first boot of 0.1.7+, if you had the legacy single `data.json`, it's split into `data/` automatically and the original is renamed to `data.pre-split.json` as a safety net. 0.2.1+ additionally renames Spanish asset folders (`assets/videojuegos`, `assets/musica`, `assets/peliculas`) to English and rewrites the paths inside every category JSON so existing covers keep resolving.
 - When you upload an image from your PC, it's decoded and written to disk at `assets/{category}/{kind}/{uuid}.{ext}`. The JSON files only store the relative path — no heavy data URLs embedded.
 - A custom `omnio-asset://` protocol serves images to the renderer with a path-traversal guard.
 - **Rolling backups**: every save that actually changes anything rotates the snapshot ring — slot 1 gets a fresh directory copy of the current data, slots 2–5 shift down, the fifth is dropped. Restore any of them from Settings → Data → Automatic snapshots; the current library is copied to `data.pre-restore/` first, so nothing is ever destroyed.
