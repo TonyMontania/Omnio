@@ -3,8 +3,8 @@
 // show every match regardless of origin language, tagging each row with
 // its origin so it's obvious when a hit belongs elsewhere.
 
-import { useEffect, useState } from 'react'
 import type { Item, MangaSource, PublicationStatus } from './types'
+import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 interface Props {
   initialQuery: string
@@ -116,113 +116,53 @@ function mangaToPatch(m: MdManga): Partial<Item> {
 }
 
 export default function MangaDexFetcher({ initialQuery, categoryId, onApply, onClose }: Props) {
-  const [query, setQuery] = useState(initialQuery ?? '')
-  const [results, setResults] = useState<MdManga[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [applying, setApplying] = useState<string | null>(null)
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [onClose])
-
-  const search = async () => {
-    if (!query.trim()) return
-    setLoading(true)
-    setError(null)
-    const r = await window.ipcRenderer.invoke('mangadex:search', query.trim())
-    setLoading(false)
-    if (r?.ok) setResults((r.data as MdManga[]) ?? [])
-    else setError(r?.error ?? 'Search failed')
+  const search = async (q: string): Promise<FetcherResult<MdManga>> => {
+    const r = await window.ipcRenderer.invoke('mangadex:search', q)
+    return r?.ok ? { ok: true, data: r.data as MdManga[] } : { ok: false, error: r?.error ?? 'Search failed' }
   }
 
-  useEffect(() => {
-    if ((initialQuery ?? '').trim()) search()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const apply = async (m: MdManga) => {
-    setApplying(m.id)
     const url = coverUrlFor(m, 512)
     const coverPath = url
       ? await window.ipcRenderer.invoke('image:download', url, categoryId, 'cover') as string | null
       : null
-    const patch = mangaToPatch(m)
-    setApplying(null)
-    onApply(patch, coverPath || undefined, undefined)
+    onApply(mangaToPatch(m), coverPath || undefined, undefined)
     onClose()
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>MangaDex</h2>
-          <button type="button" className="panel-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          <p className="hint" style={{ marginTop: 0 }}>
-            Free, no API key. Applying overwrites title, alternative titles, description,
-            release year, authors, artists, genres, total chapters/volumes, publication
-            status, and cover. Rating, reading status, notes and personal history are
-            left alone. Each hit is labelled by origin (JP / KR / CN) so you can spot
-            manga vs manhwa vs manhua at a glance.
-          </p>
-
-          <div className="fetch-search-row">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') search() }}
-              placeholder="Search title, e.g. 'chainsaw man' or 'solo leveling'…"
-              autoFocus
-            />
-            <button type="button" className="secondary-btn" onClick={search} disabled={loading}>
-              {loading ? 'Searching…' : 'Search'}
-            </button>
-          </div>
-
-          {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
-          {!loading && !error && results.length === 0 && query && (
-            <p className="hint">No matches. Try a different spelling or the original title.</p>
-          )}
-
-          {results.length > 0 && (
-            <ul className="anilist-results">
-              {results.map((m) => {
-                const a = m.attributes
-                const title = pickLocalized(a.title) || '(untitled)'
-                const authors = m.relationships?.filter((r): r is MdAuthorRel => r.type === 'author').map((r) => r.attributes?.name).filter(Boolean).slice(0, 2)
-                const sub = [
-                  originLabel(a.originalLanguage),
-                  a.year,
-                  a.status,
-                  authors?.join(' · ') || null,
-                ].filter(Boolean).join(' · ')
-                const thumb = coverUrlFor(m, 256)
-                const desc = pickLocalized(a.description)
-                return (
-                  <li key={m.id}>
-                    <button type="button" className="anilist-hit" onClick={() => apply(m)} disabled={applying !== null}>
-                      <div className="anilist-thumb">
-                        {thumb ? <img src={thumb} alt="" loading="lazy" /> : <span>{title.charAt(0)}</span>}
-                      </div>
-                      <div className="anilist-text">
-                        <div className="anilist-title">{title}</div>
-                        <div className="anilist-sub">{sub}</div>
-                        {desc && <div className="anilist-desc">{desc.slice(0, 180)}…</div>}
-                      </div>
-                      {applying === m.id && <span className="anilist-applying">Fetching…</span>}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+    <FetcherModal<MdManga>
+      title="MangaDex"
+      hint={
+        <>Free, no API key. Applying overwrites title, alternative titles, description,
+        release year, authors, artists, genres, total chapters/volumes, publication
+        status, and cover. Rating, reading status, notes and personal history are
+        left alone. Each hit is labelled by origin (JP / KR / CN) so you can spot
+        manga vs manhwa vs manhua at a glance.</>
+      }
+      placeholder="Search title, e.g. 'chainsaw man' or 'solo leveling'…"
+      initialQuery={initialQuery}
+      onSearch={search}
+      onApply={apply}
+      onClose={onClose}
+      renderHit={(m) => {
+        const a = m.attributes
+        const title = pickLocalized(a.title) || '(untitled)'
+        const authors = m.relationships?.filter((r): r is MdAuthorRel => r.type === 'author').map((r) => r.attributes?.name).filter(Boolean).slice(0, 2)
+        const sub = [
+          originLabel(a.originalLanguage),
+          a.year,
+          a.status,
+          authors?.join(' · ') || null,
+        ].filter(Boolean).join(' · ')
+        return {
+          key: m.id,
+          title,
+          sub,
+          thumbUrl: coverUrlFor(m, 256) ?? undefined,
+          desc: pickLocalized(a.description),
+        }
+      }}
+    />
   )
 }

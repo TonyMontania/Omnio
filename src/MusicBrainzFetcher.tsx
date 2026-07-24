@@ -3,8 +3,8 @@
 // Official release inside it to build a tracklist. Cover art comes from
 // coverartarchive.org keyed by the chosen release's MBID.
 
-import { useEffect, useState } from 'react'
 import type { Item, MusicType, MusicSource, Track } from './types'
+import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 interface Props {
   initialQuery: string
@@ -74,37 +74,14 @@ function msToMmSs(ms?: number): string {
 }
 
 export default function MusicBrainzFetcher({ initialQuery, onApply, onClose }: Props) {
-  const [query, setQuery] = useState(initialQuery ?? '')
-  const [results, setResults] = useState<ReleaseGroupHit[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [applying, setApplying] = useState<string | null>(null)
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [onClose])
-
-  const search = async () => {
-    if (!query.trim()) return
-    setLoading(true)
-    setError(null)
-    const r = await window.ipcRenderer.invoke('mb:search', query.trim())
-    setLoading(false)
-    if (r?.ok) setResults((r.data as ReleaseGroupHit[]) ?? [])
-    else setError(r?.error ?? 'Search failed')
+  const search = async (q: string): Promise<FetcherResult<ReleaseGroupHit>> => {
+    const r = await window.ipcRenderer.invoke('mb:search', q)
+    return r?.ok ? { ok: true, data: r.data as ReleaseGroupHit[] } : { ok: false, error: r?.error ?? 'Search failed' }
   }
 
-  useEffect(() => {
-    if ((initialQuery ?? '').trim()) search()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const apply = async (rg: ReleaseGroupHit) => {
-    setApplying(rg.id)
     const r = await window.ipcRenderer.invoke('mb:release-group-details', rg.id)
-    if (!r?.ok) { setApplying(null); setError(r?.error ?? 'Failed to load release'); return }
+    if (!r?.ok) return
     const rel = r.data as Release
     const releaseId = r.chosenReleaseId as string
 
@@ -140,75 +117,34 @@ export default function MusicBrainzFetcher({ initialQuery, onApply, onClose }: P
       tracks: tracks.length > 0 ? tracks : undefined,
     }
 
-    setApplying(null)
     onApply(patch, coverPath || undefined, undefined)
     onClose()
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>MusicBrainz · Music</h2>
-          <button type="button" className="panel-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          <p className="hint" style={{ marginTop: 0 }}>
-            Open, community-run music database — no API key needed. Applying overwrites
-            title, artist, release year, type, source, label and tracklist. Cover comes
-            from Cover Art Archive (same project). Rating, notes and listen history are
-            left alone. Rate limit is one request per second; expect a small wait.
-          </p>
-
-          <div className="fetch-search-row">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') search() }}
-              placeholder="Search release, e.g. 'in rainbows radiohead'…"
-              autoFocus
-            />
-            <button type="button" className="secondary-btn" onClick={search} disabled={loading}>
-              {loading ? 'Searching…' : 'Search'}
-            </button>
-          </div>
-
-          {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
-          {!loading && !error && results.length === 0 && query && (
-            <p className="hint">No matches. Try adding the artist name.</p>
-          )}
-
-          {results.length > 0 && (
-            <ul className="anilist-results">
-              {results.map((rg) => {
-                const y = (rg['first-release-date'] ?? '').slice(0, 4)
-                const artist = joinArtists(rg['artist-credit'])
-                const secondaries = rg['secondary-types']?.join(', ')
-                const sub = [
-                  artist,
-                  rg['primary-type'],
-                  secondaries,
-                  y,
-                ].filter(Boolean).join(' · ')
-                return (
-                  <li key={rg.id}>
-                    <button type="button" className="anilist-hit" onClick={() => apply(rg)} disabled={applying !== null}>
-                      <div className="anilist-thumb">
-                        <span>{(rg.title || '?').charAt(0)}</span>
-                      </div>
-                      <div className="anilist-text">
-                        <div className="anilist-title">{rg.title}</div>
-                        <div className="anilist-sub">{sub}</div>
-                      </div>
-                      {applying === rg.id && <span className="anilist-applying">Fetching…</span>}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+    <FetcherModal<ReleaseGroupHit>
+      title="MusicBrainz · Music"
+      hint={
+        <>Open, community-run music database — no API key needed. Applying overwrites
+        title, artist, release year, type, source, label and tracklist. Cover comes
+        from Cover Art Archive (same project). Rating, notes and listen history are
+        left alone. Rate limit is one request per second; expect a small wait.</>
+      }
+      placeholder="Search release, e.g. 'in rainbows radiohead'…"
+      initialQuery={initialQuery}
+      onSearch={search}
+      onApply={apply}
+      onClose={onClose}
+      renderHit={(rg) => {
+        const y = (rg['first-release-date'] ?? '').slice(0, 4)
+        const artist = joinArtists(rg['artist-credit'])
+        const secondaries = rg['secondary-types']?.join(', ')
+        return {
+          key: rg.id,
+          title: rg.title,
+          sub: [artist, rg['primary-type'], secondaries, y].filter(Boolean).join(' · '),
+        }
+      }}
+    />
   )
 }

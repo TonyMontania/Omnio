@@ -4,8 +4,8 @@
 // limits (3 rps) but similar reach; useful as a fallback when AniList
 // misses a title (older or region-specific entries).
 
-import { useEffect, useMemo, useState } from 'react'
 import type { Item, AnimeFormat, AnimeSource } from './types'
+import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 type MediaType = 'anime' | 'manga'
 
@@ -68,35 +68,12 @@ function extractDurationMinutes(s?: string): string | undefined {
 }
 
 export default function JikanFetcher({ initialQuery, kind, categoryId, onApply, onClose }: Props) {
-  const [query, setQuery] = useState(initialQuery ?? '')
-  const [results, setResults] = useState<JikanMedia[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [applying, setApplying] = useState<number | null>(null)
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [onClose])
-
-  const search = async () => {
-    if (!query.trim()) return
-    setLoading(true)
-    setError(null)
-    const r = await window.ipcRenderer.invoke('jikan:search', query.trim(), kind)
-    setLoading(false)
-    if (r && (r as { ok?: boolean }).ok) setResults(((r as { data?: JikanMedia[] }).data) ?? [])
-    else setError((r as { error?: string })?.error ?? 'Search failed')
+  const search = async (q: string): Promise<FetcherResult<JikanMedia>> => {
+    const r = await window.ipcRenderer.invoke('jikan:search', q, kind)
+    return r?.ok ? { ok: true, data: r.data as JikanMedia[] } : { ok: false, error: r?.error ?? 'Search failed' }
   }
 
-  useEffect(() => {
-    if ((initialQuery ?? '').trim()) search()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const apply = async (m: JikanMedia) => {
-    setApplying(m.mal_id)
     const coverUrl = m.images?.jpg?.large_image_url || m.images?.jpg?.image_url
     const coverPath = coverUrl
       ? await window.ipcRenderer.invoke('image:download', coverUrl, categoryId, 'cover') as string | null
@@ -128,75 +105,41 @@ export default function JikanFetcher({ initialQuery, kind, categoryId, onApply, 
       patch.magazine = m.serializations?.[0]?.name
     }
 
-    setApplying(null)
     onApply(patch, coverPath || undefined, undefined)
     onClose()
   }
 
-  const title = useMemo(() => `MyAnimeList · ${kind === 'anime' ? 'Anime' : 'Manga'}`, [kind])
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{title}</h2>
-          <button type="button" className="panel-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          <p className="hint" style={{ marginTop: 0 }}>
-            Via Jikan (unofficial MAL proxy — no API key needed). Applying overwrites the
-            standard fields (title, description, cover, dates, episodes/chapters, studios,
-            source, genres, authors, serialization). Rating, notes and personal history
-            are left alone.
-          </p>
-          <div className="fetch-search-row">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') search() }}
-              placeholder={`Search ${kind}…`}
-              autoFocus
-            />
-            <button type="button" className="secondary-btn" onClick={search} disabled={loading}>
-              {loading ? 'Searching…' : 'Search'}
-            </button>
-          </div>
-          {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
-          {!loading && !error && results.length === 0 && query && (
-            <p className="hint">No matches. Try a different spelling.</p>
-          )}
-          {results.length > 0 && (
-            <ul className="anilist-results">
-              {results.map((m) => {
-                const t = m.title_english || m.title
-                const y = m.year || (m.aired?.from ? new Date(m.aired.from).getFullYear() : m.published?.from ? new Date(m.published.from).getFullYear() : null)
-                const sub = [
-                  m.type?.toLowerCase(),
-                  y,
-                  kind === 'anime' ? (m.episodes ? `${m.episodes} eps` : null) : (m.chapters ? `${m.chapters} ch` : null),
-                  m.score ? `★ ${m.score.toFixed(1)}` : null,
-                ].filter(Boolean).join(' · ')
-                const cover = m.images?.jpg?.image_url
-                return (
-                  <li key={m.mal_id}>
-                    <button type="button" className="anilist-hit" onClick={() => apply(m)} disabled={applying !== null}>
-                      <div className="anilist-thumb">
-                        {cover ? <img src={cover} alt="" loading="lazy" /> : <span>{t.charAt(0)}</span>}
-                      </div>
-                      <div className="anilist-text">
-                        <div className="anilist-title">{t}</div>
-                        <div className="anilist-sub">{sub}</div>
-                        {m.synopsis && <div className="anilist-desc">{m.synopsis.slice(0, 180)}…</div>}
-                      </div>
-                      {applying === m.mal_id && <span className="anilist-applying">Applying…</span>}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+    <FetcherModal<JikanMedia>
+      title={`MyAnimeList · ${kind === 'anime' ? 'Anime' : 'Manga'}`}
+      hint={
+        <>Via Jikan (unofficial MAL proxy — no API key needed). Applying overwrites the
+        standard fields (title, description, cover, dates, episodes/chapters, studios,
+        source, genres, authors, serialization). Rating, notes and personal history
+        are left alone.</>
+      }
+      placeholder={`Search ${kind}…`}
+      initialQuery={initialQuery}
+      onSearch={search}
+      onApply={apply}
+      onClose={onClose}
+      renderHit={(m) => {
+        const t = m.title_english || m.title
+        const y = m.year || (m.aired?.from ? new Date(m.aired.from).getFullYear() : m.published?.from ? new Date(m.published.from).getFullYear() : null)
+        const sub = [
+          m.type?.toLowerCase(),
+          y,
+          kind === 'anime' ? (m.episodes ? `${m.episodes} eps` : null) : (m.chapters ? `${m.chapters} ch` : null),
+          m.score ? `★ ${m.score.toFixed(1)}` : null,
+        ].filter(Boolean).join(' · ')
+        return {
+          key: m.mal_id,
+          title: t,
+          sub,
+          thumbUrl: m.images?.jpg?.image_url,
+          desc: m.synopsis,
+        }
+      }}
+    />
   )
 }

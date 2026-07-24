@@ -2,8 +2,8 @@
 // show a picker of matches, and hand back a shaped Partial<Item> the
 // caller can merge into its editor state.
 
-import { useEffect, useMemo, useState } from 'react'
 import type { Item, AnimeFormat, AnimeSource } from './types'
+import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 type MediaType = 'ANIME' | 'MANGA'
 
@@ -66,36 +66,12 @@ function stripHtml(s?: string): string | undefined {
 }
 
 export default function AniListFetcher({ initialQuery, kind, categoryId, onApply, onClose }: Props) {
-  const [query, setQuery] = useState(initialQuery ?? '')
-  const [results, setResults] = useState<Media[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [applying, setApplying] = useState<number | null>(null)
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [onClose])
-
-  const search = async () => {
-    if (!query.trim()) return
-    setLoading(true)
-    setError(null)
-    const r = await window.ipcRenderer.invoke('anilist:search', query.trim(), kind)
-    setLoading(false)
-    if (r?.ok) setResults((r.data as Media[]) ?? [])
-    else setError(r?.error ?? 'Search failed')
+  const search = async (q: string): Promise<FetcherResult<Media>> => {
+    const r = await window.ipcRenderer.invoke('anilist:search', q, kind)
+    return r?.ok ? { ok: true, data: r.data as Media[] } : { ok: false, error: r?.error ?? 'Search failed' }
   }
 
-  // Auto-run on mount if there's a title.
-  useEffect(() => {
-    if ((initialQuery ?? '').trim()) search()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const apply = async (m: Media) => {
-    setApplying(m.id)
     const cover = m.coverImage?.extraLarge || m.coverImage?.large
     const banner = m.bannerImage
     const coverPath = cover
@@ -127,73 +103,34 @@ export default function AniListFetcher({ initialQuery, kind, categoryId, onApply
       patch.totalChapters = m.chapters ? String(m.chapters) : undefined
       patch.totalVolumes = m.volumes ? String(m.volumes) : undefined
     }
-    setApplying(null)
     onApply(patch, coverPath || undefined, bannerPath || undefined)
     onClose()
   }
 
-  const title = useMemo(() => kind === 'ANIME' ? 'AniList · Anime' : 'AniList · Manga', [kind])
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{title}</h2>
-          <button type="button" className="panel-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          <p className="hint" style={{ marginTop: 0 }}>
-            AniList is free and needs no API key. Applying overwrites the standard fields
-            (title, description, cover, banner, dates, episodes/chapters, studios, source, genres).
-            Rating, notes, watch/read status and personal history stay as they are.
-          </p>
-          <div className="fetch-search-row">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') search() }}
-              placeholder={`Search ${kind === 'ANIME' ? 'anime' : 'manga'}…`}
-              autoFocus
-            />
-            <button type="button" className="secondary-btn" onClick={search} disabled={loading}>
-              {loading ? 'Searching…' : 'Search'}
-            </button>
-          </div>
-          {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
-          {!loading && !error && results.length === 0 && query && (
-            <p className="hint">No matches. Try a different spelling.</p>
-          )}
-          {results.length > 0 && (
-            <ul className="anilist-results">
-              {results.map((m) => {
-                const t = m.title.english || m.title.romaji || m.title.native
-                const y = m.startDate?.year
-                const sub = [
-                  m.format ? m.format.replace('_', ' ').toLowerCase() : null,
-                  y,
-                  kind === 'ANIME' ? (m.episodes ? `${m.episodes} eps` : null) : (m.chapters ? `${m.chapters} ch` : null),
-                  m.averageScore ? `★ ${(m.averageScore / 10).toFixed(1)}` : null,
-                ].filter(Boolean).join(' · ')
-                return (
-                  <li key={m.id}>
-                    <button type="button" className="anilist-hit" onClick={() => apply(m)} disabled={applying !== null}>
-                      <div className="anilist-thumb">
-                        {m.coverImage?.large ? <img src={m.coverImage.large} alt="" loading="lazy" /> : <span>{t?.charAt(0)}</span>}
-                      </div>
-                      <div className="anilist-text">
-                        <div className="anilist-title">{t}</div>
-                        <div className="anilist-sub">{sub}</div>
-                        {m.description && <div className="anilist-desc">{stripHtml(m.description)?.slice(0, 180)}…</div>}
-                      </div>
-                      {applying === m.id && <span className="anilist-applying">Applying…</span>}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+    <FetcherModal<Media>
+      title={kind === 'ANIME' ? 'AniList · Anime' : 'AniList · Manga'}
+      hint={
+        <>AniList is free and needs no API key. Applying overwrites the standard fields
+        (title, description, cover, banner, dates, episodes/chapters, studios, source, genres).
+        Rating, notes, watch/read status and personal history stay as they are.</>
+      }
+      placeholder={`Search ${kind === 'ANIME' ? 'anime' : 'manga'}…`}
+      initialQuery={initialQuery}
+      onSearch={search}
+      onApply={apply}
+      onClose={onClose}
+      renderHit={(m) => {
+        const t = m.title.english || m.title.romaji || m.title.native || ''
+        const y = m.startDate?.year
+        const sub = [
+          m.format ? m.format.replace('_', ' ').toLowerCase() : null,
+          y,
+          kind === 'ANIME' ? (m.episodes ? `${m.episodes} eps` : null) : (m.chapters ? `${m.chapters} ch` : null),
+          m.averageScore ? `★ ${(m.averageScore / 10).toFixed(1)}` : null,
+        ].filter(Boolean).join(' · ')
+        return { key: m.id, title: t, sub, thumbUrl: m.coverImage?.large, desc: stripHtml(m.description) }
+      }}
+    />
   )
 }

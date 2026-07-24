@@ -3,8 +3,9 @@
 // involved companies split into developers vs publishers, platforms,
 // genres, franchises, release date and average rating.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { Item, AgeRating } from './types'
+import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 interface Props {
   clientId?: string
@@ -122,19 +123,13 @@ function gameToPatch(g: Game): Partial<Item> {
   const inv = g.involved_companies ?? []
   const devs = inv.filter((c) => c.developer && c.company?.name).map((c) => c.company!.name)
   const pubs = inv.filter((c) => c.publisher && c.company?.name).map((c) => c.company!.name)
-  // Combine summary + storyline so long-form background isn't lost when IGDB
-  // splits them (Yakuza-style games often have their real plot in storyline).
   const description = [g.summary, g.storyline].filter(Boolean).join('\n\n') || undefined
-  // Alternative names include regional titles, subtitles and internal codenames.
-  // Dedup by lowercased name and skip the main title so it isn't listed twice.
   const altSet = new Set<string>()
   for (const n of g.alternative_names ?? []) {
     if (!n?.name) continue
     if (n.name.toLowerCase() === g.name.toLowerCase()) continue
     altSet.add(n.name)
   }
-  // Genres + themes both feed the app's genre tags — themes carry things
-  // like "Open world" or "Stealth" that aren't in the tighter genre list.
   const genresPlusThemes = [
     ...(g.genres ?? []).map((x) => x.name),
     ...(g.themes ?? []).map((x) => x.name),
@@ -154,41 +149,17 @@ function gameToPatch(g: Game): Partial<Item> {
 }
 
 export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onApply, onClose }: Props) {
-  const [query, setQuery] = useState(initialQuery ?? '')
-  const [results, setResults] = useState<Game[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [applying, setApplying] = useState<number | null>(null)
-
   const authReady = useMemo(
     () => (clientId ?? '').trim().length > 8 && (clientSecret ?? '').trim().length > 8,
     [clientId, clientSecret],
   )
 
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [onClose])
-
-  const search = async () => {
-    if (!authReady) { setError('Set Client ID + Secret in Settings first'); return }
-    if (!query.trim()) return
-    setLoading(true)
-    setError(null)
-    const r = await window.ipcRenderer.invoke('igdb:search', clientId, clientSecret, query.trim())
-    setLoading(false)
-    if (r?.ok) setResults((r.data as Game[]) ?? [])
-    else setError(r?.error ?? 'Search failed')
+  const search = async (q: string): Promise<FetcherResult<Game>> => {
+    const r = await window.ipcRenderer.invoke('igdb:search', clientId, clientSecret, q)
+    return r?.ok ? { ok: true, data: r.data as Game[] } : { ok: false, error: r?.error ?? 'Search failed' }
   }
 
-  useEffect(() => {
-    if (authReady && (initialQuery ?? '').trim()) search()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const apply = async (g: Game) => {
-    setApplying(g.id)
     const coverUrl = g.cover?.image_id ? IMG(g.cover.image_id, 't_cover_big') : null
     const bannerId = g.artworks?.[0]?.image_id ?? g.screenshots?.[0]?.image_id
     const bannerUrl = bannerId ? IMG(bannerId, 't_1080p') : null
@@ -207,85 +178,47 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
       // eslint-disable-next-line no-console
       console.debug('[IGDB] age_ratings raw:', g.age_ratings)
     }
-    const patch = gameToPatch(g)
-    setApplying(null)
-    onApply(patch, coverPath || undefined, bannerPath || undefined)
+    onApply(gameToPatch(g), coverPath || undefined, bannerPath || undefined)
     onClose()
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>IGDB · Games</h2>
-          <button type="button" className="panel-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          {!authReady && (
-            <p className="hint" style={{ color: 'var(--danger)' }}>
-              Set your IGDB Client ID + Client Secret in Settings → Data → Integrations first.
-              Get them free at <code>dev.twitch.tv/console/apps</code> (create an app, category "Application Integration",
-              redirect URL <code>http://localhost</code>).
-            </p>
-          )}
-          <p className="hint" style={{ marginTop: 0 }}>
-            Applying overwrites title, alternative titles, description (summary + storyline),
-            cover, banner (first artwork or screenshot), release date, developers, publishers,
-            platforms, genres + themes, franchise/series and age rating (ESRB, falls back to
-            PEGI). Rating, time played, achievements, notes and status are left alone.
-          </p>
-
-          <div className="fetch-search-row">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') search() }}
-              placeholder="Search a game…"
-              disabled={!authReady}
-              autoFocus
-            />
-            <button type="button" className="secondary-btn" onClick={search} disabled={!authReady || loading}>
-              {loading ? 'Searching…' : 'Search'}
-            </button>
-          </div>
-
-          {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
-          {!loading && !error && results.length === 0 && query && authReady && (
-            <p className="hint">No matches. Try a different spelling.</p>
-          )}
-
-          {results.length > 0 && (
-            <ul className="anilist-results">
-              {results.map((g) => {
-                const y = g.first_release_date ? new Date(g.first_release_date * 1000).getFullYear() : null
-                const inv = g.involved_companies ?? []
-                const devs = inv.filter((c) => c.developer && c.company?.name).map((c) => c.company!.name).slice(0, 2)
-                const sub = [
-                  y,
-                  devs.join(' · ') || null,
-                  g.total_rating ? `★ ${(g.total_rating / 10).toFixed(1)}` : null,
-                ].filter(Boolean).join(' · ')
-                const thumb = g.cover?.image_id ? IMG(g.cover.image_id, 't_cover_small') : null
-                return (
-                  <li key={g.id}>
-                    <button type="button" className="anilist-hit" onClick={() => apply(g)} disabled={applying !== null}>
-                      <div className="anilist-thumb">
-                        {thumb ? <img src={thumb} alt="" loading="lazy" /> : <span>{g.name.charAt(0)}</span>}
-                      </div>
-                      <div className="anilist-text">
-                        <div className="anilist-title">{g.name}</div>
-                        <div className="anilist-sub">{sub}</div>
-                        {g.summary && <div className="anilist-desc">{g.summary.slice(0, 180)}…</div>}
-                      </div>
-                      {applying === g.id && <span className="anilist-applying">Applying…</span>}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+    <FetcherModal<Game>
+      title="IGDB · Games"
+      disabled={!authReady}
+      disabledMessage={
+        <>Set your IGDB Client ID + Client Secret in Settings → Data → Integrations first.
+        Get them free at <code>dev.twitch.tv/console/apps</code> (create an app, category "Application Integration",
+        redirect URL <code>http://localhost</code>).</>
+      }
+      hint={
+        <>Applying overwrites title, alternative titles, description (summary + storyline),
+        cover, banner (first artwork or screenshot), release date, developers, publishers,
+        platforms, genres + themes, franchise/series and age rating (ESRB, falls back to
+        PEGI). Rating, time played, achievements, notes and status are left alone.</>
+      }
+      placeholder="Search a game…"
+      initialQuery={initialQuery}
+      onSearch={search}
+      onApply={apply}
+      onClose={onClose}
+      renderHit={(g) => {
+        const y = g.first_release_date ? new Date(g.first_release_date * 1000).getFullYear() : null
+        const inv = g.involved_companies ?? []
+        const devs = inv.filter((c) => c.developer && c.company?.name).map((c) => c.company!.name).slice(0, 2)
+        const sub = [
+          y,
+          devs.join(' · ') || null,
+          g.total_rating ? `★ ${(g.total_rating / 10).toFixed(1)}` : null,
+        ].filter(Boolean).join(' · ')
+        return {
+          key: g.id,
+          title: g.name,
+          sub,
+          thumbUrl: g.cover?.image_id ? IMG(g.cover.image_id, 't_cover_small') : undefined,
+          desc: g.summary,
+        }
+      }}
+    />
   )
 }

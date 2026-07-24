@@ -3,8 +3,9 @@
 // full details for the volume — including person_credits so we can
 // split creators into writers → authors and artists → mangaArtists.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { Item } from './types'
+import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 interface Props {
   apiKey?: string
@@ -91,41 +92,16 @@ function volumeToPatch(v: CvVolume): Partial<Item> {
 }
 
 export default function ComicVineFetcher({ apiKey, initialQuery, onApply, onClose }: Props) {
-  const [query, setQuery] = useState(initialQuery ?? '')
-  const [results, setResults] = useState<CvSearchHit[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [applying, setApplying] = useState<number | null>(null)
-
   const keyLooksSet = useMemo(() => (apiKey ?? '').trim().length >= 20, [apiKey])
 
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [onClose])
-
-  const search = async () => {
-    if (!keyLooksSet) { setError('No API key configured'); return }
-    if (!query.trim()) return
-    setLoading(true)
-    setError(null)
-    const r = await window.ipcRenderer.invoke('comicvine:search', apiKey, query.trim())
-    setLoading(false)
-    if (r?.ok) setResults((r.data as CvSearchHit[]) ?? [])
-    else setError(r?.error ?? 'Search failed')
+  const search = async (q: string): Promise<FetcherResult<CvSearchHit>> => {
+    const r = await window.ipcRenderer.invoke('comicvine:search', apiKey, q)
+    return r?.ok ? { ok: true, data: r.data as CvSearchHit[] } : { ok: false, error: r?.error ?? 'Search failed' }
   }
 
-  useEffect(() => {
-    if (keyLooksSet && (initialQuery ?? '').trim()) search()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const apply = async (hit: CvSearchHit) => {
-    if (!keyLooksSet) return
-    setApplying(hit.id)
     const r = await window.ipcRenderer.invoke('comicvine:volume', apiKey, hit.id)
-    if (!r?.ok) { setApplying(null); setError(r?.error ?? 'Failed to load volume'); return }
+    if (!r?.ok) return
     const v = r.data as CvVolume
 
     const coverUrl = v.image?.super_url || v.image?.screen_url || v.image?.medium_url
@@ -133,81 +109,43 @@ export default function ComicVineFetcher({ apiKey, initialQuery, onApply, onClos
       ? await window.ipcRenderer.invoke('image:download', coverUrl, 'comics_west', 'cover') as string | null
       : null
 
-    const patch = volumeToPatch(v)
-    setApplying(null)
-    onApply(patch, coverPath || undefined, undefined)
+    onApply(volumeToPatch(v), coverPath || undefined, undefined)
     onClose()
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>ComicVine · Western Comics</h2>
-          <button type="button" className="panel-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          {!keyLooksSet && (
-            <p className="hint" style={{ color: 'var(--danger)' }}>
-              Set your ComicVine API key in Settings → Data → Integrations first.
-              Register a free one at <code>comicvine.gamespot.com/api/</code>.
-            </p>
-          )}
-          <p className="hint" style={{ marginTop: 0 }}>
-            Applying overwrites title, description, cover, start year, total issues,
-            writers (into Authors), artists / pencilers / inkers / colorists (into Artists),
-            and the publisher (into Magazine / imprint). Rating, reading status, notes
-            and personal history are left alone.
-          </p>
-
-          <div className="fetch-search-row">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') search() }}
-              placeholder="Search volume, e.g. 'saga' or 'watchmen'…"
-              disabled={!keyLooksSet}
-              autoFocus
-            />
-            <button type="button" className="secondary-btn" onClick={search} disabled={!keyLooksSet || loading}>
-              {loading ? 'Searching…' : 'Search'}
-            </button>
-          </div>
-
-          {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
-          {!loading && !error && results.length === 0 && query && keyLooksSet && (
-            <p className="hint">No matches. Try the volume start year for disambiguation.</p>
-          )}
-
-          {results.length > 0 && (
-            <ul className="anilist-results">
-              {results.map((hit) => {
-                const sub = [
-                  hit.publisher?.name,
-                  hit.start_year,
-                  hit.count_of_issues ? `${hit.count_of_issues} issues` : null,
-                ].filter(Boolean).join(' · ')
-                const thumb = hit.image?.small_url || hit.image?.medium_url
-                return (
-                  <li key={hit.id}>
-                    <button type="button" className="anilist-hit" onClick={() => apply(hit)} disabled={applying !== null}>
-                      <div className="anilist-thumb">
-                        {thumb ? <img src={thumb} alt="" loading="lazy" /> : <span>{(hit.name || '?').charAt(0)}</span>}
-                      </div>
-                      <div className="anilist-text">
-                        <div className="anilist-title">{hit.name}</div>
-                        <div className="anilist-sub">{sub}</div>
-                        {hit.deck && <div className="anilist-desc">{hit.deck.slice(0, 180)}…</div>}
-                      </div>
-                      {applying === hit.id && <span className="anilist-applying">Fetching…</span>}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+    <FetcherModal<CvSearchHit>
+      title="ComicVine · Western Comics"
+      disabled={!keyLooksSet}
+      disabledMessage={
+        <>Set your ComicVine API key in Settings → Data → Integrations first.
+        Register a free one at <code>comicvine.gamespot.com/api/</code>.</>
+      }
+      hint={
+        <>Applying overwrites title, description, cover, start year, total issues,
+        writers (into Authors), artists / pencilers / inkers / colorists (into Artists),
+        and the publisher (into Magazine / imprint). Rating, reading status, notes
+        and personal history are left alone.</>
+      }
+      placeholder="Search volume, e.g. 'saga' or 'watchmen'…"
+      initialQuery={initialQuery}
+      onSearch={search}
+      onApply={apply}
+      onClose={onClose}
+      renderHit={(hit) => {
+        const sub = [
+          hit.publisher?.name,
+          hit.start_year,
+          hit.count_of_issues ? `${hit.count_of_issues} issues` : null,
+        ].filter(Boolean).join(' · ')
+        return {
+          key: hit.id,
+          title: hit.name || '(untitled)',
+          sub,
+          thumbUrl: hit.image?.small_url || hit.image?.medium_url,
+          desc: hit.deck,
+        }
+      }}
+    />
   )
 }

@@ -2,8 +2,8 @@
 // Uses the community-run vgmdb.info JSON proxy of the site. No API key
 // but availability depends on the proxy; errors are surfaced as-is.
 
-import { useEffect, useState } from 'react'
 import type { Item, Track } from './types'
+import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 interface Props {
   initialQuery: string
@@ -81,37 +81,14 @@ function altsFromNames(m?: MultiName, primary?: string): string[] | undefined {
 }
 
 export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) {
-  const [query, setQuery] = useState(initialQuery ?? '')
-  const [results, setResults] = useState<SearchHit[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [applying, setApplying] = useState<string | null>(null)
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [onClose])
-
-  const search = async () => {
-    if (!query.trim()) return
-    setLoading(true)
-    setError(null)
-    const r = await window.ipcRenderer.invoke('vgmdb:search', query.trim())
-    setLoading(false)
-    if (r?.ok) setResults((r.data as SearchHit[]) ?? [])
-    else setError(r?.error ?? 'Search failed (vgmdb.info may be down)')
+  const search = async (q: string): Promise<FetcherResult<SearchHit>> => {
+    const r = await window.ipcRenderer.invoke('vgmdb:search', q)
+    return r?.ok ? { ok: true, data: r.data as SearchHit[] } : { ok: false, error: r?.error ?? 'Search failed (vgmdb.info may be down)' }
   }
 
-  useEffect(() => {
-    if ((initialQuery ?? '').trim()) search()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const apply = async (hit: SearchHit) => {
-    setApplying(hit.link)
     const r = await window.ipcRenderer.invoke('vgmdb:album', hit.link)
-    if (!r?.ok) { setApplying(null); setError(r?.error ?? 'Failed to load album'); return }
+    if (!r?.ok) return
     const d = r.data as AlbumDetails
 
     const coverUrl = d.picture_full || d.picture_small
@@ -150,70 +127,34 @@ export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) 
       tracks: tracks.length > 0 ? tracks : undefined,
     }
 
-    setApplying(null)
     onApply(patch, coverPath || undefined, undefined)
     onClose()
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>VGMdb · Game & anime soundtracks</h2>
-          <button type="button" className="panel-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          <p className="hint" style={{ marginTop: 0 }}>
-            Video-game music database. No API key — routed through the community
-            <code> vgmdb.info </code> JSON proxy. Applying overwrites title, artist
-            (performers or composers), release year, label, tracklist, cover; sets
-            type to <em>OST</em> and source to <em>Soundtrack</em>. Best fit for
-            game/anime OSTs and Japanese physical releases.
-          </p>
-
-          <div className="fetch-search-row">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') search() }}
-              placeholder="Search album, e.g. 'nier automata ost'…"
-              autoFocus
-            />
-            <button type="button" className="secondary-btn" onClick={search} disabled={loading}>
-              {loading ? 'Searching…' : 'Search'}
-            </button>
-          </div>
-
-          {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
-          {!loading && !error && results.length === 0 && query && (
-            <p className="hint">No matches. Try romanised or original spelling.</p>
-          )}
-
-          {results.length > 0 && (
-            <ul className="anilist-results">
-              {results.map((hit) => {
-                const t = displayName(hit.titles)
-                const y = (hit.release_date ?? '').slice(0, 4)
-                const sub = [y, hit.media_format, hit.catalog].filter(Boolean).join(' · ')
-                return (
-                  <li key={hit.link}>
-                    <button type="button" className="anilist-hit" onClick={() => apply(hit)} disabled={applying !== null}>
-                      <div className="anilist-thumb">
-                        <span>{(t || '?').charAt(0)}</span>
-                      </div>
-                      <div className="anilist-text">
-                        <div className="anilist-title">{t}</div>
-                        <div className="anilist-sub">{sub}</div>
-                      </div>
-                      {applying === hit.link && <span className="anilist-applying">Fetching…</span>}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+    <FetcherModal<SearchHit>
+      title="VGMdb · Game & anime soundtracks"
+      hint={
+        <>Video-game music database. No API key — routed through the community
+        <code> vgmdb.info </code> JSON proxy. Applying overwrites title, artist
+        (performers or composers), release year, label, tracklist, cover; sets
+        type to <em>OST</em> and source to <em>Soundtrack</em>. Best fit for
+        game/anime OSTs and Japanese physical releases.</>
+      }
+      placeholder="Search album, e.g. 'nier automata ost'…"
+      initialQuery={initialQuery}
+      onSearch={search}
+      onApply={apply}
+      onClose={onClose}
+      renderHit={(hit) => {
+        const t = displayName(hit.titles)
+        const y = (hit.release_date ?? '').slice(0, 4)
+        return {
+          key: hit.link,
+          title: t || '(untitled)',
+          sub: [y, hit.media_format, hit.catalog].filter(Boolean).join(' · '),
+        }
+      }}
+    />
   )
 }

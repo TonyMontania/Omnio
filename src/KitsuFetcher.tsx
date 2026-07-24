@@ -3,8 +3,8 @@
 // data lives under `attributes` and everything is flat strings we can
 // map straight into Omnio fields.
 
-import { useEffect, useMemo, useState } from 'react'
 import type { Item, AnimeFormat, AnimeSeason, AiringStatus } from './types'
+import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 type Kind = 'anime' | 'manga'
 
@@ -121,35 +121,12 @@ function hitToPatch(kind: Kind, h: KitsuHit): Partial<Item> {
 }
 
 export default function KitsuFetcher({ initialQuery, kind, categoryId, onApply, onClose }: Props) {
-  const [query, setQuery] = useState(initialQuery ?? '')
-  const [results, setResults] = useState<KitsuHit[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [applying, setApplying] = useState<string | null>(null)
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [onClose])
-
-  const search = async () => {
-    if (!query.trim()) return
-    setLoading(true)
-    setError(null)
-    const r = await window.ipcRenderer.invoke('kitsu:search', query.trim(), kind)
-    setLoading(false)
-    if (r?.ok) setResults((r.data as KitsuHit[]) ?? [])
-    else setError(r?.error ?? 'Search failed')
+  const search = async (q: string): Promise<FetcherResult<KitsuHit>> => {
+    const r = await window.ipcRenderer.invoke('kitsu:search', q, kind)
+    return r?.ok ? { ok: true, data: r.data as KitsuHit[] } : { ok: false, error: r?.error ?? 'Search failed' }
   }
 
-  useEffect(() => {
-    if ((initialQuery ?? '').trim()) search()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const apply = async (h: KitsuHit) => {
-    setApplying(h.id)
     const a = h.attributes
     const coverUrl = a.posterImage?.large || a.posterImage?.medium || a.posterImage?.small
     const bannerUrl = a.coverImage?.large || a.coverImage?.original
@@ -160,86 +137,46 @@ export default function KitsuFetcher({ initialQuery, kind, categoryId, onApply, 
       ? await window.ipcRenderer.invoke('image:download', bannerUrl, categoryId, 'banner') as string | null
       : null
 
-    const patch = hitToPatch(kind, h)
-    setApplying(null)
-    onApply(patch, coverPath || undefined, bannerPath || undefined)
+    onApply(hitToPatch(kind, h), coverPath || undefined, bannerPath || undefined)
     onClose()
   }
 
-  const title = useMemo(() => kind === 'anime' ? 'Kitsu · Anime' : 'Kitsu · Manga', [kind])
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{title}</h2>
-          <button type="button" className="panel-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          <p className="hint" style={{ marginTop: 0 }}>
-            Free, no API key. Best used as a fallback when AniList / MAL
-            {kind === 'manga' ? ' / MangaDex' : ''} miss a title. Applying overwrites
-            title, alt titles, description, cover, banner, dates, {kind === 'anime'
-              ? 'format, airing status, total episodes and episode duration'
-              : 'total chapters and volumes'}. Rating, notes, watch/read status and
-            personal history are left alone.
-          </p>
-
-          <div className="fetch-search-row">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') search() }}
-              placeholder={`Search ${kind}…`}
-              autoFocus
-            />
-            <button type="button" className="secondary-btn" onClick={search} disabled={loading}>
-              {loading ? 'Searching…' : 'Search'}
-            </button>
-          </div>
-
-          {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
-          {!loading && !error && results.length === 0 && query && (
-            <p className="hint">No matches.</p>
-          )}
-
-          {results.length > 0 && (
-            <ul className="anilist-results">
-              {results.map((h) => {
-                const a = h.attributes
-                const t = pickTitle(a)
-                const y = (a.startDate ?? '').slice(0, 4)
-                const sub = [
-                  a.showType || a.mangaType || null,
-                  y,
-                  kind === 'anime'
-                    ? (a.episodeCount ? `${a.episodeCount} eps` : null)
-                    : (a.chapterCount ? `${a.chapterCount} ch` : null),
-                  a.averageRating ? `★ ${(parseFloat(a.averageRating) / 10).toFixed(1)}` : null,
-                ].filter(Boolean).join(' · ')
-                const thumb = a.posterImage?.small || a.posterImage?.tiny
-                return (
-                  <li key={h.id}>
-                    <button type="button" className="anilist-hit" onClick={() => apply(h)} disabled={applying !== null}>
-                      <div className="anilist-thumb">
-                        {thumb ? <img src={thumb} alt="" loading="lazy" /> : <span>{t.charAt(0) || '?'}</span>}
-                      </div>
-                      <div className="anilist-text">
-                        <div className="anilist-title">{t}</div>
-                        <div className="anilist-sub">{sub}</div>
-                        {(a.synopsis || a.description) && (
-                          <div className="anilist-desc">{(a.synopsis || a.description)!.slice(0, 180)}…</div>
-                        )}
-                      </div>
-                      {applying === h.id && <span className="anilist-applying">Fetching…</span>}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+    <FetcherModal<KitsuHit>
+      title={kind === 'anime' ? 'Kitsu · Anime' : 'Kitsu · Manga'}
+      hint={
+        <>Free, no API key. Best used as a fallback when AniList / MAL
+        {kind === 'manga' ? ' / MangaDex' : ''} miss a title. Applying overwrites
+        title, alt titles, description, cover, banner, dates, {kind === 'anime'
+          ? 'format, airing status, total episodes and episode duration'
+          : 'total chapters and volumes'}. Rating, notes, watch/read status and
+        personal history are left alone.</>
+      }
+      placeholder={`Search ${kind}…`}
+      initialQuery={initialQuery}
+      onSearch={search}
+      onApply={apply}
+      onClose={onClose}
+      renderHit={(h) => {
+        const a = h.attributes
+        const t = pickTitle(a)
+        const y = (a.startDate ?? '').slice(0, 4)
+        const sub = [
+          a.showType || a.mangaType || null,
+          y,
+          kind === 'anime'
+            ? (a.episodeCount ? `${a.episodeCount} eps` : null)
+            : (a.chapterCount ? `${a.chapterCount} ch` : null),
+          a.averageRating ? `★ ${(parseFloat(a.averageRating) / 10).toFixed(1)}` : null,
+        ].filter(Boolean).join(' · ')
+        return {
+          key: h.id,
+          title: t,
+          sub,
+          thumbUrl: a.posterImage?.small || a.posterImage?.tiny,
+          desc: a.synopsis || a.description,
+        }
+      }}
+    />
   )
 }

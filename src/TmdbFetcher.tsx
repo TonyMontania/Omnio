@@ -2,8 +2,9 @@
 // Two-step flow: search a title, pick a hit, then fetch full details so we
 // can populate the editor with cover, banner, cast, crew, seasons, etc.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { Item, Season, SeriesFormat } from './types'
+import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 type Kind = 'movie' | 'tv'
 
@@ -150,41 +151,16 @@ function detailsToPatch(kind: Kind, d: Details): Partial<Item> {
 }
 
 export default function TmdbFetcher({ apiKey, initialQuery, kind, categoryId, onApply, onClose }: Props) {
-  const [query, setQuery] = useState(initialQuery ?? '')
-  const [results, setResults] = useState<Hit[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [applying, setApplying] = useState<number | null>(null)
-
   const keyLooksSet = useMemo(() => (apiKey ?? '').trim().length >= 20, [apiKey])
 
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [onClose])
-
-  const search = async () => {
-    if (!keyLooksSet) { setError('No API key configured'); return }
-    if (!query.trim()) return
-    setLoading(true)
-    setError(null)
-    const r = await window.ipcRenderer.invoke('tmdb:search', apiKey, query.trim(), kind)
-    setLoading(false)
-    if (r?.ok) setResults((r.data as Hit[]) ?? [])
-    else setError(r?.error ?? 'Search failed')
+  const search = async (q: string): Promise<FetcherResult<Hit>> => {
+    const r = await window.ipcRenderer.invoke('tmdb:search', apiKey, q, kind)
+    return r?.ok ? { ok: true, data: r.data as Hit[] } : { ok: false, error: r?.error ?? 'Search failed' }
   }
 
-  useEffect(() => {
-    if (keyLooksSet && (initialQuery ?? '').trim()) search()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const apply = async (h: Hit) => {
-    if (!keyLooksSet) return
-    setApplying(h.id)
     const r = await window.ipcRenderer.invoke('tmdb:details', apiKey, kind, h.id)
-    if (!r?.ok) { setApplying(null); setError(r?.error ?? 'Failed to load details'); return }
+    if (!r?.ok) return
     const d = r.data as Details
 
     const coverUrl = POSTER_URL(d.poster_path)
@@ -196,82 +172,42 @@ export default function TmdbFetcher({ apiKey, initialQuery, kind, categoryId, on
       ? await window.ipcRenderer.invoke('image:download', bannerUrl, categoryId, 'banner') as string | null
       : null
 
-    const patch = detailsToPatch(kind, d)
-    setApplying(null)
-    onApply(patch, coverPath || undefined, bannerPath || undefined)
+    onApply(detailsToPatch(kind, d), coverPath || undefined, bannerPath || undefined)
     onClose()
   }
 
-  const title = kind === 'movie' ? 'TMDb · Movies' : 'TMDb · TV Series'
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{title}</h2>
-          <button type="button" className="panel-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          {!keyLooksSet && (
-            <p className="hint" style={{ color: 'var(--danger)' }}>
-              Set your TMDb API key in Settings → Data → Integrations first.
-              Register a free one at <code>themoviedb.org/settings/api</code> (takes ~2 minutes).
-            </p>
-          )}
-          <p className="hint" style={{ marginTop: 0 }}>
-            Applying overwrites the standard fields (title, description, cover, banner,
-            {kind === 'movie'
-              ? ' release date, directors, writers, cast, production companies, genres, runtime'
-              : ' first-aired date, showrunners, directors, writers, cast, network, country, language, genres, format, seasons'
-            }). Rating, notes, watch status and personal history are left alone.
-          </p>
-
-          <div className="fetch-search-row">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') search() }}
-              placeholder={kind === 'movie' ? 'Search movies…' : 'Search TV series…'}
-              disabled={!keyLooksSet}
-              autoFocus
-            />
-            <button type="button" className="secondary-btn" onClick={search} disabled={!keyLooksSet || loading}>
-              {loading ? 'Searching…' : 'Search'}
-            </button>
-          </div>
-
-          {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
-          {!loading && !error && results.length === 0 && query && keyLooksSet && (
-            <p className="hint">No matches. Try a different spelling.</p>
-          )}
-
-          {results.length > 0 && (
-            <ul className="anilist-results">
-              {results.map((h) => {
-                const t = h.title || h.name || ''
-                const y = (h.release_date || h.first_air_date || '').slice(0, 4)
-                const sub = [y, h.vote_average ? `★ ${h.vote_average.toFixed(1)}` : null].filter(Boolean).join(' · ')
-                const thumb = THUMB_URL(h.poster_path)
-                return (
-                  <li key={h.id}>
-                    <button type="button" className="anilist-hit" onClick={() => apply(h)} disabled={applying !== null}>
-                      <div className="anilist-thumb">
-                        {thumb ? <img src={thumb} alt="" loading="lazy" /> : <span>{t.charAt(0)}</span>}
-                      </div>
-                      <div className="anilist-text">
-                        <div className="anilist-title">{t}</div>
-                        <div className="anilist-sub">{sub}</div>
-                        {h.overview && <div className="anilist-desc">{h.overview.slice(0, 180)}…</div>}
-                      </div>
-                      {applying === h.id && <span className="anilist-applying">Applying…</span>}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+    <FetcherModal<Hit>
+      title={kind === 'movie' ? 'TMDb · Movies' : 'TMDb · TV Series'}
+      disabled={!keyLooksSet}
+      disabledMessage={
+        <>Set your TMDb API key in Settings → Data → Integrations first.
+        Register a free one at <code>themoviedb.org/settings/api</code> (takes ~2 minutes).</>
+      }
+      hint={
+        <>Applying overwrites the standard fields (title, description, cover, banner,
+        {kind === 'movie'
+          ? ' release date, directors, writers, cast, production companies, genres, runtime'
+          : ' first-aired date, showrunners, directors, writers, cast, network, country, language, genres, format, seasons'
+        }). Rating, notes, watch status and personal history are left alone.</>
+      }
+      placeholder={kind === 'movie' ? 'Search movies…' : 'Search TV series…'}
+      initialQuery={initialQuery}
+      onSearch={search}
+      onApply={apply}
+      onClose={onClose}
+      renderHit={(h) => {
+        const t = h.title || h.name || ''
+        const y = (h.release_date || h.first_air_date || '').slice(0, 4)
+        const sub = [y, h.vote_average ? `★ ${h.vote_average.toFixed(1)}` : null].filter(Boolean).join(' · ')
+        return {
+          key: h.id,
+          title: t,
+          sub,
+          thumbUrl: THUMB_URL(h.poster_path) ?? undefined,
+          desc: h.overview,
+        }
+      }}
+    />
   )
 }

@@ -1,34 +1,52 @@
-// Manages the "related items" list for an entry — each row also picks a
-// relation kind (sequel, prequel, adaptation, etc.).
+// One editor for both Related (with per-row relation kind) and
+// Recommendations (plain id list). Callers pass either `related` OR `ids`
+// depending on the flavor — the row markup and picker are shared.
 
 import type { RelatedItem, Item, RelationKind } from '../../types'
 import { RELATION_OPTIONS } from '../../types'
 import AnimeItemPicker from './AnimeItemPicker'
 
-export default function RelatedListEditor({ related, options, onAdd, onRemove, onChangeRelation, pickerPlaceholder }: {
-  related: RelatedItem[]
-  options: Item[]
-  onAdd: (itemId: string) => void
-  onRemove: (itemId: string) => void
-  onChangeRelation: (itemId: string, r: RelationKind) => void
-  pickerPlaceholder?: string
-}) {
-  const lookup = (id: string) => options.find((o) => o.id === id)
+type Props =
+  | {
+      mode?: 'related'
+      related: RelatedItem[]
+      options: Item[]
+      onAdd: (itemId: string) => void
+      onRemove: (itemId: string) => void
+      onChangeRelation: (itemId: string, r: RelationKind) => void
+      pickerPlaceholder?: string
+    }
+  | {
+      mode: 'recommendations'
+      ids: string[]
+      options: Item[]
+      onAdd: (id: string) => void
+      onRemove: (id: string) => void
+      pickerPlaceholder?: string
+    }
+
+export default function RelatedListEditor(props: Props) {
+  const lookup = (id: string) => props.options.find((o) => o.id === id)
+  const ids = props.mode === 'recommendations' ? props.ids : props.related.map((r) => r.itemId)
+  const placeholder = props.pickerPlaceholder ?? (props.mode === 'recommendations' ? 'Add recommendation…' : 'Add related…')
   return (
     <div>
-      <AnimeItemPicker options={options} excludeIds={related.map((r) => r.itemId)} onPick={onAdd} placeholder={pickerPlaceholder ?? 'Add related…'} />
-      {related.length > 0 && (
+      <AnimeItemPicker options={props.options} excludeIds={ids} onPick={props.onAdd} placeholder={placeholder} />
+      {ids.length > 0 && (
         <div className="related-list">
-          {related.map((r) => {
-            const it = lookup(r.itemId)
+          {ids.map((id) => {
+            const it = lookup(id)
+            const rel = props.mode === 'recommendations' ? null : props.related.find((r) => r.itemId === id)
             return (
-              <div key={r.itemId} className="related-row">
+              <div key={id} className="related-row">
                 {it?.cover && <img src={it.cover} alt="" />}
                 <span className="related-title">{it?.title ?? '(missing)'}</span>
-                <select value={r.relation} onChange={(e) => onChangeRelation(r.itemId, e.target.value as RelationKind)}>
-                  {RELATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-                <button type="button" className="track-remove" onClick={() => onRemove(r.itemId)}>✕</button>
+                {rel && (
+                  <select value={rel.relation} onChange={(e) => (props as Extract<Props, { mode?: 'related' }>).onChangeRelation(id, e.target.value as RelationKind)}>
+                    {RELATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                )}
+                <button type="button" className="track-remove" onClick={() => props.onRemove(id)}>✕</button>
               </div>
             )
           })}
