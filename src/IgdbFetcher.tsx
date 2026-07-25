@@ -4,14 +4,14 @@
 // genres, franchises, release date and average rating.
 
 import { useMemo } from 'react'
-import type { Item, AgeRating } from './types'
+import type { Item, AgeRating, GameSource } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 interface Props {
   clientId?: string
   clientSecret?: string
   initialQuery: string
-  onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string) => void
+  onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string, hints?: { parentGameTitle?: string }) => void
   onClose: () => void
 }
 
@@ -50,7 +50,24 @@ interface Game {
   age_ratings?: AgeRatingRef[]
   game_modes?: Named[]
   themes?: Named[]
+  category?: number             // 0=main, 1=DLC, 8=remake, 9=remaster, 11=port...
+  parent_game?: { id: number; name: string }
   total_rating?: number
+  total_rating_count?: number   // popularity proxy — used to rank picker hits
+}
+
+// IGDB category enum → Omnio's GameSource union. Undocumented codes fall
+// through to leave the field unset instead of guessing.
+const CATEGORY_TO_SOURCE: Record<number, GameSource> = {
+  0: 'original',    // main_game
+  2: 'expanded',    // expansion
+  3: 'collection',  // bundle
+  4: 'standalone',  // standalone_expansion
+  8: 'remake',      // remake
+  9: 'remaster',    // remaster
+  10: 'expanded',   // expanded_game
+  11: 'port',       // port
+  13: 'collection', // pack
 }
 
 // IGDB has two coexisting encodings for age_ratings:
@@ -145,6 +162,7 @@ function gameToPatch(g: Game): Partial<Item> {
     franchise: g.franchises?.[0]?.name || g.collection?.name,
     alternativeTitles: altSet.size > 0 ? Array.from(altSet) : undefined,
     ageRating: pickAgeRating(g.age_ratings),
+    gameSource: g.category !== undefined ? CATEGORY_TO_SOURCE[g.category] : undefined,
   }
 }
 
@@ -156,7 +174,14 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
 
   const search = async (q: string): Promise<FetcherResult<Game>> => {
     const r = await window.ipcRenderer.invoke('igdb:search', clientId, clientSecret, q)
-    return r?.ok ? { ok: true, data: r.data as Game[] } : { ok: false, error: r?.error ?? 'Search failed' }
+    if (!r?.ok) return { ok: false, error: r?.error ?? 'Search failed' }
+    // IGDB search returns hits ordered by name-match relevance, which for a
+    // popular title puts DLC / bundle / region-variant entries above the
+    // main entry. Re-sort by IGDB's total_rating_count (popularity proxy)
+    // so the entry with the most metadata (devs, cover, etc.) surfaces
+    // first — that's usually the main game, which is what the user wants.
+    const games = (r.data as Game[]).slice().sort((a, b) => (b.total_rating_count ?? 0) - (a.total_rating_count ?? 0))
+    return { ok: true, data: games }
   }
 
   const apply = async (g: Game) => {
@@ -178,7 +203,12 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
       // eslint-disable-next-line no-console
       console.debug('[IGDB] age_ratings raw:', g.age_ratings)
     }
-    onApply(gameToPatch(g), coverPath || undefined, bannerPath || undefined)
+    onApply(
+      gameToPatch(g),
+      coverPath || undefined,
+      bannerPath || undefined,
+      g.parent_game?.name ? { parentGameTitle: g.parent_game.name } : undefined,
+    )
     onClose()
   }
 

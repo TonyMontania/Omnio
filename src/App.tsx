@@ -1206,6 +1206,7 @@ function App() {
     coverPath?: string,
     bannerPath?: string,
     sourceLabel = 'Metadata',
+    hints?: { parentGameTitle?: string },
   ) => {
     if (patch.title) setTitle(patch.title)
     if (patch.alternativeTitles) setAlternativeTitles(patch.alternativeTitles)
@@ -1234,6 +1235,7 @@ function App() {
     if (patch.network !== undefined) setNetwork(patch.network ?? '')
     if (patch.country !== undefined) setCountry(patch.country ?? '')
     if (patch.language !== undefined) setLanguage(patch.language ?? '')
+    if (patch.contentRating !== undefined) setContentRating(patch.contentRating ?? '')
     if (patch.seriesFormat) setSeriesFormat(patch.seriesFormat)
     if (patch.duration) setDuration(patch.duration)
     if (patch.hasSeasons !== undefined) setHasSeasons(patch.hasSeasons)
@@ -1255,6 +1257,15 @@ function App() {
     if (patch.platforms) setPlatforms(patch.platforms)
     if (patch.franchise !== undefined) setFranchise(patch.franchise ?? '')
     if (patch.ageRating) setAgeRating(patch.ageRating)
+    if (patch.gameSource) setGameSource(patch.gameSource)
+    // If IGDB reported a parent game, look for it in the user's library and
+    // pre-fill originalWorkId when a case-insensitive title matches. Saves
+    // the user from picking it manually for remakes/expansions/ports.
+    if (hints?.parentGameTitle && activeCategory === 'videojuegos') {
+      const t = hints.parentGameTitle.toLowerCase().trim()
+      const parent = items.find((i) => i.categoryId === 'videojuegos' && i.id !== editingId && i.title.toLowerCase().trim() === t)
+      if (parent) setOriginalWorkId(parent.id)
+    }
     // If IGDB gave us a franchise and the user already has other games in it,
     // hint that so they know Omnio's franchise timeline will pick this up.
     if (patch.franchise && activeCategory === 'videojuegos') {
@@ -5347,7 +5358,7 @@ function App() {
           clientId={settings.igdbClientId}
           clientSecret={settings.igdbClientSecret}
           initialQuery={title}
-          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'IGDB')}
+          onApply={(p, c, b, h) => applyFetchedPatch(p, c, b, 'IGDB', h)}
           onClose={() => setIgdbOpen(false)}
         />
       )}

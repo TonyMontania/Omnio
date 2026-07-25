@@ -41,6 +41,10 @@ interface Genre      { name: string }
 interface Country    { iso_3166_1: string; name?: string }
 interface Language   { iso_639_1: string; english_name?: string }
 interface TmdbSeason { season_number: number; episode_count?: number; air_date?: string; name?: string }
+interface Collection { name: string }
+interface MovieReleaseDate { certification?: string; type?: number }
+interface MovieReleaseCountry { iso_3166_1: string; release_dates?: MovieReleaseDate[] }
+interface TvContentRating { iso_3166_1: string; rating?: string }
 interface Details {
   id: number
   title?: string
@@ -69,6 +73,23 @@ interface Details {
   credits?: { cast?: CastMember[]; crew?: CrewMember[] }
   created_by?: { name: string }[]
   alternative_titles?: { titles?: { title: string }[]; results?: { title: string }[] }
+  belongs_to_collection?: Collection | null
+  release_dates?: { results?: MovieReleaseCountry[] }   // movies
+  content_ratings?: { results?: TvContentRating[] }     // tv
+}
+
+// TMDb reports certifications per country. Prefer US, then GB, then AU,
+// then whatever's first. TV series follow the same pattern under content_ratings.
+function pickCertification(entries?: { iso_3166_1: string; rating?: string; release_dates?: MovieReleaseDate[] }[]): string | undefined {
+  if (!entries || entries.length === 0) return undefined
+  const order = ['US', 'GB', 'AU', 'CA']
+  const pickFrom = (e: typeof entries[number]) => e.rating || e.release_dates?.find((d) => d.certification)?.certification
+  for (const c of order) {
+    const hit = entries.find((e) => e.iso_3166_1 === c && pickFrom(e))
+    if (hit) return pickFrom(hit)
+  }
+  for (const e of entries) { const v = pickFrom(e); if (v) return v }
+  return undefined
 }
 
 const IMG_BASE   = 'https://image.tmdb.org/t/p'
@@ -118,9 +139,19 @@ function detailsToPatch(kind: Kind, d: Details): Partial<Item> {
     patch.writers   = crew.filter((c) => jobIs(c.job, ['Writer', 'Screenplay', 'Story'])).map((c) => c.name)
     patch.productionCompanies = d.production_companies?.map((c) => c.name)
     if (d.runtime) patch.duration = String(d.runtime)   // stored as minutes
+    if (d.belongs_to_collection?.name) patch.franchise = d.belongs_to_collection.name
+    const cert = pickCertification(d.release_dates?.results)
+    if (cert) patch.contentRating = cert
   } else {
     patch.seriesDescription = d.overview || d.tagline || undefined
     patch.releaseDate = d.first_air_date || undefined
+    // first_air_date + last_air_date go into the aired-range too so the
+    // detail modal shows "2015 → 2019" alongside the release date.
+    if (d.first_air_date) patch.airedFrom = d.first_air_date
+    if (d.last_air_date) patch.airedTo = d.last_air_date
+    // TV series don't have belongs_to_collection, but number_of_episodes
+    // gives us the series-level total that number_of_seasons doesn't.
+    if (d.number_of_episodes) patch.totalEpisodes = String(d.number_of_episodes)
     patch.cast = cast
     // "Directors" for series is an ambiguous field in TMDb — creators are
     // most useful as showrunners, and directing episodes rotates.
@@ -131,6 +162,8 @@ function detailsToPatch(kind: Kind, d: Details): Partial<Item> {
     patch.country = d.origin_country?.[0] || d.production_countries?.[0]?.iso_3166_1
     patch.language = d.spoken_languages?.[0]?.english_name || d.spoken_languages?.[0]?.iso_639_1
     patch.seriesFormat = mapSeriesFormat(d)
+    const cert = pickCertification(d.content_ratings?.results)
+    if (cert) patch.contentRating = cert
     if (d.seasons && d.seasons.length > 0) {
       patch.hasSeasons = true
       patch.seasons = d.seasons
@@ -187,8 +220,8 @@ export default function TmdbFetcher({ apiKey, initialQuery, kind, categoryId, on
       hint={
         <>Applying overwrites the standard fields (title, description, cover, banner,
         {kind === 'movie'
-          ? ' release date, directors, writers, cast, production companies, genres, runtime'
-          : ' first-aired date, showrunners, directors, writers, cast, network, country, language, genres, format, seasons'
+          ? ' release date, directors, writers, cast, production companies, genres, runtime, franchise, content rating (MPAA)'
+          : ' first-aired date, aired range, showrunners, directors, writers, cast, network, country, language, genres, format, seasons, total episodes, content rating (TV-MA…)'
         }). Rating, notes, watch status and personal history are left alone.</>
       }
       placeholder={kind === 'movie' ? 'Search movies…' : 'Search TV series…'}

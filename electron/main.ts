@@ -986,7 +986,14 @@ const IGDB_FIELDS = [
   // renderer and pickAgeRating can pick whichever key exists.
   'age_ratings.*',
   'game_modes.name', 'themes.name',
-  'total_rating',
+  // category = main/dlc/expansion/standalone/remake/remaster/port… maps into
+  // Omnio's gameSource so the source pill autofills for remakes and ports.
+  'category',
+  // parent_game.name lets us echo the IGDB-known parent title. The renderer
+  // uses this to guess the item the user probably meant to link as
+  // originalWork; we don't fill originalWorkId directly (that's a local id).
+  'parent_game.name', 'parent_game.id',
+  'total_rating', 'total_rating_count',
 ].join(',')
 
 ipcMain.handle('igdb:search', async (_event, clientId: string, clientSecret: string, term: string) => {
@@ -1023,7 +1030,11 @@ ipcMain.handle('tmdb:search', async (_event, apiKey: string, term: string, kind:
 // the app's Season[] list without a second call.
 ipcMain.handle('tmdb:details', async (_event, apiKey: string, kind: 'movie' | 'tv', id: number | string) => {
   if (!apiKey || !id) return { ok: false, error: 'Missing API key or id' }
-  return proxyJson(`${TMDB_BASE}/${kind}/${id}?api_key=${encodeURIComponent(apiKey)}&append_to_response=credits,images,external_ids`)
+  // release_dates (movies) and content_ratings (tv) carry the MPAA / TV-MA
+  // certification we surface as contentRating. belongs_to_collection lands
+  // on the movie payload directly and gives us the franchise.
+  const extras = kind === 'movie' ? 'credits,images,external_ids,release_dates' : 'credits,images,external_ids,content_ratings'
+  return proxyJson(`${TMDB_BASE}/${kind}/${id}?api_key=${encodeURIComponent(apiKey)}&append_to_response=${extras}`)
 })
 
 // AniList — GraphQL, no API key required. Type is 'ANIME' or 'MANGA'.
