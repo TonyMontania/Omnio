@@ -3182,6 +3182,21 @@ function App() {
                       <p className="hint">One-shot safety nets from previous upgrades and restore operations (<code>data.pre-split.json</code>, <code>data.pre-restore/</code>). Rotating snapshots above are untouched.</p>
                     </div>
                     <div className="field-group">
+                      <label>Clean orphan assets</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={() => askConfirm(
+                          'Scan the assets/ folder and delete every file no item references anymore? Reclaims disk used by covers you fetched from an API and then discarded before saving.',
+                          async () => {
+                            const r = await window.ipcRenderer.invoke('storage:clean-orphan-assets')
+                            if (!r?.ok) { setToast(`Scan failed: ${r?.error ?? 'unknown'}`); return }
+                            if (r.removed > 0) setToast(`Removed ${r.removed} orphan${r.removed === 1 ? '' : 's'} · freed ${(r.bytes / 1024 / 1024).toFixed(2)} MB (${r.referenced} references / ${r.scanned} files scanned)`)
+                            else setToast(`Nothing to clean · ${r.referenced} references / ${r.scanned} files on disk`)
+                          },
+                        )}>Scan and delete orphan assets</button>
+                      </div>
+                      <p className="hint">Walks the assets/ folder and unlinks any file no library entry, group cover, or artist photo points at. Newer edits already clean up transient downloads on cancel — this button reclaims garbage from before that fix landed.</p>
+                    </div>
+                    <div className="field-group">
                       <label>Data quality</label>
                       <button type="button" className="secondary-btn" onClick={() => setDupOpen(true)}>Find similar titles</button>
                     </div>

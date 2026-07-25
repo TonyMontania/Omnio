@@ -474,6 +474,71 @@ ipcMain.handle('storage:copy-data-to', async (_event, targetDir: string) => {
 // Frees disk from old one-shot migration / restore safety nets that pile up
 // as the user experiments with restores. Never touches the live data/ or the
 // numbered snapshots under data/backups/.
+// Walk every file under assets/ and remove ones not referenced by any JSON.
+// Handles the leaks that pre-date the "unlink transient assets on cancel"
+// fix — users who had accumulated fetched-then-discarded covers before it
+// landed can reclaim that disk in one click.
+//
+// Referenced fields: cover, bannerImage, bannerImage2, logoImage on Items,
+// volumeCovers[].cover, singleCovers[].cover, editions[].cover,
+// bundleContents[].cover, collections[].cover, artists.photo, artists.bannerImage.
+ipcMain.handle('storage:clean-orphan-assets', async () => {
+  const collectReferenced = async (): Promise<Set<string>> => {
+    const refs = new Set<string>()
+    const push = (v: unknown) => { if (typeof v === 'string' && v && !/^(data:|https?:|file:|blob:|omnio-asset:)/i.test(v)) refs.add(v) }
+    const jsonNames = [...CATEGORY_IDS.map(fileForCategory), 'collections.json', 'artists.json']
+    for (const name of jsonNames) {
+      const p = path.join(DATA_DIR, name)
+      let raw: string
+      try { raw = await fs.readFile(p, 'utf-8') } catch { continue }
+      let parsed: unknown
+      try { parsed = JSON.parse(raw) } catch { continue }
+      if (!Array.isArray(parsed)) continue
+      for (const it of parsed as Record<string, unknown>[]) {
+        push(it.cover); push(it.bannerImage); push(it.bannerImage2); push(it.logoImage); push(it.photo)
+        for (const v of (it.volumeCovers as { cover?: string }[] | undefined) ?? []) push(v.cover)
+        for (const s of (it.singleCovers as { cover?: string }[] | undefined) ?? []) push(s.cover)
+        for (const e of (it.editions as { cover?: string }[] | undefined) ?? []) push(e.cover)
+        for (const b of (it.bundleContents as { cover?: string }[] | undefined) ?? []) push(b.cover)
+      }
+    }
+    return refs
+  }
+
+  const walk = async (dir: string, out: string[]) => {
+    let entries: import('node:fs').Dirent[]
+    try { entries = await fs.readdir(dir, { withFileTypes: true }) } catch { return }
+    for (const e of entries) {
+      const full = path.join(dir, e.name)
+      if (e.isDirectory()) await walk(full, out)
+      else if (e.isFile()) out.push(full)
+    }
+  }
+
+  try {
+    const referenced = await collectReferenced()
+    const onDisk: string[] = []
+    await walk(ASSETS_ROOT, onDisk)
+    let removed = 0
+    let bytes = 0
+    for (const abs of onDisk) {
+      // Convert absolute path back to the "cat/kind/file.ext" form the JSONs
+      // store, using forward slashes to match how paths are written on save.
+      const rel = path.relative(ASSETS_ROOT, abs).split(path.sep).join('/')
+      if (referenced.has(rel)) continue
+      try {
+        const stat = await fs.stat(abs)
+        await fs.unlink(abs)
+        removed++
+        bytes += stat.size
+      } catch { /* file vanished between stat and unlink — fine */ }
+    }
+    return { ok: true, removed, bytes, referenced: referenced.size, scanned: onDisk.length }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 ipcMain.handle('storage:cleanup-migration-artifacts', async () => {
   const paths = [
     path.join(STORAGE_ROOT, 'data.pre-split.json'),

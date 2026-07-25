@@ -196,7 +196,7 @@ Organized in tabs:
 - **Behavior**: Confirm before deleting, Startup category.
 - **Libraries**: Individual toggles for each of the 9 categories.
 - **Card Fields**: which fields to show on cards per category (Games, Music, Manga/etc., Movies, Anime, Series).
-- **Data**: Export / Import backup JSON, automatic snapshots (5 rotated with 1-click restore), Find similar titles (fuzzy duplicate finder), Import from MyAnimeList / AniList XML, Import from Excel / CSV / Notion / TXT, Export as HTML (static shareable site), Yearly wrapped (year-in-review), API keys (SteamGridDB / IGDB / TMDb / ComicVine), **Check for updates** (assisted download that matches your install kind), Reset settings to defaults, Delete all data, About.
+- **Data**: Export / Import backup JSON, automatic snapshots (5 rotated with 1-click restore), remote backup to a Dropbox / OneDrive / Drive folder, Find similar titles (fuzzy duplicate finder), Import from MyAnimeList / AniList XML, Import from Excel / CSV / Notion / TXT, Export as HTML (static shareable site), Yearly wrapped (year-in-review), API keys (SteamGridDB / IGDB / TMDb / ComicVine), **Check for updates** (assisted download that matches your install kind), **Clean migration leftovers** (delete `data.pre-split.json` and `data.pre-restore/`), **Clean orphan assets** (scan `assets/` and remove any file no library entry references), Reset settings to defaults, Delete all data, About.
 
 ## Statistics per category
 
