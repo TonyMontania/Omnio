@@ -84,16 +84,42 @@ function inferSourceFromTitle(title: string): GameSource | undefined {
   return undefined
 }
 
-// IGDB has two coexisting encodings for age_ratings:
-//   Legacy: category enum (1=ESRB, 2=PEGI…) + rating enum (8=E, 9=E10+…)
-//   Newer:  category and rating are strings ("ESRB", "M") OR nested inside
-//           rating_category with a numeric or string identifier.
-// We normalize every combination into our AgeRating union.
-const ESRB_NUM: Record<number, AgeRating> = {
+// IGDB has migrated (late 2024) from `{category, rating}` numeric enums to
+// `{organization, rating_category}` where both are IDs into separate tables.
+// We keep the legacy readers for backward compatibility and add the new
+// numeric-ID readers on top.
+//
+// Legacy `category` enum (age_rating_organizations before the migration):
+//   1=ESRB, 2=PEGI, 3=CERO, 4=USK, 5=GRAC, 6=CLASS_IND, 7=ACB
+// Legacy `rating` enum (per-organization values, ESRB range 6–12).
+//
+// New `organization` uses the same 1..7 numbering — that's why we can reuse
+// the isESRB / isPEGI checks. New `rating_category` is a GLOBAL ID space
+// where the ESRB block is 1..7 and PEGI is 8..12 (inferred from real API
+// responses — Tunic returns {organization:1, rating_category:4} for its
+// ESRB E10+ rating, {organization:2, rating_category:9} for PEGI 7).
+const ESRB_NUM_LEGACY: Record<number, AgeRating> = {
   6: 'rp', 7: 'e', 8: 'e', 9: 'e10', 10: 't', 11: 'm', 12: 'ao',
 }
-const PEGI_NUM: Record<number, AgeRating> = {
+const PEGI_NUM_LEGACY: Record<number, AgeRating> = {
   1: 'e', 2: 'e10', 3: 't', 4: 't', 5: 'm',
+}
+// New rating_category global IDs — inferred from real IGDB responses:
+const ESRB_RATING_CATEGORY: Record<number, AgeRating> = {
+  1: 'rp',   // ESRB_RP
+  2: 'e',    // ESRB_EC (Early Childhood → E)
+  3: 'e',    // ESRB_E
+  4: 'e10',  // ESRB_E10+
+  5: 't',    // ESRB_T
+  6: 'm',    // ESRB_M
+  7: 'ao',   // ESRB_AO
+}
+const PEGI_RATING_CATEGORY: Record<number, AgeRating> = {
+  8: 'e',    // PEGI 3
+  9: 'e10',  // PEGI 7
+  10: 't',   // PEGI 12
+  11: 't',   // PEGI 16
+  12: 'm',   // PEGI 18
 }
 const ESRB_STR: Record<string, AgeRating> = {
   'rp': 'rp', 'ec': 'e', 'e': 'e', 'e10': 'e10', 'e10+': 'e10',
@@ -103,36 +129,47 @@ const PEGI_STR: Record<string, AgeRating> = {
   'pegi 3': 'e', 'pegi 7': 'e10', 'pegi 12': 't', 'pegi 16': 't', 'pegi 18': 'm',
   '3': 'e', '7': 'e10', '12': 't', '16': 't', '18': 'm',
 }
-function categoryOf(r: AgeRatingRef): number | string | undefined {
-  return r.category ?? r.rating_category ?? r.organization
+function orgOf(r: AgeRatingRef): number | string | undefined {
+  return r.organization ?? r.category
 }
-function isESRB(cat: number | string | undefined): boolean {
-  return cat === 1 || (typeof cat === 'string' && cat.toLowerCase().includes('esrb'))
+function isESRB(v: number | string | undefined): boolean {
+  return v === 1 || (typeof v === 'string' && v.toLowerCase().includes('esrb'))
 }
-function isPEGI(cat: number | string | undefined): boolean {
-  return cat === 2 || (typeof cat === 'string' && cat.toLowerCase().includes('pegi'))
-}
-function mapESRB(rating: number | string | undefined): AgeRating | undefined {
-  if (typeof rating === 'number') return ESRB_NUM[rating]
-  if (typeof rating === 'string') return ESRB_STR[rating.toLowerCase().trim().replace(/^esrb[\s:]*/i, '')]
-  return undefined
-}
-function mapPEGI(rating: number | string | undefined): AgeRating | undefined {
-  if (typeof rating === 'number') return PEGI_NUM[rating]
-  if (typeof rating === 'string') return PEGI_STR[rating.toLowerCase().trim().replace(/^pegi[\s:]*/i, 'pegi ')]
-  return undefined
+function isPEGI(v: number | string | undefined): boolean {
+  return v === 2 || (typeof v === 'string' && v.toLowerCase().includes('pegi'))
 }
 function pickAgeRating(refs?: AgeRatingRef[]): AgeRating | undefined {
   if (!refs || refs.length === 0) return undefined
+  // Prefer ESRB (US) then PEGI (EU) then anything mappable.
   for (const r of refs) {
-    if (isESRB(categoryOf(r))) {
-      const m = mapESRB(r.rating)
+    if (!isESRB(orgOf(r))) continue
+    // Try new schema first: rating_category is a global ID in the ESRB block.
+    if (typeof r.rating_category === 'number') {
+      const m = ESRB_RATING_CATEGORY[r.rating_category]
+      if (m) return m
+    }
+    // Legacy: rating is the ESRB-local enum.
+    if (typeof r.rating === 'number') {
+      const m = ESRB_NUM_LEGACY[r.rating]
+      if (m) return m
+    }
+    if (typeof r.rating === 'string') {
+      const m = ESRB_STR[r.rating.toLowerCase().trim().replace(/^esrb[\s:]*/i, '')]
       if (m) return m
     }
   }
   for (const r of refs) {
-    if (isPEGI(categoryOf(r))) {
-      const m = mapPEGI(r.rating)
+    if (!isPEGI(orgOf(r))) continue
+    if (typeof r.rating_category === 'number') {
+      const m = PEGI_RATING_CATEGORY[r.rating_category]
+      if (m) return m
+    }
+    if (typeof r.rating === 'number') {
+      const m = PEGI_NUM_LEGACY[r.rating]
+      if (m) return m
+    }
+    if (typeof r.rating === 'string') {
+      const m = PEGI_STR[r.rating.toLowerCase().trim().replace(/^pegi[\s:]*/i, 'pegi ')]
       if (m) return m
     }
   }
