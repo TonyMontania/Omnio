@@ -1306,8 +1306,23 @@ function App() {
       else if (isMangaLike(activeCategory)) setMangaDescription(patch.description)
       else setDescription(patch.description)
     }
-    if (coverPath) setCover(coverPath)
-    if (bannerPath) setBannerImage(bannerPath)
+    if (coverPath) {
+      // If the editor already had a fetched cover pending save from an
+      // earlier apply, delete that file — otherwise every re-fetch during
+      // the same edit session accumulates orphaned assets on disk.
+      const savedCover = editingItem?.cover
+      if (isLocalAssetPath(cover) && cover !== savedCover && cover !== coverPath) {
+        window.ipcRenderer.invoke('image:delete', cover)
+      }
+      setCover(coverPath)
+    }
+    if (bannerPath) {
+      const savedBanner = editingItem?.bannerImage
+      if (isLocalAssetPath(bannerImage) && bannerImage !== savedBanner && bannerImage !== bannerPath) {
+        window.ipcRenderer.invoke('image:delete', bannerImage)
+      }
+      setBannerImage(bannerPath)
+    }
     const franchiseNote = franchiseSiblingCount > 0
       ? ` · joins ${franchiseSiblingCount} other ${franchiseSiblingCount === 1 ? 'game' : 'games'} in "${patch.franchise}"`
       : ''
@@ -1354,7 +1369,37 @@ function App() {
     setPanelOpen(true)
   }
 
-  const closePanel = () => { setPanelOpen(false); setEditingId(null); resetForm() }
+  const closePanel = () => {
+    // If the user fetched artwork during this edit session but never saved,
+    // the file lives on disk but isn't referenced by any item. Compare the
+    // current form state against the persisted item and unlink any transient
+    // assets before closing.
+    if (editingId && editingItem) {
+      const orphanCandidates: (string | undefined)[] = [
+        cover !== editingItem.cover ? cover : undefined,
+        bannerImage !== editingItem.bannerImage ? bannerImage : undefined,
+        logoImage !== editingItem.logoImage ? logoImage : undefined,
+        movieBanner !== editingItem.bannerImage2 ? movieBanner : undefined,
+      ]
+      const savedBundleCovers = new Set((editingItem.bundleContents ?? []).map((b) => b.cover).filter(Boolean) as string[])
+      for (const b of bundleContents) {
+        if (b.cover && !savedBundleCovers.has(b.cover)) orphanCandidates.push(b.cover)
+      }
+      for (const c of orphanCandidates) {
+        if (isLocalAssetPath(c)) window.ipcRenderer.invoke('image:delete', c)
+      }
+    } else if (!editingId) {
+      // "Add" mode: nothing was ever persisted, so every asset in the form
+      // is transient and safe to remove.
+      for (const c of [cover, bannerImage, logoImage, movieBanner]) {
+        if (isLocalAssetPath(c)) window.ipcRenderer.invoke('image:delete', c)
+      }
+      for (const b of bundleContents) {
+        if (isLocalAssetPath(b.cover)) window.ipcRenderer.invoke('image:delete', b.cover)
+      }
+    }
+    setPanelOpen(false); setEditingId(null); resetForm()
+  }
 
   // Rebuilds only when any field the preview reads actually changes, so
   // typing a description doesn't rebuild the object 20 times per second.
@@ -5329,9 +5374,21 @@ function App() {
           initialQuery={title}
           kind={sgdbOpen}
           onPick={(rel) => {
-            if (sgdbOpen === 'grids') setCover(rel)
-            else if (sgdbOpen === 'heroes') setBannerImage(rel)
-            else if (sgdbOpen === 'logos') setLogoImage(rel)
+            // Delete the previous transient asset (downloaded from a prior
+            // SGDB pick during this same edit session) so it doesn't linger.
+            const savedCover = editingItem?.cover
+            const savedBanner = editingItem?.bannerImage
+            const savedLogo = editingItem?.logoImage
+            if (sgdbOpen === 'grids') {
+              if (isLocalAssetPath(cover) && cover !== savedCover && cover !== rel) window.ipcRenderer.invoke('image:delete', cover)
+              setCover(rel)
+            } else if (sgdbOpen === 'heroes') {
+              if (isLocalAssetPath(bannerImage) && bannerImage !== savedBanner && bannerImage !== rel) window.ipcRenderer.invoke('image:delete', bannerImage)
+              setBannerImage(rel)
+            } else if (sgdbOpen === 'logos') {
+              if (isLocalAssetPath(logoImage) && logoImage !== savedLogo && logoImage !== rel) window.ipcRenderer.invoke('image:delete', logoImage)
+              setLogoImage(rel)
+            }
             setToast('Artwork downloaded')
           }}
           onClose={() => setSgdbOpen(null)}
@@ -5345,6 +5402,13 @@ function App() {
           kind="grids"
           saveAsKind="bundle"
           onPick={(rel) => {
+            // Delete the previous bundle sub-cover if it was a transient
+            // download (present in state but not in the persisted item).
+            const savedBundle = editingItem?.bundleContents?.find((b) => b.id === bundleSgdbFor.entryId)?.cover
+            const currentBundle = bundleContents.find((b) => b.id === bundleSgdbFor.entryId)?.cover
+            if (isLocalAssetPath(currentBundle) && currentBundle !== savedBundle && currentBundle !== rel) {
+              window.ipcRenderer.invoke('image:delete', currentBundle)
+            }
             setBundleContents((prev) => prev.map((b) => b.id === bundleSgdbFor.entryId ? { ...b, cover: rel } : b))
             setToast('Bundle cover downloaded')
           }}
