@@ -210,13 +210,11 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
       ? await window.ipcRenderer.invoke('image:download', bannerUrl, 'videojuegos', 'banner') as string | null
       : null
 
-    // Dev-tools breadcrumb: if the age rating still doesn't apply for some
-    // titles, open DevTools (Ctrl+Shift+I) and look at this object — IGDB
-    // occasionally ships shapes not covered by the maps in pickAgeRating.
-    if (g.age_ratings && g.age_ratings.length > 0) {
-      // eslint-disable-next-line no-console
-      console.debug('[IGDB] age_ratings raw:', g.age_ratings)
-    }
+    // Dev-tools breadcrumb: DevTools' default filter hides `debug` under
+    // "10 hidden" so we use `log` here — an unmapped shape is worth being
+    // loud about. Screenshot the object and it lands in an issue.
+    // eslint-disable-next-line no-console
+    console.log('[IGDB] game:', g.name, '| age_ratings:', g.age_ratings, '| category:', g.category, '| parent_game:', g.parent_game)
     onApply(
       gameToPatch(g),
       coverPath || undefined,

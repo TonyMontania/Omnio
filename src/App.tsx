@@ -356,6 +356,7 @@ function App() {
   const [filterPlatforms, setFilterPlatforms] = useState<Platform[]>([])
   const [filterGenres, setFilterGenres] = useState<string[]>([])
   const [minRating, setMinRating] = useState<number>(0)
+  const [deleteMode, setDeleteMode] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [draggedId, setDraggedId] = useState<string | null>(null)
 
@@ -3447,12 +3448,21 @@ function App() {
                       onSetMinRating={setMinRating}
                       onClear={() => { setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]); setMinRating(0) }}
                     />
+                    <button
+                      type="button"
+                      className={deleteMode ? 'sort-select delete-mode-btn active' : 'sort-select delete-mode-btn'}
+                      onClick={() => setDeleteMode((v) => !v)}
+                      title={deleteMode ? 'Exit delete mode' : 'Enter delete mode — cards show a red ✕ to remove'}
+                    >
+                      {deleteMode ? '← Exit delete' : '✕ Delete'}
+                    </button>
                   </div>
 
                   <div className="content-scroll">
                   {sortBy === 'custom' && <p className="hint drag-hint">Drag cards to reorder them.</p>}
+                  {deleteMode && <p className="hint drag-hint" style={{ color: 'var(--danger)' }}>Delete mode — click the red ✕ on any card to remove it.</p>}
 
-                  <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
+                  <div className={`${layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}${deleteMode ? ' delete-mode' : ''}`}>
                     {visibleItems.length === 0 && (
                       itemsInCategory.length === 0 ? (
                         <div className="empty-state">
@@ -3849,6 +3859,22 @@ function App() {
                       <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleCoverFile} />
                     </div>
 
+                    {(activeCategory === 'peliculas' || isSeriesLike) && (
+                      <div className="field-group">
+                        <label>Backdrop image</label>
+                        <input
+                          placeholder={movieBanner.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                          value={movieBanner.startsWith('data:') ? '' : movieBanner}
+                          onChange={(e) => setMovieBanner(e.target.value)}
+                        />
+                        <div className="upload-row">
+                          <button type="button" className="upload-btn" onClick={() => movieBannerFileInputRef.current?.click()}>Upload from PC</button>
+                          {movieBanner && <button type="button" className="upload-btn clear" onClick={() => setMovieBanner('')}>Clear</button>}
+                        </div>
+                        <input type="file" accept="image/*" ref={movieBannerFileInputRef} style={{ display: 'none' }} onChange={handleMovieBannerFile} />
+                      </div>
+                    )}
+
                     {isVideojuegos && (
                       <>
                         <div className="field-group">
@@ -4085,20 +4111,7 @@ function App() {
                       <>
                         <div className="form-section-header">
                           <span className="form-section-title">Movie details</span>
-                          <span className="form-section-hint">Cast, crew, backdrop, franchise</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Backdrop image</label>
-                          <input
-                            placeholder={movieBanner.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
-                            value={movieBanner.startsWith('data:') ? '' : movieBanner}
-                            onChange={(e) => setMovieBanner(e.target.value)}
-                          />
-                          <div className="upload-row">
-                            <button type="button" className="upload-btn" onClick={() => movieBannerFileInputRef.current?.click()}>Upload from PC</button>
-                            {movieBanner && <button type="button" className="upload-btn clear" onClick={() => setMovieBanner('')}>Clear</button>}
-                          </div>
-                          <input type="file" accept="image/*" ref={movieBannerFileInputRef} style={{ display: 'none' }} onChange={handleMovieBannerFile} />
+                          <span className="form-section-hint">Cast, crew, franchise</span>
                         </div>
                         <TagEditor
                           label="Directors"
@@ -4256,20 +4269,7 @@ function App() {
                   <>
                     <div className="form-section-header">
                       <span className="form-section-title">Series details</span>
-                      <span className="form-section-hint">Cast, crew, network, seasons, backdrop</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Backdrop image</label>
-                      <input
-                        placeholder={movieBanner.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
-                        value={movieBanner.startsWith('data:') ? '' : movieBanner}
-                        onChange={(e) => setMovieBanner(e.target.value)}
-                      />
-                      <div className="upload-row">
-                        <button type="button" className="upload-btn" onClick={() => movieBannerFileInputRef.current?.click()}>Upload from PC</button>
-                        {movieBanner && <button type="button" className="upload-btn clear" onClick={() => setMovieBanner('')}>Clear</button>}
-                      </div>
-                      <input type="file" accept="image/*" ref={movieBannerFileInputRef} style={{ display: 'none' }} onChange={handleMovieBannerFile} />
+                      <span className="form-section-hint">Cast, crew, network, seasons</span>
                     </div>
                     <div className="field-group">
                       <label>Description</label>
@@ -5059,6 +5059,7 @@ function App() {
 
                 <div className="panel-footer">
                   {editingId && <button className="danger" onClick={handleDeleteFromPanel}>Delete</button>}
+                  <button type="button" className="ghost" onClick={() => askConfirm('Clear every field in this editor? The item stays in your library — Save changes only overwrites when you press it.', () => resetForm())}>Clear fields</button>
                   {editingId && (
                     <div className="bulk-drop">
                       <button type="button" className="ghost" onClick={() => setMoveMenuOpen((v) => !v)}>Move to library ▾</button>

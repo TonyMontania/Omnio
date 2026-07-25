@@ -142,10 +142,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0;
+  transition: opacity 0.12s;
 }
 
 .list.grid .delete { top: 6px; left: 6px; right: auto; }
 .delete:hover { color: var(--danger); }
+
+/* Reveal delete X on card hover OR whenever the list is in delete mode.
+   Default hidden keeps the grid clean; delete mode makes every X pop with
+   the danger color so it's obvious the click means removal. */
+.item-card:hover .delete { opacity: 0.85; }
+.list.delete-mode .delete {
+  opacity: 1;
+  background: var(--danger);
+  color: #fff;
+}
+.list.delete-mode .item-card { outline: 1px dashed var(--danger); outline-offset: -1px; }
 
 .folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px; }
 

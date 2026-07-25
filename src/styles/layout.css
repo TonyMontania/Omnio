@@ -100,6 +100,9 @@
   font-size: 13px;
   font-family: var(--font-body);
 }
+.delete-mode-btn { cursor: pointer; white-space: nowrap; }
+.delete-mode-btn:hover { border-color: var(--danger); color: var(--danger); }
+.delete-mode-btn.active { background: var(--danger); color: #fff; border-color: var(--danger); }
 
 .filters-wrap { position: relative; }
 
