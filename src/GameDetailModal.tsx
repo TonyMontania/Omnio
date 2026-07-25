@@ -1,7 +1,12 @@
-import { useState } from 'react'
-import { getOwnershipLabel, getGameStatus, getGameSourceLabel, getAgeRatingLabel, getRelationLabel, renderMiniMarkdown, assetSrc } from './types'
+import { getOwnershipLabel, getGameStatus, getGameSourceLabel, getAgeRatingLabel, assetSrc } from './types'
 import { GameStatusIcon } from './icons'
 import type { Item, Collection } from './types'
+import DetailTopbar from './components/detail/DetailTopbar'
+import DetailCoverStrip from './components/detail/DetailCoverStrip'
+import DetailFranchiseTimeline from './components/detail/DetailFranchiseTimeline'
+import DetailHistoryTable from './components/detail/DetailHistoryTable'
+import DetailReview from './components/detail/DetailReview'
+import DetailNotes from './components/detail/DetailNotes'
 
 interface Props {
   item: Item
@@ -13,31 +18,29 @@ interface Props {
   onNavigate: (id: string) => void
 }
 
-function timelineSortKey(i: Item): string {
-  return i.releaseDate || i.releaseYear || ''
-}
+const timelineSortKey = (i: Item) => i.releaseDate || i.releaseYear || ''
+const yearOf = (i: Item) => timelineSortKey(i).slice(0, 4)
 
 export default function GameDetailModal({ item, groups, allGames, onClose, onEdit, onDuplicate, onNavigate }: Props) {
-  const [revealSpoilers, setRevealSpoilers] = useState(false)
   const gs = getGameStatus(item.gameStatus)
   const year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null
   const franchiseItems = item.franchise
     ? allGames.filter((a) => a.franchise === item.franchise).sort((a, b) => timelineSortKey(a).localeCompare(timelineSortKey(b)))
     : []
-  const relatedResolved = (item.relatedItems ?? []).map((r) => ({ rel: r, ref: allGames.find((a) => a.id === r.itemId) })).filter((x) => x.ref)
-  const recommendedResolved = (item.recommendedItems ?? []).map((id) => allGames.find((a) => a.id === id)).filter((x): x is Item => !!x)
+  const relatedEntries = (item.relatedItems ?? [])
+    .map((r) => ({ ref: allGames.find((a) => a.id === r.itemId), rel: r }))
+    .filter((x) => x.ref)
+    .map(({ ref, rel }) => ({ item: ref!, badge: rel.relation }))
+  const recommendedEntries = (item.recommendedItems ?? [])
+    .map((id) => allGames.find((a) => a.id === id))
+    .filter((x): x is Item => !!x)
+    .map((it) => ({ item: it }))
   const originalWork = item.originalWorkId ? allGames.find((a) => a.id === item.originalWorkId) : null
   const derivedWorks = allGames.filter((a) => a.originalWorkId === item.id)
 
   return (
     <div className="game-page">
-      <div className="game-page-topbar">
-        <button className="back-btn wide" onClick={onClose}>← Back</button>
-        <div className="game-page-actions">
-          <button className="edit-btn" onClick={onDuplicate}>⧉ Duplicate</button>
-          <button className="edit-btn" onClick={onEdit}>✎ Edit</button>
-        </div>
-      </div>
+      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} />
 
       {item.bannerImage && (
         <div className="game-modal-banner">
@@ -190,125 +193,20 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             </div>
           )}
 
-          {item.gameReview && (
-            <div className="field-group">
-              <label>Review{item.hasSpoilers ? ' (spoilers)' : ''}</label>
-              {item.hasSpoilers && !revealSpoilers ? (
-                <button type="button" className="pill" onClick={() => setRevealSpoilers(true)}>Show spoilers</button>
-              ) : (
-                <div className="notes-preview" dangerouslySetInnerHTML={{ __html: renderMiniMarkdown(item.gameReview) }} />
-              )}
-            </div>
-          )}
-
-          {item.notes && (
-            <div className="field-group">
-              <label>Notes</label>
-              <div className="notes-preview" dangerouslySetInnerHTML={{ __html: renderMiniMarkdown(item.notes) }} />
-            </div>
-          )}
-
-          {item.rewatches && item.rewatches.length > 0 && (
-            <div className="field-group">
-              <label>Replay history</label>
-              <table className="track-table">
-                <thead>
-                  <tr>
-                    <th className="col-num">Date</th>
-                    <th className="col-rating">Rating</th>
-                    <th className="col-title">Notes</th>
-                    <th className="col-spacer"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {item.rewatches.map((r) => (
-                    <tr key={r.id}>
-                      <td className="col-num">{r.date}</td>
-                      <td className="col-rating">{r.rating ? `★ ${r.rating}` : ''}</td>
-                      <td className="col-title">{r.notes ?? ''}</td>
-                      <td className="col-spacer"></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {relatedResolved.length > 0 && (
-            <div className="field-group">
-              <label>Related</label>
-              <div className="cover-strip">
-                {relatedResolved.map(({ rel, ref }) => (
-                  <button key={rel.itemId} type="button" className="cover-strip-item" onClick={() => onNavigate(rel.itemId)} title={`${ref!.title} — ${getRelationLabel(rel.relation)}`}>
-                    {ref!.cover
-                      ? <img src={assetSrc(ref!.cover)} alt={ref!.title} />
-                      : <div className="cover-strip-placeholder">{ref!.title.slice(0, 2).toUpperCase()}</div>}
-                    <span className="cover-strip-badge">{getRelationLabel(rel.relation)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
+          <DetailReview review={item.gameReview} hasSpoilers={item.hasSpoilers} />
+          <DetailNotes notes={item.notes} />
+          <DetailHistoryTable label="Replay history" entries={item.rewatches ?? []} />
+          <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
           {originalWork && (
-            <div className="field-group">
-              <label>Original work</label>
-              <div className="cover-strip">
-                <button type="button" className="cover-strip-item" onClick={() => onNavigate(originalWork.id)} title={originalWork.title}>
-                  {originalWork.cover
-                    ? <img src={assetSrc(originalWork.cover)} alt={originalWork.title} />
-                    : <div className="cover-strip-placeholder">{originalWork.title.slice(0, 2).toUpperCase()}</div>}
-                  <span className="cover-strip-title">{originalWork.title}</span>
-                </button>
-              </div>
-            </div>
+            <DetailCoverStrip label="Original work" entries={[{ item: originalWork }]} onNavigate={onNavigate} />
           )}
-
-          {derivedWorks.length > 0 && (
-            <div className="field-group">
-              <label>Derived works</label>
-              <div className="cover-strip">
-                {derivedWorks.map((d) => (
-                  <button key={d.id} type="button" className="cover-strip-item" onClick={() => onNavigate(d.id)} title={d.title}>
-                    {d.cover
-                      ? <img src={assetSrc(d.cover)} alt={d.title} />
-                      : <div className="cover-strip-placeholder">{d.title.slice(0, 2).toUpperCase()}</div>}
-                    <span className="cover-strip-title">{d.title}{d.gameSource ? ` · ${getGameSourceLabel(d.gameSource)}` : ''}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {franchiseItems.length > 1 && (
-            <div className="field-group">
-              <label>Franchise — {item.franchise}</label>
-              <div className="franchise-timeline">
-                {franchiseItems.map((f) => (
-                  <button key={f.id} type="button" className={f.id === item.id ? 'franchise-item current' : 'franchise-item'} onClick={() => f.id !== item.id && onNavigate(f.id)}>
-                    {f.cover && <img src={assetSrc(f.cover)} alt="" />}
-                    <span className="franchise-title">{f.title}</span>
-                    <span className="franchise-year">{timelineSortKey(f).slice(0, 4)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {recommendedResolved.length > 0 && (
-            <div className="field-group">
-              <label>Recommendations</label>
-              <div className="cover-strip">
-                {recommendedResolved.map((r) => (
-                  <button key={r.id} type="button" className="cover-strip-item" onClick={() => onNavigate(r.id)} title={r.title}>
-                    {r.cover
-                      ? <img src={assetSrc(r.cover)} alt={r.title} />
-                      : <div className="cover-strip-placeholder">{r.title.slice(0, 2).toUpperCase()}</div>}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <DetailCoverStrip
+            label="Derived works"
+            entries={derivedWorks.map((d) => ({ item: d, badge: d.gameSource ? getGameSourceLabel(d.gameSource) : undefined }))}
+            onNavigate={onNavigate}
+          />
+          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} />
+          <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
         </div>
       </div>
     </div>
