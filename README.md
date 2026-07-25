@@ -17,12 +17,12 @@ The UI is in English. For a field-by-field reference in English and Spanish, see
 ## Highlights
 
 - **10 libraries** with rich per-category fields (see [Categories](#categories))
-- **9 metadata sources wired in-app** covering every library — SteamGridDB + IGDB (games), TMDb (movies + series), MusicBrainz/CAA + VGMdb (music), AniList + MAL + Kitsu (anime), MangaDex + ComicVine for the comics family (see [Metadata sources](#metadata--artwork-sources))
+- **9 metadata sources wired in-app** covering every library — SteamGridDB + IGDB (games), TMDb (movies + series), MusicBrainz/CAA + VGMdb (music), AniList + MAL + Kitsu (anime), MangaDex + ComicVine for the comics family. Each source fills as much as its API exposes: IGDB now autofills source (Remake / Remaster / Port…), franchise, ESRB / PEGI age rating and parent-work links; TMDb pulls MPAA / TV-MA content rating, franchise (via `belongs_to_collection`), aired range and season / episode duration; AniList / MAL / Kitsu fill airing / publication status, demographic, age rating and manga staff (authors + artists); MangaDex batches every per-volume cover in parallel. See [Metadata sources](#metadata--artwork-sources).
 - **Full-screen edit modal** with live preview (card / detail) that updates as you type, plus a consolidated metadata-fetch panel at the top
 - **Move items between libraries** (bulk or single) — reassign a manga to manhwa, an anime to donghua, or anything to anything without re-typing
 - **Bulk import**: MyAnimeList / AniList XML plus a generic importer for `.xlsx`, `.csv` (Notion database exports work as-is), `.tsv` and `.txt`
 - **In-app updater** — silent check at boot, banner + Settings button, downloads the exact asset that matches your install kind (portable/NSIS/DMG/AppImage) with a progress bar; AppImage relaunches automatically after swap
-- **Global search Ctrl+K**, bulk actions (Shift+click), undo/redo (Ctrl+Z)
+- **Global search Ctrl+K**, bulk actions (Shift+click), undo/redo (Ctrl+Z), toolbar **Delete mode** that hides the card X by default and reveals it on-demand
 - **Split storage** since 0.1.7: one JSON per library slice, editing one game only rewrites `games.json`, corruption of one file leaves the rest intact
 - **5 rotating snapshots** auto-taken on each save; 1-click restore
 - **Yearly heatmap + Wrapped** end-of-year recap in Statistics
