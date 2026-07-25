@@ -3,7 +3,7 @@
 // show every match regardless of origin language, tagging each row with
 // its origin so it's obvious when a hit belongs elsewhere.
 
-import type { Item, MangaSource, PublicationStatus, MangaVolume } from './types'
+import type { Item, MangaSource, PublicationStatus, MangaVolume, AgeRating } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 interface Props {
@@ -79,6 +79,13 @@ const STATUS_MAP: Record<NonNullable<MdMangaAttrs['status']>, PublicationStatus>
 const SOURCE_LABEL: Record<string, MangaSource> = {
   ja: 'original', ko: 'original', zh: 'original', 'zh-hk': 'original',
 }
+// MangaDex contentRating strings → our AgeRating union.
+const CONTENT_RATING_MAP: Record<string, AgeRating> = {
+  safe: 'e',
+  suggestive: 't',
+  erotica: 'm',
+  pornographic: 'ao',
+}
 
 function originLabel(lang?: string): string {
   if (!lang) return 'unknown'
@@ -117,6 +124,7 @@ function mangaToPatch(m: MdManga): Partial<Item> {
     totalVolumes: a.lastVolume || undefined,
     pubStatus: a.status ? STATUS_MAP[a.status] : undefined,
     mangaSource: a.originalLanguage ? (SOURCE_LABEL[a.originalLanguage] ?? undefined) : undefined,
+    ageRating: a.contentRating ? CONTENT_RATING_MAP[a.contentRating] : undefined,
   }
 }
 
@@ -132,20 +140,31 @@ export default function MangaDexFetcher({ initialQuery, categoryId, onApply, onC
       ? await window.ipcRenderer.invoke('image:download', url, categoryId, 'cover') as string | null
       : null
 
-    // Fetch every cover the series has and file the ones tagged with a
-    // volume number into volumeCovers. Runs in parallel with the main
-    // cover so slow connections don't block the primary flow.
+    // List every cover MangaDex has, then download the ones tagged with a
+    // volume number in parallel so a manga with 30+ volumes takes seconds
+    // instead of a minute. Sequential was the previous slowness the user
+    // saw when the metadata took ages to appear.
     const covers = await window.ipcRenderer.invoke('mangadex:covers', m.id) as { ok: boolean; data?: MdCoverEntry[] }
-    const volumeCovers: MangaVolume[] = []
+    let volumeCovers: MangaVolume[] = []
     if (covers?.ok && Array.isArray(covers.data)) {
-      for (const c of covers.data) {
-        const vol = c.attributes?.volume
-        const file = c.attributes?.fileName
-        if (!vol || !file) continue
+      const tagged = covers.data.filter((c) => c.attributes?.volume && c.attributes?.fileName)
+      // Dedup by volume number — MangaDex often has multiple regional covers
+      // per volume; the first one wins so the gallery reads chronologically.
+      const seen = new Set<string>()
+      const unique: MdCoverEntry[] = []
+      for (const c of tagged) {
+        const vol = c.attributes!.volume!
+        if (seen.has(vol)) continue
+        seen.add(vol); unique.push(c)
+      }
+      const downloads = await Promise.all(unique.map(async (c): Promise<MangaVolume | null> => {
+        const vol = c.attributes!.volume!
+        const file = c.attributes!.fileName!
         const coverUrl = `https://uploads.mangadex.org/covers/${m.id}/${file}.512.jpg`
         const rel = await window.ipcRenderer.invoke('image:download', coverUrl, categoryId, 'volume') as string | null
-        if (rel) volumeCovers.push({ id: crypto.randomUUID(), number: vol, cover: rel })
-      }
+        return rel ? { id: crypto.randomUUID() as string, number: vol, cover: rel } : null
+      }))
+      volumeCovers = downloads.filter((v): v is MangaVolume => v !== null)
     }
     const patch = mangaToPatch(m)
     if (volumeCovers.length > 0) patch.volumeCovers = volumeCovers

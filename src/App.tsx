@@ -1213,10 +1213,18 @@ function App() {
     if (patch.genres) setGenres(patch.genres)
     if (patch.airedFrom) setAiredFrom(patch.airedFrom)
     if (patch.airedTo) setAiredTo(patch.airedTo)
-    if (patch.releaseDate) setReleaseDate(patch.releaseDate)
+    if (patch.releaseDate) {
+      setReleaseDate(patch.releaseDate)
+      // Category forms that show a separate Release year field (movies) rely
+      // on this — without it the year is stored only inside the ISO date and
+      // the UI field stays empty even though the card shows the right year.
+      const yr = patch.releaseDate.slice(0, 4)
+      if (/^\d{4}$/.test(yr)) setReleaseYear(yr)
+    }
     if (patch.seasonYear) setSeasonYear(patch.seasonYear)
     if (patch.season) setSeason(patch.season)
     if (patch.episodeDuration) setEpisodeDuration(patch.episodeDuration)
+    if (patch.unitCount) setUnitCount(patch.unitCount)
     if (patch.studios) setStudios(patch.studios)
     if (patch.animeFormat) setAnimeFormat(patch.animeFormat)
     if (patch.animeSource) setAnimeSource(patch.animeSource)
@@ -1267,13 +1275,12 @@ function App() {
       if (parent) setOriginalWorkId(parent.id)
     }
     // If IGDB gave us a franchise and the user already has other games in it,
-    // hint that so they know Omnio's franchise timeline will pick this up.
+    // note that in the toast so they know Omnio's franchise timeline will
+    // include this entry. Never gate the rest of the field mapping on this —
+    // the game must still receive description, cover, banner, etc. below.
+    let franchiseSiblingCount = 0
     if (patch.franchise && activeCategory === 'videojuegos') {
-      const siblings = items.filter((i) => i.categoryId === 'videojuegos' && i.franchise === patch.franchise && i.id !== editingId)
-      if (siblings.length > 0) {
-        setToast(`${sourceLabel} applied · ${siblings.length} other ${siblings.length === 1 ? 'game' : 'games'} in "${patch.franchise}"`)
-        return
-      }
+      franchiseSiblingCount = items.filter((i) => i.categoryId === 'videojuegos' && i.franchise === patch.franchise && i.id !== editingId).length
     }
 
     // Comics / Manga family (ComicVine, later MangaDex)
@@ -1300,7 +1307,10 @@ function App() {
     }
     if (coverPath) setCover(coverPath)
     if (bannerPath) setBannerImage(bannerPath)
-    setToast(`${sourceLabel} data applied`)
+    const franchiseNote = franchiseSiblingCount > 0
+      ? ` · joins ${franchiseSiblingCount} other ${franchiseSiblingCount === 1 ? 'game' : 'games'} in "${patch.franchise}"`
+      : ''
+    setToast(`${sourceLabel} data applied${franchiseNote}`)
   }
 
   // Keep the old name as a thin wrapper so existing callers don't move.
@@ -1466,6 +1476,7 @@ function App() {
       const derived = useSeasons ? seasonsDerivedCounts(seasons) : null
       return {
         ...base,
+        bannerImage2: movieBanner.trim() || undefined,
         unitCount: useSeasons ? String(seasons.length) : (unitCount || undefined),
         startYear: startYear || undefined,
         endYear: endYear || undefined,
@@ -3817,7 +3828,11 @@ function App() {
 
                     <div className="form-section-header">
                       <span className="form-section-title">Media</span>
-                      <span className="form-section-hint">Cover · banner · logo</span>
+                      <span className="form-section-hint">
+                        {isVideojuegos ? 'Cover · banner · logo'
+                          : (activeCategory === 'peliculas' || activeCategory === 'series') ? 'Cover · backdrop'
+                          : 'Cover'}
+                      </span>
                     </div>
                     <div className="field-group">
                       <label>Cover</label>
@@ -4241,7 +4256,20 @@ function App() {
                   <>
                     <div className="form-section-header">
                       <span className="form-section-title">Series details</span>
-                      <span className="form-section-hint">Cast, crew, network, seasons</span>
+                      <span className="form-section-hint">Cast, crew, network, seasons, backdrop</span>
+                    </div>
+                    <div className="field-group">
+                      <label>Backdrop image</label>
+                      <input
+                        placeholder={movieBanner.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                        value={movieBanner.startsWith('data:') ? '' : movieBanner}
+                        onChange={(e) => setMovieBanner(e.target.value)}
+                      />
+                      <div className="upload-row">
+                        <button type="button" className="upload-btn" onClick={() => movieBannerFileInputRef.current?.click()}>Upload from PC</button>
+                        {movieBanner && <button type="button" className="upload-btn clear" onClick={() => setMovieBanner('')}>Clear</button>}
+                      </div>
+                      <input type="file" accept="image/*" ref={movieBannerFileInputRef} style={{ display: 'none' }} onChange={handleMovieBannerFile} />
                     </div>
                     <div className="field-group">
                       <label>Description</label>

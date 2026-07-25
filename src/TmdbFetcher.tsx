@@ -59,6 +59,7 @@ interface Details {
   first_air_date?: string
   last_air_date?: string
   runtime?: number
+  episode_run_time?: number[]      // tv: minutes per episode, array of samples
   number_of_seasons?: number
   number_of_episodes?: number
   genres?: Genre[]
@@ -152,6 +153,10 @@ function detailsToPatch(kind: Kind, d: Details): Partial<Item> {
     // TV series don't have belongs_to_collection, but number_of_episodes
     // gives us the series-level total that number_of_seasons doesn't.
     if (d.number_of_episodes) patch.totalEpisodes = String(d.number_of_episodes)
+    if (d.number_of_seasons) patch.unitCount = String(d.number_of_seasons)
+    if (d.episode_run_time && d.episode_run_time.length > 0) {
+      patch.episodeDuration = String(d.episode_run_time[0])
+    }
     patch.cast = cast
     // "Directors" for series is an ambiguous field in TMDb — creators are
     // most useful as showrunners, and directing episodes rotates.

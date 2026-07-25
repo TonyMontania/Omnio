@@ -2,7 +2,7 @@
 // show a picker of matches, and hand back a shaped Partial<Item> the
 // caller can merge into its editor state.
 
-import type { Item, AnimeFormat, AnimeSource, AiringStatus } from './types'
+import type { Item, AnimeFormat, AnimeSource, AiringStatus, PublicationStatus } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 type MediaType = 'ANIME' | 'MANGA'
@@ -89,6 +89,14 @@ const AIRING_STATUS_MAP: Record<string, AiringStatus> = {
   CANCELLED: 'cancelled',
   HIATUS: 'airing',   // no dedicated hiatus bucket — treat as still airing
 }
+// AniList reuses the same MediaStatus for manga — map into pubStatus.
+const PUB_STATUS_MAP: Record<string, PublicationStatus> = {
+  RELEASING: 'publishing',
+  FINISHED: 'finished',
+  NOT_YET_RELEASED: 'not_yet_released',
+  CANCELLED: 'cancelled',
+  HIATUS: 'hiatus',
+}
 
 function stripHtml(s?: string): string | undefined {
   if (!s) return undefined
@@ -136,6 +144,7 @@ export default function AniListFetcher({ initialQuery, kind, categoryId, onApply
       const { authors, artists } = splitMangaStaff(m.staff)
       if (authors.length) patch.authors = authors
       if (artists.length) patch.mangaArtists = artists
+      if (m.status && PUB_STATUS_MAP[m.status]) patch.pubStatus = PUB_STATUS_MAP[m.status]
     }
     onApply(patch, coverPath || undefined, bannerPath || undefined)
     onClose()

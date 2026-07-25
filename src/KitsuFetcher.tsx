@@ -3,7 +3,7 @@
 // data lives under `attributes` and everything is flat strings we can
 // map straight into Omnio fields.
 
-import type { Item, AnimeFormat, AnimeSeason, AiringStatus, AgeRating } from './types'
+import type { Item, AnimeFormat, AnimeSeason, AiringStatus, AgeRating, PublicationStatus } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 type Kind = 'anime' | 'manga'
@@ -64,6 +64,13 @@ const AIRING_STATUS_MAP: Record<string, AiringStatus> = {
 const KITSU_AGE_MAP: Record<string, AgeRating> = {
   G: 'e', PG: 'e10', R: 't', R18: 'm',
 }
+const KITSU_PUB_MAP: Record<string, PublicationStatus> = {
+  current: 'publishing',
+  finished: 'finished',
+  tba: 'not_yet_released',
+  unreleased: 'not_yet_released',
+  upcoming: 'not_yet_released',
+}
 
 function seasonOfMonth(month: number): AnimeSeason | undefined {
   if (month >= 1 && month <= 3) return 'winter'
@@ -116,11 +123,7 @@ function hitToPatch(kind: Kind, h: KitsuHit): Partial<Item> {
     patch.mangaDescription = description
     patch.totalChapters = a.chapterCount ? String(a.chapterCount) : undefined
     patch.totalVolumes = a.volumeCount ? String(a.volumeCount) : undefined
-    // mangaType hints at manga vs manhwa vs manhua vs novel; only mark
-    // it if Kitsu is confident. Otherwise leave source unset.
-    if (a.mangaType === 'manhwa' || a.mangaType === 'manhua') {
-      // sourceMap doesn't cover Korean/Chinese origins directly; leave undefined
-    }
+    if (a.status && KITSU_PUB_MAP[a.status]) patch.pubStatus = KITSU_PUB_MAP[a.status]
   }
   return patch
 }

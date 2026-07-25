@@ -785,12 +785,19 @@ ipcMain.handle('jikan:search', async (_event, term: string, kind: 'anime' | 'man
         const json = await r.json() as { data?: unknown[] }
         return { ok: true, data: json.data ?? [] }
       }
-      lastError = `HTTP ${r.status}${r.status === 504 ? ' — MAL upstream timed out, retry in a moment' : ''}`
+      const hint = r.status === 504 ? ' — MAL upstream timed out, retry in a moment'
+        : r.status === 429 ? ' — Jikan rate limit hit (3/sec, 60/min). Wait a few seconds and retry.'
+        : ''
+      lastError = `HTTP ${r.status}${hint}`
       if (!isRetryable(r.status)) return { ok: false, error: lastError }
     } catch (e) {
       lastError = (e as Error).message
     }
-    if (attempt < maxAttempts - 1) await new Promise((res) => setTimeout(res, 800 * (attempt + 1)))
+    // Longer backoff when we hit rate-limit; short backoff for timeouts.
+    if (attempt < maxAttempts - 1) {
+      const wait = lastError.includes('429') ? 3000 * (attempt + 1) : 800 * (attempt + 1)
+      await new Promise((res) => setTimeout(res, wait))
+    }
   }
   return { ok: false, error: lastError }
 })

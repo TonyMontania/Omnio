@@ -70,6 +70,20 @@ const CATEGORY_TO_SOURCE: Record<number, GameSource> = {
   13: 'collection', // pack
 }
 
+// Fallback: IGDB frequently mislabels Remake/Remaster as category:0 (main),
+// so infer from the title if the category didn't give us a definite answer.
+function inferSourceFromTitle(title: string): GameSource | undefined {
+  const t = title.toLowerCase()
+  if (/\bremake\b/.test(t)) return 'remake'
+  if (/\bremaster(ed)?\b/.test(t)) return 'remaster'
+  if (/\breimagined\b/.test(t)) return 'reimagined'
+  if (/\breboot\b/.test(t)) return 'reboot'
+  if (/\bdefinitive edition\b|\bcomplete edition\b|\bgoty edition\b|\bgame of the year edition\b|\bultimate edition\b/.test(t)) return 'expanded'
+  if (/\bhd collection\b|\btrilogy\b|\banthology\b|\bcollection\b|\bmasterpiece collection\b|\bmaster collection\b/.test(t)) return 'collection'
+  if (/\bport\b/.test(t)) return 'port'
+  return undefined
+}
+
 // IGDB has two coexisting encodings for age_ratings:
 //   Legacy: category enum (1=ESRB, 2=PEGI…) + rating enum (8=E, 9=E10+…)
 //   Newer:  category and rating are strings ("ESRB", "M") OR nested inside
@@ -162,7 +176,7 @@ function gameToPatch(g: Game): Partial<Item> {
     franchise: g.franchises?.[0]?.name || g.collection?.name,
     alternativeTitles: altSet.size > 0 ? Array.from(altSet) : undefined,
     ageRating: pickAgeRating(g.age_ratings),
-    gameSource: g.category !== undefined ? CATEGORY_TO_SOURCE[g.category] : undefined,
+    gameSource: (g.category !== undefined ? CATEGORY_TO_SOURCE[g.category] : undefined) ?? inferSourceFromTitle(g.name),
   }
 }
 
