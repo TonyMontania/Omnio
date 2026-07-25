@@ -3,7 +3,7 @@
 // data lives under `attributes` and everything is flat strings we can
 // map straight into Omnio fields.
 
-import type { Item, AnimeFormat, AnimeSeason, AiringStatus } from './types'
+import type { Item, AnimeFormat, AnimeSeason, AiringStatus, AgeRating } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 type Kind = 'anime' | 'manga'
@@ -60,6 +60,10 @@ const AIRING_STATUS_MAP: Record<string, AiringStatus> = {
   current: 'airing', finished: 'finished', tba: 'not_yet_aired',
   unreleased: 'not_yet_aired', upcoming: 'not_yet_aired',
 }
+// Kitsu ageRating uses G/PG/R/R18 — ESRB-ish.
+const KITSU_AGE_MAP: Record<string, AgeRating> = {
+  G: 'e', PG: 'e10', R: 't', R18: 'm',
+}
 
 function seasonOfMonth(month: number): AnimeSeason | undefined {
   if (month >= 1 && month <= 3) return 'winter'
@@ -101,6 +105,7 @@ function hitToPatch(kind: Kind, h: KitsuHit): Partial<Item> {
     if (y) patch.seasonYear = y
     if (m) patch.season = seasonOfMonth(parseInt(m, 10))
   }
+  if (a.ageRating && KITSU_AGE_MAP[a.ageRating]) patch.ageRating = KITSU_AGE_MAP[a.ageRating]
   if (kind === 'anime') {
     patch.animeDescription = description
     patch.animeFormat = a.showType ? ANIME_FORMAT_MAP[a.showType] : undefined

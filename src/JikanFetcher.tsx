@@ -4,7 +4,7 @@
 // limits (3 rps) but similar reach; useful as a fallback when AniList
 // misses a title (older or region-specific entries).
 
-import type { Item, AnimeFormat, AnimeSource } from './types'
+import type { Item, AnimeFormat, AnimeSource, Demographic, AgeRating, AiringStatus } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 type MediaType = 'anime' | 'manga'
@@ -42,6 +42,37 @@ interface JikanMedia {
   authors?: { name: string }[]
   serializations?: { name: string }[]
   genres?: { name: string }[]
+  demographics?: { name: string }[]
+  rating?: string             // "PG-13", "R+ - Mild Nudity", "Rx - Hentai", etc.
+}
+
+// MAL demographic strings → our Demographic union.
+const DEMOGRAPHIC_MAP: Record<string, Demographic> = {
+  Shounen: 'shonen', Shoujo: 'shojo', Seinen: 'seinen', Josei: 'josei',
+}
+// MAL rating strings are free-text prefixed with the code. We match on the
+// prefix and drop the suffix so "R+ - Mild Nudity" maps like plain "R+".
+function mapMalRating(raw?: string): AgeRating | undefined {
+  if (!raw) return undefined
+  const code = raw.trim().split(/[\s-]/)[0].toUpperCase()
+  if (code === 'G') return 'e'
+  if (code === 'PG') return 'e'
+  if (code === 'PG-13') return 't'
+  if (code === 'R') return 'm'
+  if (code === 'R+') return 'm'
+  if (code === 'RX') return 'ao'
+  return undefined
+}
+// MAL airing status uses "Currently Airing" / "Finished Airing" / "Not yet aired".
+const MAL_AIRING_MAP: Record<string, AiringStatus> = {
+  'Currently Airing': 'airing',
+  'Publishing': 'airing',
+  'Finished Airing': 'finished',
+  'Finished': 'finished',
+  'Not yet aired': 'not_yet_aired',
+  'Not yet published': 'not_yet_aired',
+  'Discontinued': 'cancelled',
+  'On Hiatus': 'airing',
 }
 
 const FORMAT_MAP: Record<string, AnimeFormat> = {
@@ -94,6 +125,13 @@ export default function JikanFetcher({ initialQuery, kind, categoryId, onApply, 
       episodeDuration: extractDurationMinutes(m.duration),
       studios: m.studios?.map((s) => s.name),
     }
+    // Both anime and manga share demographic + rating.
+    const demoName = m.demographics?.[0]?.name
+    if (demoName && DEMOGRAPHIC_MAP[demoName]) patch.demographic = DEMOGRAPHIC_MAP[demoName]
+    const age = mapMalRating(m.rating)
+    if (age) patch.ageRating = age
+    if (m.status && MAL_AIRING_MAP[m.status]) patch.airingStatus = MAL_AIRING_MAP[m.status]
+
     if (kind === 'anime') {
       patch.animeFormat = m.type ? FORMAT_MAP[m.type] : undefined
       patch.totalEpisodes = m.episodes ? String(m.episodes) : undefined
@@ -115,8 +153,8 @@ export default function JikanFetcher({ initialQuery, kind, categoryId, onApply, 
       hint={
         <>Via Jikan (unofficial MAL proxy — no API key needed). Applying overwrites the
         standard fields (title, description, cover, dates, episodes/chapters, studios,
-        source, genres, authors, serialization). Rating, notes and personal history
-        are left alone.</>
+        source, genres, authors, serialization, demographic, age rating, airing
+        status). Rating, notes and personal history are left alone.</>
       }
       placeholder={`Search ${kind}…`}
       initialQuery={initialQuery}

@@ -836,6 +836,22 @@ ipcMain.handle('mangadex:search', async (_event, term: string) => {
   })
 })
 
+// List every cover_art entry for a manga so the fetcher can pull per-volume
+// covers into the app's volumeCovers gallery.
+ipcMain.handle('mangadex:covers', async (_event, mangaId: string) => {
+  if (!mangaId) return { ok: false, error: 'Missing manga id' }
+  const params = new URLSearchParams({ limit: '100', 'order[volume]': 'asc' })
+  params.append('manga[]', mangaId)
+  return proxyJson(`${MD_BASE}/cover?${params.toString()}`, {
+    headers: { 'User-Agent': MD_UA, Accept: 'application/json' },
+    pick: (j) => (j as { data?: unknown[] }).data,
+    softError: (j) => {
+      const r = (j as { result?: string; errors?: { detail?: string }[] })
+      return r.result === 'error' ? (r.errors?.[0]?.detail ?? 'MangaDex returned an error') : null
+    },
+  })
+})
+
 // ComicVine (GameSpot) — comics metadata (Marvel, DC, Image, indies).
 // Requires a free API key from comicvine.gamespot.com/api/. Rate-limit
 // is soft (~200 req/hr per key). "Volume" is ComicVine's word for series.
@@ -1059,7 +1075,7 @@ ipcMain.handle('anilist:search', async (_event, term: string, kind: 'ANIME' | 'M
           description(asHtml: false)
           genres
           studios(isMain: true) { nodes { name } }
-          staff(perPage: 5) { nodes { name { full } } }
+          staff(perPage: 10) { edges { role node { name { full } } } }
           source
           countryOfOrigin
           coverImage { extraLarge large }

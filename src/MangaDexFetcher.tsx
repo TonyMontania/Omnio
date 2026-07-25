@@ -3,7 +3,7 @@
 // show every match regardless of origin language, tagging each row with
 // its origin so it's obvious when a hit belongs elsewhere.
 
-import type { Item, MangaSource, PublicationStatus } from './types'
+import type { Item, MangaSource, PublicationStatus, MangaVolume } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 interface Props {
@@ -40,6 +40,11 @@ interface MdManga {
   type: 'manga'
   attributes: MdMangaAttrs
   relationships?: MdRel[]
+}
+
+interface MdCoverEntry {
+  id: string
+  attributes?: { fileName?: string; volume?: string; locale?: string }
 }
 
 // Prefer English, then Japanese romaji, then Japanese, then anything.
@@ -126,7 +131,25 @@ export default function MangaDexFetcher({ initialQuery, categoryId, onApply, onC
     const coverPath = url
       ? await window.ipcRenderer.invoke('image:download', url, categoryId, 'cover') as string | null
       : null
-    onApply(mangaToPatch(m), coverPath || undefined, undefined)
+
+    // Fetch every cover the series has and file the ones tagged with a
+    // volume number into volumeCovers. Runs in parallel with the main
+    // cover so slow connections don't block the primary flow.
+    const covers = await window.ipcRenderer.invoke('mangadex:covers', m.id) as { ok: boolean; data?: MdCoverEntry[] }
+    const volumeCovers: MangaVolume[] = []
+    if (covers?.ok && Array.isArray(covers.data)) {
+      for (const c of covers.data) {
+        const vol = c.attributes?.volume
+        const file = c.attributes?.fileName
+        if (!vol || !file) continue
+        const coverUrl = `https://uploads.mangadex.org/covers/${m.id}/${file}.512.jpg`
+        const rel = await window.ipcRenderer.invoke('image:download', coverUrl, categoryId, 'volume') as string | null
+        if (rel) volumeCovers.push({ id: crypto.randomUUID(), number: vol, cover: rel })
+      }
+    }
+    const patch = mangaToPatch(m)
+    if (volumeCovers.length > 0) patch.volumeCovers = volumeCovers
+    onApply(patch, coverPath || undefined, undefined)
     onClose()
   }
 
@@ -136,9 +159,10 @@ export default function MangaDexFetcher({ initialQuery, categoryId, onApply, onC
       hint={
         <>Free, no API key. Applying overwrites title, alternative titles, description,
         release year, authors, artists, genres, total chapters/volumes, publication
-        status, and cover. Rating, reading status, notes and personal history are
-        left alone. Each hit is labelled by origin (JP / KR / CN) so you can spot
-        manga vs manhwa vs manhua at a glance.</>
+        status, cover and per-volume covers (each volume that MangaDex has art
+        for lands in the gallery). Rating, reading status, notes and personal
+        history are left alone. Each hit is labelled by origin (JP / KR / CN)
+        so you can spot manga vs manhwa vs manhua at a glance.</>
       }
       placeholder="Search title, e.g. 'chainsaw man' or 'solo leveling'…"
       initialQuery={initialQuery}

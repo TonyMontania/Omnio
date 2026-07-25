@@ -1291,6 +1291,7 @@ function App() {
     if (patch.animeDescription) setAnimeDescription(patch.animeDescription)
     if (patch.mangaDescription && !patch.description) setMangaDescription(patch.mangaDescription)
     if (patch.airingStatus) setAiringStatus(patch.airingStatus)
+    if (patch.demographic) setDemographic(patch.demographic)
 
     if (patch.description) {
       if (activeCategory === 'anime' || activeCategory === 'donghua') setAnimeDescription(patch.description)

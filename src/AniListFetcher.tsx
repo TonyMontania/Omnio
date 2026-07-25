@@ -2,7 +2,7 @@
 // show a picker of matches, and hand back a shaped Partial<Item> the
 // caller can merge into its editor state.
 
-import type { Item, AnimeFormat, AnimeSource } from './types'
+import type { Item, AnimeFormat, AnimeSource, AiringStatus } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 
 type MediaType = 'ANIME' | 'MANGA'
@@ -16,6 +16,7 @@ interface Props {
 }
 
 interface FuzzyDate { year?: number; month?: number; day?: number }
+interface StaffEdge { role?: string; node?: { name?: { full?: string } } }
 interface Media {
   id: number
   title: { romaji?: string; english?: string; native?: string }
@@ -32,7 +33,7 @@ interface Media {
   description?: string
   genres?: string[]
   studios?: { nodes?: { name: string }[] }
-  staff?: { nodes?: { name: { full: string } }[] }
+  staff?: { edges?: StaffEdge[] }
   source?: string
   countryOfOrigin?: string
   coverImage?: { extraLarge?: string; large?: string }
@@ -40,6 +41,28 @@ interface Media {
   synonyms?: string[]
   averageScore?: number
   siteUrl?: string
+}
+
+// AniList staff roles are free-text — "Story", "Art", "Story & Art", "Original
+// Creator", etc. Split them into authors (writing) vs mangaArtists (drawing)
+// so both fields fill correctly for manga imports.
+function splitMangaStaff(staff?: { edges?: StaffEdge[] }): { authors: string[]; artists: string[] } {
+  const authors: string[] = []
+  const artists: string[] = []
+  const seenA = new Set<string>()
+  const seenB = new Set<string>()
+  for (const e of staff?.edges ?? []) {
+    const name = e.node?.name?.full
+    const role = (e.role ?? '').toLowerCase()
+    if (!name) continue
+    if (/(story|writer|scenario|author|original creator|screenplay)/.test(role) && !seenA.has(name)) {
+      authors.push(name); seenA.add(name)
+    }
+    if (/(art|illustrator|illustration|character design|drawer)/.test(role) && !seenB.has(name)) {
+      artists.push(name); seenB.add(name)
+    }
+  }
+  return { authors, artists }
 }
 
 function formatDate(d?: FuzzyDate): string | undefined {
@@ -58,6 +81,13 @@ const SOURCE_MAP_ANIME: Record<string, AnimeSource> = {
   ORIGINAL: 'original', MANGA: 'manga', LIGHT_NOVEL: 'light_novel',
   WEB_NOVEL: 'web_novel', NOVEL: 'novel', VIDEO_GAME: 'game',
   VISUAL_NOVEL: 'visual_novel', OTHER: 'other',
+}
+const AIRING_STATUS_MAP: Record<string, AiringStatus> = {
+  RELEASING: 'airing',
+  FINISHED: 'finished',
+  NOT_YET_RELEASED: 'not_yet_aired',
+  CANCELLED: 'cancelled',
+  HIATUS: 'airing',   // no dedicated hiatus bucket — treat as still airing
 }
 
 function stripHtml(s?: string): string | undefined {
@@ -99,9 +129,13 @@ export default function AniListFetcher({ initialQuery, kind, categoryId, onApply
       patch.animeFormat = m.format ? FORMAT_MAP[m.format] : undefined
       patch.totalEpisodes = m.episodes ? String(m.episodes) : undefined
       patch.animeSource = m.source ? SOURCE_MAP_ANIME[m.source] : undefined
+      patch.airingStatus = m.status ? AIRING_STATUS_MAP[m.status] : undefined
     } else {
       patch.totalChapters = m.chapters ? String(m.chapters) : undefined
       patch.totalVolumes = m.volumes ? String(m.volumes) : undefined
+      const { authors, artists } = splitMangaStaff(m.staff)
+      if (authors.length) patch.authors = authors
+      if (artists.length) patch.mangaArtists = artists
     }
     onApply(patch, coverPath || undefined, bannerPath || undefined)
     onClose()
