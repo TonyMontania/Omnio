@@ -615,6 +615,14 @@ function App() {
   const [units, setUnits] = useState<Unit[]>([])
 
   useEffect(() => {
+    loadFromDisk({ applySettings: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Reads the split JSON files off disk and hydrates state. Runs once on
+  // mount and again whenever the user hits F5, so external edits to the
+  // data/ folder (or a snapshot restore) show up without a full app restart.
+  const loadFromDisk = async ({ applySettings }: { applySettings: boolean }): Promise<void> => {
     const migrate = async (list: Item[]): Promise<{ list: Item[]; changed: boolean }> => {
       let changed = false
       const persist = async (val: string | undefined, categoryId: string, kind: string): Promise<string | undefined> => {
@@ -632,9 +640,6 @@ function App() {
         if (volumeCovers && volumeCovers.length > 0) {
           volumeCovers = await Promise.all(volumeCovers.map(async (v) => ({ ...v, cover: (await persist(v.cover, it.categoryId, 'volume')) ?? v.cover })))
         }
-        // Pre-0.2 stored devs as a comma-separated string and publisher as a
-        // single string. Rewrite into the array shape so the rest of the app
-        // (edit form, stats, detail modal) can treat them uniformly.
         const anyIt = it as unknown as { devs?: unknown; publisher?: unknown; publishers?: unknown }
         let devs = it.devs
         if (typeof anyIt.devs === 'string') {
@@ -661,44 +666,67 @@ function App() {
       const migrated = await Promise.all(list.map(async (a) => ({ ...a, photo: await persist(a.photo), bannerImage: await persist(a.bannerImage) })))
       return { list: migrated, changed }
     }
-    window.ipcRenderer.invoke('data:load').then(async (data: AppData | null) => {
-      let items = data?.items ?? []
-      let artists = data?.artists ?? []
-      const itemsRes = await migrate(items)
-      items = itemsRes.list
-      const artistsRes = await migrateArtists(artists)
-      artists = artistsRes.list
-      setItems(items)
-      if (data?.collections) setCollections(data.collections)
-      setMusicArtists(artists)
-      if (data?.settings) {
-        const merged = {
-          ...DEFAULT_SETTINGS,
-          ...data.settings,
-          gameFields: { ...DEFAULT_GAME_FIELDS, ...data.settings.gameFields },
-          musicFields: { ...DEFAULT_MUSIC_FIELDS, ...data.settings.musicFields },
-          mangaFields: { ...DEFAULT_MANGA_FIELDS, ...data.settings.mangaFields },
-          movieFields: { ...DEFAULT_MOVIE_FIELDS, ...data.settings.movieFields },
-          animeFields: { ...DEFAULT_ANIME_FIELDS, ...data.settings.animeFields },
-          seriesFields: { ...DEFAULT_SERIES_FIELDS, ...data.settings.seriesFields },
-          enabledCategories: data.settings.enabledCategories && !data.settings.enabledCategories.includes('donghua') && data.settings.enabledCategories.includes('anime')
-            ? [...data.settings.enabledCategories, 'donghua']
-            : data.settings.enabledCategories,
-        }
-        setSettings(merged)
-        setLayout(merged.defaultLayout)
-        if (merged.startupCategory === 'last' && merged.lastCategory && CATEGORIES.some((c) => c.id === merged.lastCategory)) {
-          setActiveCategory(merged.lastCategory)
-        }
+    const data = await window.ipcRenderer.invoke('data:load') as AppData | null
+    let items = data?.items ?? []
+    let artists = data?.artists ?? []
+    const itemsRes = await migrate(items)
+    items = itemsRes.list
+    const artistsRes = await migrateArtists(artists)
+    artists = artistsRes.list
+    skipHistoryRef.current = true
+    setItems(items)
+    setCollections(data?.collections ?? [])
+    setMusicArtists(artists)
+    if (applySettings && data?.settings) {
+      const merged = {
+        ...DEFAULT_SETTINGS,
+        ...data.settings,
+        gameFields: { ...DEFAULT_GAME_FIELDS, ...data.settings.gameFields },
+        musicFields: { ...DEFAULT_MUSIC_FIELDS, ...data.settings.musicFields },
+        mangaFields: { ...DEFAULT_MANGA_FIELDS, ...data.settings.mangaFields },
+        movieFields: { ...DEFAULT_MOVIE_FIELDS, ...data.settings.movieFields },
+        animeFields: { ...DEFAULT_ANIME_FIELDS, ...data.settings.animeFields },
+        seriesFields: { ...DEFAULT_SERIES_FIELDS, ...data.settings.seriesFields },
+        enabledCategories: data.settings.enabledCategories && !data.settings.enabledCategories.includes('donghua') && data.settings.enabledCategories.includes('anime')
+          ? [...data.settings.enabledCategories, 'donghua']
+          : data.settings.enabledCategories,
       }
-      if (data?.customOrders) setCustomOrders(data.customOrders)
-      setLoaded(true)
-    })
-  }, [])
+      setSettings(merged)
+      setLayout(merged.defaultLayout)
+      if (merged.startupCategory === 'last' && merged.lastCategory && CATEGORIES.some((c) => c.id === merged.lastCategory)) {
+        setActiveCategory(merged.lastCategory)
+      }
+    }
+    if (data?.customOrders) setCustomOrders(data.customOrders)
+    setLoaded(true)
+  }
 
   useEffect(() => {
     if (!loaded) return
-    window.ipcRenderer.invoke('data:save', { items, collections, settings, artists: musicArtists })
+    void (async () => {
+      const res = await window.ipcRenderer.invoke('data:save', { items, collections, settings, artists: musicArtists }) as { ok?: boolean; rewrites?: { from: string; to: string }[] } | boolean
+      // Main-process rename step may have renamed some asset files to match
+      // titles. Reflect those rewrites in local state so <img src> resolves
+      // to the new filename without a full reload.
+      const rewrites = (typeof res === 'object' && res?.rewrites) || []
+      if (rewrites.length === 0) return
+      const map = new Map(rewrites.map((r) => [r.from, r.to]))
+      const swap = (v: string | undefined) => (v && map.has(v) ? map.get(v)! : v)
+      skipHistoryRef.current = true
+      setItems((list) => list.map((it) => {
+        const cover = swap(it.cover)
+        const bannerImage = swap(it.bannerImage)
+        const bannerImage2 = swap(it.bannerImage2)
+        const logoImage = swap(it.logoImage)
+        const volumeCovers = it.volumeCovers?.map((v) => ({ ...v, cover: swap(v.cover) ?? v.cover }))
+        const singleCovers = it.singleCovers?.map((s) => ({ ...s, cover: swap(s.cover) ?? s.cover }))
+        const editions = it.editions?.map((e) => ({ ...e, cover: swap(e.cover) ?? e.cover }))
+        const bundleContents = it.bundleContents?.map((b) => ({ ...b, cover: swap(b.cover) ?? b.cover }))
+        return { ...it, cover, bannerImage, bannerImage2, logoImage, volumeCovers, singleCovers, editions, bundleContents }
+      }))
+      setMusicArtists((list) => list.map((a) => ({ ...a, photo: swap(a.photo), bannerImage: swap(a.bannerImage) })))
+      setCollections((list) => list.map((g) => ({ ...g, cover: swap(g.cover) ?? g.cover })))
+    })()
   }, [items, collections, settings, musicArtists, loaded])
 
   useEffect(() => {
@@ -720,6 +748,9 @@ function App() {
       } else if (mod && e.key.toLowerCase() === 'y' && !inField) {
         e.preventDefault()
         redo()
+      } else if (e.key === 'F5' && !inField) {
+        e.preventDefault()
+        loadFromDisk({ applySettings: false }).then(() => setToast('Library refreshed'))
       }
     }
     window.addEventListener('keydown', handler)
@@ -3136,13 +3167,15 @@ function App() {
 
                 {settingsTab === 'data' && (
                   <>
+                    <div className="settings-section-title">Backup &amp; restore</div>
                     <div className="field-group">
-                      <label>Backup</label>
+                      <label>Manual backup</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={handleExport}>⬇ Export backup</button>
                         <button type="button" className="secondary-btn" onClick={() => importInputRef.current?.click()}>⬆ Import backup</button>
                         <input type="file" accept="application/json" ref={importInputRef} style={{ display: 'none' }} onChange={handleImportFile} />
                       </div>
+                      <p className="hint">Save your library as a single JSON file, or restore one you exported earlier.</p>
                     </div>
                     <div className="field-group">
                       <label>Automatic snapshots</label>
@@ -3168,38 +3201,10 @@ function App() {
                           else setToast(`Backup failed: ${r?.error ?? 'unknown'}`)
                         }}>Copy library to folder…</button>
                       </div>
-                      <p className="hint">Pick a folder inside your cloud storage (Dropbox, OneDrive, Google Drive) — Omnio writes a timestamped copy of <code>data/</code> and <code>assets/</code> there and the cloud service handles the upload. Stays local-first; you keep the master copy on this machine.</p>
+                      <p className="hint">Pick a folder inside your cloud storage (Dropbox, OneDrive, Google Drive) — Omnio writes a timestamped copy of <code>data/</code> and <code>assets/</code> there and the cloud service handles the upload.</p>
                     </div>
-                    <div className="field-group">
-                      <label>Clean migration leftovers</label>
-                      <div className="settings-actions">
-                        <button type="button" className="secondary-btn" onClick={async () => {
-                          const r = await window.ipcRenderer.invoke('storage:cleanup-migration-artifacts')
-                          if (r?.removed > 0) setToast(`Freed ${(r.bytes / 1024).toFixed(1)} KB`)
-                          else setToast('Nothing to clean')
-                        }}>Delete pre-split / pre-restore backups</button>
-                      </div>
-                      <p className="hint">One-shot safety nets from previous upgrades and restore operations (<code>data.pre-split.json</code>, <code>data.pre-restore/</code>). Rotating snapshots above are untouched.</p>
-                    </div>
-                    <div className="field-group">
-                      <label>Clean orphan assets</label>
-                      <div className="settings-actions">
-                        <button type="button" className="secondary-btn" onClick={() => askConfirm(
-                          'Scan the assets/ folder and delete every file no item references anymore? Reclaims disk used by covers you fetched from an API and then discarded before saving.',
-                          async () => {
-                            const r = await window.ipcRenderer.invoke('storage:clean-orphan-assets')
-                            if (!r?.ok) { setToast(`Scan failed: ${r?.error ?? 'unknown'}`); return }
-                            if (r.removed > 0) setToast(`Removed ${r.removed} orphan${r.removed === 1 ? '' : 's'} · freed ${(r.bytes / 1024 / 1024).toFixed(2)} MB (${r.referenced} references / ${r.scanned} files scanned)`)
-                            else setToast(`Nothing to clean · ${r.referenced} references / ${r.scanned} files on disk`)
-                          },
-                        )}>Scan and delete orphan assets</button>
-                      </div>
-                      <p className="hint">Walks the assets/ folder and unlinks any file no library entry, group cover, or artist photo points at. Newer edits already clean up transient downloads on cancel — this button reclaims garbage from before that fix landed.</p>
-                    </div>
-                    <div className="field-group">
-                      <label>Data quality</label>
-                      <button type="button" className="secondary-btn" onClick={() => setDupOpen(true)}>Find similar titles</button>
-                    </div>
+
+                    <div className="settings-section-title">Import &amp; share</div>
                     <div className="field-group">
                       <label>Import from other trackers</label>
                       <div className="settings-actions">
@@ -3234,22 +3239,19 @@ function App() {
                       </div>
                       <p className="hint">Wrapped is a year-in-review view. Export builds a standalone <code>index.html</code> and copies your <code>assets/</code> folder — send the folder to a friend and it just opens. Scope defaults to the whole library; pick a single library to share just that one.</p>
                     </div>
+                    <div className="settings-section-title">Integrations · API keys</div>
                     <div className="field-group">
-                      <label>Integrations · ComicVine API key (Western Comics)</label>
+                      <label>SteamGridDB (Games — covers / banners / logos)</label>
                       <input
                         type="password"
-                        placeholder="Paste your ComicVine key…"
-                        value={settings.comicvineApiKey ?? ''}
-                        onChange={(e) => setSettings((s) => ({ ...s, comicvineApiKey: e.target.value }))}
+                        placeholder="Paste your SteamGridDB key…"
+                        value={settings.sgdbApiKey ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, sgdbApiKey: e.target.value }))}
                       />
-                      <p className="hint">
-                        Register a free key at <code>comicvine.gamespot.com/api/</code>. Enables
-                        the "↗ ComicVine" button in the Western Comics editor. Covers Marvel,
-                        DC, Image and indie publishers.
-                      </p>
+                      <p className="hint">Free key at <code>steamgriddb.com/profile/preferences/api</code>.</p>
                     </div>
                     <div className="field-group">
-                      <label>Integrations · IGDB (Games) — Twitch Client ID + Secret</label>
+                      <label>IGDB (Games — full metadata) — Twitch Client ID + Secret</label>
                       <input
                         type="text"
                         placeholder="Client ID"
@@ -3263,41 +3265,33 @@ function App() {
                         onChange={(e) => setSettings((s) => ({ ...s, igdbClientSecret: e.target.value }))}
                         style={{ marginTop: 6 }}
                       />
-                      <p className="hint">
-                        Create a free Twitch app at <code>dev.twitch.tv/console/apps</code> (category
-                        "Application Integration", any localhost redirect URL). Enables the
-                        "↗ IGDB" button next to the cover in the Game editor.
-                      </p>
+                      <p className="hint">Free Twitch app at <code>dev.twitch.tv/console/apps</code> (Application Integration, any localhost redirect).</p>
                     </div>
                     <div className="field-group">
-                      <label>Integrations · TMDb API key (Movies + Series)</label>
+                      <label>TMDb (Movies + Series)</label>
                       <input
                         type="password"
                         placeholder="Paste your TMDb v3 API key…"
                         value={settings.tmdbApiKey ?? ''}
                         onChange={(e) => setSettings((s) => ({ ...s, tmdbApiKey: e.target.value }))}
                       />
-                      <p className="hint">
-                        Get a free v3 key at <code>themoviedb.org/settings/api</code>. Enables
-                        the "↗ TMDb" button next to the cover field in the Movie and Series editors.
-                      </p>
+                      <p className="hint">Free v3 key at <code>themoviedb.org/settings/api</code>.</p>
                     </div>
                     <div className="field-group">
-                      <label>Integrations · SteamGridDB API key</label>
+                      <label>ComicVine (Western Comics)</label>
                       <input
                         type="password"
-                        placeholder="Paste your SteamGridDB key…"
-                        value={settings.sgdbApiKey ?? ''}
-                        onChange={(e) => setSettings((s) => ({ ...s, sgdbApiKey: e.target.value }))}
+                        placeholder="Paste your ComicVine key…"
+                        value={settings.comicvineApiKey ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, comicvineApiKey: e.target.value }))}
                       />
-                      <p className="hint">
-                        Get a free key at <code>steamgriddb.com/profile/preferences/api</code>. Enables
-                        the "↗ SteamGridDB" button next to cover / banner / logo in the game editor.
-                        AniList (anime & manga) needs no key.
-                      </p>
+                      <p className="hint">Free key at <code>comicvine.gamespot.com/api/</code> — Marvel, DC, Image, indies.</p>
                     </div>
+                    <p className="hint" style={{ marginTop: -6 }}>MusicBrainz, VGMdb, AniList, MyAnimeList, Kitsu and MangaDex need no key — they work out of the box.</p>
+
+                    <div className="settings-section-title">Updates</div>
                     <div className="field-group">
-                      <label>Updates</label>
+                      <label>Check for updates</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={() => runUpdateCheck(false)} disabled={updateCheckState === 'checking'}>
                           {updateCheckState === 'checking' ? 'Checking…' : 'Check for updates'}
@@ -3323,12 +3317,76 @@ function App() {
                         <p className="hint">Omnio {updateInfo.latest} released. You're on {updateInfo.current}. Downloads work for portable, NSIS, DMG, AppImage — pick your build on the release page.</p>
                       )}
                     </div>
+
+                    <div className="settings-section-title">Maintenance</div>
+                    <div className="field-group">
+                      <label>Find duplicates</label>
+                      <button type="button" className="secondary-btn" onClick={() => setDupOpen(true)}>Find similar titles</button>
+                      <p className="hint">Fuzzy-matches titles across every library and lets you merge or delete the duplicates.</p>
+                    </div>
+                    <div className="field-group">
+                      <label>Rename all assets to titles</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={async () => {
+                          const r = await window.ipcRenderer.invoke('storage:rename-all-assets') as { ok: boolean; renamed?: number; rewrites?: { from: string; to: string }[]; error?: string }
+                          if (!r?.ok) { setToast(`Rename failed: ${r?.error ?? 'unknown'}`); return }
+                          const rewrites = r.rewrites ?? []
+                          if (rewrites.length === 0) { setToast('All assets already use title-based names'); return }
+                          const map = new Map(rewrites.map((x) => [x.from, x.to]))
+                          const swap = (v: string | undefined) => (v && map.has(v) ? map.get(v)! : v)
+                          skipHistoryRef.current = true
+                          setItems((list) => list.map((it) => ({
+                            ...it,
+                            cover: swap(it.cover),
+                            bannerImage: swap(it.bannerImage),
+                            bannerImage2: swap(it.bannerImage2),
+                            logoImage: swap(it.logoImage),
+                            volumeCovers: it.volumeCovers?.map((v) => ({ ...v, cover: swap(v.cover) ?? v.cover })),
+                            singleCovers: it.singleCovers?.map((s) => ({ ...s, cover: swap(s.cover) ?? s.cover })),
+                            editions: it.editions?.map((e) => ({ ...e, cover: swap(e.cover) ?? e.cover })),
+                            bundleContents: it.bundleContents?.map((b) => ({ ...b, cover: swap(b.cover) ?? b.cover })),
+                          })))
+                          setMusicArtists((list) => list.map((a) => ({ ...a, photo: swap(a.photo), bannerImage: swap(a.bannerImage) })))
+                          setCollections((list) => list.map((g) => ({ ...g, cover: swap(g.cover) ?? g.cover })))
+                          setToast(`Renamed ${rewrites.length} asset${rewrites.length === 1 ? '' : 's'}`)
+                        }}>Rename all assets now</button>
+                      </div>
+                      <p className="hint">Sweeps every referenced file under <code>assets/</code> and renames it to <code>[title] [kind].ext</code> in one pass — the same rename that runs on save, but forced across the whole library. Handy right after upgrading from an older build where files were UUID-named.</p>
+                    </div>
+                    <div className="field-group">
+                      <label>Clean orphan assets</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={() => askConfirm(
+                          'Scan the assets/ folder and delete every file no item references anymore? Reclaims disk used by covers you fetched from an API and then discarded before saving.',
+                          async () => {
+                            const r = await window.ipcRenderer.invoke('storage:clean-orphan-assets')
+                            if (!r?.ok) { setToast(`Scan failed: ${r?.error ?? 'unknown'}`); return }
+                            if (r.removed > 0) setToast(`Removed ${r.removed} orphan${r.removed === 1 ? '' : 's'} · freed ${(r.bytes / 1024 / 1024).toFixed(2)} MB (${r.referenced} references / ${r.scanned} files scanned)`)
+                            else setToast(`Nothing to clean · ${r.referenced} references / ${r.scanned} files on disk`)
+                          },
+                        )}>Scan and delete orphan assets</button>
+                      </div>
+                      <p className="hint">Walks every subfolder under <code>assets/</code> and unlinks any file no item, group cover, or artist photo points at. Also useful after the title-based rename to sweep any leftover UUID copies.</p>
+                    </div>
+                    <div className="field-group">
+                      <label>Clean migration leftovers</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={async () => {
+                          const r = await window.ipcRenderer.invoke('storage:cleanup-migration-artifacts')
+                          if (r?.removed > 0) setToast(`Freed ${(r.bytes / 1024).toFixed(1)} KB`)
+                          else setToast('Nothing to clean')
+                        }}>Delete pre-split / pre-restore backups</button>
+                      </div>
+                      <p className="hint">One-shot safety nets from previous upgrades and restore operations (<code>data.pre-split.json</code>, <code>data.pre-restore/</code>). Rotating snapshots above are untouched.</p>
+                    </div>
+
+                    <div className="settings-section-title">Danger zone</div>
                     <div className="field-group">
                       <label>Reset settings</label>
                       <button type="button" className="secondary-btn" onClick={() => askConfirm('Reset all settings to defaults? Your library data won’t be affected.', () => { setSettings(DEFAULT_SETTINGS); setLayout(DEFAULT_SETTINGS.defaultLayout); setToast('Settings reset') })}>Reset to defaults</button>
                     </div>
                     <div className="field-group">
-                      <label>Danger zone</label>
+                      <label>Delete all data</label>
                       <button type="button" className="danger-btn" onClick={handleWipeAll}>Delete all data</button>
                     </div>
                     <div className="field-group">

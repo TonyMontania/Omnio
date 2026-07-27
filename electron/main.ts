@@ -280,11 +280,178 @@ async function migrateLegacyIfNeeded(): Promise<Record<string, unknown> | null> 
   return legacy
 }
 
+// -----------------------------------------------------------------------------
+// Asset naming: files under assets/ are stored as "{item title} {kind}.ext"
+// (with an optional disambiguator for gallery entries — volume number, single
+// name, bundled game name, edition label). This makes the assets/ folder
+// human-browsable in Explorer / Finder. Legacy UUID-named files from older
+// installs are renamed on first save after upgrade.
+// -----------------------------------------------------------------------------
+
+// Windows reserves <>:"/\|?* and control chars in filenames; also chokes on
+// names ending in a dot or space. Collapse to a small readable subset that
+// works across Windows / macOS / Linux without escaping games and albums out
+// of recognition.
+function sanitizeAssetName(raw: string): string {
+  if (!raw) return ''
+  const noBad = raw
+    // eslint-disable-next-line no-control-regex
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ')
+    .replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)) // fullwidth → ascii
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[. ]+$/g, '')
+  // Windows reserved device names — prefix with underscore if bare match.
+  if (/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i.test(noBad)) return `_${noBad}`
+  return noBad.slice(0, 80)  // keep total path well under Windows' 260-char limit
+}
+
+// Rename fileAbs to a title-based name in the same directory. Returns the
+// new absolute path (or the original if the rename wasn't needed / failed).
+// Collision policy: if a *different* file already occupies the desired name,
+// append " 2", " 3"… before the extension. Same file is a no-op.
+async function renameAssetFile(fileAbs: string, desiredBase: string): Promise<string> {
+  const dir = path.dirname(fileAbs)
+  const ext = path.extname(fileAbs)  // includes leading dot
+  const currentName = path.basename(fileAbs)
+  // eslint-disable-next-line no-control-regex
+  const cleanBase = desiredBase.replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ').replace(/[. ]+$/g, '').trim()
+  if (!cleanBase) return fileAbs
+  const primary = `${cleanBase}${ext}`
+  if (currentName === primary) return fileAbs
+  // Find an unused name (primary, then " 2", " 3"…). If the candidate exists
+  // and is our own current file, treat as no-op — nothing to do.
+  let candidate = path.join(dir, primary)
+  let n = 2
+  while (await fileExists(candidate)) {
+    if (path.resolve(candidate) === path.resolve(fileAbs)) return fileAbs
+    candidate = path.join(dir, `${cleanBase} ${n}${ext}`)
+    n++
+    if (n > 999) return fileAbs
+  }
+  try {
+    await fs.rename(fileAbs, candidate)
+    return candidate
+  } catch {
+    return fileAbs
+  }
+}
+
+// A single rewrite the renderer needs to apply: old relative path → new
+// relative path. Returned from data:save so the renderer can update its
+// in-memory items/collections/artists without a full reload.
+type Rewrite = { from: string; to: string }
+
+// Given a relative asset path currently on disk under assets/, rename the
+// file to match `desiredBase` and return the new relative path. No-ops if
+// the path is external (http/data/etc), missing, or already correctly named.
+async function renameRelIfNeeded(rel: unknown, desiredBase: string, rewrites: Rewrite[]): Promise<string | undefined> {
+  if (typeof rel !== 'string' || !rel) return rel as undefined
+  if (/^(data:|https?:|file:|blob:|omnio-asset:)/i.test(rel)) return rel
+  // Cheap short-circuit: name already matches (or a "-2"/"-3" collision
+  // variant of the desired base). Skips every syscall for the common case
+  // where the file was already renamed on a previous save.
+  // eslint-disable-next-line no-control-regex
+  const cleanBase = desiredBase.replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ').replace(/[. ]+$/g, '').trim()
+  if (!cleanBase) return rel
+  const currentName = rel.split('/').pop() ?? ''
+  const currentBase = currentName.replace(/\.[^.]+$/, '')
+  if (currentBase === cleanBase || new RegExp(`^${cleanBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\d+$`).test(currentBase)) return rel
+  const abs = safeRelative(rel)
+  if (!abs) return rel
+  if (!await fileExists(abs)) return rel
+  const newAbs = await renameAssetFile(abs, desiredBase)
+  if (newAbs === abs) return rel
+  const newRel = path.relative(ASSETS_ROOT, newAbs).split(path.sep).join('/')
+  rewrites.push({ from: rel, to: newRel })
+  return newRel
+}
+
+// Walks every asset-bearing field on an item and renames the underlying
+// file so its base matches the item's title (plus a disambiguator for
+// gallery entries). Mutates the item in-place with the new rel paths.
+async function renameItemAssets(it: Record<string, unknown>, rewrites: Rewrite[]): Promise<void> {
+  const title = sanitizeAssetName(String(it.title ?? ''))
+  if (!title) return
+  if (typeof it.cover === 'string')       it.cover       = await renameRelIfNeeded(it.cover,       `${title} cover`,   rewrites)
+  if (typeof it.bannerImage === 'string') it.bannerImage = await renameRelIfNeeded(it.bannerImage, `${title} banner`,  rewrites)
+  if (typeof it.bannerImage2 === 'string')it.bannerImage2= await renameRelIfNeeded(it.bannerImage2,`${title} banner 2`,rewrites)
+  if (typeof it.logoImage === 'string')   it.logoImage   = await renameRelIfNeeded(it.logoImage,   `${title} logo`,    rewrites)
+
+  const vols = it.volumeCovers as { number?: string | number; cover?: string }[] | undefined
+  if (Array.isArray(vols)) {
+    for (const v of vols) {
+      if (typeof v.cover === 'string' && v.number != null && v.number !== '') {
+        const label = sanitizeAssetName(`vol ${v.number}`)
+        v.cover = await renameRelIfNeeded(v.cover, `${title} ${label}`, rewrites)
+      }
+    }
+  }
+  const singles = it.singleCovers as { title?: string; cover?: string }[] | undefined
+  if (Array.isArray(singles)) {
+    for (const s of singles) {
+      if (typeof s.cover === 'string' && s.title) {
+        const label = sanitizeAssetName(s.title)
+        if (label) s.cover = await renameRelIfNeeded(s.cover, `${title} single ${label}`, rewrites)
+      }
+    }
+  }
+  const editions = it.editions as { name?: string; cover?: string }[] | undefined
+  if (Array.isArray(editions)) {
+    for (const e of editions) {
+      if (typeof e.cover === 'string' && e.name) {
+        const label = sanitizeAssetName(e.name)
+        if (label) e.cover = await renameRelIfNeeded(e.cover, `${title} ${label} edition`, rewrites)
+      }
+    }
+  }
+  const bundles = it.bundleContents as { name?: string; cover?: string }[] | undefined
+  if (Array.isArray(bundles)) {
+    for (const b of bundles) {
+      if (typeof b.cover === 'string' && b.name) {
+        const label = sanitizeAssetName(b.name)
+        if (label) b.cover = await renameRelIfNeeded(b.cover, `${label} cover`, rewrites)
+      }
+    }
+  }
+}
+
+async function renameArtistAssets(a: Record<string, unknown>, rewrites: Rewrite[]): Promise<void> {
+  const name = sanitizeAssetName(String(a.name ?? ''))
+  if (!name) return
+  if (typeof a.photo === 'string')       a.photo       = await renameRelIfNeeded(a.photo,       `${name} photo`,  rewrites)
+  if (typeof a.bannerImage === 'string') a.bannerImage = await renameRelIfNeeded(a.bannerImage, `${name} banner`, rewrites)
+}
+
+async function renameGroupAssets(g: Record<string, unknown>, rewrites: Rewrite[]): Promise<void> {
+  const name = sanitizeAssetName(String(g.name ?? g.title ?? ''))
+  if (!name) return
+  if (typeof g.cover === 'string') g.cover = await renameRelIfNeeded(g.cover, `${name} cover`, rewrites)
+}
+
+// Runs before every write: rename every UUID-named (or stale-title-named)
+// asset file to match the current item / artist / group title. Returns the
+// rewrites so the renderer can update its in-memory state.
+async function renameAllAssets(payload: Record<string, unknown>): Promise<Rewrite[]> {
+  const rewrites: Rewrite[] = []
+  if (Array.isArray(payload.items)) {
+    for (const it of payload.items as Record<string, unknown>[]) await renameItemAssets(it, rewrites)
+  }
+  if (Array.isArray(payload.artists)) {
+    for (const a of payload.artists as Record<string, unknown>[]) await renameArtistAssets(a, rewrites)
+  }
+  if (Array.isArray(payload.collections)) {
+    for (const g of payload.collections as Record<string, unknown>[]) await renameGroupAssets(g, rewrites)
+  }
+  return rewrites
+}
+
 // Splits an AppData payload across per-category + top-level files, writing
 // only slices whose content changed. Rotates the snapshot ring first if any
 // write is going to happen.
-async function writeSplitData(payload: Record<string, unknown>): Promise<void> {
+async function writeSplitData(payload: Record<string, unknown>): Promise<Rewrite[]> {
   await fs.mkdir(DATA_DIR, { recursive: true })
+  const rewrites = await renameAllAssets(payload)
 
   const plans: { path: string; content: string }[] = []
 
@@ -318,6 +485,7 @@ async function writeSplitData(payload: Record<string, unknown>): Promise<void> {
   if (willChange) await rotateSnapshots()
 
   for (const p of plans) await writeIfChanged(p.path, p.content)
+  return rewrites
 }
 
 // Snapshot rotation: slot N-1 → N (dropping the oldest), then copy the
@@ -348,8 +516,8 @@ async function rotateSnapshots(): Promise<void> {
 }
 
 ipcMain.handle('data:save', async (_event, data: Record<string, unknown>) => {
-  await writeSplitData(data ?? {})
-  return true
+  const rewrites = await writeSplitData(data ?? {})
+  return { ok: true, rewrites }
 })
 
 ipcMain.handle('data:load', async () => {
@@ -534,6 +702,27 @@ ipcMain.handle('storage:clean-orphan-assets', async () => {
       } catch { /* file vanished between stat and unlink — fine */ }
     }
     return { ok: true, removed, bytes, referenced: referenced.size, scanned: onDisk.length }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// User-triggered "rename every asset now" pass. Reads the full library off
+// disk, runs the same title-based renamer that the auto-save step uses,
+// writes the JSONs back with the new paths, and returns the rewrite map so
+// the renderer can update its in-memory state without a reload.
+ipcMain.handle('storage:rename-all-assets', async () => {
+  try {
+    const data = await readSplitData()
+    if (!data) return { ok: true, renamed: 0, rewrites: [] as Rewrite[] }
+    const rewrites = await renameAllAssets(data)
+    if (rewrites.length > 0) {
+      // Persist the rewritten paths. writeSplitData will invoke the renamer
+      // a second time, but every file is already correctly named so the
+      // short-circuit fires and no additional I/O happens.
+      await writeSplitData(data)
+    }
+    return { ok: true, renamed: rewrites.length, rewrites }
   } catch (e) {
     return { ok: false, error: (e as Error).message }
   }
