@@ -380,6 +380,51 @@ function App() {
   const [dupOpen, setDupOpen] = useState(false)
   const [brokenAssetsOpen, setBrokenAssetsOpen] = useState(false)
   const [brokenAssets, setBrokenAssets] = useState<{ itemId: string; itemTitle: string; category: string; field: string; rel: string }[]>([])
+
+  // Mirror of storage:clear-asset-ref but for the in-memory items /
+  // collections / artists state, so a Clear from the broken-cover modal
+  // reflects instantly — otherwise <img> tags keep firing 404s on every
+  // render until the user hits F5.
+  const applyClearedRefLocally = (b: { itemId: string; category: string; field: string }) => {
+    skipHistoryRef.current = true
+    if (b.category === 'artists') {
+      setMusicArtists((list) => list.map((a) => {
+        if (a.id !== b.itemId) return a
+        if (b.field === 'photo')  return { ...a, photo: undefined }
+        if (b.field === 'banner') return { ...a, bannerImage: undefined }
+        return a
+      }))
+      return
+    }
+    if (b.category === 'collections') {
+      setCollections((list) => list.map((g) => (g.id === b.itemId && b.field === 'cover' ? { ...g, cover: undefined } : g)))
+      return
+    }
+    setItems((list) => list.map((it) => {
+      if (it.id !== b.itemId) return it
+      if (b.field === 'cover')     return { ...it, cover: undefined }
+      if (b.field === 'banner')    return { ...it, bannerImage: undefined }
+      if (b.field === 'banner 2')  return { ...it, bannerImage2: undefined }
+      if (b.field === 'logo')      return { ...it, logoImage: undefined }
+      if (b.field.startsWith('volume ')) {
+        const n = b.field.slice(7)
+        return { ...it, volumeCovers: it.volumeCovers?.map((v) => (String(v.number ?? '?') === n ? { ...v, cover: '' } : v)) }
+      }
+      if (b.field.startsWith('single ')) {
+        const n = b.field.slice(7)
+        return { ...it, singleCovers: it.singleCovers?.map((s) => ((s.name ?? '?') === n ? { ...s, cover: '' } : s)) }
+      }
+      if (b.field.startsWith('edition ')) {
+        const n = b.field.slice(8)
+        return { ...it, editions: it.editions?.map((e) => ((e.name ?? '?') === n ? { ...e, cover: undefined } : e)) }
+      }
+      if (b.field.startsWith('bundle ')) {
+        const n = b.field.slice(7)
+        return { ...it, bundleContents: it.bundleContents?.map((x) => ((x.name ?? '?') === n ? { ...x, cover: undefined } : x)) }
+      }
+      return it
+    }))
+  }
   const [searchOpen, setSearchOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
@@ -5484,8 +5529,22 @@ function App() {
                 <p className="hint">No broken references. Every asset path in your library resolves to a real file on disk.</p>
               ) : (
                 <>
-                  <p className="hint">{brokenAssets.length} reference{brokenAssets.length === 1 ? '' : 's'} point to a file that no longer exists. Click <strong>Clear</strong> to blank the field — then re-open the item and re-fetch cleanly.</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+                  <p className="hint">{brokenAssets.length} reference{brokenAssets.length === 1 ? '' : 's'} point to a file that no longer exists. Click <strong>Clear</strong> to blank the field — the item updates live, no reload needed. Then re-open the item and re-fetch cleanly.</p>
+                  <div className="settings-actions" style={{ marginBottom: 12 }}>
+                    <button type="button" className="secondary-btn" onClick={async () => {
+                      // Bulk clear: fire every clear in parallel, apply every
+                      // state mutation, empty the list. Same guarantees as
+                      // clicking each Clear one by one.
+                      const results = await Promise.all(brokenAssets.map((b) =>
+                        window.ipcRenderer.invoke('storage:clear-asset-ref', b.itemId, b.field, b.category) as Promise<{ ok: boolean; error?: string }>,
+                      ))
+                      brokenAssets.forEach((b, i) => { if (results[i]?.ok) applyClearedRefLocally(b) })
+                      const failed = results.filter((r) => !r?.ok).length
+                      setBrokenAssets([])
+                      setToast(failed === 0 ? `Cleared ${results.length} reference${results.length === 1 ? '' : 's'}` : `Cleared ${results.length - failed}, ${failed} failed`)
+                    }}>Clear all {brokenAssets.length}</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {brokenAssets.map((b, i) => (
                       <div key={`${b.itemId}-${b.field}-${i}`} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -5497,8 +5556,9 @@ function App() {
                         <button type="button" className="secondary-btn" onClick={async () => {
                           const r = await window.ipcRenderer.invoke('storage:clear-asset-ref', b.itemId, b.field, b.category) as { ok: boolean; error?: string }
                           if (!r?.ok) { setToast(`Failed: ${r?.error ?? 'unknown'}`); return }
+                          applyClearedRefLocally(b)
                           setBrokenAssets((list) => list.filter((_, j) => j !== i))
-                          setToast('Reference cleared — reload with F5 to see the item without it')
+                          setToast('Reference cleared')
                         }}>Clear</button>
                       </div>
                     ))}
