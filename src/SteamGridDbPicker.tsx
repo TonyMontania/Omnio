@@ -4,6 +4,7 @@
 // it to assets/videojuegos/{kind}/ and hand back the relative path.
 
 import { useEffect, useMemo, useState } from 'react'
+import { assetBasename } from './utils/files'
 
 type Kind = 'grids' | 'heroes' | 'logos'
 
@@ -96,7 +97,16 @@ export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, 
 
   const pickAsset = async (a: Asset) => {
     setDownloading(a.id)
-    const rel = await window.ipcRenderer.invoke('image:download', a.url, 'videojuegos', saveAsKind ?? KIND_TO_LOCAL[kind])
+    // Prefer the picked-game name (SGDB match), fall back to the query the
+    // user typed. Bundle sub-covers pass their sub-game name as initialQuery
+    // so this still ends up with the right on-disk name.
+    const hint = game?.name || query.trim() || initialQuery || ''
+    const folderKind = saveAsKind ?? KIND_TO_LOCAL[kind]
+    // Filename always uses the semantic kind ('cover' / 'banner' / 'logo'),
+    // even when folderKind='bundle' — matches the on-disk convention where
+    // bundle sub-covers are named "{sub-game} cover.ext".
+    const filenameKind = KIND_TO_LOCAL[kind]
+    const rel = await window.ipcRenderer.invoke('image:download', a.url, 'videojuegos', folderKind, assetBasename(hint, filenameKind))
     setDownloading(null)
     if (rel) { onPick(rel); onClose() }
     else alert('Download failed. Try another asset or check your connection.')

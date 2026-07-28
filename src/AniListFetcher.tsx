@@ -4,6 +4,7 @@
 
 import type { Item, AnimeFormat, AnimeSource, AiringStatus, PublicationStatus } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
+import { assetBasename } from './utils/files'
 
 type MediaType = 'ANIME' | 'MANGA'
 
@@ -110,16 +111,15 @@ export default function AniListFetcher({ initialQuery, kind, categoryId, onApply
   }
 
   const apply = async (m: Media) => {
+    const title = m.title.english || m.title.romaji || m.title.native || ''
     const cover = m.coverImage?.extraLarge || m.coverImage?.large
     const banner = m.bannerImage
     const coverPath = cover
-      ? await window.ipcRenderer.invoke('image:download', cover, categoryId, 'cover')
+      ? await window.ipcRenderer.invoke('image:download', cover, categoryId, 'cover', assetBasename(title, 'cover'))
       : undefined
     const bannerPath = banner
-      ? await window.ipcRenderer.invoke('image:download', banner, categoryId, 'banner')
+      ? await window.ipcRenderer.invoke('image:download', banner, categoryId, 'banner', assetBasename(title, 'banner'))
       : undefined
-
-    const title = m.title.english || m.title.romaji || m.title.native || ''
     const patch: Partial<Item> = {
       title,
       description: stripHtml(m.description),

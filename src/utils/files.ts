@@ -6,6 +6,28 @@
 
 import type { ChangeEvent } from 'react'
 
+// Filename-safe version of `raw` — strips filesystem-reserved chars, collapses
+// whitespace, trims. Mirrors sanitizeAssetName in electron/main.ts so both
+// sides pick the same on-disk name for the same title.
+export function sanitizeForFilename(raw: string): string {
+  if (!raw) return ''
+  // eslint-disable-next-line no-control-regex
+  const noBad = raw.replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().replace(/[. ]+$/g, '')
+  if (/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i.test(noBad)) return `_${noBad}`
+  return noBad.slice(0, 80)
+}
+
+// Compose the filename base ("Metro 2033 Redux cover") that gets passed to
+// image:save / image:download. Keeping this in one place means the renderer
+// and the main-process auto-rename step produce byte-identical names, so the
+// rename step short-circuits on the common case.
+export function assetBasename(hint: string | undefined, kind: string, subLabel?: string | number): string | undefined {
+  const clean = sanitizeForFilename(hint ?? '')
+  if (!clean) return undefined
+  const sub = subLabel === undefined || subLabel === null || subLabel === '' ? '' : sanitizeForFilename(String(subLabel))
+  return sub ? `${clean} ${kind} ${sub}` : `${clean} ${kind}`
+}
+
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()

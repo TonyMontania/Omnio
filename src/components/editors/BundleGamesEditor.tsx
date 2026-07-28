@@ -5,7 +5,7 @@
 import { useRef, useState } from 'react'
 import type { BundleGame, GameStatus } from '../../types'
 import { assetSrc, GAME_STATUS_OPTIONS } from '../../types'
-import { pickImageToDataUrl } from '../../utils/files'
+import { pickImageToDataUrl, assetBasename } from '../../utils/files'
 
 export default function BundleGamesEditor({
   enabled, onToggle, entries, onChange, onRequestSgdb,
@@ -68,7 +68,10 @@ function BundleRow({ entry, onPatch, onRemove, onRequestSgdb }: {
   const fileInput = useRef<HTMLInputElement>(null)
 
   const uploadCover = pickImageToDataUrl(async (dataUrl) => {
-    const rel = await window.ipcRenderer.invoke('image:save', 'videojuegos', 'bundle', dataUrl)
+    // Bundle sub-covers live under games/bundle/ but are named "{sub-game
+    // name} cover.ext" so they read as one file per bundled game (rather
+    // than being disambiguated against the parent bundle title).
+    const rel = await window.ipcRenderer.invoke('image:save', 'videojuegos', 'bundle', dataUrl, assetBasename(entry.name, 'cover'))
     if (rel) onPatch({ cover: rel })
   })
 

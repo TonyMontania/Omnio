@@ -6,6 +6,7 @@
 import { useMemo } from 'react'
 import type { Item } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
+import { assetBasename } from './utils/files'
 
 interface Props {
   apiKey?: string
@@ -106,7 +107,7 @@ export default function ComicVineFetcher({ apiKey, initialQuery, onApply, onClos
 
     const coverUrl = v.image?.super_url || v.image?.screen_url || v.image?.medium_url
     const coverPath = coverUrl
-      ? await window.ipcRenderer.invoke('image:download', coverUrl, 'comics_west', 'cover') as string | null
+      ? await window.ipcRenderer.invoke('image:download', coverUrl, 'comics_west', 'cover', assetBasename(v.name, 'cover')) as string | null
       : null
 
     onApply(volumeToPatch(v), coverPath || undefined, undefined)

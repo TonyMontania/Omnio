@@ -90,7 +90,7 @@ import DistChart from './insights/DistChart'
 import Heatmap from './insights/Heatmap'
 import RatingPicker from './components/editors/RatingPicker'
 import AnimeItemPicker from './components/editors/AnimeItemPicker'
-import { pickImageToDataUrl } from './utils/files'
+import { pickImageToDataUrl, assetBasename } from './utils/files'
 import PlatformEditor from './components/editors/PlatformEditor'
 import GameSubItems from './components/editors/GameSubItems'
 import BundleGamesEditor from './components/editors/BundleGamesEditor'
@@ -625,20 +625,20 @@ function App() {
   const loadFromDisk = async ({ applySettings }: { applySettings: boolean }): Promise<void> => {
     const migrate = async (list: Item[]): Promise<{ list: Item[]; changed: boolean }> => {
       let changed = false
-      const persist = async (val: string | undefined, categoryId: string, kind: string): Promise<string | undefined> => {
+      const persist = async (val: string | undefined, categoryId: string, kind: string, basename?: string): Promise<string | undefined> => {
         if (!val || !val.startsWith('data:')) return val
-        const rel = await window.ipcRenderer.invoke('image:save', categoryId, kind, val)
+        const rel = await window.ipcRenderer.invoke('image:save', categoryId, kind, val, basename)
         if (typeof rel === 'string') { changed = true; return rel }
         return val
       }
       const migrated = await Promise.all(list.map(async (it) => {
-        const cover = await persist(it.cover, it.categoryId, 'cover')
-        const bannerImage = await persist(it.bannerImage, it.categoryId, 'banner')
-        const bannerImage2 = await persist(it.bannerImage2, it.categoryId, 'banner')
-        const logoImage = await persist(it.logoImage, it.categoryId, 'logo')
+        const cover = await persist(it.cover, it.categoryId, 'cover', assetBasename(it.title, 'cover'))
+        const bannerImage = await persist(it.bannerImage, it.categoryId, 'banner', assetBasename(it.title, 'banner'))
+        const bannerImage2 = await persist(it.bannerImage2, it.categoryId, 'banner', assetBasename(it.title, 'banner', 2))
+        const logoImage = await persist(it.logoImage, it.categoryId, 'logo', assetBasename(it.title, 'logo'))
         let volumeCovers = it.volumeCovers
         if (volumeCovers && volumeCovers.length > 0) {
-          volumeCovers = await Promise.all(volumeCovers.map(async (v) => ({ ...v, cover: (await persist(v.cover, it.categoryId, 'volume')) ?? v.cover })))
+          volumeCovers = await Promise.all(volumeCovers.map(async (v) => ({ ...v, cover: (await persist(v.cover, it.categoryId, 'volume', assetBasename(it.title, 'volume', v.number))) ?? v.cover })))
         }
         const anyIt = it as unknown as { devs?: unknown; publisher?: unknown; publishers?: unknown }
         let devs = it.devs
@@ -657,13 +657,13 @@ function App() {
     }
     const migrateArtists = async (list: MusicArtist[]): Promise<{ list: MusicArtist[]; changed: boolean }> => {
       let changed = false
-      const persist = async (val: string | undefined): Promise<string | undefined> => {
+      const persist = async (val: string | undefined, kind: string, basename?: string): Promise<string | undefined> => {
         if (!val || !val.startsWith('data:')) return val
-        const rel = await window.ipcRenderer.invoke('image:save', 'artists', 'photo', val)
+        const rel = await window.ipcRenderer.invoke('image:save', 'artists', kind, val, basename)
         if (typeof rel === 'string') { changed = true; return rel }
         return val
       }
-      const migrated = await Promise.all(list.map(async (a) => ({ ...a, photo: await persist(a.photo), bannerImage: await persist(a.bannerImage) })))
+      const migrated = await Promise.all(list.map(async (a) => ({ ...a, photo: await persist(a.photo, 'photo', assetBasename(a.name, 'photo')), bannerImage: await persist(a.bannerImage, 'photo', assetBasename(a.name, 'banner')) })))
       return { list: migrated, changed }
     }
     const data = await window.ipcRenderer.invoke('data:load') as AppData | null
@@ -726,6 +726,20 @@ function App() {
       }))
       setMusicArtists((list) => list.map((a) => ({ ...a, photo: swap(a.photo), bannerImage: swap(a.bannerImage) })))
       setCollections((list) => list.map((g) => ({ ...g, cover: swap(g.cover) ?? g.cover })))
+      // Also refresh the currently-open editor's field states so the input
+      // boxes show the new filename immediately — without this the user
+      // would see the old UUID path until they close and reopen the modal.
+      setCover((v) => swap(v) ?? v)
+      setBannerImage((v) => swap(v) ?? v)
+      setLogoImage((v) => swap(v) ?? v)
+      setMovieBanner((v) => swap(v) ?? v)
+      setArtistPhotoField((v) => swap(v) ?? v)
+      setArtistBannerField((v) => swap(v) ?? v)
+      setCollectionCoverField((v) => swap(v) ?? v)
+      setVolumeCovers((list) => list.map((v) => ({ ...v, cover: swap(v.cover) ?? v.cover })))
+      setSingleCovers((list) => list.map((s) => ({ ...s, cover: swap(s.cover) ?? s.cover })))
+      setEditions((list) => list.map((e) => ({ ...e, cover: swap(e.cover) ?? e.cover })))
+      setBundleContents((list) => list.map((b) => ({ ...b, cover: swap(b.cover) ?? b.cover })))
     })()
   }, [items, collections, settings, musicArtists, loaded])
 
@@ -942,15 +956,15 @@ function App() {
 
   const handleSaveArtistEdit = async () => {
     if (!artistNameField.trim() || !editingArtistId) return
-    const persistArtistImg = async (val: string): Promise<string | undefined> => {
+    const persistArtistImg = async (val: string, kind: 'photo' | 'banner'): Promise<string | undefined> => {
       const trimmed = val.trim()
       if (!trimmed) return undefined
       if (!trimmed.startsWith('data:')) return trimmed
-      const rel = await window.ipcRenderer.invoke('image:save', 'artists', 'photo', trimmed)
+      const rel = await window.ipcRenderer.invoke('image:save', 'artists', 'photo', trimmed, assetBasename(artistNameField.trim(), kind))
       return typeof rel === 'string' ? rel : trimmed
     }
-    const photo = await persistArtistImg(artistPhotoField)
-    const bannerImage = await persistArtistImg(artistBannerField)
+    const photo = await persistArtistImg(artistPhotoField, 'photo')
+    const bannerImage = await persistArtistImg(artistBannerField, 'banner')
     const cleanMembers = artistMembers
       .filter((m) => m.name.trim())
       .map((m) => ({ ...m, name: m.name.trim(), roles: m.roles.filter((r) => r.trim()) }))
@@ -1688,28 +1702,29 @@ function App() {
     return base
   }
 
-  const persistDataUrl = async (val: string | undefined, categoryId: string, kind: string): Promise<string | undefined> => {
+  const persistDataUrl = async (val: string | undefined, categoryId: string, kind: string, basename?: string): Promise<string | undefined> => {
     if (!val || !val.startsWith('data:')) return val
-    const rel = await window.ipcRenderer.invoke('image:save', categoryId, kind, val)
+    const rel = await window.ipcRenderer.invoke('image:save', categoryId, kind, val, basename)
     return typeof rel === 'string' ? rel : val
   }
 
   const persistItemImages = async (item: Item): Promise<Item> => {
-    const cover = await persistDataUrl(item.cover, item.categoryId, 'cover')
-    const bannerImage = await persistDataUrl(item.bannerImage, item.categoryId, 'banner')
-    const bannerImage2 = await persistDataUrl(item.bannerImage2, item.categoryId, 'banner')
-    const logoImage = await persistDataUrl(item.logoImage, item.categoryId, 'logo')
+    const t = item.title
+    const cover = await persistDataUrl(item.cover, item.categoryId, 'cover', assetBasename(t, 'cover'))
+    const bannerImage = await persistDataUrl(item.bannerImage, item.categoryId, 'banner', assetBasename(t, 'banner'))
+    const bannerImage2 = await persistDataUrl(item.bannerImage2, item.categoryId, 'banner', assetBasename(t, 'banner', 2))
+    const logoImage = await persistDataUrl(item.logoImage, item.categoryId, 'logo', assetBasename(t, 'logo'))
     let volumeCovers = item.volumeCovers
     if (volumeCovers && volumeCovers.length > 0) {
-      volumeCovers = await Promise.all(volumeCovers.map(async (v) => ({ ...v, cover: (await persistDataUrl(v.cover, item.categoryId, 'volume')) ?? v.cover })))
+      volumeCovers = await Promise.all(volumeCovers.map(async (v) => ({ ...v, cover: (await persistDataUrl(v.cover, item.categoryId, 'volume', assetBasename(t, 'volume', v.number))) ?? v.cover })))
     }
     let singleCovers = item.singleCovers
     if (singleCovers && singleCovers.length > 0) {
-      singleCovers = await Promise.all(singleCovers.map(async (s) => ({ ...s, cover: (await persistDataUrl(s.cover, item.categoryId, 'single')) ?? s.cover })))
+      singleCovers = await Promise.all(singleCovers.map(async (s) => ({ ...s, cover: (await persistDataUrl(s.cover, item.categoryId, 'single', assetBasename(t, 'single', s.name))) ?? s.cover })))
     }
     let editions = item.editions
     if (editions && editions.length > 0) {
-      editions = await Promise.all(editions.map(async (e) => ({ ...e, cover: await persistDataUrl(e.cover, item.categoryId, 'edition') })))
+      editions = await Promise.all(editions.map(async (e) => ({ ...e, cover: await persistDataUrl(e.cover, item.categoryId, 'edition', assetBasename(t, 'edition', e.name)) })))
     }
     return { ...item, cover, bannerImage, bannerImage2, logoImage, volumeCovers, singleCovers, editions }
   }
@@ -1905,7 +1920,7 @@ function App() {
     let cover: string | undefined
     if (!trimmedCover) cover = undefined
     else if (trimmedCover.startsWith('data:')) {
-      const rel = await window.ipcRenderer.invoke('image:save', 'groups', 'cover', trimmedCover)
+      const rel = await window.ipcRenderer.invoke('image:save', 'groups', 'cover', trimmedCover, assetBasename(collectionNameField.trim(), 'cover'))
       cover = typeof rel === 'string' ? rel : trimmedCover
     } else cover = trimmedCover
     const oldCollection = collections.find((c) => c.id === editingCollectionId)

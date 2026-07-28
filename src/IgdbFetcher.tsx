@@ -6,6 +6,7 @@
 import { useMemo } from 'react'
 import type { Item, AgeRating, GameSource } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
+import { assetBasename } from './utils/files'
 
 interface Props {
   clientId?: string
@@ -241,10 +242,10 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
     const bannerUrl = bannerId ? IMG(bannerId, 't_1080p') : null
 
     const coverPath = coverUrl
-      ? await window.ipcRenderer.invoke('image:download', coverUrl, 'videojuegos', 'cover') as string | null
+      ? await window.ipcRenderer.invoke('image:download', coverUrl, 'videojuegos', 'cover', assetBasename(g.name, 'cover')) as string | null
       : null
     const bannerPath = bannerUrl
-      ? await window.ipcRenderer.invoke('image:download', bannerUrl, 'videojuegos', 'banner') as string | null
+      ? await window.ipcRenderer.invoke('image:download', bannerUrl, 'videojuegos', 'banner', assetBasename(g.name, 'banner')) as string | null
       : null
 
     // Dev-tools breadcrumb: DevTools' default filter hides `debug` under

@@ -5,6 +5,7 @@
 
 import type { Item, MusicType, MusicSource, Track } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
+import { assetBasename } from './utils/files'
 
 interface Props {
   initialQuery: string
@@ -88,7 +89,7 @@ export default function MusicBrainzFetcher({ initialQuery, onApply, onClose }: P
     // Cover Art Archive returns a redirect to the actual image. `front-500`
     // is the "medium" front cover — usually enough for a music card.
     const caaUrl = `https://coverartarchive.org/release/${releaseId}/front-500`
-    const coverPath = await window.ipcRenderer.invoke('image:download', caaUrl, 'musica', 'cover') as string | null
+    const coverPath = await window.ipcRenderer.invoke('image:download', caaUrl, 'musica', 'cover', assetBasename(rg.title, 'cover')) as string | null
 
     // Flatten multi-disc into one numbered tracklist. MB tracks already
     // carry a per-medium `number` string like "1", "A1" for vinyl, etc.

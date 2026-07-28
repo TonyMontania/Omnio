@@ -382,16 +382,15 @@ async function renameItemAssets(it: Record<string, unknown>, rewrites: Rewrite[]
   if (Array.isArray(vols)) {
     for (const v of vols) {
       if (typeof v.cover === 'string' && v.number != null && v.number !== '') {
-        const label = sanitizeAssetName(`vol ${v.number}`)
-        v.cover = await renameRelIfNeeded(v.cover, `${title} ${label}`, rewrites)
+        v.cover = await renameRelIfNeeded(v.cover, `${title} volume ${sanitizeAssetName(String(v.number))}`, rewrites)
       }
     }
   }
-  const singles = it.singleCovers as { title?: string; cover?: string }[] | undefined
+  const singles = it.singleCovers as { name?: string; cover?: string }[] | undefined
   if (Array.isArray(singles)) {
     for (const s of singles) {
-      if (typeof s.cover === 'string' && s.title) {
-        const label = sanitizeAssetName(s.title)
+      if (typeof s.cover === 'string' && s.name) {
+        const label = sanitizeAssetName(s.name)
         if (label) s.cover = await renameRelIfNeeded(s.cover, `${title} single ${label}`, rewrites)
       }
     }
@@ -401,7 +400,7 @@ async function renameItemAssets(it: Record<string, unknown>, rewrites: Rewrite[]
     for (const e of editions) {
       if (typeof e.cover === 'string' && e.name) {
         const label = sanitizeAssetName(e.name)
-        if (label) e.cover = await renameRelIfNeeded(e.cover, `${title} ${label} edition`, rewrites)
+        if (label) e.cover = await renameRelIfNeeded(e.cover, `${title} edition ${label}`, rewrites)
       }
     }
   }
@@ -410,6 +409,8 @@ async function renameItemAssets(it: Record<string, unknown>, rewrites: Rewrite[]
     for (const b of bundles) {
       if (typeof b.cover === 'string' && b.name) {
         const label = sanitizeAssetName(b.name)
+        // Bundle sub-covers use the sub-game name (not the parent bundle
+        // title) so browsing games/bundle/ reads as one file per sub-game.
         if (label) b.cover = await renameRelIfNeeded(b.cover, `${label} cover`, rewrites)
       }
     }
@@ -584,7 +585,23 @@ ipcMain.handle('data:restore-backup', async (_event, name: string) => {
   return true
 })
 
-ipcMain.handle('image:save', async (_event, categoryId: string, kind: string, dataUrl: string) => {
+// Compute the on-disk filename for a new asset. When `basename` (a
+// caller-supplied filename base like "Metro 2033 Redux cover") is present,
+// uses it with a numeric-suffix collision handler. Falls back to a UUID
+// when no basename is given so callers without the item title still work.
+async function buildAssetFilename(dir: string, basename: string | undefined, ext: string): Promise<string> {
+  const clean = basename ? sanitizeAssetName(basename) : ''
+  if (!clean) return `${crypto.randomUUID()}.${ext}`
+  const primary = `${clean}.${ext}`
+  if (!await fileExists(path.join(dir, primary))) return primary
+  for (let n = 2; n < 1000; n++) {
+    const candidate = `${clean} ${n}.${ext}`
+    if (!await fileExists(path.join(dir, candidate))) return candidate
+  }
+  return `${crypto.randomUUID()}.${ext}`
+}
+
+ipcMain.handle('image:save', async (_event, categoryId: string, kind: string, dataUrl: string, basename?: string) => {
   const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl)
   if (!match) return null
   const mime = match[1]
@@ -594,7 +611,7 @@ ipcMain.handle('image:save', async (_event, categoryId: string, kind: string, da
   const safeKind = kind.replace(/[^a-z0-9_-]/gi, '')
   const dir = path.join(ASSETS_ROOT, safeCategory, safeKind)
   await fs.mkdir(dir, { recursive: true })
-  const filename = `${crypto.randomUUID()}.${ext}`
+  const filename = await buildAssetFilename(dir, basename, ext)
   await fs.writeFile(path.join(dir, filename), buf)
   return `${safeCategory}/${safeKind}/${filename}`
 })
@@ -1366,7 +1383,7 @@ const EXT_FROM_URL: Record<string, string> = {
   png: 'png', jpg: 'jpg', jpeg: 'jpg', webp: 'webp', gif: 'gif', avif: 'avif', bmp: 'bmp', svg: 'svg',
 }
 
-ipcMain.handle('image:download', async (_event, url: string, categoryId: string, kind: string) => {
+ipcMain.handle('image:download', async (_event, url: string, categoryId: string, kind: string, basename?: string) => {
   try {
     const r = await fetch(url)
     if (!r.ok) return null
@@ -1381,7 +1398,7 @@ ipcMain.handle('image:download', async (_event, url: string, categoryId: string,
     const safeKind = kind.replace(/[^a-z0-9_-]/gi, '')
     const dir = path.join(ASSETS_ROOT, safeCategory, safeKind)
     await fs.mkdir(dir, { recursive: true })
-    const filename = `${crypto.randomUUID()}.${ext}`
+    const filename = await buildAssetFilename(dir, basename, ext)
     await fs.writeFile(path.join(dir, filename), buf)
     return `${safeCategory}/${safeKind}/${filename}`
   } catch {

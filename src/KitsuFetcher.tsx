@@ -5,6 +5,7 @@
 
 import type { Item, AnimeFormat, AnimeSeason, AiringStatus, AgeRating, PublicationStatus } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
+import { assetBasename } from './utils/files'
 
 type Kind = 'anime' | 'manga'
 
@@ -136,13 +137,14 @@ export default function KitsuFetcher({ initialQuery, kind, categoryId, onApply, 
 
   const apply = async (h: KitsuHit) => {
     const a = h.attributes
+    const title = a.canonicalTitle || a.titles?.en || a.titles?.en_jp || a.titles?.ja_jp || ''
     const coverUrl = a.posterImage?.large || a.posterImage?.medium || a.posterImage?.small
     const bannerUrl = a.coverImage?.large || a.coverImage?.original
     const coverPath = coverUrl
-      ? await window.ipcRenderer.invoke('image:download', coverUrl, categoryId, 'cover') as string | null
+      ? await window.ipcRenderer.invoke('image:download', coverUrl, categoryId, 'cover', assetBasename(title, 'cover')) as string | null
       : null
     const bannerPath = bannerUrl
-      ? await window.ipcRenderer.invoke('image:download', bannerUrl, categoryId, 'banner') as string | null
+      ? await window.ipcRenderer.invoke('image:download', bannerUrl, categoryId, 'banner', assetBasename(title, 'banner')) as string | null
       : null
 
     onApply(hitToPatch(kind, h), coverPath || undefined, bannerPath || undefined)
