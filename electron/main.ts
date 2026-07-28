@@ -1532,11 +1532,24 @@ ipcMain.handle('storage:clear-asset-ref', async (_event, itemId: string, field: 
 })
 
 app.whenReady().then(() => {
-  protocol.handle('omnio-asset', (request) => {
+  protocol.handle('omnio-asset', async (request) => {
     const url = new URL(request.url)
     const rel = decodeURIComponent(url.hostname + url.pathname)
     const resolved = safeRelative(rel)
-    if (!resolved) return new Response('Not found', { status: 404 })
+    if (!resolved) {
+      // eslint-disable-next-line no-console
+      console.warn('[omnio-asset] rejected path traversal or bad path:', rel)
+      return new Response('Not found', { status: 404 })
+    }
+    // Explicit existence check with a clear log line, so a broken cover in
+    // the DOM points at exactly which rel path is missing instead of just
+    // a stack-trace from net.fetch. Helps triage the "still broken after
+    // audit" cases.
+    if (!await fileExists(resolved)) {
+      // eslint-disable-next-line no-console
+      console.warn('[omnio-asset] MISSING:', rel, '(resolved to', resolved, ')')
+      return new Response('Not found', { status: 404 })
+    }
     return net.fetch(pathToFileURL(resolved).toString())
   })
   createWindow()
