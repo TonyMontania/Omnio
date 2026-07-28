@@ -58,6 +58,7 @@ import ItemCard from './ItemCard'
 import Toast from './Toast'
 import BackupList from './BackupList'
 import BulkActionBar from './BulkActionBar'
+const ReleaseCalendar    = lazy(() => import('./ReleaseCalendar'))
 const GameDetailModal   = lazy(() => import('./GameDetailModal'))
 const MusicDetailModal  = lazy(() => import('./MusicDetailModal'))
 const ArtistDetailView  = lazy(() => import('./ArtistDetailView'))
@@ -83,7 +84,7 @@ const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 import { buildStaticSiteHtml } from './exportSite'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
-  InsightsIcon, SettingsIcon, ChevronIcon, FolderIcon,
+  InsightsIcon, SettingsIcon, ChevronIcon, FolderIcon, CalendarIcon,
 } from './icons'
 
 // Editors and pickers used inside detail modals and the toolbar
@@ -302,7 +303,7 @@ function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [loaded, setLoaded] = useState(false)
   const [layout, setLayout] = useState<Layout>('grid')
-  const [specialView, setSpecialView] = useState<'none' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'stats' | 'settings'>('none')
+  const [specialView, setSpecialView] = useState<'none' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'stats' | 'calendar' | 'settings'>('none')
   const [animeBoardStatus, setAnimeBoardStatus] = useState<AnimeStatus>('plan_to_watch')
   const [seriesBoardStatus, setSeriesBoardStatus] = useState<SeriesStatus>('plan_to_watch')
   const [viewingSeries, setViewingSeries] = useState<Item | null>(null)
@@ -2326,6 +2327,10 @@ function App() {
               <span className="nav-icon"><InsightsIcon /></span>
               <span>Statistics</span>
             </button>
+            <button className={specialView === 'calendar' ? 'nav-item active' : 'nav-item'} onClick={() => { setSpecialView('calendar'); closePanel(); closeAllDetailViews() }}>
+              <span className="nav-icon"><CalendarIcon /></span>
+              <span>Release calendar</span>
+            </button>
           </div>
 
           <div className="sidebar-footer">
@@ -3050,6 +3055,12 @@ function App() {
               </div>
               </div>
             </>
+          )}
+
+          {specialView === 'calendar' && (
+            <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
+              <ReleaseCalendar items={items} onNavigate={navigateToItem} />
+            </Suspense>
           )}
 
           {specialView === 'settings' && (
