@@ -1521,12 +1521,19 @@ function App() {
     setPanelOpen(true)
   }
 
-  const closePanel = () => {
+  const closePanel = ({ afterSave = false }: { afterSave?: boolean } = {}) => {
     // If the user fetched artwork during this edit session but never saved,
     // the file lives on disk but isn't referenced by any item. Compare the
     // current form state against the persisted item and unlink any transient
     // assets before closing.
-    if (editingId && editingItem) {
+    //
+    // afterSave=true skips this entirely: handleSave already ran
+    // findOrphanedItemAssets against the just-persisted item, and the current
+    // form state IS the saved state. If we ran the cleanup here we'd read a
+    // stale editingItem (React hasn't propagated the setItems yet) and
+    // delete files that were just saved — the exact "artwork downloaded,
+    // then 404" bug.
+    if (!afterSave && editingId && editingItem) {
       const orphanCandidates: (string | undefined)[] = [
         cover !== editingItem.cover ? cover : undefined,
         bannerImage !== editingItem.bannerImage ? bannerImage : undefined,
@@ -1540,9 +1547,10 @@ function App() {
       for (const c of orphanCandidates) {
         if (isLocalAssetPath(c)) window.ipcRenderer.invoke('image:delete', c)
       }
-    } else if (!editingId) {
-      // "Add" mode: nothing was ever persisted, so every asset in the form
-      // is transient and safe to remove.
+    } else if (!afterSave && !editingId) {
+      // "Add" mode + cancel: nothing was ever persisted, so every asset in
+      // the form is transient and safe to remove. When afterSave=true the
+      // item just got saved so its assets are legitimately referenced now.
       for (const c of [cover, bannerImage, logoImage, movieBanner]) {
         if (isLocalAssetPath(c)) window.ipcRenderer.invoke('image:delete', c)
       }
@@ -1943,7 +1951,7 @@ function App() {
       setItems((prev) => [...prev, created])
     }
     setToast('Saved')
-    closePanel()
+    closePanel({ afterSave: true })
   }
 
   const performDelete = (item: Item) => {
@@ -3846,7 +3854,7 @@ function App() {
               <div className="panel-header">
               <h3>{editingId ? `Edit ${current?.label}` : `Add ${current?.label}`}</h3>
               <div className="panel-header-actions">
-                <button className="panel-close" onClick={closePanel}>✕</button>
+                <button className="panel-close" onClick={() => closePanel()}>✕</button>
               </div>
             </div>
             <>
@@ -5555,7 +5563,7 @@ function App() {
                     </div>
                   )}
                   <div className="panel-footer-right">
-                    <button className="ghost" onClick={closePanel}>Cancel</button>
+                    <button className="ghost" onClick={() => closePanel()}>Cancel</button>
                     <button className="primary" onClick={handleSave}>{editingId ? 'Save changes' : 'Add'}</button>
                   </div>
                 </div>
