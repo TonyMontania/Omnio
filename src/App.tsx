@@ -5531,17 +5531,15 @@ function App() {
                 <>
                   <p className="hint">{brokenAssets.length} reference{brokenAssets.length === 1 ? '' : 's'} point to a file that no longer exists. Click <strong>Clear</strong> to blank the field — the item updates live, no reload needed. Then re-open the item and re-fetch cleanly.</p>
                   <div className="settings-actions" style={{ marginBottom: 12 }}>
-                    <button type="button" className="secondary-btn" onClick={async () => {
-                      // Bulk clear via a single IPC that groups refs by source
-                      // file and rewrites each JSON exactly once. The earlier
-                      // parallel per-ref version raced on shared files and
-                      // dropped every clear except the last one per file.
-                      const payload = brokenAssets.map((b) => ({ itemId: b.itemId, field: b.field, source: b.category }))
-                      const r = await window.ipcRenderer.invoke('storage:clear-asset-refs', payload) as { ok: boolean; cleared: number; errors: string[] }
+                    <button type="button" className="secondary-btn" onClick={() => {
+                      // Update in-memory state; autosave persists to disk on
+                      // the next tick. No IPC round-trip means no risk of
+                      // "handler not registered" (stale dev main.js) or races
+                      // on shared JSON files between parallel per-ref writes.
                       brokenAssets.forEach((b) => applyClearedRefLocally(b))
+                      const n = brokenAssets.length
                       setBrokenAssets([])
-                      if (r?.ok) setToast(`Cleared ${r.cleared} reference${r.cleared === 1 ? '' : 's'}`)
-                      else setToast(`Cleared ${r?.cleared ?? 0}, errors: ${(r?.errors ?? []).join('; ')}`)
+                      setToast(`Cleared ${n} reference${n === 1 ? '' : 's'}`)
                     }}>Clear all {brokenAssets.length}</button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -5553,9 +5551,7 @@ function App() {
                             <code>{b.category}</code> · {b.field} · <code style={{ opacity: 0.7 }}>{b.rel}</code>
                           </div>
                         </div>
-                        <button type="button" className="secondary-btn" onClick={async () => {
-                          const r = await window.ipcRenderer.invoke('storage:clear-asset-ref', b.itemId, b.field, b.category) as { ok: boolean; error?: string }
-                          if (!r?.ok) { setToast(`Failed: ${r?.error ?? 'unknown'}`); return }
+                        <button type="button" className="secondary-btn" onClick={() => {
                           applyClearedRefLocally(b)
                           setBrokenAssets((list) => list.filter((_, j) => j !== i))
                           setToast('Reference cleared')
