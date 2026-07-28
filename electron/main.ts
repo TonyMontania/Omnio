@@ -1479,13 +1479,44 @@ ipcMain.handle('storage:audit-broken-assets', async () => {
   return { ok: true, broken }
 })
 
-// Clear a specific asset reference on a specific item. Called from the
-// broken-cover UI after the user chooses to unlink a dangling path.
-// Locates the item across all category JSONs by id, blanks the field,
-// writes back. Nested arrays (volumeCovers etc.) use "kind:index" or the
-// nested field's own id when passed.
+// Blanks the field on the given item record in-place. Extracted so the
+// single-ref and bulk-refs handlers share the exact same field-lookup rules.
+function clearRefOnItem(it: Record<string, unknown>, field: string): void {
+  if (field === 'cover') it.cover = undefined
+  else if (field === 'banner') it.bannerImage = undefined
+  else if (field === 'banner 2') it.bannerImage2 = undefined
+  else if (field === 'logo') it.logoImage = undefined
+  else if (field === 'photo') it.photo = undefined
+  else if (field.startsWith('volume ')) {
+    const n = field.slice(7)
+    for (const v of (it.volumeCovers as { number?: string | number; cover?: string }[] | undefined) ?? []) {
+      if (String(v.number ?? '?') === n) v.cover = undefined
+    }
+  } else if (field.startsWith('single ')) {
+    const n = field.slice(7)
+    for (const x of (it.singleCovers as { name?: string; cover?: string }[] | undefined) ?? []) {
+      if ((x.name ?? '?') === n) x.cover = undefined
+    }
+  } else if (field.startsWith('edition ')) {
+    const n = field.slice(8)
+    for (const x of (it.editions as { name?: string; cover?: string }[] | undefined) ?? []) {
+      if ((x.name ?? '?') === n) x.cover = undefined
+    }
+  } else if (field.startsWith('bundle ')) {
+    const n = field.slice(7)
+    for (const x of (it.bundleContents as { name?: string; cover?: string }[] | undefined) ?? []) {
+      if ((x.name ?? '?') === n) x.cover = undefined
+    }
+  }
+}
+
+const sourceToFilename = (source: string) =>
+  source === 'collections' ? 'collections.json' : source === 'artists' ? 'artists.json' : fileForCategory(source)
+
+// Clear a single asset reference. Convenience wrapper around
+// storage:clear-asset-refs for the one-off Clear button in the UI.
 ipcMain.handle('storage:clear-asset-ref', async (_event, itemId: string, field: string, source: string) => {
-  const filename = source === 'collections' ? 'collections.json' : source === 'artists' ? 'artists.json' : fileForCategory(source)
+  const filename = sourceToFilename(source)
   const p = path.join(DATA_DIR, filename)
   let raw: string
   try { raw = await fs.readFile(p, 'utf-8') } catch { return { ok: false, error: `Cannot read ${filename}` } }
@@ -1495,32 +1526,7 @@ ipcMain.handle('storage:clear-asset-ref', async (_event, itemId: string, field: 
   const list = parsed as Record<string, unknown>[]
   const it = list.find((x) => String(x.id) === itemId)
   if (!it) return { ok: false, error: 'Item not found' }
-  if (field === 'cover') it.cover = undefined
-  else if (field === 'banner') it.bannerImage = undefined
-  else if (field === 'banner 2') it.bannerImage2 = undefined
-  else if (field === 'logo') it.logoImage = undefined
-  else if (field === 'photo') it.photo = undefined
-  else if (field.startsWith('volume ')) {
-    const n = field.slice(7)
-    const vols = (it.volumeCovers as { number?: string | number; cover?: string }[] | undefined) ?? []
-    const v = vols.find((x) => String(x.number ?? '?') === n)
-    if (v) v.cover = undefined
-  } else if (field.startsWith('single ')) {
-    const n = field.slice(7)
-    const arr = (it.singleCovers as { name?: string; cover?: string }[] | undefined) ?? []
-    const x = arr.find((y) => (y.name ?? '?') === n)
-    if (x) x.cover = undefined
-  } else if (field.startsWith('edition ')) {
-    const n = field.slice(8)
-    const arr = (it.editions as { name?: string; cover?: string }[] | undefined) ?? []
-    const x = arr.find((y) => (y.name ?? '?') === n)
-    if (x) x.cover = undefined
-  } else if (field.startsWith('bundle ')) {
-    const n = field.slice(7)
-    const arr = (it.bundleContents as { name?: string; cover?: string }[] | undefined) ?? []
-    const x = arr.find((y) => (y.name ?? '?') === n)
-    if (x) x.cover = undefined
-  }
+  clearRefOnItem(it, field)
   const content = JSON.stringify(list, null, 2)
   try {
     await fs.writeFile(p, content, 'utf-8')
@@ -1529,6 +1535,50 @@ ipcMain.handle('storage:clear-asset-ref', async (_event, itemId: string, field: 
   } catch (e) {
     return { ok: false, error: (e as Error).message }
   }
+})
+
+// Bulk clear. Groups refs by source file first so each JSON is read,
+// mutated with every ref that targets it, then written exactly once.
+// Fixes the race the parallel per-ref UI used to have — writes to the
+// same file used to overwrite each other, keeping only the last clear.
+ipcMain.handle('storage:clear-asset-refs', async (_event, refs: { itemId: string; field: string; source: string }[]) => {
+  const bySource = new Map<string, { itemId: string; field: string }[]>()
+  for (const r of refs) {
+    const arr = bySource.get(r.source) ?? []
+    arr.push({ itemId: r.itemId, field: r.field })
+    bySource.set(r.source, arr)
+  }
+  let cleared = 0
+  const errors: string[] = []
+  for (const [source, entries] of bySource) {
+    const filename = sourceToFilename(source)
+    const p = path.join(DATA_DIR, filename)
+    let raw: string
+    try { raw = await fs.readFile(p, 'utf-8') } catch { errors.push(`Cannot read ${filename}`); continue }
+    let parsed: unknown
+    try { parsed = JSON.parse(raw) } catch { errors.push(`Cannot parse ${filename}`); continue }
+    if (!Array.isArray(parsed)) { errors.push(`${filename} is not an array`); continue }
+    const list = parsed as Record<string, unknown>[]
+    const byId = new Map<string, Record<string, unknown>>()
+    for (const it of list) byId.set(String(it.id ?? ''), it)
+    let touched = 0
+    for (const e of entries) {
+      const it = byId.get(e.itemId)
+      if (!it) continue
+      clearRefOnItem(it, e.field)
+      touched++
+    }
+    if (touched === 0) continue
+    const content = JSON.stringify(list, null, 2)
+    try {
+      await fs.writeFile(p, content, 'utf-8')
+      lastHashes[p] = sha1(content)
+      cleared += touched
+    } catch (err) {
+      errors.push(`${filename}: ${(err as Error).message}`)
+    }
+  }
+  return { ok: errors.length === 0, cleared, errors }
 })
 
 app.whenReady().then(() => {

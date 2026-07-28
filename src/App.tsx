@@ -5532,16 +5532,16 @@ function App() {
                   <p className="hint">{brokenAssets.length} reference{brokenAssets.length === 1 ? '' : 's'} point to a file that no longer exists. Click <strong>Clear</strong> to blank the field — the item updates live, no reload needed. Then re-open the item and re-fetch cleanly.</p>
                   <div className="settings-actions" style={{ marginBottom: 12 }}>
                     <button type="button" className="secondary-btn" onClick={async () => {
-                      // Bulk clear: fire every clear in parallel, apply every
-                      // state mutation, empty the list. Same guarantees as
-                      // clicking each Clear one by one.
-                      const results = await Promise.all(brokenAssets.map((b) =>
-                        window.ipcRenderer.invoke('storage:clear-asset-ref', b.itemId, b.field, b.category) as Promise<{ ok: boolean; error?: string }>,
-                      ))
-                      brokenAssets.forEach((b, i) => { if (results[i]?.ok) applyClearedRefLocally(b) })
-                      const failed = results.filter((r) => !r?.ok).length
+                      // Bulk clear via a single IPC that groups refs by source
+                      // file and rewrites each JSON exactly once. The earlier
+                      // parallel per-ref version raced on shared files and
+                      // dropped every clear except the last one per file.
+                      const payload = brokenAssets.map((b) => ({ itemId: b.itemId, field: b.field, source: b.category }))
+                      const r = await window.ipcRenderer.invoke('storage:clear-asset-refs', payload) as { ok: boolean; cleared: number; errors: string[] }
+                      brokenAssets.forEach((b) => applyClearedRefLocally(b))
                       setBrokenAssets([])
-                      setToast(failed === 0 ? `Cleared ${results.length} reference${results.length === 1 ? '' : 's'}` : `Cleared ${results.length - failed}, ${failed} failed`)
+                      if (r?.ok) setToast(`Cleared ${r.cleared} reference${r.cleared === 1 ? '' : 's'}`)
+                      else setToast(`Cleared ${r?.cleared ?? 0}, errors: ${(r?.errors ?? []).join('; ')}`)
                     }}>Clear all {brokenAssets.length}</button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
