@@ -5,7 +5,7 @@
 import { useMemo } from 'react'
 import type { Item, Season, SeriesFormat } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
-import { assetBasename } from './utils/files'
+import { assetBasename, downloadImageAsset } from './utils/files'
 
 type Kind = 'movie' | 'tv'
 
@@ -206,10 +206,10 @@ export default function TmdbFetcher({ apiKey, initialQuery, kind, categoryId, on
     const coverUrl = POSTER_URL(d.poster_path)
     const bannerUrl = BACK_URL(d.backdrop_path)
     const coverPath = coverUrl
-      ? await window.ipcRenderer.invoke('image:download', coverUrl, categoryId, 'cover', assetBasename(title, 'cover')) as string | null
+      ? await downloadImageAsset( coverUrl, categoryId, 'cover', assetBasename(title, 'cover')) as string | null
       : null
     const bannerPath = bannerUrl
-      ? await window.ipcRenderer.invoke('image:download', bannerUrl, categoryId, 'banner', assetBasename(title, 'banner')) as string | null
+      ? await downloadImageAsset( bannerUrl, categoryId, 'banner', assetBasename(title, 'banner')) as string | null
       : null
 
     onApply(detailsToPatch(kind, d), coverPath || undefined, bannerPath || undefined)

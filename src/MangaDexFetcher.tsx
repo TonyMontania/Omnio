@@ -5,7 +5,7 @@
 
 import type { Item, MangaSource, PublicationStatus, MangaVolume, AgeRating } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
-import { assetBasename } from './utils/files'
+import { assetBasename, downloadImageAsset } from './utils/files'
 
 interface Props {
   initialQuery: string
@@ -139,7 +139,7 @@ export default function MangaDexFetcher({ initialQuery, categoryId, onApply, onC
     const title = pickLocalized(m.attributes.title) || ''
     const url = coverUrlFor(m, 512)
     const coverPath = url
-      ? await window.ipcRenderer.invoke('image:download', url, categoryId, 'cover', assetBasename(title, 'cover')) as string | null
+      ? await downloadImageAsset( url, categoryId, 'cover', assetBasename(title, 'cover')) as string | null
       : null
 
     // List every cover MangaDex has, then download the ones tagged with a
@@ -163,7 +163,7 @@ export default function MangaDexFetcher({ initialQuery, categoryId, onApply, onC
         const vol = c.attributes!.volume!
         const file = c.attributes!.fileName!
         const coverUrl = `https://uploads.mangadex.org/covers/${m.id}/${file}.512.jpg`
-        const rel = await window.ipcRenderer.invoke('image:download', coverUrl, categoryId, 'volume', assetBasename(title, 'volume', vol)) as string | null
+        const rel = await downloadImageAsset( coverUrl, categoryId, 'volume', assetBasename(title, 'volume', vol)) as string | null
         return rel ? { id: crypto.randomUUID() as string, number: vol, cover: rel } : null
       }))
       volumeCovers = downloads.filter((v): v is MangaVolume => v !== null)

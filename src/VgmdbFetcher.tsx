@@ -4,7 +4,7 @@
 
 import type { Item, Track } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
-import { assetBasename } from './utils/files'
+import { assetBasename, downloadImageAsset } from './utils/files'
 
 interface Props {
   initialQuery: string
@@ -95,7 +95,7 @@ export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) 
     const albumTitle = d.name || d.names?.en || d.names?.ja || hit.titles?.en || hit.titles?.ja || ''
     const coverUrl = d.picture_full || d.picture_small
     const coverPath = coverUrl
-      ? await window.ipcRenderer.invoke('image:download', coverUrl, 'musica', 'cover', assetBasename(albumTitle, 'cover')) as string | null
+      ? await downloadImageAsset( coverUrl, 'musica', 'cover', assetBasename(albumTitle, 'cover')) as string | null
       : null
 
     // Flatten multi-disc into one running tracklist; VGMdb often omits

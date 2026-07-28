@@ -1383,26 +1383,151 @@ const EXT_FROM_URL: Record<string, string> = {
   png: 'png', jpg: 'jpg', jpeg: 'jpg', webp: 'webp', gif: 'gif', avif: 'avif', bmp: 'bmp', svg: 'svg',
 }
 
+// Fetches an image URL with up to 3 attempts (short backoff on network /
+// 5xx errors). Returns { ok, path } | { ok: false, error } so callers can
+// surface a real reason to the user instead of a silent null.
 ipcMain.handle('image:download', async (_event, url: string, categoryId: string, kind: string, basename?: string) => {
-  try {
-    const r = await fetch(url)
-    if (!r.ok) return null
-    const ct = r.headers.get('content-type') ?? ''
-    const buf = Buffer.from(await r.arrayBuffer())
-    let ext = EXT_FROM_MIME[ct.split(';')[0].trim()]
-    if (!ext) {
-      const urlExt = url.split('?')[0].split('.').pop()?.toLowerCase() ?? ''
-      ext = EXT_FROM_URL[urlExt] ?? 'bin'
+  const attempt = async (): Promise<{ ok: true; buf: Buffer; ct: string } | { ok: false; error: string; retriable: boolean }> => {
+    try {
+      const r = await fetch(url)
+      if (!r.ok) {
+        const retriable = r.status === 408 || r.status === 429 || r.status === 500 || r.status === 502 || r.status === 503 || r.status === 504
+        return { ok: false, error: `HTTP ${r.status}`, retriable }
+      }
+      const ct = r.headers.get('content-type') ?? ''
+      const buf = Buffer.from(await r.arrayBuffer())
+      return { ok: true, buf, ct }
+    } catch (e) {
+      // Network-level errors (DNS, connection reset, timeout) are always worth a retry.
+      return { ok: false, error: (e as Error).message, retriable: true }
     }
-    const safeCategory = assetFolderForCategory(categoryId).replace(/[^a-z0-9_-]/gi, '')
-    const safeKind = kind.replace(/[^a-z0-9_-]/gi, '')
-    const dir = path.join(ASSETS_ROOT, safeCategory, safeKind)
-    await fs.mkdir(dir, { recursive: true })
-    const filename = await buildAssetFilename(dir, basename, ext)
-    await fs.writeFile(path.join(dir, filename), buf)
-    return `${safeCategory}/${safeKind}/${filename}`
-  } catch {
-    return null
+  }
+  let last = { ok: false as const, error: 'Download failed', retriable: false }
+  for (let i = 0; i < 3; i++) {
+    const r = await attempt()
+    if (r.ok) {
+      let ext = EXT_FROM_MIME[r.ct.split(';')[0].trim()]
+      if (!ext) {
+        const urlExt = url.split('?')[0].split('.').pop()?.toLowerCase() ?? ''
+        ext = EXT_FROM_URL[urlExt] ?? 'bin'
+      }
+      const safeCategory = assetFolderForCategory(categoryId).replace(/[^a-z0-9_-]/gi, '')
+      const safeKind = kind.replace(/[^a-z0-9_-]/gi, '')
+      const dir = path.join(ASSETS_ROOT, safeCategory, safeKind)
+      try {
+        await fs.mkdir(dir, { recursive: true })
+        const filename = await buildAssetFilename(dir, basename, ext)
+        await fs.writeFile(path.join(dir, filename), r.buf)
+        return { ok: true, path: `${safeCategory}/${safeKind}/${filename}` }
+      } catch (e) {
+        return { ok: false, error: `Disk write failed: ${(e as Error).message}` }
+      }
+    }
+    last = r
+    if (!r.retriable) break
+    if (i < 2) await new Promise((res) => setTimeout(res, 600 * (i + 1)))
+  }
+  return { ok: false, error: last.error }
+})
+
+// Audit every asset reference across items / artists / groups and return
+// the ones whose file is missing on disk. Used by Settings → Maintenance →
+// "Find broken covers" so users can spot and clean up references that
+// point to files a fetch never actually wrote (silent failures pre-0.3).
+ipcMain.handle('storage:audit-broken-assets', async () => {
+  const broken: { itemId: string; itemTitle: string; category: string; field: string; rel: string }[] = []
+  const check = async (rel: unknown, itemId: string, itemTitle: string, category: string, field: string): Promise<boolean> => {
+    if (typeof rel !== 'string' || !rel) return true
+    if (/^(data:|https?:|blob:)/i.test(rel)) return true  // external / inline — not our disk
+    const abs = safeRelative(rel)
+    if (!abs) return true
+    if (await fileExists(abs)) return true
+    broken.push({ itemId, itemTitle, category, field, rel })
+    return false
+  }
+  const jsonNames = [...CATEGORY_IDS.map(fileForCategory), 'collections.json', 'artists.json']
+  for (const name of jsonNames) {
+    const p = path.join(DATA_DIR, name)
+    let raw: string
+    try { raw = await fs.readFile(p, 'utf-8') } catch { continue }
+    let parsed: unknown
+    try { parsed = JSON.parse(raw) } catch { continue }
+    if (!Array.isArray(parsed)) continue
+    const source = name.replace(/\.json$/, '')
+    for (const it of parsed as Record<string, unknown>[]) {
+      const id = String(it.id ?? '')
+      const title = String(it.title ?? it.name ?? '(untitled)')
+      await check(it.cover, id, title, source, 'cover')
+      await check(it.bannerImage, id, title, source, 'banner')
+      await check(it.bannerImage2, id, title, source, 'banner 2')
+      await check(it.logoImage, id, title, source, 'logo')
+      await check(it.photo, id, title, source, 'photo')
+      for (const v of (it.volumeCovers as { number?: string | number; cover?: string }[] | undefined) ?? []) {
+        await check(v.cover, id, title, source, `volume ${v.number ?? '?'}`)
+      }
+      for (const s of (it.singleCovers as { name?: string; cover?: string }[] | undefined) ?? []) {
+        await check(s.cover, id, title, source, `single ${s.name ?? '?'}`)
+      }
+      for (const e of (it.editions as { name?: string; cover?: string }[] | undefined) ?? []) {
+        await check(e.cover, id, title, source, `edition ${e.name ?? '?'}`)
+      }
+      for (const b of (it.bundleContents as { name?: string; cover?: string }[] | undefined) ?? []) {
+        await check(b.cover, id, title, source, `bundle ${b.name ?? '?'}`)
+      }
+    }
+  }
+  return { ok: true, broken }
+})
+
+// Clear a specific asset reference on a specific item. Called from the
+// broken-cover UI after the user chooses to unlink a dangling path.
+// Locates the item across all category JSONs by id, blanks the field,
+// writes back. Nested arrays (volumeCovers etc.) use "kind:index" or the
+// nested field's own id when passed.
+ipcMain.handle('storage:clear-asset-ref', async (_event, itemId: string, field: string, source: string) => {
+  const filename = source === 'collections' ? 'collections.json' : source === 'artists' ? 'artists.json' : fileForCategory(source)
+  const p = path.join(DATA_DIR, filename)
+  let raw: string
+  try { raw = await fs.readFile(p, 'utf-8') } catch { return { ok: false, error: `Cannot read ${filename}` } }
+  let parsed: unknown
+  try { parsed = JSON.parse(raw) } catch { return { ok: false, error: `Cannot parse ${filename}` } }
+  if (!Array.isArray(parsed)) return { ok: false, error: `${filename} is not an array` }
+  const list = parsed as Record<string, unknown>[]
+  const it = list.find((x) => String(x.id) === itemId)
+  if (!it) return { ok: false, error: 'Item not found' }
+  if (field === 'cover') it.cover = undefined
+  else if (field === 'banner') it.bannerImage = undefined
+  else if (field === 'banner 2') it.bannerImage2 = undefined
+  else if (field === 'logo') it.logoImage = undefined
+  else if (field === 'photo') it.photo = undefined
+  else if (field.startsWith('volume ')) {
+    const n = field.slice(7)
+    const vols = (it.volumeCovers as { number?: string | number; cover?: string }[] | undefined) ?? []
+    const v = vols.find((x) => String(x.number ?? '?') === n)
+    if (v) v.cover = undefined
+  } else if (field.startsWith('single ')) {
+    const n = field.slice(7)
+    const arr = (it.singleCovers as { name?: string; cover?: string }[] | undefined) ?? []
+    const x = arr.find((y) => (y.name ?? '?') === n)
+    if (x) x.cover = undefined
+  } else if (field.startsWith('edition ')) {
+    const n = field.slice(8)
+    const arr = (it.editions as { name?: string; cover?: string }[] | undefined) ?? []
+    const x = arr.find((y) => (y.name ?? '?') === n)
+    if (x) x.cover = undefined
+  } else if (field.startsWith('bundle ')) {
+    const n = field.slice(7)
+    const arr = (it.bundleContents as { name?: string; cover?: string }[] | undefined) ?? []
+    const x = arr.find((y) => (y.name ?? '?') === n)
+    if (x) x.cover = undefined
+  }
+  const content = JSON.stringify(list, null, 2)
+  try {
+    await fs.writeFile(p, content, 'utf-8')
+    lastHashes[p] = sha1(content)
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
   }
 })
 

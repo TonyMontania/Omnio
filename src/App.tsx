@@ -378,6 +378,8 @@ function App() {
   const [customOrders, setCustomOrders] = useState<Record<string, string[]>>({})
   const [toast, setToast] = useState<string | null>(null)
   const [dupOpen, setDupOpen] = useState(false)
+  const [brokenAssetsOpen, setBrokenAssetsOpen] = useState(false)
+  const [brokenAssets, setBrokenAssets] = useState<{ itemId: string; itemTitle: string; category: string; field: string; rel: string }[]>([])
   const [searchOpen, setSearchOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
@@ -834,6 +836,19 @@ function App() {
     const t = setTimeout(() => setToast(null), 2000)
     return () => clearTimeout(t)
   }, [toast])
+
+  // Fetchers dispatch this event via downloadImageAsset when image:download
+  // returns { ok: false, error }. Surfacing the reason is the whole point —
+  // before this, a bad TMDb URL / rate-limit / CDN blip left the item with
+  // no cover and the user had no idea why.
+  useEffect(() => {
+    const h = (e: Event) => {
+      const detail = (e as CustomEvent<{ kind: string; error: string }>).detail
+      setToast(`Cover download failed — ${detail?.error ?? 'unknown'}. Try another asset.`)
+    }
+    window.addEventListener('omnio-image-download-error', h)
+    return () => window.removeEventListener('omnio-image-download-error', h)
+  }, [])
   useEffect(() => {
     if (COMIC_CATEGORY_IDS.includes(activeCategory)) setComicsOpen(true)
   }, [activeCategory])
@@ -3340,6 +3355,19 @@ function App() {
                       <p className="hint">Fuzzy-matches titles across every library and lets you merge or delete the duplicates.</p>
                     </div>
                     <div className="field-group">
+                      <label>Find broken covers</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={async () => {
+                          const r = await window.ipcRenderer.invoke('storage:audit-broken-assets') as { ok: boolean; broken?: { itemId: string; itemTitle: string; category: string; field: string; rel: string }[]; error?: string }
+                          if (!r?.ok) { setToast(`Audit failed: ${r?.error ?? 'unknown'}`); return }
+                          const broken = r.broken ?? []
+                          setBrokenAssets(broken)
+                          setBrokenAssetsOpen(true)
+                        }}>Scan for missing files</button>
+                      </div>
+                      <p className="hint">Walks every <code>cover</code>, <code>banner</code>, <code>logo</code>, <code>volume</code>, <code>single</code>, <code>edition</code>, <code>bundle</code>, <code>photo</code> path in your library and lists the ones whose file is missing on disk (usually because a fetch failed silently). Pick items and click "Clear reference" — the field goes empty and you can re-fetch cleanly.</p>
+                    </div>
+                    <div className="field-group">
                       <label>Rename all assets to titles</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={async () => {
@@ -5442,6 +5470,44 @@ function App() {
           onOpenItem={navigateToItem}
           onClose={() => setDupOpen(false)}
         />
+      )}
+
+      {brokenAssetsOpen && (
+        <div className="modal-overlay" onClick={() => setBrokenAssetsOpen(false)}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: '90vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header">
+              <h2>Broken cover audit</h2>
+              <button type="button" className="panel-close" onClick={() => setBrokenAssetsOpen(false)}>✕</button>
+            </div>
+            <div className="modal-body" style={{ overflowY: 'auto' }}>
+              {brokenAssets.length === 0 ? (
+                <p className="hint">No broken references. Every asset path in your library resolves to a real file on disk.</p>
+              ) : (
+                <>
+                  <p className="hint">{brokenAssets.length} reference{brokenAssets.length === 1 ? '' : 's'} point to a file that no longer exists. Click <strong>Clear</strong> to blank the field — then re-open the item and re-fetch cleanly.</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+                    {brokenAssets.map((b, i) => (
+                      <div key={`${b.itemId}-${b.field}-${i}`} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600 }}>{b.itemTitle}</div>
+                          <div className="hint" style={{ margin: 0, fontSize: 12 }}>
+                            <code>{b.category}</code> · {b.field} · <code style={{ opacity: 0.7 }}>{b.rel}</code>
+                          </div>
+                        </div>
+                        <button type="button" className="secondary-btn" onClick={async () => {
+                          const r = await window.ipcRenderer.invoke('storage:clear-asset-ref', b.itemId, b.field, b.category) as { ok: boolean; error?: string }
+                          if (!r?.ok) { setToast(`Failed: ${r?.error ?? 'unknown'}`); return }
+                          setBrokenAssets((list) => list.filter((_, j) => j !== i))
+                          setToast('Reference cleared — reload with F5 to see the item without it')
+                        }}>Clear</button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       <BulkActionBar

@@ -4,7 +4,7 @@
 // it to assets/videojuegos/{kind}/ and hand back the relative path.
 
 import { useEffect, useMemo, useState } from 'react'
-import { assetBasename } from './utils/files'
+import { assetBasename, downloadImageAsset } from './utils/files'
 
 type Kind = 'grids' | 'heroes' | 'logos'
 
@@ -106,7 +106,7 @@ export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, 
     // even when folderKind='bundle' — matches the on-disk convention where
     // bundle sub-covers are named "{sub-game} cover.ext".
     const filenameKind = KIND_TO_LOCAL[kind]
-    const rel = await window.ipcRenderer.invoke('image:download', a.url, 'videojuegos', folderKind, assetBasename(hint, filenameKind))
+    const rel = await downloadImageAsset( a.url, 'videojuegos', folderKind, assetBasename(hint, filenameKind))
     setDownloading(null)
     if (rel) { onPick(rel); onClose() }
     else alert('Download failed. Try another asset or check your connection.')

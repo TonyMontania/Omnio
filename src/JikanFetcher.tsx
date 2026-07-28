@@ -6,7 +6,7 @@
 
 import type { Item, AnimeFormat, AnimeSource, Demographic, AgeRating, AiringStatus } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
-import { assetBasename } from './utils/files'
+import { assetBasename, downloadImageAsset } from './utils/files'
 
 type MediaType = 'anime' | 'manga'
 
@@ -109,7 +109,7 @@ export default function JikanFetcher({ initialQuery, kind, categoryId, onApply, 
     const displayTitle = m.title_english || m.title
     const coverUrl = m.images?.jpg?.large_image_url || m.images?.jpg?.image_url
     const coverPath = coverUrl
-      ? await window.ipcRenderer.invoke('image:download', coverUrl, categoryId, 'cover', assetBasename(displayTitle, 'cover')) as string | null
+      ? await downloadImageAsset( coverUrl, categoryId, 'cover', assetBasename(displayTitle, 'cover')) as string | null
       : null
     const alts = Array.from(new Set([m.title, m.title_english, m.title_japanese, ...(m.title_synonyms ?? [])].filter(Boolean))) as string[]
     const patch: Partial<Item> = {
