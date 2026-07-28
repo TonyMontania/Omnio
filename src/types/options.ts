@@ -8,6 +8,7 @@ import type {
   AnimeStatus, AiringStatus, AnimeFormat, AnimeSeason, Demographic, AnimeSource, AnimeField,
   SeriesStatus, SeriesFormat, SeriesField,
   MovieSource, MovieField, WatchLocation,
+  BookStatus, BookFormat, BookSource, BookField,
   AgeRating, RelationKind, Platform, BandStatus,
 } from './entities'
 
@@ -301,3 +302,41 @@ export const WATCH_LOCATION_OPTIONS: { value: WatchLocation; label: string }[] =
   { value: 'tv', label: 'TV' },
   { value: 'other', label: 'Other' },
 ]
+
+// ---- Books ----
+
+export const BOOK_STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
+  { value: 'plan_to_read', label: 'Plan to read' },
+  { value: 'reading', label: 'Reading' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'dropped', label: 'Dropped' },
+]
+
+export const BOOK_FORMAT_OPTIONS: { value: BookFormat; label: string }[] = [
+  { value: 'paperback', label: 'Paperback' },
+  { value: 'hardcover', label: 'Hardcover' },
+  { value: 'ebook', label: 'E-book' },
+  { value: 'audiobook', label: 'Audiobook' },
+  { value: 'other', label: 'Other' },
+]
+
+export const BOOK_SOURCE_OPTIONS: { value: BookSource; label: string }[] = [
+  { value: 'original', label: 'Original' },
+  { value: 'translation', label: 'Translation' },
+  { value: 'adaptation', label: 'Adaptation' },
+  { value: 'other', label: 'Other' },
+]
+
+export const BOOK_FIELD_OPTIONS: { value: BookField; label: string }[] = [
+  { value: 'title', label: 'Title' },
+  { value: 'authors', label: 'Authors' },
+  { value: 'status', label: 'Status' },
+  { value: 'pages', label: 'Pages read/total' },
+  { value: 'rating', label: 'Rating' },
+  { value: 'tags', label: 'Tags' },
+]
+
+export const DEFAULT_BOOK_FIELDS: Record<BookField, boolean> = {
+  title: true, authors: true, status: true, pages: true, rating: true, tags: true,
+}

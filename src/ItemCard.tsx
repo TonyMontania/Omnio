@@ -1,7 +1,7 @@
 import type { DragEvent } from 'react'
-import { getGameStatus, getCategoryLine, getMusicTypeLabel, getMangaStatus, isMangaLike, getAnimeStatus, getSeriesStatus, renderMiniMarkdown, assetSrc, DEFAULT_GAME_FIELDS, DEFAULT_MUSIC_FIELDS, DEFAULT_MANGA_FIELDS, DEFAULT_MOVIE_FIELDS, DEFAULT_ANIME_FIELDS, DEFAULT_SERIES_FIELDS } from './types'
+import { getGameStatus, getCategoryLine, getMusicTypeLabel, getMangaStatus, isMangaLike, getAnimeStatus, getSeriesStatus, getBookStatus, renderMiniMarkdown, assetSrc, DEFAULT_GAME_FIELDS, DEFAULT_MUSIC_FIELDS, DEFAULT_MANGA_FIELDS, DEFAULT_MOVIE_FIELDS, DEFAULT_ANIME_FIELDS, DEFAULT_SERIES_FIELDS, DEFAULT_BOOK_FIELDS } from './types'
 import { GameStatusIcon, MangaStatusIcon, AnimeStatusIcon } from './icons'
-import type { Item, GameField, MusicField, MangaField, MovieField, AnimeField, SeriesField } from './types'
+import type { Item, GameField, MusicField, MangaField, MovieField, AnimeField, SeriesField, BookField, MangaStatus } from './types'
 
 interface Props {
   item: Item
@@ -20,9 +20,10 @@ interface Props {
   movieFields?: Record<MovieField, boolean>
   animeFields?: Record<AnimeField, boolean>
   seriesFields?: Record<SeriesField, boolean>
+  bookFields?: Record<BookField, boolean>
 }
 
-export default function ItemCard({ item, layout, onOpen, onDelete, onToggleSelect, selected, selectionActive, draggableEnabled, onDragStartItem, onDropItem, gameFields, musicFields, mangaFields, movieFields, animeFields, seriesFields }: Props) {
+export default function ItemCard({ item, layout, onOpen, onDelete, onToggleSelect, selected, selectionActive, draggableEnabled, onDragStartItem, onDropItem, gameFields, musicFields, mangaFields, movieFields, animeFields, seriesFields, bookFields }: Props) {
   // Shift+click always toggles selection. Once any card is selected,
   // plain clicks also toggle so the user can keep going without holding
   // shift each time (macOS Finder pattern).
@@ -36,22 +37,26 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleSelec
   const isMovie = item.categoryId === 'peliculas'
   const isAnime = item.categoryId === 'anime' || item.categoryId === 'donghua'
   const isSeries = item.categoryId === 'series'
+  const isBook = item.categoryId === 'libros'
   const gf = isGame ? (gameFields ?? DEFAULT_GAME_FIELDS) : null
   const mf = isMusic ? (musicFields ?? DEFAULT_MUSIC_FIELDS) : null
   const mgf = isManga ? (mangaFields ?? DEFAULT_MANGA_FIELDS) : null
   const movf = isMovie ? (movieFields ?? DEFAULT_MOVIE_FIELDS) : null
   const anf = isAnime ? (animeFields ?? DEFAULT_ANIME_FIELDS) : null
   const sf = isSeries ? (seriesFields ?? DEFAULT_SERIES_FIELDS) : null
+  const bf = isBook ? (bookFields ?? DEFAULT_BOOK_FIELDS) : null
 
-  const showTitle = isGame ? gf!.title : isMusic ? mf!.title : isManga ? mgf!.title : isMovie ? movf!.title : isAnime ? anf!.title : isSeries ? sf!.title : true
-  const showLine = isGame ? gf!.playTime : isManga ? mgf!.chapters : isMovie ? movf!.year : isAnime ? anf!.episodes : isSeries ? sf!.episodes : true
-  const showRating = isGame ? gf!.rating : isMusic ? mf!.rating : isMovie ? movf!.rating : isAnime ? anf!.rating : isSeries ? sf!.rating : true
-  const showTags = isGame ? gf!.tags : isMusic ? mf!.tags : isMovie ? movf!.tags : isAnime ? anf!.tags : isSeries ? sf!.tags : true
+  const showTitle = isGame ? gf!.title : isMusic ? mf!.title : isManga ? mgf!.title : isMovie ? movf!.title : isAnime ? anf!.title : isSeries ? sf!.title : isBook ? bf!.title : true
+  const showLine = isGame ? gf!.playTime : isManga ? mgf!.chapters : isMovie ? movf!.year : isAnime ? anf!.episodes : isSeries ? sf!.episodes : isBook ? bf!.pages : true
+  const showRating = isGame ? gf!.rating : isMusic ? mf!.rating : isMovie ? movf!.rating : isAnime ? anf!.rating : isSeries ? sf!.rating : isBook ? bf!.rating : true
+  const showTags = isGame ? gf!.tags : isMusic ? mf!.tags : isMovie ? movf!.tags : isAnime ? anf!.tags : isSeries ? sf!.tags : isBook ? bf!.tags : true
   const gs = isGame && gf!.status ? getGameStatus(item.gameStatus) : null
   const ms = isManga && mgf!.status ? getMangaStatus(item.mangaStatus) : null
   const as = isAnime && anf!.status ? getAnimeStatus(item.watchStatus) : null
   const ss = isSeries && sf!.status ? getSeriesStatus(item.seriesStatus) : null
+  const bs = isBook && bf!.status ? getBookStatus(item.bookStatus) : null
   const showMovieStatus = isMovie && movf!.status
+  const showBookAuthors = isBook && bf!.authors && item.authors && item.authors.length > 0
 
   const musicYear = item.releaseDate ? new Date(item.releaseDate).getFullYear() : item.releaseYear
 
@@ -96,6 +101,8 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleSelec
         {ms && <p className="item-status"><MangaStatusIcon value={ms.value} /> {ms.label}</p>}
         {as && <p className="item-status"><AnimeStatusIcon value={as.value} /> {as.label}</p>}
         {ss && <p className="item-status"><AnimeStatusIcon value={ss.value} /> {ss.label}</p>}
+        {bs && <p className="item-status"><MangaStatusIcon value={bs.value as MangaStatus} /> {bs.label}</p>}
+        {showBookAuthors && <p className="item-meta">{item.authors!.slice(0, 2).join(', ')}</p>}
         {showMovieStatus && <p className="item-status">{item.consumed ? 'Watched' : 'Not watched'}</p>}
 
         {isMusic ? (

@@ -115,6 +115,7 @@ const CATEGORY_IDS = [
   'videojuegos', 'musica', 'peliculas', 'series',
   'anime', 'donghua',
   'manga', 'manhwa', 'manhua', 'comics_west',
+  'libros',
 ] as const
 
 // The internal categoryId (kept in every item.categoryId, in customOrders keys,
@@ -132,6 +133,7 @@ const CATEGORY_FILENAME: Record<string, string> = {
   manhwa: 'manhwa',
   manhua: 'manhua',
   comics_west: 'comics_west',
+  libros: 'books',
 }
 const fileForCategory = (cat: string) => `${CATEGORY_FILENAME[cat] ?? cat}.json`
 
@@ -1374,6 +1376,31 @@ ipcMain.handle('anilist:search', async (_event, term: string, kind: 'ANIME' | 'M
       return errs && errs.length ? errs[0].message : null
     },
   })
+})
+
+// OpenLibrary — open, no-key books metadata. Two-step: search returns
+// hits with a `key` like "/works/OL...W"; the works endpoint gives us
+// the description, subjects and author refs. Covers live at
+// covers.openlibrary.org/b/id/{coverId}-L.jpg — keyed by numeric coverId
+// on the hit.
+const OL_BASE = 'https://openlibrary.org'
+const OL_UA = 'Omnio/0.1 ( https://github.com/TonyMontania/Omnio )'
+const olHeaders = { 'User-Agent': OL_UA, Accept: 'application/json' }
+
+ipcMain.handle('openlibrary:search', async (_event, term: string) => {
+  if (!term.trim()) return { ok: false, error: 'Missing search term' }
+  // Only ask for the fields we actually use — smaller payload than the default.
+  const fields = ['key', 'title', 'author_name', 'first_publish_year', 'publisher', 'isbn', 'number_of_pages_median', 'cover_i', 'subject', 'language'].join(',')
+  return proxyJson(`${OL_BASE}/search.json?q=${encodeURIComponent(term.trim())}&limit=15&fields=${fields}`, {
+    headers: olHeaders,
+    pick: (j) => (j as { docs?: unknown[] }).docs,
+  })
+})
+
+ipcMain.handle('openlibrary:work', async (_event, workKey: string) => {
+  // workKey looks like "/works/OL45804W" — the search hits' key field.
+  if (!workKey) return { ok: false, error: 'Missing work key' }
+  return proxyJson(`${OL_BASE}${workKey}.json`, { headers: olHeaders })
 })
 
 // Download a remote image URL and file it into assets/{category}/{kind}/{uuid}.{ext}.

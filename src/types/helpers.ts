@@ -8,6 +8,7 @@ import type {
   AnimeStatus, AiringStatus, AnimeFormat, AnimeSeason, Demographic, AnimeSource,
   SeriesStatus, SeriesFormat,
   MusicSource, MangaSource, MovieSource, GameSource, WatchLocation,
+  BookStatus, BookFormat, BookSource,
   AgeRating, RelationKind, BandStatus,
   Chapter, Episode, Season, Track, Item,
 } from './entities'
@@ -21,6 +22,7 @@ import {
   MOVIE_SOURCE_OPTIONS,
   GAME_SOURCE_OPTIONS,
   WATCH_LOCATION_OPTIONS,
+  BOOK_STATUS_OPTIONS, BOOK_FORMAT_OPTIONS, BOOK_SOURCE_OPTIONS,
   RELATION_OPTIONS, AGE_RATING_OPTIONS, BAND_STATUS_OPTIONS,
 } from './options'
 
@@ -186,6 +188,18 @@ export function getMangaStatus(value?: MangaStatus) {
   return MANGA_STATUS_OPTIONS.find((s) => s.value === (value || 'plan_to_read')) ?? MANGA_STATUS_OPTIONS[0]
 }
 
+export function getBookStatus(value?: BookStatus) {
+  return BOOK_STATUS_OPTIONS.find((s) => s.value === (value || 'plan_to_read')) ?? BOOK_STATUS_OPTIONS[0]
+}
+
+export function getBookFormatLabel(value?: BookFormat): string | undefined {
+  return BOOK_FORMAT_OPTIONS.find((s) => s.value === value)?.label
+}
+
+export function getBookSourceLabel(value?: BookSource): string | undefined {
+  return BOOK_SOURCE_OPTIONS.find((s) => s.value === value)?.label
+}
+
 export function getGameStatus(value?: GameStatus) {
   return GAME_STATUS_OPTIONS.find((s) => s.value === (value || 'backlog')) ?? GAME_STATUS_OPTIONS[0]
 }
@@ -244,6 +258,10 @@ export function getCategoryLine(item: Item): string | null {
     case 'musica': {
       const parts = [item.releaseYear, item.musicType ? getMusicTypeLabel(item.musicType) : null].filter(Boolean)
       return parts.length ? parts.join(' · ') : null
+    }
+    case 'libros': {
+      if (!item.pagesRead) return null
+      return `p. ${item.pagesRead}${item.totalPages ? `/${item.totalPages}` : ''}`
     }
     default:
       return null

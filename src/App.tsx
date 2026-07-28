@@ -15,6 +15,7 @@ import type {
   AnimeStatus, AnimeField, AnimeSource, AnimeFormat, AnimeSeason, AiringStatus, Demographic, Episode,
   SeriesStatus, SeriesField, SeriesFormat, Season,
   MovieField, MovieSource, WatchLocation,
+  BookField, BookStatus, BookFormat, BookSource,
   AgeRating, RelatedItem, RewatchEntry,
   BandStatus, BandMember, SingleCover, AlbumEdition,
   CustomField,
@@ -31,6 +32,7 @@ import {
   ANIME_FIELD_OPTIONS, DEFAULT_ANIME_FIELDS, AIRING_STATUS_OPTIONS, DEMOGRAPHIC_OPTIONS,
   SERIES_STATUS_OPTIONS, SERIES_FORMAT_OPTIONS, SERIES_FIELD_OPTIONS, DEFAULT_SERIES_FIELDS,
   MOVIE_SOURCE_OPTIONS, MOVIE_FIELD_OPTIONS, DEFAULT_MOVIE_FIELDS, WATCH_LOCATION_OPTIONS,
+  BOOK_STATUS_OPTIONS, BOOK_FORMAT_OPTIONS, BOOK_SOURCE_OPTIONS, BOOK_FIELD_OPTIONS, DEFAULT_BOOK_FIELDS,
   AGE_RATING_OPTIONS, BAND_STATUS_OPTIONS,
 } from './types'
 
@@ -63,6 +65,8 @@ const GameDetailModal   = lazy(() => import('./GameDetailModal'))
 const MusicDetailModal  = lazy(() => import('./MusicDetailModal'))
 const ArtistDetailView  = lazy(() => import('./ArtistDetailView'))
 const MangaDetailModal  = lazy(() => import('./MangaDetailModal'))
+const BookDetailModal   = lazy(() => import('./BookDetailModal'))
+const OpenLibraryFetcher = lazy(() => import('./OpenLibraryFetcher'))
 const MovieDetailModal  = lazy(() => import('./MovieDetailModal'))
 const AnimeDetailModal  = lazy(() => import('./AnimeDetailModal'))
 const SeriesDetailModal = lazy(() => import('./SeriesDetailModal'))
@@ -179,6 +183,7 @@ interface Settings {
   movieFields: Record<MovieField, boolean>
   animeFields: Record<AnimeField, boolean>
   seriesFields: Record<SeriesField, boolean>
+  bookFields: Record<BookField, boolean>
   sgdbApiKey?: string
   tmdbApiKey?: string
   igdbClientId?: string
@@ -198,7 +203,7 @@ interface AppData {
 // About string can't drift from the packaged version number.
 const APP_VERSION = __APP_VERSION__
 
-const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS }
+const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS }
 
 function getUniqueTags(list: Item[]): string[] {
   const set = new Set<string>()
@@ -369,6 +374,7 @@ function App() {
   const savedScrollRef = useRef<number>(0)
   const [viewingMusic, setViewingMusic] = useState<Item | null>(null)
   const [viewingManga, setViewingManga] = useState<Item | null>(null)
+  const [viewingBook, setViewingBook] = useState<Item | null>(null)
   const [viewingMovie, setViewingMovie] = useState<Item | null>(null)
   const [viewingAnime, setViewingAnime] = useState<Item | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -640,6 +646,19 @@ function App() {
   const [mangaReview, setMangaReview] = useState('')
   const [hasChapters, setHasChapters] = useState(false)
   const [chapters, setChapters] = useState<Chapter[]>([])
+  // Books — mirror manga's shape (status, pages read/total, publication status, review)
+  const [bookStatus, setBookStatus] = useState<BookStatus>('plan_to_read')
+  const [bookFormat, setBookFormat] = useState<BookFormat | ''>('')
+  const [bookSource, setBookSource] = useState<BookSource | ''>('')
+  const [pagesRead, setPagesRead] = useState('')
+  const [totalPages, setTotalPages] = useState('')
+  const [publisher, setPublisher] = useState('')
+  const [saga, setSaga] = useState('')
+  const [sagaIndex, setSagaIndex] = useState('')
+  const [isbn, setIsbn] = useState('')
+  const [translator, setTranslator] = useState('')
+  const [bookReview, setBookReview] = useState('')
+  const [openLibraryOpen, setOpenLibraryOpen] = useState(false)
   const [movieSource, setMovieSource] = useState<MovieSource | ''>('')
   const [movieReview, setMovieReview] = useState('')
   const [gameSource, setGameSource] = useState<GameSource | ''>('')
@@ -697,11 +716,17 @@ function App() {
           changed = true
         }
         let publishers = it.publishers
-        if (!publishers && typeof anyIt.publisher === 'string' && anyIt.publisher) {
+        // Legacy pre-0.2 games stored a single `publisher: string`. Split
+        // into `publishers: string[]` and strip the legacy field ONLY when
+        // we actually did the migration — otherwise Book items (which use
+        // publisher as a first-class field) get wiped every load.
+        let stripLegacyPublisher = false
+        if (!publishers && typeof anyIt.publisher === 'string' && anyIt.publisher && it.categoryId === 'videojuegos') {
           publishers = [(anyIt.publisher as string).trim()].filter(Boolean)
           changed = true
+          stripLegacyPublisher = true
         }
-        return { ...it, cover, bannerImage, bannerImage2, logoImage, volumeCovers, devs, publishers, publisher: undefined }
+        return { ...it, cover, bannerImage, bannerImage2, logoImage, volumeCovers, devs, publishers, ...(stripLegacyPublisher ? { publisher: undefined } : {}) }
       }))
       return { list: migrated, changed }
     }
@@ -737,6 +762,7 @@ function App() {
         movieFields: { ...DEFAULT_MOVIE_FIELDS, ...data.settings.movieFields },
         animeFields: { ...DEFAULT_ANIME_FIELDS, ...data.settings.animeFields },
         seriesFields: { ...DEFAULT_SERIES_FIELDS, ...data.settings.seriesFields },
+          bookFields: { ...DEFAULT_BOOK_FIELDS, ...data.settings.bookFields },
         enabledCategories: data.settings.enabledCategories && !data.settings.enabledCategories.includes('donghua') && data.settings.enabledCategories.includes('anime')
           ? [...data.settings.enabledCategories, 'donghua']
           : data.settings.enabledCategories,
@@ -866,6 +892,7 @@ function App() {
       else if (viewingGame) setViewingGame(null)
       else if (viewingMusic) setViewingMusic(null)
       else if (viewingManga) setViewingManga(null)
+      else if (viewingBook) setViewingBook(null)
       else if (viewingMovie) setViewingMovie(null)
       else if (viewingAnime) setViewingAnime(null)
       else if (viewingSeries) setViewingSeries(null)
@@ -877,7 +904,7 @@ function App() {
     // cause the listener to rebind constantly; the closure captures the
     // latest versions each time this effect re-runs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alertMsg, confirmState, viewingGame, viewingMusic, viewingManga, viewingMovie, viewingAnime, viewingSeries, viewingArtist, artistPanelOpen, panelOpen])
+  }, [alertMsg, confirmState, viewingGame, viewingMusic, viewingManga, viewingBook, viewingMovie, viewingAnime, viewingSeries, viewingArtist, artistPanelOpen, panelOpen])
 
   useEffect(() => {
     if (!toast) return
@@ -959,6 +986,7 @@ function App() {
     setUnitCount(''); setStartYear(''); setEndYear(''); setUnits([])
     setMangaAuthors([]); setMangaArtists([]); setVolumeCovers([]); setMangaDescription(''); setPubStatus(''); setReadingStatus('plan_to_read')
     setMangaSource(''); setMagazine(''); setMangaReview(''); setHasChapters(false); setChapters([])
+    setBookStatus('plan_to_read'); setBookFormat(''); setBookSource(''); setPagesRead(''); setTotalPages(''); setPublisher(''); setSaga(''); setSagaIndex(''); setIsbn(''); setTranslator(''); setBookReview('')
     setMovieSource(''); setMovieReview('')
     setGameSource(''); setOriginalWorkId(''); setGameReview('')
     setDirectors([]); setCast([]); setProductionCompanies([]); setDistributors([]); setMovieDescription(''); setFranchise(''); setWatchedWhere(''); setMovieBanner(''); setHasSpoilers(false); setTimesWatched('')
@@ -1053,7 +1081,7 @@ function App() {
   }
 
   const closeAllDetailViews = () => {
-    setViewingGame(null); setViewingMusic(null); setViewingManga(null); setViewingMovie(null); setViewingAnime(null); setViewingSeries(null); setViewingArtist(null)
+    setViewingGame(null); setViewingMusic(null); setViewingManga(null); setViewingBook(null); setViewingMovie(null); setViewingAnime(null); setViewingSeries(null); setViewingArtist(null)
   }
 
   const switchCategory = (id: string) => {
@@ -1118,6 +1146,17 @@ function App() {
     setMangaReview(item.mangaReview ?? '')
     setHasChapters(item.hasChapters ?? false)
     setChapters(item.chapters ?? [])
+    setBookStatus(item.bookStatus ?? 'plan_to_read')
+    setBookFormat(item.bookFormat ?? '')
+    setBookSource(item.bookSource ?? '')
+    setPagesRead(item.pagesRead ?? '')
+    setTotalPages(item.totalPages ?? '')
+    setPublisher(item.publisher ?? '')
+    setSaga(item.saga ?? '')
+    setSagaIndex(item.sagaIndex ?? '')
+    setIsbn(item.isbn ?? '')
+    setTranslator(item.translator ?? '')
+    setBookReview(item.bookReview ?? '')
     setMovieSource(item.movieSource ?? '')
     setMovieReview(item.movieReview ?? '')
     setGameSource(item.gameSource ?? '')
@@ -1196,7 +1235,7 @@ function App() {
   // scroll position we snapshotted before opening the detail. Uses rAF so it
   // runs after the DOM has painted the list at scrollTop 0.
   useEffect(() => {
-    const anyOpen = viewingGame || viewingMusic || viewingManga || viewingMovie || viewingAnime || viewingSeries || viewingArtist
+    const anyOpen = viewingGame || viewingMusic || viewingManga || viewingBook || viewingMovie || viewingAnime || viewingSeries || viewingArtist
     if (anyOpen) return
     if (savedScrollRef.current <= 0) return
     const target = savedScrollRef.current
@@ -1207,7 +1246,7 @@ function App() {
       if (el) el.scrollTop = target
     })
     return () => { cancelled = true }
-  }, [viewingGame, viewingMusic, viewingManga, viewingMovie, viewingAnime, viewingSeries, viewingArtist])
+  }, [viewingGame, viewingMusic, viewingManga, viewingBook, viewingMovie, viewingAnime, viewingSeries, viewingArtist])
 
   const openEditPanel = (item: Item) => {
     // Snapshot the list's scroll position so we can put the user back where
@@ -1217,6 +1256,7 @@ function App() {
     if (item.categoryId === 'videojuegos') { setViewingGame(item); return }
     if (item.categoryId === 'musica') { setViewingMusic(item); return }
     if (isMangaLike(item.categoryId)) { setViewingManga(item); return }
+    if (item.categoryId === 'libros') { setViewingBook(item); return }
     if (item.categoryId === 'peliculas') { setViewingMovie(item); return }
     if (isAnimeLikeCategory(item.categoryId)) { setViewingAnime(item); return }
     if (item.categoryId === 'series') { setViewingSeries(item); return }
@@ -1228,7 +1268,7 @@ function App() {
   // sidebar reflects where the item lives, then hands off to the normal
   // detail-modal flow. Also closes any open modals so we land clean.
   const navigateToItem = (item: Item) => {
-    setViewingGame(null); setViewingMusic(null); setViewingManga(null)
+    setViewingGame(null); setViewingMusic(null); setViewingManga(null); setViewingBook(null)
     setViewingMovie(null); setViewingAnime(null); setViewingSeries(null); setViewingArtist(null)
     setActiveCategory(item.categoryId)
     setActiveCollectionId(null)
@@ -1457,6 +1497,12 @@ function App() {
   const openEditFromMangaModal = () => {
     if (!viewingManga) return
     loadItemIntoForm(viewingManga)
+    setPanelOpen(true)
+  }
+
+  const openEditFromBookModal = () => {
+    if (!viewingBook) return
+    loadItemIntoForm(viewingBook)
     setPanelOpen(true)
   }
 
@@ -1742,6 +1788,36 @@ function App() {
       }
     }
 
+    if (activeCategory === 'libros') {
+      return {
+        ...base,
+        authors: mangaAuthors.length > 0 ? mangaAuthors : undefined,
+        description: description.trim() || undefined,
+        bookStatus,
+        bookFormat: bookFormat || undefined,
+        bookSource: bookSource || undefined,
+        pagesRead: pagesRead || undefined,
+        totalPages: totalPages || undefined,
+        publisher: publisher.trim() || undefined,
+        saga: saga.trim() || undefined,
+        sagaIndex: sagaIndex.trim() || undefined,
+        isbn: isbn.trim() || undefined,
+        translator: translator.trim() || undefined,
+        pubStatus: pubStatus || undefined,
+        genres: genres.length > 0 ? genres : undefined,
+        alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
+        releaseDate: releaseDate || undefined,
+        startDate: startDate || undefined,
+        ageRating: ageRating || undefined,
+        bookReview: bookReview.trim() || undefined,
+        hasSpoilers: bookReview.trim() ? hasSpoilers : undefined,
+        rewatches: rewatches.length > 0 ? rewatches : undefined,
+        franchise: franchise.trim() || undefined,
+        relatedItems: relatedItems.length > 0 ? relatedItems : undefined,
+        recommendedItems: recommendedItems.length > 0 ? recommendedItems : undefined,
+      }
+    }
+
     if (activeCategory === 'musica') {
       const albumLike = isAlbumLikeMusic(musicType || undefined)
       return {
@@ -1860,6 +1936,7 @@ function App() {
       if (viewingGame && viewingGame.id === editingId) setViewingGame(updated)
       if (viewingMusic && viewingMusic.id === editingId) setViewingMusic(updated)
       if (viewingManga && viewingManga.id === editingId) setViewingManga(updated)
+      if (viewingBook && viewingBook.id === editingId) setViewingBook(updated)
       if (viewingMovie && viewingMovie.id === editingId) setViewingMovie(updated)
       if (viewingAnime && viewingAnime.id === editingId) setViewingAnime(updated)
       if (viewingSeries && viewingSeries.id === editingId) setViewingSeries(updated)
@@ -1888,6 +1965,7 @@ function App() {
     if (viewingGame && viewingGame.id === item.id) setViewingGame(null)
     if (viewingMusic && viewingMusic.id === item.id) setViewingMusic(null)
     if (viewingManga && viewingManga.id === item.id) setViewingManga(null)
+    if (viewingBook && viewingBook.id === item.id) setViewingBook(null)
     if (viewingMovie && viewingMovie.id === item.id) setViewingMovie(null)
     if (viewingAnime && viewingAnime.id === item.id) setViewingAnime(null)
     if (viewingSeries && viewingSeries.id === item.id) setViewingSeries(null)
@@ -1923,6 +2001,15 @@ function App() {
     const copy: Item = { ...viewingManga, id: crypto.randomUUID(), title: `${viewingManga.title} (Copy)`, createdAt: Date.now() }
     setItems((prev) => [...prev, copy])
     setViewingManga(null)
+    loadItemIntoForm(copy)
+    setPanelOpen(true)
+  }
+
+  const handleDuplicateBook = () => {
+    if (!viewingBook) return
+    const copy: Item = { ...viewingBook, id: crypto.randomUUID(), title: `${viewingBook.title} (Copy)`, createdAt: Date.now() }
+    setItems((prev) => [...prev, copy])
+    setViewingBook(null)
     loadItemIntoForm(copy)
     setPanelOpen(true)
   }
@@ -2412,6 +2499,16 @@ function App() {
               onEdit={openEditFromMangaModal}
               onDuplicate={handleDuplicateManga}
               onNavigate={(id) => { const target = items.find((i) => i.id === id); if (target) setViewingManga(target) }}
+            />
+          ) : viewingBook ? (
+            <BookDetailModal
+              item={viewingBook}
+              groups={collections.filter((c) => c.categoryId === 'libros' && c.itemIds.includes(viewingBook.id))}
+              allBooks={items.filter((i) => i.categoryId === 'libros')}
+              onClose={() => setViewingBook(null)}
+              onEdit={openEditFromBookModal}
+              onDuplicate={handleDuplicateBook}
+              onNavigate={(id) => { const target = items.find((i) => i.id === id); if (target) setViewingBook(target) }}
             />
           ) : viewingArtist ? (
             <ArtistDetailView
@@ -3257,6 +3354,14 @@ function App() {
                         ))}
                       </div>
                     </div>
+                    <div className="field-group">
+                      <label>Books</label>
+                      <div className="pills">
+                        {BOOK_FIELD_OPTIONS.map((f) => (
+                          <button key={f.value} type="button" className={settings.bookFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, bookFields: { ...s.bookFields, [f.value]: !s.bookFields[f.value] } }))}>{f.label}</button>
+                        ))}
+                      </div>
+                    </div>
                   </>
                 )}
 
@@ -3722,6 +3827,8 @@ function App() {
                         mangaFields={settings.mangaFields}
                         movieFields={settings.movieFields}
                         animeFields={settings.animeFields}
+                        seriesFields={settings.seriesFields}
+                        bookFields={settings.bookFields}
                       />
                     ))}
                   </div>
@@ -4029,6 +4136,12 @@ function App() {
                             </button>
                           )}
                         </>}
+                        {activeCategory === 'libros' && (
+                          <button type="button" className="metadata-source-btn" onClick={() => setOpenLibraryOpen(true)}>
+                            <span className="ms-name">↗ OpenLibrary</span>
+                            <span className="ms-desc">Authors, publisher, page count, ISBN + cover</span>
+                          </button>
+                        )}
                         {activeCategory === 'peliculas' && (
                           <button type="button" className="metadata-source-btn" onClick={() => setTmdbOpen('movie')}>
                             <span className="ms-name">↗ TMDb</span>
@@ -5076,6 +5189,106 @@ function App() {
                   </>
                 )}
 
+                    {activeCategory === 'libros' && (
+                  <>
+                    <div className="form-section-header">
+                      <span className="form-section-title">Book details</span>
+                      <span className="form-section-hint">Authors, publisher, series, pages read, ISBN, format</span>
+                    </div>
+                    <TagEditor
+                      label="Authors"
+                      tags={mangaAuthors}
+                      onAdd={(a) => setMangaAuthors((prev) => prev.includes(a) ? prev : [...prev, a])}
+                      onRemove={(i) => setMangaAuthors((prev) => prev.filter((_, idx) => idx !== i))}
+                      placeholder="Add author"
+                    />
+                    <div className="field-grid two">
+                      <div className="field-group">
+                        <label>Status</label>
+                        <select value={bookStatus} onChange={(e) => setBookStatus(e.target.value as BookStatus)}>
+                          {BOOK_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                      </div>
+                      <div className="field-group">
+                        <label>Format</label>
+                        <select value={bookFormat} onChange={(e) => setBookFormat(e.target.value as BookFormat | '')}>
+                          <option value="">—</option>
+                          {BOOK_FORMAT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="field-grid two">
+                      <div className="field-group">
+                        <label>Pages read</label>
+                        <input value={pagesRead} onChange={(e) => setPagesRead(e.target.value.replace(/[^\d]/g, ''))} placeholder="e.g. 120" />
+                      </div>
+                      <div className="field-group">
+                        <label>Total pages</label>
+                        <input value={totalPages} onChange={(e) => setTotalPages(e.target.value.replace(/[^\d]/g, ''))} placeholder="e.g. 350" />
+                      </div>
+                    </div>
+                    <div className="field-grid two">
+                      <div className="field-group">
+                        <label>Publisher</label>
+                        <input value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder="e.g. Tor Books" />
+                      </div>
+                      <div className="field-group">
+                        <label>ISBN</label>
+                        <input value={isbn} onChange={(e) => setIsbn(e.target.value)} placeholder="e.g. 978-0-7653-1178-8" />
+                      </div>
+                    </div>
+                    <div className="field-grid two">
+                      <div className="field-group">
+                        <label>Series / saga</label>
+                        <input value={saga} onChange={(e) => setSaga(e.target.value)} placeholder="e.g. The Stormlight Archive" />
+                      </div>
+                      <div className="field-group">
+                        <label>Book # in series</label>
+                        <input value={sagaIndex} onChange={(e) => setSagaIndex(e.target.value)} placeholder="e.g. Book 1" />
+                      </div>
+                    </div>
+                    <div className="field-grid two">
+                      <div className="field-group">
+                        <label>Publication status</label>
+                        <select value={pubStatus} onChange={(e) => setPubStatus(e.target.value as PublicationStatus | '')}>
+                          <option value="">—</option>
+                          {PUBLICATION_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                      </div>
+                      <div className="field-group">
+                        <label>Source</label>
+                        <select value={bookSource} onChange={(e) => setBookSource(e.target.value as BookSource | '')}>
+                          <option value="">—</option>
+                          {BOOK_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="field-grid two">
+                      <div className="field-group">
+                        <label>Translator</label>
+                        <input value={translator} onChange={(e) => setTranslator(e.target.value)} placeholder="Optional" />
+                      </div>
+                      <div className="field-group">
+                        <label>Started reading</label>
+                        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="field-group">
+                      <label>Description</label>
+                      <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Book synopsis" />
+                    </div>
+                    <div className="field-group">
+                      <label>Review</label>
+                      <textarea value={bookReview} onChange={(e) => setBookReview(e.target.value)} rows={4} placeholder="Your review" />
+                      {bookReview.trim() && (
+                        <div className="field-inline">
+                          <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(!hasSpoilers)}>Contains spoilers</button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
                     {activeCategory === 'musica' && (
                   <>
                     <div className="form-section-header">
@@ -5747,6 +5960,16 @@ function App() {
           onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'ComicVine')}
           onClose={() => setComicvineOpen(false)}
         />
+      )}
+
+      {openLibraryOpen && (
+        <Suspense fallback={null}>
+          <OpenLibraryFetcher
+            initialQuery={title}
+            onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'OpenLibrary')}
+            onClose={() => setOpenLibraryOpen(false)}
+          />
+        </Suspense>
       )}
 
       {mangadexOpen && (

@@ -7,6 +7,7 @@ export interface Category {
 export const CATEGORIES: Category[] = [
   { id: 'anime', label: 'Anime', singular: 'anime' },
   { id: 'donghua', label: 'Donghua', singular: 'donghua' },
+  { id: 'libros', label: 'Books', singular: 'book' },
   { id: 'videojuegos', label: 'Games', singular: 'game' },
   { id: 'manga', label: 'Manga', singular: 'manga' },
   { id: 'manhwa', label: 'Manhwa', singular: 'manhwa' },

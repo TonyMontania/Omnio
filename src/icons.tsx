@@ -67,6 +67,15 @@ function SeriesIcon() {
   )
 }
 
+function BooksIcon() {
+  return (
+    <Icon>
+      <path d="M4 4h6a3 3 0 013 3v13a2 2 0 00-2-2H4V4z" />
+      <path d="M20 4h-6a3 3 0 00-3 3v13a2 2 0 012-2h7V4z" />
+    </Icon>
+  )
+}
+
 function WesternComicIcon() {
   return (
     <Icon>
@@ -94,6 +103,7 @@ export function CategoryIcon({ id }: { id: string }) {
     case 'peliculas': return <MoviesIcon />
     case 'musica': return <MusicIcon />
     case 'series': return <SeriesIcon />
+    case 'libros': return <BooksIcon />
     default: return null
   }
 }

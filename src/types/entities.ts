@@ -32,6 +32,11 @@ export type MovieSource = 'original' | 'book' | 'comic' | 'game' | 'true_story' 
 export type MovieField = 'title' | 'status' | 'year' | 'rating' | 'tags'
 export type WatchLocation = 'cinema' | 'streaming' | 'physical' | 'tv' | 'other'
 
+export type BookStatus = 'plan_to_read' | 'reading' | 'completed' | 'paused' | 'dropped'
+export type BookFormat = 'paperback' | 'hardcover' | 'ebook' | 'audiobook' | 'other'
+export type BookSource = 'original' | 'translation' | 'adaptation' | 'other'
+export type BookField = 'title' | 'authors' | 'status' | 'pages' | 'rating' | 'tags'
+
 export type AgeRating = 'e' | 'e10' | 't' | 'm' | 'ao' | 'rp'
 export type RelationKind =
   | 'sequel' | 'prequel' | 'side_story' | 'spin_off' | 'alt_version' | 'adaptation'
@@ -299,6 +304,19 @@ export interface Item {
   startYear?: string
   endYear?: string
   units?: Unit[]
+  // Books — mirrors the manga shape (authors + reading progress + publication
+  // status) with a couple of book-specific fields on top.
+  bookStatus?: BookStatus
+  bookFormat?: BookFormat
+  bookSource?: BookSource
+  publisher?: string
+  saga?: string           // "The Wheel of Time", "Foundation", etc.
+  sagaIndex?: string      // "Book 1", "Vol. 3"; free-form so "1.5" works
+  pagesRead?: string
+  totalPages?: string
+  isbn?: string
+  translator?: string
+  bookReview?: string
   // User-defined free-form fields, Notion-style. Displayed at the bottom of
   // every detail view; each item can carry its own list independently of the
   // built-in category schema.
