@@ -189,6 +189,10 @@ interface Settings {
   // "Rating" stays as your preference in Games without leaking into Music.
   categorySortModes?: Record<string, string>
   rememberCategorySort?: boolean
+  // Prototype: 'sidebar' (classic, default) vs 'topnav' (compact, more
+  // horizontal room for the item grid). Collections and utility buttons
+  // reflow accordingly.
+  layoutMode?: 'sidebar' | 'topnav'
   sgdbApiKey?: string
   tmdbApiKey?: string
   igdbClientId?: string
@@ -208,7 +212,7 @@ interface AppData {
 // About string can't drift from the packaged version number.
 const APP_VERSION = __APP_VERSION__
 
-const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, rememberCategorySort: true, categorySortModes: {} }
+const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, rememberCategorySort: true, categorySortModes: {}, layoutMode: 'sidebar' }
 
 function getUniqueTags(list: Item[]): string[] {
   const set = new Set<string>()
@@ -2203,6 +2207,7 @@ function App() {
       data-density={settings.density}
       data-font-size={settings.fontSize}
       data-motion={settings.motion}
+      data-layout={settings.layoutMode ?? 'sidebar'}
     >
       {updateInfo && !updateBannerDismissed && (
         <div className="update-banner">
@@ -2223,8 +2228,50 @@ function App() {
           </div>
         </div>
       )}
+      {settings.layoutMode === 'topnav' && (
+        <nav className="topnav">
+          <div className="topnav-brand">
+            <svg className="brand-logo" viewBox="0 0 128 128" aria-hidden="true">
+              <circle cx="64" cy="64" r="46" fill="none" stroke="currentColor" strokeWidth="6" />
+              <path d="M64 26 L71.5 56.5 L102 64 L71.5 71.5 L64 102 L56.5 71.5 L26 64 L56.5 56.5 Z" fill="currentColor" />
+              <circle cx="64" cy="64" r="6" fill="none" stroke="currentColor" strokeWidth="4" />
+            </svg>
+            <span>Omnio</span>
+          </div>
+          <div className="topnav-libs">
+            {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((cat) => (
+              <button
+                key={cat.id}
+                className={specialView === 'none' && cat.id === activeCategory ? 'topnav-tab active' : 'topnav-tab'}
+                onClick={() => switchCategory(cat.id)}
+                title={cat.label}
+              >
+                <span className="nav-icon"><CategoryIcon id={cat.id} /></span>
+                <span>{cat.label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="topnav-utils">
+            <button
+              className={specialView === 'calendar' ? 'topnav-util active' : 'topnav-util'}
+              onClick={() => { setSpecialView('calendar'); closePanel(); closeAllDetailViews() }}
+              title="Release calendar"
+            ><CalendarIcon /></button>
+            <button
+              className={specialView === 'stats' ? 'topnav-util active' : 'topnav-util'}
+              onClick={() => { setSpecialView('stats'); closePanel(); closeAllDetailViews() }}
+              title="Statistics"
+            ><InsightsIcon /></button>
+            <button
+              className={specialView === 'settings' ? 'topnav-util active' : 'topnav-util'}
+              onClick={() => { setSpecialView('settings'); closePanel(); closeAllDetailViews() }}
+              title="Settings"
+            ><SettingsIcon /></button>
+          </div>
+        </nav>
+      )}
       <div className="body">
-        {!settings.sidebarHidden && (
+        {settings.layoutMode !== 'topnav' && !settings.sidebarHidden && (
         <nav className={settings.sidebarCompact ? 'sidebar sidebar-icons' : 'sidebar'}>
           <div className="brand-row">
             <svg className="brand-logo" viewBox="0 0 128 128" aria-hidden="true">
@@ -3268,6 +3315,14 @@ function App() {
                       </div>
                     </div>
                     <div className="field-group">
+                      <label>Layout <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 8, letterSpacing: '0.05em' }}>PROTOTYPE</span></label>
+                      <div className="yesno">
+                        <button type="button" className={(settings.layoutMode ?? 'sidebar') === 'sidebar' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, layoutMode: 'sidebar' }))}>Sidebar (classic)</button>
+                        <button type="button" className={settings.layoutMode === 'topnav' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, layoutMode: 'topnav' }))}>Top nav</button>
+                      </div>
+                      <p className="hint">Top nav moves the library selector to a horizontal bar above the content, reflows the Collections as chips, and gives the item grid the full width of the window. Toggle any time.</p>
+                    </div>
+                    <div className="field-group">
                       <label>Default view</label>
                       <select
                         value={settings.defaultLayout}
@@ -3683,6 +3738,81 @@ function App() {
                   {subView === 'items' && <button className="add-btn" onClick={openAddPanel}>+ Add</button>}
                 </div>
               </div>
+
+              {/* Prototype: when the sidebar is gone (top-nav layout),
+                  reflow the category's Collections status filters as chips
+                  right under the header — same functionality, different
+                  place. Only shows when there's a board view for this
+                  library (games, movies, anime/donghua, series, manga
+                  variants, music, books). */}
+              {settings.layoutMode === 'topnav' && (() => {
+                // TS narrows specialView based on the surrounding
+                // conditional block, so cast to string for the comparisons
+                // that intentionally reach into other board views.
+                const sv = specialView as string
+                const chips: { key: string; label: string; count: number; active: boolean; onClick: () => void }[] = []
+                if (isVideojuegos) {
+                  GAME_STATUS_OPTIONS.forEach((s) => chips.push({
+                    key: s.value, label: s.label,
+                    count: itemsInCategory.filter((i) => (i.gameStatus || 'backlog') === s.value).length,
+                    active: sv === 'board' && boardStatus === s.value,
+                    onClick: () => { setSpecialView('board'); setBoardStatus(s.value); closePanel(); closeAllDetailViews() },
+                  }))
+                } else if (activeCategory === 'musica') {
+                  (['listened', 'unlistened'] as const).forEach((v) => chips.push({
+                    key: v, label: v === 'listened' ? 'Listened' : 'Not listened',
+                    count: itemsInCategory.filter((i) => v === 'listened' ? i.consumed : !i.consumed).length,
+                    active: sv === 'musicBoard' && musicBoardFilter === v,
+                    onClick: () => { setSpecialView('musicBoard'); setMusicBoardFilter(v); closePanel(); closeAllDetailViews() },
+                  }))
+                } else if (isManga) {
+                  MANGA_STATUS_OPTIONS.forEach((s) => chips.push({
+                    key: s.value, label: s.label,
+                    count: itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === s.value).length,
+                    active: sv === 'mangaBoard' && mangaBoardStatus === s.value,
+                    onClick: () => { setSpecialView('mangaBoard'); setMangaBoardStatus(s.value); closePanel(); closeAllDetailViews() },
+                  }))
+                } else if (activeCategory === 'peliculas') {
+                  (['watched', 'unwatched'] as const).forEach((v) => chips.push({
+                    key: v, label: v === 'watched' ? 'Watched' : 'Not watched',
+                    count: itemsInCategory.filter((i) => v === 'watched' ? i.consumed : !i.consumed).length,
+                    active: sv === 'moviesBoard' && moviesBoardFilter === v,
+                    onClick: () => { setSpecialView('moviesBoard'); setMoviesBoardFilter(v); closePanel(); closeAllDetailViews() },
+                  }))
+                } else if (isAnime) {
+                  ANIME_STATUS_OPTIONS.forEach((s) => chips.push({
+                    key: s.value, label: s.label,
+                    count: itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === s.value).length,
+                    active: sv === 'animeBoard' && animeBoardStatus === s.value,
+                    onClick: () => { setSpecialView('animeBoard'); setAnimeBoardStatus(s.value); closePanel(); closeAllDetailViews() },
+                  }))
+                } else if (isSeriesLike) {
+                  SERIES_STATUS_OPTIONS.forEach((s) => chips.push({
+                    key: s.value, label: s.label,
+                    count: itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === s.value).length,
+                    active: sv === 'seriesBoard' && seriesBoardStatus === s.value,
+                    onClick: () => { setSpecialView('seriesBoard'); setSeriesBoardStatus(s.value); closePanel(); closeAllDetailViews() },
+                  }))
+                } else if (activeCategory === 'libros') {
+                  BOOK_STATUS_OPTIONS.forEach((s) => chips.push({
+                    key: s.value, label: s.label,
+                    count: itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === s.value).length,
+                    active: sv === 'bookBoard' && bookBoardStatus === s.value,
+                    onClick: () => { setSpecialView('bookBoard'); setBookBoardStatus(s.value); closePanel(); closeAllDetailViews() },
+                  }))
+                }
+                if (chips.length === 0) return null
+                return (
+                  <div className="collection-chips">
+                    {chips.map((c) => (
+                      <button key={c.key} className={c.active ? 'collection-chip active' : 'collection-chip'} onClick={c.onClick}>
+                        <span>{c.label}</span>
+                        <span className="chip-count">{c.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                )
+              })()}
 
               <div className="sub-tabs">
                 <button className={subView === 'items' ? 'sub-tab active' : 'sub-tab'} onClick={() => { setSubView('items'); setActiveCollectionId(null); resetListControls() }}>

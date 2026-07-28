@@ -16,3 +16,4 @@
 @import './styles/insights.css';      /* charts, badges, top-rated */
 @import './styles/settings.css';      /* theme/accent swatches, welcome, about, danger-btn, spoiler */
 @import './styles/utilities.css';     /* Ctrl+K search, backups, duplicates, bulk actions, selection state */
+@import './styles/topnav.css';        /* prototype: top-nav layout (Option A) */
