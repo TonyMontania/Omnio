@@ -33,21 +33,34 @@ function parseISODate(s?: string): Date | null {
   return Number.isNaN(dt.getTime()) ? null : dt
 }
 
+function parseYear(y?: string): Date | null {
+  if (!y || !/^\d{4}$/.test(y.trim())) return null
+  return new Date(parseInt(y, 10), 0, 1)
+}
+
 // Pick every candidate date on an item and return the ones in the future
 // (or today). Same item can produce multiple entries — e.g. an anime with
-// airedFrom (season starts) shows separately from its releaseDate.
+// airedFrom (season starts) shows separately from its releaseDate. `startDate`
+// is the "I started this" personal marker for anime/manga/books/series and
+// isn't a public release, so it's intentionally excluded. Music-only items
+// with just a releaseYear (no full date) get promoted via parseYear as a
+// year-precision entry so albums still appear in the calendar.
 function collectEntries(items: Item[], today: Date): Entry[] {
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const out: Entry[] = []
   for (const it of items) {
-    const push = (raw: string | undefined, label: string, source: Entry['source']) => {
-      const d = parseISODate(raw)
+    const push = (d: Date | null, label: string, source: Entry['source']) => {
       if (!d || d < startOfToday) return
       out.push({ item: it, date: d, label, source })
     }
-    push(it.releaseDate, 'Release', 'release')
-    push(it.airedFrom, 'Airs from', 'aired')
-    push(it.startDate, 'Starts', 'release')
+    // Prefer the most-precise date the item carries. releaseDate covers
+    // games/movies/music-albums/books; airedFrom covers anime/donghua/series;
+    // releaseYear + startYear are year-only fallbacks for older entries.
+    push(parseISODate(it.releaseDate), 'Release', 'release')
+    push(parseISODate(it.airedFrom), 'Airs from', 'aired')
+    // Only fall back to releaseYear if there's no releaseDate (avoid dup).
+    if (!it.releaseDate) push(parseYear(it.releaseYear), 'Release', 'release')
+    if (!it.airedFrom && !it.releaseDate) push(parseYear(it.startYear), 'Starts airing', 'aired')
   }
   // Dedup: same item + same date + same source is redundant.
   const seen = new Set<string>()

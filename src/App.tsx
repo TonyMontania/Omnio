@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo, useRef, ChangeEvent, Suspense, lazy } fro
 
 // Category metadata (Games / Music / Movies / Series / Anime & Donghua / Comics & Manga family)
 import {
-  CATEGORIES, COMIC_CATEGORY_IDS, COMIC_GROUP_LABEL,
-  ANIME_CATEGORY_IDS, ANIME_GROUP_LABEL, isAnimeLikeCategory,
+  CATEGORIES,
+  isAnimeLikeCategory,
 } from './categories'
 
 // Types
@@ -38,7 +38,7 @@ import {
 
 // Helpers (label lookups, derived counts, formatters, mini markdown)
 import {
-  getGameStatusRank, getMangaStatus, getAnimeStatus, getSeriesStatus,
+  getGameStatusRank, getMangaStatus, getAnimeStatus, getSeriesStatus, getBookStatus,
   seasonsDerivedCounts, isAlbumLikeMusic, isMangaLike,
   assetSrc, renderMiniMarkdown, parseDurationToSeconds,
 } from './types'
@@ -88,7 +88,8 @@ const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 import { buildStaticSiteHtml } from './exportSite'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
-  InsightsIcon, SettingsIcon, ChevronIcon, FolderIcon, CalendarIcon,
+  // ChevronIcon removed — no more collapsible library groups.
+  InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon,
 } from './icons'
 
 // Editors and pickers used inside detail modals and the toolbar
@@ -308,9 +309,10 @@ function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [loaded, setLoaded] = useState(false)
   const [layout, setLayout] = useState<Layout>('grid')
-  const [specialView, setSpecialView] = useState<'none' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'stats' | 'calendar' | 'settings'>('none')
+  const [specialView, setSpecialView] = useState<'none' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'stats' | 'calendar' | 'settings'>('none')
   const [animeBoardStatus, setAnimeBoardStatus] = useState<AnimeStatus>('plan_to_watch')
   const [seriesBoardStatus, setSeriesBoardStatus] = useState<SeriesStatus>('plan_to_watch')
+  const [bookBoardStatus, setBookBoardStatus] = useState<BookStatus>('plan_to_read')
   const [viewingSeries, setViewingSeries] = useState<Item | null>(null)
   const [settingsTab, setSettingsTab] = useState<'appearance' | 'behavior' | 'libraries' | 'cards' | 'data'>('appearance')
   const [welcomeStep, setWelcomeStep] = useState<'libraries' | 'tips'>('libraries')
@@ -330,8 +332,6 @@ function App() {
   }, [settings.enabledCategories, activeCategory, statsCategory])
 
   const [subView, setSubView] = useState<'items' | 'groups' | 'artists'>('items')
-  const [comicsOpen, setComicsOpen] = useState(false)
-  const [animeGroupOpen, setAnimeGroupOpen] = useState(false)
   const [musicArtists, setMusicArtists] = useState<MusicArtist[]>([])
   const [newArtistName, setNewArtistName] = useState('')
   const [viewingArtist, setViewingArtist] = useState<MusicArtist | null>(null)
@@ -924,9 +924,6 @@ function App() {
     window.addEventListener('omnio-image-download-error', h)
     return () => window.removeEventListener('omnio-image-download-error', h)
   }, [])
-  useEffect(() => {
-    if (COMIC_CATEGORY_IDS.includes(activeCategory)) setComicsOpen(true)
-  }, [activeCategory])
 
   const handlePlayTimeChange = (v: string) => { if (/^\d*\.?\d{0,2}$/.test(v)) setPlayTime(v) }
   const intHandler = (setter: (v: string) => void) => (v: string) => { if (/^\d*$/.test(v)) setter(v) }
@@ -2209,73 +2206,14 @@ function App() {
 
           <span className="sidebar-section-title">Library</span>
           <div className="sidebar-nav">
-            {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((cat) => {
-              const enabledFn = (id: string) => !settings.enabledCategories || settings.enabledCategories.includes(id)
-              const firstEnabledComic = CATEGORIES.filter((c) => enabledFn(c.id) && COMIC_CATEGORY_IDS.includes(c.id))[0]?.id
-              const firstEnabledAnime = CATEGORIES.filter((c) => enabledFn(c.id) && ANIME_CATEGORY_IDS.includes(c.id))[0]?.id
-              if (COMIC_CATEGORY_IDS.includes(cat.id) && cat.id !== firstEnabledComic) return null
-              if (ANIME_CATEGORY_IDS.includes(cat.id) && cat.id !== firstEnabledAnime) return null
-              if (cat.id === firstEnabledComic) {
-                const enabledComics = CATEGORIES.filter((c) => COMIC_CATEGORY_IDS.includes(c.id) && enabledFn(c.id))
-                const groupActive = specialView === 'none' && COMIC_CATEGORY_IDS.includes(activeCategory)
-                return (
-                  <div key="comics-group">
-                    <button className={groupActive ? 'nav-item active' : 'nav-item'} onClick={() => setComicsOpen((o) => !o)}>
-                      <span className="nav-icon"><CategoryIcon id="manga" /></span>
-                      <span>{COMIC_GROUP_LABEL}</span>
-                      <span className="nav-caret"><ChevronIcon open={comicsOpen} /></span>
-                    </button>
-                    {comicsOpen && (
-                      <div className="nav-subgroup">
-                        {enabledComics.map((sub) => (
-                          <button
-                            key={sub.id}
-                            className={specialView === 'none' && activeCategory === sub.id ? 'nav-item sub active' : 'nav-item sub'}
-                            onClick={() => switchCategory(sub.id)}
-                          >
-                            <span className="nav-icon"><CategoryIcon id={sub.id} /></span>
-                            <span>{sub.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              }
-              if (cat.id === firstEnabledAnime) {
-                const enabledAnimeCats = CATEGORIES.filter((c) => ANIME_CATEGORY_IDS.includes(c.id) && enabledFn(c.id))
-                const groupActive = specialView === 'none' && ANIME_CATEGORY_IDS.includes(activeCategory)
-                return (
-                  <div key="anime-group">
-                    <button className={groupActive ? 'nav-item active' : 'nav-item'} onClick={() => setAnimeGroupOpen((o) => !o)}>
-                      <span className="nav-icon"><CategoryIcon id="anime" /></span>
-                      <span>{ANIME_GROUP_LABEL}</span>
-                      <span className="nav-caret"><ChevronIcon open={animeGroupOpen} /></span>
-                    </button>
-                    {animeGroupOpen && (
-                      <div className="nav-subgroup">
-                        {enabledAnimeCats.map((sub) => (
-                          <button
-                            key={sub.id}
-                            className={specialView === 'none' && activeCategory === sub.id ? 'nav-item sub active' : 'nav-item sub'}
-                            onClick={() => switchCategory(sub.id)}
-                          >
-                            <span className="nav-icon"><CategoryIcon id={sub.id} /></span>
-                            <span>{sub.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              }
-              return (
-                <button key={cat.id} className={specialView === 'none' && cat.id === activeCategory ? 'nav-item active' : 'nav-item'} onClick={() => switchCategory(cat.id)}>
-                  <span className="nav-icon"><CategoryIcon id={cat.id} /></span>
-                  <span>{cat.label}</span>
-                </button>
-              )
-            })}
+            {/* Every library is a top-level nav item — no dropdown groups.
+                Order comes from CATEGORIES; visibility from enabledCategories. */}
+            {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((cat) => (
+              <button key={cat.id} className={specialView === 'none' && cat.id === activeCategory ? 'nav-item active' : 'nav-item'} onClick={() => switchCategory(cat.id)}>
+                <span className="nav-icon"><CategoryIcon id={cat.id} /></span>
+                <span>{cat.label}</span>
+              </button>
+            ))}
           </div>
 
           {activeCategory === 'videojuegos' && (
@@ -2382,6 +2320,26 @@ function App() {
                     <span className="nav-icon"><AnimeStatusIcon value={s.value} /></span>
                     <span>{s.label}</span>
                     <span className="nav-count">{itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === s.value).length}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {activeCategory === 'libros' && (
+            <>
+              <div className="sidebar-divider" />
+              <span className="sidebar-section-title">Collections</span>
+              <div className="sidebar-nav">
+                {BOOK_STATUS_OPTIONS.map((s) => (
+                  <button
+                    key={s.value}
+                    className={specialView === 'bookBoard' && bookBoardStatus === s.value ? 'nav-item active' : 'nav-item'}
+                    onClick={() => { setSpecialView('bookBoard'); setBookBoardStatus(s.value); closePanel(); closeAllDetailViews() }}
+                  >
+                    <span className="nav-icon"><MangaStatusIcon value={s.value as MangaStatus} /></span>
+                    <span>{s.label}</span>
+                    <span className="nav-count">{itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === s.value).length}</span>
                   </button>
                 ))}
               </div>
@@ -2773,6 +2731,46 @@ function App() {
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
                   <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} seriesFields={settings.seriesFields} />
+                ))}
+              </div>
+              </div>
+            </>)
+          })()}
+
+          {specialView === 'bookBoard' && (() => {
+            const list = filterAndSort(itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === bookBoardStatus), search, [], [], [], [], sortBy)
+            return (<>
+              <div className="content-header">
+                <div className="page-title">
+                  <span className="page-icon"><MangaStatusIcon value={bookBoardStatus as MangaStatus} /></span>
+                  <div>
+                    <h1>{getBookStatus(bookBoardStatus).label}</h1>
+                    <span className="page-count">{list.length} books</span>
+                  </div>
+                </div>
+                <div className="header-actions">
+                  <div className="view-toggle">
+                    <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
+                    <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
+                    <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')}>≡ Compact</button>
+                  </div>
+                </div>
+              </div>
+              <div className="toolbar">
+                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                  <option value="recent">Most recent</option>
+                  <option value="alpha">Alphabetical</option>
+                  <option value="rating">Rating</option>
+                  <option value="yearAsc">Publication year ↑</option>
+                  <option value="yearDesc">Publication year ↓</option>
+                </select>
+              </div>
+              <div className="content-scroll">
+              <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
+                {list.length === 0 && <p className="empty">Nothing here.</p>}
+                {list.map((i) => (
+                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} bookFields={settings.bookFields} />
                 ))}
               </div>
               </div>
@@ -5465,10 +5463,35 @@ function App() {
                 )}
 
                     <div className="form-section-header">
-                      <span className="form-section-title">Custom fields</span>
+                      <span className="form-section-title">Notes, tags & groups</span>
                     </div>
                     <div className="field-group">
-                      <label>Your own key/value pairs — anything the built-in fields don't cover</label>
+                      <label>{activeCategory === 'peliculas' ? 'Review' : 'Notes (supports **bold**, *italic*, and "- " lists)'}</label>
+                      <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+                      {notes.trim() && <div className="notes-preview" dangerouslySetInnerHTML={{ __html: renderMiniMarkdown(notes) }} />}
+                    </div>
+
+                    {editingId && (
+                      <div className="field-group">
+                        <label>Groups</label>
+                        <div className="pills">
+                          {categoryCollections.length === 0 && <span className="hint">No groups here yet.</span>}
+                          {categoryCollections.map((c) => (
+                            <button key={c.id} type="button" className={c.itemIds.includes(editingId) ? 'pill active' : 'pill'} onClick={() => handleToggleItemInCollection(c.id, editingId)}>
+                              {c.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <TagEditor
+                      tags={tags}
+                      onAdd={(t) => setTags((prev) => prev.includes(t) ? prev : [...prev, t])}
+                      onRemove={(i) => setTags((prev) => prev.filter((_, idx) => idx !== i))}
+                    />
+                    <div className="field-group">
+                      <label>Custom fields — your own key/value pairs</label>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {customFields.map((f, i) => (
                           <div key={f.id} style={{ display: 'flex', gap: 6 }}>
@@ -5500,35 +5523,6 @@ function App() {
                         >+ Add field</button>
                       </div>
                     </div>
-
-                    <div className="form-section-header">
-                      <span className="form-section-title">Notes, tags & groups</span>
-                    </div>
-                    <div className="field-group">
-                      <label>{activeCategory === 'peliculas' ? 'Review' : 'Notes (supports **bold**, *italic*, and "- " lists)'}</label>
-                      <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
-                      {notes.trim() && <div className="notes-preview" dangerouslySetInnerHTML={{ __html: renderMiniMarkdown(notes) }} />}
-                    </div>
-
-                    {editingId && (
-                      <div className="field-group">
-                        <label>Groups</label>
-                        <div className="pills">
-                          {categoryCollections.length === 0 && <span className="hint">No groups here yet.</span>}
-                          {categoryCollections.map((c) => (
-                            <button key={c.id} type="button" className={c.itemIds.includes(editingId) ? 'pill active' : 'pill'} onClick={() => handleToggleItemInCollection(c.id, editingId)}>
-                              {c.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <TagEditor
-                      tags={tags}
-                      onAdd={(t) => setTags((prev) => prev.includes(t) ? prev : [...prev, t])}
-                      onRemove={(i) => setTags((prev) => prev.filter((_, idx) => idx !== i))}
-                    />
                   </div>
                 </div>
                 </div>
