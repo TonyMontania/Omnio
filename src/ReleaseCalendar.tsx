@@ -89,6 +89,7 @@ export default function ReleaseCalendar({ items, onNavigate }: Props) {
   const today = useMemo(() => new Date(), [])
   const [monthCursor, setMonthCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [categoryFilter, setCategoryFilter] = useState<string>('')
+  const [comingLayout, setComingLayout] = useState<'list' | 'grid'>('list')
 
   const filteredItems = useMemo(
     () => (categoryFilter ? items.filter((i) => i.categoryId === categoryFilter) : items),
@@ -139,9 +140,43 @@ export default function ReleaseCalendar({ items, onNavigate }: Props) {
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 3fr)', gap: 24, alignItems: 'start' }}>
 
           <section>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, marginBottom: 12 }}>Coming up next</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: 0 }}>Coming up next</h2>
+              <div className="view-toggle">
+                <button className={comingLayout === 'list' ? 'active' : ''} onClick={() => setComingLayout('list')}>☰ List</button>
+                <button className={comingLayout === 'grid' ? 'active' : ''} onClick={() => setComingLayout('grid')}>▦ Grid</button>
+              </div>
+            </div>
             {upcoming.length === 0 ? (
-              <p className="hint">Nothing on the horizon. Add items with future <code>releaseDate</code>, <code>airedFrom</code> or <code>startDate</code> and they'll show up here.</p>
+              <p className="hint">Nothing on the horizon. Add items with future <code>releaseDate</code>, <code>airedFrom</code>, <code>releaseYear</code> or <code>startYear</code> and they'll show up here.</p>
+            ) : comingLayout === 'grid' ? (
+              // Grid mode: cover-first cards laid out on an auto-fill grid.
+              // Same click target as the list rows so tap-to-open still works.
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+                {upcoming.map((e, i) => {
+                  const cover = assetSrc(e.item.cover)
+                  const category = CATEGORIES.find((c) => c.id === e.item.categoryId)
+                  return (
+                    <button
+                      key={`${e.item.id}-${e.source}-${i}`}
+                      type="button"
+                      onClick={() => onNavigate(e.item)}
+                      style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 0, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text)', textAlign: 'left' }}
+                    >
+                      <div style={{ aspectRatio: '2/3', background: 'var(--surface-3)', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                        {cover
+                          ? <img src={cover} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontFamily: 'var(--font-display)', fontSize: 32 }}>{e.item.title.charAt(0).toUpperCase()}</div>}
+                      </div>
+                      <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{e.item.title}</div>
+                      <div className="hint" style={{ margin: 0, fontSize: 11, lineHeight: 1.3 }}>
+                        <div>{fmtDay(e.date)}</div>
+                        <div>{e.label}{category ? ` · ${category.label}` : ''}</div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {upcoming.map((e, i) => {

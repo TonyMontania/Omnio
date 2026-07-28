@@ -185,6 +185,10 @@ interface Settings {
   animeFields: Record<AnimeField, boolean>
   seriesFields: Record<SeriesField, boolean>
   bookFields: Record<BookField, boolean>
+  // Last sort mode the user picked per category. Restored on switch so
+  // "Rating" stays as your preference in Games without leaking into Music.
+  categorySortModes?: Record<string, string>
+  rememberCategorySort?: boolean
   sgdbApiKey?: string
   tmdbApiKey?: string
   igdbClientId?: string
@@ -204,7 +208,7 @@ interface AppData {
 // About string can't drift from the packaged version number.
 const APP_VERSION = __APP_VERSION__
 
-const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS }
+const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, rememberCategorySort: true, categorySortModes: {} }
 
 function getUniqueTags(list: Item[]): string[] {
   const set = new Set<string>()
@@ -1082,11 +1086,25 @@ function App() {
   }
 
   const switchCategory = (id: string) => {
-    // Reset the sort back to a value that makes sense in every category so
-    // you don't carry "Time played" from Games into Music, etc.
-    setActiveCategory(id); setSpecialView('none'); setSubView('items'); setActiveCollectionId(null); resetListControls(); setSortBy('recent'); closePanel()
+    // Restore the sort the user last picked in this category (if the
+    // "remember sort" setting is on) so their preferred view stays put
+    // between visits. Falls back to 'recent' for first-time entries.
+    const nextSort = settings.rememberCategorySort
+      ? ((settings.categorySortModes?.[id] as SortBy | undefined) ?? 'recent')
+      : 'recent'
+    setActiveCategory(id); setSpecialView('none'); setSubView('items'); setActiveCollectionId(null); resetListControls(); setSortBy(nextSort); closePanel()
     closeAllDetailViews()
     setSettings((s) => ({ ...s, lastCategory: id }))
+  }
+
+  // Wrap setSortBy so every UI-driven change also persists to settings for
+  // the currently-active category. Non-UI callers (like the "custom" reset
+  // when opening a collection) go straight to setSortBy and are excluded.
+  const setSortByPersistent = (v: SortBy) => {
+    setSortBy(v)
+    if (settings.rememberCategorySort && activeCategory) {
+      setSettings((s) => ({ ...s, categorySortModes: { ...(s.categorySortModes ?? {}), [activeCategory]: v } }))
+    }
   }
 
   const openAddPanel = () => { setEditingId(null); resetForm(); setPanelOpen(true) }
@@ -1669,6 +1687,7 @@ function App() {
         bannerImage2: movieBanner.trim() || undefined,
         hasSpoilers: movieReview.trim() ? hasSpoilers : undefined,
         genres: genres.length > 0 ? genres : undefined,
+        releaseDate: releaseDate || undefined,
         releaseYear: releaseYear || undefined,
         duration: duration || undefined,
         consumed,
@@ -1778,6 +1797,7 @@ function App() {
         volumesRead: volumesRead || undefined,
         totalVolumes: totalVolumesM || undefined,
         startDate: startDate || undefined,
+        releaseDate: releaseDate || undefined,
         alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
         mangaSource: mangaSource || undefined,
         magazine: magazine.trim() || undefined,
@@ -1827,8 +1847,12 @@ function App() {
       const albumLike = isAlbumLikeMusic(musicType || undefined)
       return {
         ...base,
-        releaseYear: !albumLike ? (releaseYear || undefined) : undefined,
-        releaseDate: albumLike ? (releaseDate || undefined) : undefined,
+        // Save whichever the user filled in — releaseDate is the more
+        // precise one and drives the Release calendar; releaseYear is the
+        // fallback shown on cards and used as the calendar's year-only
+        // entry when no full date exists.
+        releaseYear: releaseYear || undefined,
+        releaseDate: releaseDate || undefined,
         musicType: musicType || undefined,
         consumed,
         artist: artist.trim() || undefined,
@@ -2512,7 +2536,7 @@ function App() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
                   <option value="recent">Most recent</option>
                   <option value="alpha">Alphabetical</option>
                   <option value="rating">Rating</option>
@@ -2556,7 +2580,7 @@ function App() {
               </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
                   <option value="recent">Most recent</option>
                   <option value="alpha">Alphabetical</option>
                   <option value="rating">Rating</option>
@@ -2598,7 +2622,7 @@ function App() {
               </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
                   <option value="recent">Most recent</option>
                   <option value="alpha">Alphabetical</option>
                   <option value="rating">Rating</option>
@@ -2640,7 +2664,7 @@ function App() {
               </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
                   <option value="recent">Most recent</option>
                   <option value="alpha">Alphabetical</option>
                   <option value="rating">Rating</option>
@@ -2681,7 +2705,7 @@ function App() {
               </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
                   <option value="recent">Most recent</option>
                   <option value="alpha">Alphabetical</option>
                   <option value="rating">Rating</option>
@@ -2724,7 +2748,7 @@ function App() {
               </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
                   <option value="recent">Most recent</option>
                   <option value="alpha">Alphabetical</option>
                   <option value="rating">Rating</option>
@@ -2766,7 +2790,7 @@ function App() {
               </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
                   <option value="recent">Most recent</option>
                   <option value="alpha">Alphabetical</option>
                   <option value="rating">Rating</option>
@@ -3274,6 +3298,14 @@ function App() {
                       </div>
                     </div>
                     <div className="field-group">
+                      <label>Remember sort per library</label>
+                      <div className="yesno">
+                        <button type="button" className={settings.rememberCategorySort ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, rememberCategorySort: true }))}>Yes</button>
+                        <button type="button" className={!settings.rememberCategorySort ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, rememberCategorySort: false, categorySortModes: {} }))}>No</button>
+                      </div>
+                      <p className="hint">When on, each library keeps whichever sort you left it in ("Rating" in Games, "Alphabetical" in Music…). When off, every library opens sorted by "Most recent".</p>
+                    </div>
+                    <div className="field-group">
                       <label>On startup, open</label>
                       <div className="yesno">
                         <button type="button" className={settings.startupCategory === 'last' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'last' }))}>Last used category</button>
@@ -3727,7 +3759,7 @@ function App() {
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
-                    <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+                    <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
                       <option value="recent">Most recent</option>
                       <option value="alpha">Alphabetical</option>
                       <option value="rating">Rating</option>
@@ -4506,6 +4538,10 @@ function App() {
                         />
                         <div className="field-row">
                           <div className="field-group">
+                            <label>Release date</label>
+                            <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
+                          </div>
+                          <div className="field-group">
                             <label>Release year</label>
                             <input value={releaseYear} onChange={(e) => yearHandler(setReleaseYear)(e.target.value)} inputMode="numeric" maxLength={4} placeholder="e.g. 2023" />
                           </div>
@@ -5078,7 +5114,11 @@ function App() {
                     </div>
                     <div className="field-row">
                       <div className="field-group">
-                        <label>Start date</label>
+                        <label>Publication date</label>
+                        <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
+                      </div>
+                      <div className="field-group">
+                        <label>Start date (personal)</label>
                         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                       </div>
                       <div className="field-group">
@@ -5405,9 +5445,15 @@ function App() {
                       </>
                     ) : (
                       <>
-                        <div className="field-group">
-                          <label>Release year</label>
-                          <input value={releaseYear} onChange={(e) => yearHandler(setReleaseYear)(e.target.value)} inputMode="numeric" maxLength={4} />
+                        <div className="field-row">
+                          <div className="field-group">
+                            <label>Release date</label>
+                            <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
+                          </div>
+                          <div className="field-group">
+                            <label>Release year</label>
+                            <input value={releaseYear} onChange={(e) => yearHandler(setReleaseYear)(e.target.value)} inputMode="numeric" maxLength={4} />
+                          </div>
                         </div>
                         <div className="field-group">
                           <label>Listened?</label>
