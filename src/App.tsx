@@ -17,6 +17,7 @@ import type {
   MovieField, MovieSource, WatchLocation,
   AgeRating, RelatedItem, RewatchEntry,
   BandStatus, BandMember, SingleCover, AlbumEdition,
+  CustomField,
 } from './types'
 
 // Runtime constants (option lists, default field visibility)
@@ -617,6 +618,7 @@ function App() {
   const [rewatches, setRewatches] = useState<RewatchEntry[]>([])
   const [relatedItems, setRelatedItems] = useState<RelatedItem[]>([])
   const [recommendedItems, setRecommendedItems] = useState<string[]>([])
+  const [customFields, setCustomFields] = useState<CustomField[]>([])
   const [seriesStatus, setSeriesStatus] = useState<SeriesStatus>('plan_to_watch')
   const [seriesFormat, setSeriesFormat] = useState<SeriesFormat | ''>('')
   const [seriesDescription, setSeriesDescription] = useState('')
@@ -964,7 +966,7 @@ function App() {
     setAlternativeTitles([]); setAnimeSource(''); setEpisodeDuration(''); setAiredFrom(''); setAiredTo(''); setAgeRating('')
     setFavoriteEpisode(''); setFavoriteEpisodeNote(''); setDroppedAtEpisode(''); setDroppedReason('')
     setHasEpisodes(false); setEpisodes([])
-    setAnimeReview(''); setRewatches([]); setRelatedItems([]); setRecommendedItems([])
+    setAnimeReview(''); setRewatches([]); setRelatedItems([]); setRecommendedItems([]); setCustomFields([])
     setSeriesStatus('plan_to_watch'); setSeriesFormat(''); setSeriesDescription(''); setShowrunners([]); setWriters([])
     setNetwork(''); setCountry(''); setLanguage(''); setContentRating('')
     setHasSeasons(false); setSeasons([]); setSeriesReview('')
@@ -1154,6 +1156,7 @@ function App() {
     setRewatches(item.rewatches ?? [])
     setRelatedItems(item.relatedItems ?? [])
     setRecommendedItems(item.recommendedItems ?? [])
+    setCustomFields(item.customFields ?? [])
     setSeriesStatus(item.seriesStatus ?? 'plan_to_watch')
     setSeriesFormat(item.seriesFormat ?? '')
     setSeriesDescription(item.seriesDescription ?? '')
@@ -1549,6 +1552,11 @@ function App() {
   const handleLogoFile   = pickImageToDataUrl(setLogoImage)
 
   const buildItemFromForm = (id: string, createdAt: number): Item => {
+    // Trim custom-field keys/values and drop rows the user left completely
+    // empty so serialized JSON stays clean.
+    const cleanCustomFields = customFields
+      .map((f) => ({ ...f, key: f.key.trim(), value: f.value.trim() }))
+      .filter((f) => f.key || f.value)
     const base: Item = {
       id, categoryId: activeCategory, title: title.trim(),
       cover: cover.trim() || undefined,
@@ -1556,6 +1564,7 @@ function App() {
       tags: tags.length > 0 ? tags : undefined,
       rating: rating || undefined,
       finishedAt: finishedAt || undefined,
+      customFields: cleanCustomFields.length > 0 ? cleanCustomFields : undefined,
       createdAt,
     }
 
@@ -5230,6 +5239,43 @@ function App() {
                     </div>
                   </>
                 )}
+
+                    <div className="form-section-header">
+                      <span className="form-section-title">Custom fields</span>
+                    </div>
+                    <div className="field-group">
+                      <label>Your own key/value pairs — anything the built-in fields don't cover</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {customFields.map((f, i) => (
+                          <div key={f.id} style={{ display: 'flex', gap: 6 }}>
+                            <input
+                              value={f.key}
+                              onChange={(e) => setCustomFields((prev) => prev.map((x, j) => (j === i ? { ...x, key: e.target.value } : x)))}
+                              placeholder="Key (e.g. My score)"
+                              style={{ flex: '0 0 30%' }}
+                            />
+                            <input
+                              value={f.value}
+                              onChange={(e) => setCustomFields((prev) => prev.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
+                              placeholder="Value"
+                              style={{ flex: 1 }}
+                            />
+                            <button
+                              type="button"
+                              className="secondary-btn"
+                              onClick={() => setCustomFields((prev) => prev.filter((_, j) => j !== i))}
+                              title="Remove"
+                            >✕</button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="secondary-btn"
+                          style={{ alignSelf: 'flex-start' }}
+                          onClick={() => setCustomFields((prev) => [...prev, { id: crypto.randomUUID(), key: '', value: '' }])}
+                        >+ Add field</button>
+                      </div>
+                    </div>
 
                     <div className="form-section-header">
                       <span className="form-section-title">Notes, tags & groups</span>

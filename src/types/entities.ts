@@ -299,4 +299,14 @@ export interface Item {
   startYear?: string
   endYear?: string
   units?: Unit[]
+  // User-defined free-form fields, Notion-style. Displayed at the bottom of
+  // every detail view; each item can carry its own list independently of the
+  // built-in category schema.
+  customFields?: CustomField[]
+}
+
+export interface CustomField {
+  id: string
+  key: string
+  value: string
 }

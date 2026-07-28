@@ -3,6 +3,7 @@ import { GameStatusIcon } from './icons'
 import type { Item, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
+import CustomFieldsView from './components/CustomFieldsView'
 import DetailFranchiseTimeline from './components/detail/DetailFranchiseTimeline'
 import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
@@ -207,6 +208,7 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
           />
           <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} />
           <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
+          <CustomFieldsView fields={item.customFields} />
         </div>
       </div>
     </div>

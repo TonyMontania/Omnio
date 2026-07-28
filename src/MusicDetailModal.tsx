@@ -4,6 +4,7 @@ import { StarRatingDisplay } from './StarRating'
 import type { Item, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
+import CustomFieldsView from './components/CustomFieldsView'
 import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
 import DetailNotes from './components/detail/DetailNotes'
@@ -130,6 +131,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
         <DetailHistoryTable label="Listen history" entries={item.rewatches ?? []} />
         <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
         <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
+          <CustomFieldsView fields={item.customFields} />
       </div>
 
       {albumLike && item.tracks && item.tracks.length > 0 && (
