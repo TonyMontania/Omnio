@@ -13,8 +13,10 @@ function esc(s: string): string {
 function localSrc(rel?: string): string | null {
   if (!rel) return null
   if (/^(https?:|data:|blob:)/i.test(rel)) return rel  // remote / inline pass through
-  if (rel.startsWith('omnio-asset:')) return rel.replace(/^omnio-asset:\/*/i, 'assets/')
-  return `assets/${rel}`
+  const bare = rel.startsWith('omnio-asset:') ? rel.replace(/^omnio-asset:\/*/i, '') : rel
+  // Percent-encode path segments so filenames with spaces ("Mirror's Edge
+  // Catalyst cover.jpg") load in a browser opening the exported index.html.
+  return `assets/${bare.split('/').map(encodeURIComponent).join('/')}`
 }
 
 function renderCard(it: Item): string {

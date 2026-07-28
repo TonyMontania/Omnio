@@ -32,7 +32,10 @@ import {
 export function assetSrc(value?: string | null): string | undefined {
   if (!value) return undefined
   if (/^(data:|https?:|file:|blob:|omnio-asset:)/i.test(value)) return value
-  return `omnio-asset://${value}`
+  // Percent-encode each path segment so filenames with spaces, apostrophes
+  // or unicode ("Mirror's Edge Catalyst cover.jpg") survive the WHATWG URL
+  // parser. The main process decodes with decodeURIComponent on the way in.
+  return `omnio-asset://${value.split('/').map(encodeURIComponent).join('/')}`
 }
 
 // ---- Relation ----
