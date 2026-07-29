@@ -10,7 +10,7 @@ import { useMemo } from 'react'
 import type { Item } from './types'
 import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
-import { CategoryIcon, CalendarIcon } from './icons'
+import { CategoryIcon, CalendarIcon, InsightsIcon, SettingsIcon } from './icons'
 
 interface Props {
   items: Item[]
@@ -18,6 +18,9 @@ interface Props {
   onOpenCategory: (id: string) => void
   onOpenItem: (item: Item) => void
   onOpenCalendar: () => void
+  onOpenStats: () => void
+  onOpenSettings: () => void
+  onOpenSearch: () => void
 }
 
 // Rank an item's recency by whichever of finishedAt / createdAt is
@@ -90,7 +93,7 @@ function summarizeCategory(catId: string, list: Item[]): string {
   }
 }
 
-export default function Home({ items, enabledCategories, onOpenCategory, onOpenItem, onOpenCalendar }: Props) {
+export default function Home({ items, enabledCategories, onOpenCategory, onOpenItem, onOpenCalendar, onOpenStats, onOpenSettings, onOpenSearch }: Props) {
   const today = useMemo(() => new Date(), [])
   const greeting = useMemo(() => {
     const h = today.getHours()
@@ -119,12 +122,32 @@ export default function Home({ items, enabledCategories, onOpenCategory, onOpenI
 
   return (
     <div className="home">
-      <div className="content-header">
-        <div className="page-title">
+      <div className="home-header">
+        <div className="home-brand">
+          <svg className="brand-logo" viewBox="0 0 128 128" aria-hidden="true">
+            <circle cx="64" cy="64" r="46" fill="none" stroke="currentColor" strokeWidth="6" />
+            <path d="M64 26 L71.5 56.5 L102 64 L71.5 71.5 L64 102 L56.5 71.5 L26 64 L56.5 56.5 Z" fill="currentColor" />
+            <circle cx="64" cy="64" r="6" fill="none" stroke="currentColor" strokeWidth="4" />
+          </svg>
           <div>
             <h1>{greeting}</h1>
-            <span className="page-count">{dateLabel}</span>
+            <span className="home-date">{dateLabel}</span>
           </div>
+        </div>
+        <div className="home-utils">
+          <button type="button" className="home-util" onClick={onOpenSearch} title="Global search (Ctrl+K)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <span>Search</span>
+          </button>
+          <button type="button" className="home-util" onClick={onOpenCalendar} title="Release calendar">
+            <CalendarIcon /><span>Calendar</span>
+          </button>
+          <button type="button" className="home-util" onClick={onOpenStats} title="Statistics">
+            <InsightsIcon /><span>Stats</span>
+          </button>
+          <button type="button" className="home-util" onClick={onOpenSettings} title="Settings">
+            <SettingsIcon /><span>Settings</span>
+          </button>
         </div>
       </div>
 

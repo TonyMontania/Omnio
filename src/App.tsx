@@ -867,6 +867,9 @@ function App() {
       } else if (e.key === '?' && !inField && !e.ctrlKey && !e.metaKey) {
         e.preventDefault()
         setShortcutsOpen(true)
+      } else if (mod && e.key.toLowerCase() === 'h' && !inField) {
+        e.preventDefault()
+        setSpecialView('home'); closePanel(); closeAllDetailViews()
       }
     }
     window.addEventListener('keydown', handler)
@@ -2277,7 +2280,7 @@ function App() {
           </div>
         </div>
       )}
-      {settings.layoutMode === 'topnav' && (
+      {settings.layoutMode === 'topnav' && specialView !== 'home' && (
         <nav className="topnav">
           <div className="topnav-brand">
             <svg className="brand-logo" viewBox="0 0 128 128" aria-hidden="true">
@@ -2289,7 +2292,7 @@ function App() {
           </div>
           <div className="topnav-libs">
             <button
-              className={specialView === 'home' ? 'topnav-tab active' : 'topnav-tab'}
+              className={(specialView as string) === 'home' ? 'topnav-tab active' : 'topnav-tab'}
               onClick={() => { setSpecialView('home'); closePanel(); closeAllDetailViews() }}
               title="Home"
             >
@@ -2328,7 +2331,7 @@ function App() {
         </nav>
       )}
       <div className="body">
-        {settings.layoutMode !== 'topnav' && !settings.sidebarHidden && (
+        {settings.layoutMode !== 'topnav' && !settings.sidebarHidden && specialView !== 'home' && (
         <nav className={settings.sidebarCompact ? 'sidebar sidebar-icons' : 'sidebar'}>
           <div className="brand-row">
             <svg className="brand-logo" viewBox="0 0 128 128" aria-hidden="true">
@@ -2341,7 +2344,7 @@ function App() {
           </div>
 
           <div className="sidebar-nav">
-            <button className={specialView === 'home' ? 'nav-item active' : 'nav-item'} onClick={() => { setSpecialView('home'); closePanel(); closeAllDetailViews() }}>
+            <button className={(specialView as string) === 'home' ? 'nav-item active' : 'nav-item'} onClick={() => { setSpecialView('home'); closePanel(); closeAllDetailViews() }}>
               <span className="nav-icon"><HomeIcon /></span>
               <span>Home</span>
             </button>
@@ -3371,6 +3374,9 @@ function App() {
                 onOpenCategory={(id) => switchCategory(id)}
                 onOpenItem={navigateToItem}
                 onOpenCalendar={() => { setSpecialView('calendar'); closePanel(); closeAllDetailViews() }}
+                onOpenStats={() => { setSpecialView('stats'); closePanel(); closeAllDetailViews() }}
+                onOpenSettings={() => { setSpecialView('settings'); closePanel(); closeAllDetailViews() }}
+                onOpenSearch={() => setSearchOpen(true)}
               />
             </Suspense>
           )}
