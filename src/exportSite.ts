@@ -120,6 +120,26 @@ export function buildStaticSiteHtml(items: Item[], artists: MusicArtist[], title
     footer { padding:24px 40px 40px; color:var(--mute); font-size:11px;
       font-family:"IBM Plex Mono", monospace; letter-spacing:.06em;
       border-top:1px solid var(--line); margin-top:32px; }
+    /* Interactive controls (search + theme toggle) added in the mejorado
+       export. Inline JS at the bottom of body wires them up. */
+    .controls { margin-left:auto; display:flex; gap:8px; align-items:center; }
+    .controls input {
+      background:var(--surface-2); border:1px solid var(--line);
+      color:var(--ink); padding:6px 10px; border-radius:6px; font:inherit;
+      font-size:13px; min-width:220px;
+    }
+    .controls button {
+      background:var(--surface-2); border:1px solid var(--line);
+      color:var(--ink); padding:5px 10px; border-radius:6px; cursor:pointer;
+      font:inherit; font-size:12px;
+    }
+    .controls button:hover { border-color:var(--accent); color:var(--accent); }
+    body.light {
+      --bg:#f8f5ea; --surface:#f0ecdf; --surface-2:#e6e2d3;
+      --line:#d1cdbf; --ink:#2a2825; --mute:#75726a; --accent:#a17c00;
+    }
+    .hidden { display:none !important; }
+    .cat.filtered-out { display:none; }
   `.trim()
 
   const sections = CATEGORIES.map((c) => {
@@ -146,10 +166,41 @@ export function buildStaticSiteHtml(items: Item[], artists: MusicArtist[], title
 <header>
   <h1>${esc(title)}</h1>
   <span class="meta">${total} entries · exported ${now}</span>
+  <div class="controls">
+    <input id="q" type="search" placeholder="Search titles…" autocomplete="off">
+    <button id="theme">☾ / ☀</button>
+  </div>
 </header>
-<nav>${nav}</nav>
+<nav>${nav}<a href="#" data-cat="__all">All</a></nav>
 ${sections}
 ${artistsSection}
-<footer>Exported from Omnio · read-only static snapshot.</footer>
+<footer>Exported from Omnio · read-only static snapshot. Search filters cards live; theme toggle persists in localStorage.</footer>
+<script>
+(function() {
+  // Client-side filter — hide cards whose title/sub don't contain the query.
+  var q = document.getElementById('q');
+  function norm(s){ return (s||'').toLowerCase(); }
+  q && q.addEventListener('input', function() {
+    var needle = norm(q.value.trim());
+    document.querySelectorAll('.card').forEach(function(c) {
+      var t = norm((c.querySelector('.title')||{}).textContent);
+      var s = norm((c.querySelector('.sub')||{}).textContent);
+      c.classList.toggle('hidden', needle && (t.indexOf(needle) === -1 && s.indexOf(needle) === -1));
+    });
+    document.querySelectorAll('section.cat').forEach(function(sec) {
+      var any = Array.prototype.some.call(sec.querySelectorAll('.card'), function(c){ return !c.classList.contains('hidden'); });
+      sec.classList.toggle('filtered-out', !any);
+    });
+  });
+  // Theme toggle — respects saved preference, defaults to dark.
+  var t = document.getElementById('theme');
+  var saved = localStorage.getItem('omnio-export-theme');
+  if (saved === 'light') document.body.classList.add('light');
+  t && t.addEventListener('click', function() {
+    document.body.classList.toggle('light');
+    localStorage.setItem('omnio-export-theme', document.body.classList.contains('light') ? 'light' : 'dark');
+  });
+})();
+</script>
 </body></html>`
 }

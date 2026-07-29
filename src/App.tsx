@@ -328,7 +328,7 @@ function App() {
   const [bookBoardStatus, setBookBoardStatus] = useState<BookStatus>('plan_to_read')
   const [viewingSeries, setViewingSeries] = useState<Item | null>(null)
   const [settingsTab, setSettingsTab] = useState<'appearance' | 'behavior' | 'libraries' | 'cards' | 'data'>('appearance')
-  const [welcomeStep, setWelcomeStep] = useState<'libraries' | 'tips'>('libraries')
+  const [welcomeStep, setWelcomeStep] = useState<'libraries' | 'keys' | 'tips'>('libraries')
   const [welcomePicks, setWelcomePicks] = useState<Record<string, boolean>>({})
   const [moviesBoardFilter, setMoviesBoardFilter] = useState<'watched' | 'unwatched'>('watched')
   const [mangaBoardStatus, setMangaBoardStatus] = useState<MangaStatus>('plan_to_read')
@@ -5918,14 +5918,42 @@ function App() {
                     )
                   })}
                 </div>
-                <div className="modal-actions">
+                <div className="modal-actions" style={{ gap: 8 }}>
+                  <span style={{ marginRight: 'auto', fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>1 / 3</span>
                   <button className="danger-solid" onClick={() => {
                     const picked = CATEGORIES.filter((c) => welcomePicks[c.id] ?? true).map((c) => c.id)
                     setSettings((s) => ({ ...s, enabledCategories: picked.length > 0 ? picked : CATEGORIES.map((c) => c.id) }))
                     const firstEnabled = picked[0]
                     if (firstEnabled) setActiveCategory(firstEnabled)
-                    setWelcomeStep('tips')
-                  }}>Continue</button>
+                    setWelcomeStep('keys')
+                  }}>Continue →</button>
+                </div>
+              </>
+            ) : welcomeStep === 'keys' ? (
+              <>
+                <p className="modal-message">
+                  API keys for metadata sources — optional but they unlock the ↗ Fetch buttons in the editors. All free, keyless sources (AniList, MAL, Kitsu, MangaDex, MusicBrainz, VGMdb, OpenLibrary) work out of the box.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>SteamGridDB (game covers/banners/logos)</span>
+                    <input type="password" placeholder="Free key at steamgriddb.com/profile/preferences/api" value={settings.sgdbApiKey ?? ''} onChange={(e) => setSettings((s) => ({ ...s, sgdbApiKey: e.target.value }))} />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>TMDb (movies + series)</span>
+                    <input type="password" placeholder="Free v3 key at themoviedb.org/settings/api" value={settings.tmdbApiKey ?? ''} onChange={(e) => setSettings((s) => ({ ...s, tmdbApiKey: e.target.value }))} />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>IGDB (games full metadata) — Twitch Client ID + Secret</span>
+                    <input type="text" placeholder="Client ID (dev.twitch.tv/console/apps)" value={settings.igdbClientId ?? ''} onChange={(e) => setSettings((s) => ({ ...s, igdbClientId: e.target.value }))} />
+                    <input type="password" placeholder="Client Secret" value={settings.igdbClientSecret ?? ''} onChange={(e) => setSettings((s) => ({ ...s, igdbClientSecret: e.target.value }))} />
+                  </label>
+                </div>
+                <div className="modal-actions" style={{ gap: 8, marginTop: 16 }}>
+                  <span style={{ marginRight: 'auto', fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>2 / 3</span>
+                  <button className="secondary-btn" onClick={() => setWelcomeStep('libraries')}>← Back</button>
+                  <button className="secondary-btn" onClick={() => setWelcomeStep('tips')}>Skip →</button>
+                  <button className="danger-solid" onClick={() => setWelcomeStep('tips')}>Continue →</button>
                 </div>
               </>
             ) : (
@@ -5935,11 +5963,14 @@ function App() {
                 </p>
                 <ul className="welcome-tips">
                   <li>Pick a category on the left sidebar.</li>
-                  <li>Click <b>+ Add</b> to create your first entry.</li>
-                  <li>Personalize theme, density and card fields in <b>Settings</b>.</li>
-                  <li>Press <b>Ctrl+F</b> to search, <b>Esc</b> to close any panel.</li>
+                  <li>Click <b>+ Add</b> or use <b>↗ Fetch metadata</b> in the editor to fill fields from AniList / TMDb / IGDB / etc.</li>
+                  <li>Personalize theme, density, card fields and card zoom in <b>Settings</b>.</li>
+                  <li>Press <b>?</b> anytime for the shortcuts cheatsheet · <b>Ctrl+K</b> for global search · <b>F5</b> to refresh.</li>
+                  <li>Right-click any card for quick actions (open, edit, duplicate, move, delete).</li>
                 </ul>
-                <div className="modal-actions">
+                <div className="modal-actions" style={{ gap: 8 }}>
+                  <span style={{ marginRight: 'auto', fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>3 / 3</span>
+                  <button className="secondary-btn" onClick={() => setWelcomeStep('keys')}>← Back</button>
                   <button className="danger-solid" onClick={() => setSettings((s) => ({ ...s, welcomeShown: true }))}>Get started</button>
                 </div>
               </>
