@@ -8,6 +8,7 @@ interface Props {
   layout: 'list' | 'grid' | 'compact'
   onOpen: (item: Item) => void
   onDelete: (item: Item) => void
+  onContextMenu?: (item: Item, x: number, y: number) => void
   onToggleSelect?: (id: string) => void
   selected?: boolean
   selectionActive?: boolean
@@ -23,7 +24,12 @@ interface Props {
   bookFields?: Record<BookField, boolean>
 }
 
-export default function ItemCard({ item, layout, onOpen, onDelete, onToggleSelect, selected, selectionActive, draggableEnabled, onDragStartItem, onDropItem, gameFields, musicFields, mangaFields, movieFields, animeFields, seriesFields, bookFields }: Props) {
+export default function ItemCard({ item, layout, onOpen, onDelete, onContextMenu, onToggleSelect, selected, selectionActive, draggableEnabled, onDragStartItem, onDropItem, gameFields, musicFields, mangaFields, movieFields, animeFields, seriesFields, bookFields }: Props) {
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (!onContextMenu) return
+    e.preventDefault()
+    onContextMenu(item, e.clientX, e.clientY)
+  }
   // Shift+click always toggles selection. Once any card is selected,
   // plain clicks also toggle so the user can keep going without holding
   // shift each time (macOS Finder pattern).
@@ -71,7 +77,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleSelec
 
   if (layout === 'compact') {
     return (
-      <div className={`item-card compact${selected ? ' selected' : ''}`} onClick={handleClick} {...dragProps}>
+      <div className={`item-card compact${selected ? ' selected' : ''}`} onClick={handleClick} onContextMenu={handleContextMenu} {...dragProps}>
         {selected && <span className="card-check" aria-hidden>✓</span>}
         <div className="compact-cover">
           {item.cover ? <img src={assetSrc(item.cover)} alt={item.title} loading="lazy" decoding="async" /> : <div className="cover-placeholder small">{item.title.charAt(0).toUpperCase()}</div>}
@@ -86,7 +92,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleSelec
   }
 
   return (
-    <div className={`item-card${selected ? ' selected' : ''}`} onClick={handleClick} {...dragProps}>
+    <div className={`item-card${selected ? ' selected' : ''}`} onClick={handleClick} onContextMenu={handleContextMenu} {...dragProps}>
       {selected && <span className="card-check" aria-hidden>✓</span>}
       <div className={isMusic ? 'cover-wrap square' : 'cover-wrap'}>
         {item.cover ? (

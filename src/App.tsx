@@ -57,6 +57,7 @@ import {
 // bundle stays lean — the app boots faster and users only pay for a
 // modal's JS the first time they open it (imperceptible on local disk).
 import ItemCard from './ItemCard'
+import CardContextMenu, { type CardMenuAction } from './components/CardContextMenu'
 import Toast from './Toast'
 import BackupList from './BackupList'
 import BulkActionBar from './BulkActionBar'
@@ -446,6 +447,7 @@ function App() {
   }
   const [searchOpen, setSearchOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [ctxMenu, setCtxMenu] = useState<{ item: Item; x: number; y: number } | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
   const [bundleSgdbFor, setBundleSgdbFor] = useState<null | { entryId: string; title: string }>(null)
@@ -2017,6 +2019,36 @@ function App() {
   }
 
   const handleDeleteFromPanel = () => { if (editingItem) handleDelete(editingItem) }
+
+  // Builds the right-click menu for a card. Actions are common to every
+  // library (open, edit, duplicate, move, add to group, delete) so no
+  // per-category branching is needed here — the modals underneath handle
+  // the category-specific state.
+  const buildCardMenu = (item: Item): CardMenuAction[] => {
+    const dup = () => {
+      const copy: Item = { ...item, id: crypto.randomUUID(), title: `${item.title} (Copy)`, createdAt: Date.now() }
+      setItems((prev) => [...prev, copy])
+      setToast(`Duplicated as "${copy.title}"`)
+    }
+    const targets = CATEGORIES.filter((c) => c.id !== item.categoryId)
+    return [
+      { label: 'Open', onClick: () => openEditPanel(item) },
+      { label: 'Edit', onClick: () => { openEditPanel(item); setTimeout(() => loadItemIntoForm(item), 0); setPanelOpen(true) } },
+      { label: 'Duplicate', onClick: dup },
+      { divider: true, label: '', onClick: () => {} },
+      // Move-to-library submenu flattened: each destination is its own row.
+      // The categoryId change re-slots the item into another JSON on next save.
+      ...targets.slice(0, 4).map((c) => ({
+        label: `Move to ${c.label}`,
+        onClick: () => {
+          setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, categoryId: c.id } : i)))
+          setToast(`Moved to ${c.label}`)
+        },
+      })),
+      { divider: true, label: '', onClick: () => {} },
+      { label: 'Delete…', danger: true, onClick: () => handleDelete(item) },
+    ]
+  }
 
   const handleDuplicateGame = () => {
     if (!viewingGame) return
@@ -4014,6 +4046,7 @@ function App() {
                         animeFields={settings.animeFields}
                         seriesFields={settings.seriesFields}
                         bookFields={settings.bookFields}
+                        onContextMenu={(it, x, y) => setCtxMenu({ item: it, x, y })}
                       />
                     ))}
                   </div>
@@ -5979,6 +6012,15 @@ function App() {
           items={items}
           onOpenItem={navigateToItem}
           onClose={() => setDupOpen(false)}
+        />
+      )}
+
+      {ctxMenu && (
+        <CardContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          actions={buildCardMenu(ctxMenu.item)}
+          onClose={() => setCtxMenu(null)}
         />
       )}
 
