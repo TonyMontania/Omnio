@@ -62,6 +62,7 @@ import Toast from './Toast'
 import BackupList from './BackupList'
 import BulkActionBar from './BulkActionBar'
 const ReleaseCalendar    = lazy(() => import('./ReleaseCalendar'))
+const Home              = lazy(() => import('./Home'))
 const GameDetailModal   = lazy(() => import('./GameDetailModal'))
 const MusicDetailModal  = lazy(() => import('./MusicDetailModal'))
 const ArtistDetailView  = lazy(() => import('./ArtistDetailView'))
@@ -91,7 +92,7 @@ import { buildStaticSiteHtml } from './exportSite'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
   // ChevronIcon removed — no more collapsible library groups.
-  InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon,
+  InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon, HomeIcon,
 } from './icons'
 
 // Editors and pickers used inside detail modals and the toolbar
@@ -163,7 +164,7 @@ const ACCENT_OPTIONS: { value: AccentName; label: string; swatch: string }[] = [
 
 type DensityName = 'comfortable' | 'compact'
 type FontSizeName = 'small' | 'medium' | 'large'
-type StartupCategoryMode = 'last' | 'first'
+type StartupCategoryMode = 'last' | 'first' | 'home'
 type MotionMode = 'auto' | 'reduced'
 
 interface Settings {
@@ -322,7 +323,7 @@ function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [loaded, setLoaded] = useState(false)
   const [layout, setLayout] = useState<Layout>('grid')
-  const [specialView, setSpecialView] = useState<'none' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'stats' | 'calendar' | 'settings'>('none')
+  const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'stats' | 'calendar' | 'settings'>('none')
   const [animeBoardStatus, setAnimeBoardStatus] = useState<AnimeStatus>('plan_to_watch')
   const [seriesBoardStatus, setSeriesBoardStatus] = useState<SeriesStatus>('plan_to_watch')
   const [bookBoardStatus, setBookBoardStatus] = useState<BookStatus>('plan_to_read')
@@ -787,6 +788,12 @@ function App() {
       setLayout(merged.defaultLayout)
       if (merged.startupCategory === 'last' && merged.lastCategory && CATEGORIES.some((c) => c.id === merged.lastCategory)) {
         setActiveCategory(merged.lastCategory)
+      }
+      // Home dashboard takes precedence when the setting is on — sets a
+      // specialView instead of choosing a category. First-run only; F5
+      // keeps whatever the user was looking at.
+      if (applySettings && merged.startupCategory === 'home') {
+        setSpecialView('home')
       }
     }
     if (data?.customOrders) setCustomOrders(data.customOrders)
@@ -2281,6 +2288,14 @@ function App() {
             <span>Omnio</span>
           </div>
           <div className="topnav-libs">
+            <button
+              className={specialView === 'home' ? 'topnav-tab active' : 'topnav-tab'}
+              onClick={() => { setSpecialView('home'); closePanel(); closeAllDetailViews() }}
+              title="Home"
+            >
+              <span className="nav-icon"><HomeIcon /></span>
+              <span>Home</span>
+            </button>
             {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((cat) => (
               <button
                 key={cat.id}
@@ -2325,6 +2340,12 @@ function App() {
             <button className="sidebar-toggle" onClick={() => setSettings((s) => ({ ...s, sidebarHidden: true }))} title="Hide sidebar">⟨⟨</button>
           </div>
 
+          <div className="sidebar-nav">
+            <button className={specialView === 'home' ? 'nav-item active' : 'nav-item'} onClick={() => { setSpecialView('home'); closePanel(); closeAllDetailViews() }}>
+              <span className="nav-icon"><HomeIcon /></span>
+              <span>Home</span>
+            </button>
+          </div>
           <span className="sidebar-section-title">Library</span>
           <div className="sidebar-nav">
             {/* Every library is a top-level nav item — no dropdown groups.
@@ -3342,6 +3363,18 @@ function App() {
             </>
           )}
 
+          {specialView === 'home' && (
+            <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
+              <Home
+                items={items}
+                enabledCategories={settings.enabledCategories}
+                onOpenCategory={(id) => switchCategory(id)}
+                onOpenItem={navigateToItem}
+                onOpenCalendar={() => { setSpecialView('calendar'); closePanel(); closeAllDetailViews() }}
+              />
+            </Suspense>
+          )}
+
           {specialView === 'calendar' && (
             <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
               <ReleaseCalendar items={items} onNavigate={navigateToItem} />
@@ -3483,6 +3516,7 @@ function App() {
                     <div className="field-group">
                       <label>On startup, open</label>
                       <div className="yesno">
+                        <button type="button" className={settings.startupCategory === 'home' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'home' }))}>Home dashboard</button>
                         <button type="button" className={settings.startupCategory === 'last' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'last' }))}>Last used category</button>
                         <button type="button" className={settings.startupCategory === 'first' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'first' }))}>First category</button>
                       </div>

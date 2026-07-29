@@ -176,6 +176,16 @@ export function CalendarIcon() {
   )
 }
 
+export function HomeIcon() {
+  return (
+    <Icon>
+      <path d="M3 12L12 4l9 8" />
+      <path d="M5 10v10h14V10" />
+      <path d="M10 20v-6h4v6" />
+    </Icon>
+  )
+}
+
 export function ChevronIcon({ open }: { open: boolean }) {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
