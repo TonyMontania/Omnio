@@ -85,6 +85,7 @@ const MangaDexFetcher   = lazy(() => import('./MangaDexFetcher'))
 const KitsuFetcher      = lazy(() => import('./KitsuFetcher'))
 const MalImporter       = lazy(() => import('./MalImporter'))
 const GenericImporter   = lazy(() => import('./GenericImporter'))
+const SteamImporter     = lazy(() => import('./SteamImporter'))
 const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 import { buildStaticSiteHtml } from './exportSite'
 import {
@@ -545,6 +546,7 @@ function App() {
   const [kitsuOpen, setKitsuOpen] = useState<null | 'anime' | 'manga'>(null)
   const [malOpen, setMalOpen] = useState(false)
   const [genericImportOpen, setGenericImportOpen] = useState(false)
+  const [steamOpen, setSteamOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -3552,6 +3554,21 @@ function App() {
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={() => setMalOpen(true)}>Import MAL / AniList XML</button>
                         <button type="button" className="secondary-btn" onClick={() => setGenericImportOpen(true)}>Import Excel / CSV / Notion / TXT</button>
+                        <button type="button" className="secondary-btn" onClick={() => setSteamOpen(true)}>Import from Steam profile</button>
+                      </div>
+                      <p className="hint">Steam import reads a public profile via the community XML endpoint — no API key. Playtime and status pre-fill; open each item afterwards to fetch cover + metadata via IGDB or SteamGridDB.</p>
+                    </div>
+                    <div className="field-group">
+                      <label>Export to other trackers</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={async () => {
+                          const { buildAnimeMalXml, downloadBlob } = await import('./MalExporter')
+                          downloadBlob('omnio-anime.xml', 'application/xml', buildAnimeMalXml(items))
+                        }}>⬇ Export Anime (MAL XML)</button>
+                        <button type="button" className="secondary-btn" onClick={async () => {
+                          const { buildMangaMalXml, downloadBlob } = await import('./MalExporter')
+                          downloadBlob('omnio-manga.xml', 'application/xml', buildMangaMalXml(items))
+                        }}>⬇ Export Manga (MAL XML)</button>
                       </div>
                       <p className="hint">Bulk-load titles from other places. MAL/AniList uses the XML export; the generic importer takes an .xlsx, .csv (including Notion database exports), .tsv or .txt file with one title per line.</p>
                     </div>
@@ -6301,6 +6318,18 @@ function App() {
           }}
           onClose={() => setGenericImportOpen(false)}
         />
+      )}
+
+      {steamOpen && (
+        <Suspense fallback={null}>
+          <SteamImporter
+            onImport={(newItems) => {
+              setItems((all) => [...all, ...newItems])
+              setToast(`Imported ${newItems.length} games from Steam`)
+            }}
+            onClose={() => setSteamOpen(false)}
+          />
+        </Suspense>
       )}
 
       {wrappedOpen && (

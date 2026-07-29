@@ -20,6 +20,7 @@ import { CATEGORIES } from './categories'
 import {
   GAME_STATUS_OPTIONS, MANGA_STATUS_OPTIONS,
   ANIME_STATUS_OPTIONS, SERIES_STATUS_OPTIONS,
+  BOOK_STATUS_OPTIONS,
 } from './types'
 
 interface Props {
@@ -33,6 +34,7 @@ type FieldTarget =
   | 'status' | 'releaseYear' | 'releaseDate' | 'artist' | 'devs'
   | 'publishers' | 'platforms' | 'directors' | 'cast'
   | 'chaptersRead' | 'episodesWatched' | 'playTime'
+  | 'authors' | 'publisher' | 'saga' | 'sagaIndex' | 'pagesRead' | 'totalPages' | 'isbn'
 
 // Auto-detect header -> field mapping. Match on lower-cased, punctuation-
 // stripped column name.
@@ -55,6 +57,13 @@ const HEADER_ALIASES: Record<FieldTarget, string[]> = {
   chaptersRead: ['chapters read', 'chapter', 'chapters', 'capitulos'],
   episodesWatched: ['episodes watched', 'episode', 'episodes', 'episodios'],
   playTime: ['playtime', 'time played', 'hours', 'horas'],
+  authors: ['author', 'authors', 'autor', 'autores', 'by', 'writer'],
+  publisher: ['publisher', 'editorial', 'editor'],
+  saga: ['saga', 'series', 'collection'],
+  sagaIndex: ['book number', 'volume number', 'series index', 'book in series', 'n in series'],
+  pagesRead: ['pages read', 'pagina', 'paginas leidas', 'read pages'],
+  totalPages: ['pages', 'total pages', 'page count', 'paginas', 'num pages'],
+  isbn: ['isbn', 'isbn 10', 'isbn 13', 'isbn10', 'isbn13'],
 }
 
 function normalizeHeader(s: string): string {
@@ -141,6 +150,7 @@ function mapStatus(raw: string, categoryId: string): string | undefined {
   const opts = categoryId === 'videojuegos' ? GAME_STATUS_OPTIONS
     : categoryId === 'anime' || categoryId === 'donghua' ? ANIME_STATUS_OPTIONS
     : categoryId === 'series' ? SERIES_STATUS_OPTIONS
+    : categoryId === 'libros' ? BOOK_STATUS_OPTIONS
     : MANGA_STATUS_OPTIONS
   const hit = opts.find((o) => o.value.toLowerCase() === n || o.label.toLowerCase() === n)
   return hit?.value
@@ -175,6 +185,15 @@ function toItem(row: string[], mapping: FieldTarget[], categoryId: string): Item
   const chaptersRead = get('chaptersRead'); if (chaptersRead) item.chaptersRead = chaptersRead
   const episodesWatched = get('episodesWatched'); if (episodesWatched) item.episodesWatched = episodesWatched
   const playTime = get('playTime'); if (playTime) item.playTime = playTime
+  // Book-specific fields — authors reuse the manga authors[] slot so
+  // Books share the "list of writers" pattern with manga cleanly.
+  const authors = get('authors'); if (authors) item.authors = authors.split(/[,;|]/).map((a) => a.trim()).filter(Boolean)
+  const publisher = get('publisher'); if (publisher) item.publisher = publisher
+  const saga = get('saga'); if (saga) item.saga = saga
+  const sagaIndex = get('sagaIndex'); if (sagaIndex) item.sagaIndex = sagaIndex
+  const pagesRead = get('pagesRead'); if (pagesRead) item.pagesRead = pagesRead
+  const totalPages = get('totalPages'); if (totalPages) item.totalPages = totalPages
+  const isbn = get('isbn'); if (isbn) item.isbn = isbn
 
   const statusRaw = get('status')
   if (statusRaw) {
@@ -183,6 +202,7 @@ function toItem(row: string[], mapping: FieldTarget[], categoryId: string): Item
       if (categoryId === 'videojuegos') item.gameStatus = mapped as Item['gameStatus']
       else if (categoryId === 'anime' || categoryId === 'donghua') item.watchStatus = mapped as Item['watchStatus']
       else if (categoryId === 'series') item.seriesStatus = mapped as Item['seriesStatus']
+      else if (categoryId === 'libros') item.bookStatus = mapped as Item['bookStatus']
       else item.mangaStatus = mapped as Item['mangaStatus']
     }
   }
@@ -208,6 +228,13 @@ const FIELD_LABELS: Record<FieldTarget, string> = {
   chaptersRead: 'Chapters read',
   episodesWatched: 'Episodes watched',
   playTime: 'Time played',
+  authors: 'Authors',
+  publisher: 'Publisher',
+  saga: 'Series / saga',
+  sagaIndex: 'Book # in series',
+  pagesRead: 'Pages read',
+  totalPages: 'Total pages',
+  isbn: 'ISBN',
 }
 
 export default function GenericImporter({ existingItems, onImport, onClose }: Props) {

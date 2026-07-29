@@ -1378,6 +1378,30 @@ ipcMain.handle('anilist:search', async (_event, term: string, kind: 'ANIME' | 'M
   })
 })
 
+// Steam community XML endpoint proxy. Given a full profile URL or a
+// bare vanity name, fetches the games XML (CORS-blocked in the renderer)
+// and returns the raw XML for the caller to parse. No API key needed;
+// only works when "Game details" privacy is public.
+ipcMain.handle('steam:library', async (_event, profileInput: string) => {
+  const raw = (profileInput ?? '').trim()
+  if (!raw) return { ok: false, error: 'Missing profile input' }
+  let url: string
+  if (/^[a-zA-Z0-9_-]+$/.test(raw)) url = `https://steamcommunity.com/id/${raw}/games?tab=all&xml=1`
+  else {
+    const m = raw.match(/steamcommunity\.com\/(id|profiles)\/([^/?#]+)/i)
+    if (!m) return { ok: false, error: 'Could not parse Steam URL. Use https://steamcommunity.com/id/<vanity> or /profiles/<steamid64>.' }
+    url = `https://steamcommunity.com/${m[1]}/${m[2]}/games?tab=all&xml=1`
+  }
+  try {
+    const r = await fetch(url)
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const xml = await r.text()
+    return { ok: true, xml }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 // OpenLibrary — open, no-key books metadata. Two-step: search returns
 // hits with a `key` like "/works/OL...W"; the works endpoint gives us
 // the description, subjects and author refs. Covers live at
