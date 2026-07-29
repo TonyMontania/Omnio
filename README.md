@@ -12,10 +12,12 @@
 
 ## What it does
 
-- **10 libraries** in one app: Games, Music, Movies, Series, Anime, Donghua, Manga, Manhwa, Manhua, Western Comics.
-- **One-click metadata + covers** from 9 sources — SteamGridDB, IGDB, TMDb, MusicBrainz + Cover Art Archive, VGMdb, AniList, MyAnimeList, Kitsu, MangaDex, ComicVine.
-- **Bulk import**: MyAnimeList / AniList XML, plus `.xlsx`, `.csv` (Notion exports work as-is), `.tsv` and `.txt`.
-- **Static HTML export** — share your library as a folder anyone can open in a browser.
+- **11 libraries** in one app: Games, Music, Movies, Series, Anime, Donghua, Manga, Manhwa, Manhua, Western Comics, Books.
+- **Home dashboard** — landing view with a portal card per library, "currently in progress" strip and next-30-days upcoming releases. Optional startup screen.
+- **Two layouts** — classic sidebar or top-nav bar with libraries as tabs. Toggle in Settings → Appearance.
+- **One-click metadata + covers** from 10 sources — SteamGridDB, IGDB, TMDb, MusicBrainz + Cover Art Archive, VGMdb, AniList, MyAnimeList, Kitsu, MangaDex, ComicVine, OpenLibrary.
+- **Import**: MyAnimeList / AniList XML, Steam profile (no key), Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads vocab presets.
+- **Export**: HTML site (search + light/dark toggle built in), MAL-compatible XML for anime + manga, iCal (.ics) for the release calendar.
 - **In-app updater** — silent check at boot, one-click download of the exact build for your platform.
 - **Local-first**: everything lives in `data/` + `assets/` next to the executable. No accounts, no cloud, no telemetry.
 
@@ -47,8 +49,11 @@ Download the latest build for your platform from the [releases page](https://git
 
 - **Ctrl+K** — global search across every library
 - **Ctrl+F** — search inside the current library
+- **Ctrl+H** — jump to Home dashboard
 - **Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y)** — undo / redo
 - **F5** — refresh the current library (reload data from disk)
+- **?** — show the shortcuts cheatsheet
+- **Right-click** on any card — quick actions (open, edit, duplicate, move, delete)
 - **Shift+click** — multi-select cards
 - **Esc** — close any modal / panel / detail view
 
@@ -72,6 +77,7 @@ Download the latest build for your platform from the [releases page](https://git
 - **Series** — cast, directors, showrunners, seasons with per-episode tracking.
 - **Anime & Donghua** — AniList-style card, studios, episodes watched/total, episode list with rating/notes, rewatch log.
 - **Manga / Manhwa / Manhua / Western Comics** — authors + artists, chapters/volumes, volume covers gallery, chapter list, magazine.
+- **Books** — authors, publisher, series/saga, pages read/total, ISBN, format (paperback / hardcover / ebook / audiobook), reread history. OpenLibrary metadata + covers, no key needed.
 
 For a full field-by-field reference (English + Spanish labels), see [`docs/FIELDS.md`](docs/FIELDS.md).
 
@@ -91,6 +97,7 @@ Nine sources are wired directly into the editors — click the **↗** button ne
 | [Kitsu](https://kitsu.app/) | Anime · Manga fallback | No key |
 | [MangaDex](https://mangadex.org/) | Manga · Manhwa · Manhua | No key |
 | [ComicVine](https://comicvine.gamespot.com/) | Western Comics | Free API key |
+| [OpenLibrary](https://openlibrary.org/) | Books | No key |
 
 ## Storage & portability
 
@@ -98,7 +105,7 @@ Your library lives in two folders next to the executable (or under the OS data d
 
 ```
 data/
-  games.json  music.json  movies.json  series.json
+  games.json  music.json  movies.json  series.json  books.json
   anime.json  donghua.json
   manga.json  manhwa.json  manhua.json  comics_west.json
   collections.json   ← groups
@@ -119,11 +126,11 @@ assets/
 
 ## Settings tabs
 
-- **Appearance** — theme, accent, density, font size, sidebar mode, motion.
-- **Behavior** — confirm before deleting, startup category.
-- **Libraries** — turn any of the 10 categories on/off.
+- **Appearance** — theme, accent, density, font size, card zoom, sidebar mode, layout (sidebar / top nav), motion.
+- **Behavior** — confirm before deleting, startup screen (Home dashboard / last category / first category), remember sort per library.
+- **Libraries** — turn any of the 11 categories on/off.
 - **Card Fields** — pick which fields show on cards, per library.
-- **Data** — export/import backup JSON, snapshots (5 rotated), remote backup, duplicate finder, MAL/AniList import, Excel/CSV/Notion import, HTML export, Yearly Wrapped, API keys, updates, maintenance (clean migration leftovers, clean orphan assets), reset settings, delete all data.
+- **Data** — backup & restore (JSON + assets folder), snapshots (5 rotated), remote backup, import (MAL/AniList XML, Excel/CSV/Notion, Steam profile), export (HTML, MAL XML for anime/manga, iCal for calendar), Yearly Wrapped with PNG export, API keys, updates, maintenance (find broken covers, rename all assets, clean orphans), reset settings, delete all data.
 
 ## License
 
