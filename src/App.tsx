@@ -193,6 +193,9 @@ interface Settings {
   // horizontal room for the item grid). Collections and utility buttons
   // reflow accordingly.
   layoutMode?: 'sidebar' | 'topnav'
+  // Card-grid zoom. sm = denser, md = default, lg / xl = bigger covers.
+  // Applies globally so every library respects the same preference.
+  cardZoom?: 'sm' | 'md' | 'lg' | 'xl'
   sgdbApiKey?: string
   tmdbApiKey?: string
   igdbClientId?: string
@@ -212,7 +215,7 @@ interface AppData {
 // About string can't drift from the packaged version number.
 const APP_VERSION = __APP_VERSION__
 
-const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, rememberCategorySort: true, categorySortModes: {}, layoutMode: 'sidebar' }
+const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, rememberCategorySort: true, categorySortModes: {}, layoutMode: 'sidebar', cardZoom: 'md' }
 
 function getUniqueTags(list: Item[]): string[] {
   const set = new Set<string>()
@@ -442,6 +445,7 @@ function App() {
     }))
   }
   const [searchOpen, setSearchOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
   const [bundleSgdbFor, setBundleSgdbFor] = useState<null | { entryId: string; title: string }>(null)
@@ -849,6 +853,9 @@ function App() {
       } else if (e.key === 'F5' && !inField) {
         e.preventDefault()
         loadFromDisk({ applySettings: false }).then(() => setToast('Library refreshed'))
+      } else if (e.key === '?' && !inField && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        setShortcutsOpen(true)
       }
     }
     window.addEventListener('keydown', handler)
@@ -2208,6 +2215,7 @@ function App() {
       data-font-size={settings.fontSize}
       data-motion={settings.motion}
       data-layout={settings.layoutMode ?? 'sidebar'}
+      data-card-zoom={settings.cardZoom ?? 'md'}
     >
       {updateInfo && !updateBannerDismissed && (
         <div className="update-banner">
@@ -3313,6 +3321,15 @@ function App() {
                         <button type="button" className={!settings.sidebarCompact ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, sidebarCompact: false }))}>Full</button>
                         <button type="button" className={settings.sidebarCompact ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, sidebarCompact: true }))}>Icons only</button>
                       </div>
+                    </div>
+                    <div className="field-group">
+                      <label>Card zoom</label>
+                      <div className="yesno">
+                        {(['sm','md','lg','xl'] as const).map((z) => (
+                          <button key={z} type="button" className={(settings.cardZoom ?? 'md') === z ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, cardZoom: z }))}>{z === 'sm' ? 'Small' : z === 'md' ? 'Medium' : z === 'lg' ? 'Large' : 'Extra large'}</button>
+                        ))}
+                      </div>
+                      <p className="hint">Controls how big the covers show in Grid layout. Smaller fits more per row; larger makes each cover more prominent.</p>
                     </div>
                     <div className="field-group">
                       <label>Layout <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 8, letterSpacing: '0.05em' }}>PROTOTYPE</span></label>
@@ -5963,6 +5980,59 @@ function App() {
           onOpenItem={navigateToItem}
           onClose={() => setDupOpen(false)}
         />
+      )}
+
+      {shortcutsOpen && (
+        <div className="modal-overlay" onClick={() => setShortcutsOpen(false)}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 620, width: '90vw' }}>
+            <div className="modal-header">
+              <h2>Keyboard shortcuts</h2>
+              <button type="button" className="panel-close" onClick={() => setShortcutsOpen(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px 32px' }}>
+                {[
+                  { section: 'Navigation', rows: [
+                    ['Ctrl+K', 'Global search across every library'],
+                    ['Ctrl+F', 'Search inside the current library'],
+                    ['F5', 'Refresh the library from disk'],
+                    ['?', 'Show this cheatsheet'],
+                    ['Esc', 'Close any open modal, panel or detail view'],
+                  ]},
+                  { section: 'Editing', rows: [
+                    ['Ctrl+Z', 'Undo the last change'],
+                    ['Ctrl+Shift+Z', 'Redo'],
+                    ['Ctrl+Y', 'Redo (alt)'],
+                  ]},
+                  { section: 'Selection', rows: [
+                    ['Shift+click', 'Toggle multi-select on a card'],
+                    ['Click', 'When any card is selected, single click toggles too'],
+                  ]},
+                  { section: 'Detail views', rows: [
+                    ['Edit', 'Opens the full editor pre-filled with the item'],
+                    ['Duplicate', 'Creates a "(Copy)" of the current item'],
+                  ]},
+                ].map((g) => (
+                  <div key={g.section}>
+                    <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: 8 }}>{g.section}</h3>
+                    <table style={{ width: '100%', fontSize: 13 }}>
+                      <tbody>
+                        {g.rows.map(([k, d]) => (
+                          <tr key={k}>
+                            <td style={{ padding: '4px 0', width: 130 }}>
+                              <kbd style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 6px', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{k}</kbd>
+                            </td>
+                            <td style={{ padding: '4px 0', color: 'var(--text-dim)' }}>{d}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {brokenAssetsOpen && (

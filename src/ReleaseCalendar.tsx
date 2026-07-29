@@ -75,6 +75,51 @@ function collectEntries(items: Item[], today: Date): Entry[] {
 function fmtMonthYear(d: Date): string {
   return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 }
+
+// Emits an RFC-5545 iCalendar document from the future entries. Each
+// entry is a whole-day VEVENT keyed by item id + source so re-imports
+// don't create duplicates. Categories are stamped as CATEGORIES so
+// Google/Outlook clients can color-code by library. Line folding is
+// skipped — modern parsers handle long lines fine, and it keeps the
+// generator small.
+function toICS(entries: Entry[]): string {
+  const dt = (d: Date) => d.getFullYear().toString().padStart(4, '0') + (d.getMonth() + 1).toString().padStart(2, '0') + d.getDate().toString().padStart(2, '0')
+  const now = new Date()
+  const dtstamp = `${dt(now)}T000000Z`
+  const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
+  const lines: string[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Omnio//Release Calendar//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:Omnio Releases',
+  ]
+  for (const e of entries) {
+    const end = new Date(e.date); end.setDate(end.getDate() + 1)
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:${e.item.id}-${e.source}@omnio.local`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART;VALUE=DATE:${dt(e.date)}`,
+      `DTEND;VALUE=DATE:${dt(end)}`,
+      `SUMMARY:${esc(e.item.title)} — ${esc(e.label)}`,
+      `CATEGORIES:${esc(e.item.categoryId)}`,
+      'END:VEVENT',
+    )
+  }
+  lines.push('END:VCALENDAR')
+  return lines.join('\r\n')
+}
+
+function downloadFile(name: string, mime: string, content: string) {
+  const blob = new Blob([content], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = name
+  document.body.appendChild(a); a.click(); document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
 function fmtDay(d: Date): string {
   return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }
@@ -133,6 +178,13 @@ export default function ReleaseCalendar({ items, onNavigate }: Props) {
             <option value="">All libraries</option>
             {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
+          <button
+            type="button"
+            className="secondary-btn"
+            disabled={entries.length === 0}
+            onClick={() => downloadFile('omnio-releases.ics', 'text/calendar', toICS(entries))}
+            title="Download an iCal file you can import into Google Calendar, Outlook, Apple Calendar, etc."
+          >⬇ Export .ics</button>
         </div>
       </div>
 
