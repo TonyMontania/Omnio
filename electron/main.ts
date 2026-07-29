@@ -747,6 +747,34 @@ ipcMain.handle('storage:rename-all-assets', async () => {
   }
 })
 
+// Copy the contents of `sourceAssetsDir` recursively into the active
+// ASSETS_ROOT. Used after Import backup to bring the exporter's asset
+// files into this install. Overwrites files with the same relative path
+// so a fresh import wins over stale local copies.
+ipcMain.handle('storage:import-assets-from', async (_event, sourceAssetsDir: string) => {
+  if (!sourceAssetsDir) return { ok: false, error: 'No folder chosen' }
+  try {
+    const stat = await fs.stat(sourceAssetsDir)
+    if (!stat.isDirectory()) return { ok: false, error: 'Not a directory' }
+    await fs.mkdir(ASSETS_ROOT, { recursive: true })
+    await fs.cp(sourceAssetsDir, ASSETS_ROOT, { recursive: true, force: true, errorOnExist: false })
+    // Count files for the toast.
+    let copied = 0
+    const walk = async (dir: string) => {
+      try {
+        for (const e of await fs.readdir(dir, { withFileTypes: true })) {
+          if (e.isDirectory()) await walk(path.join(dir, e.name))
+          else copied++
+        }
+      } catch { /* skip */ }
+    }
+    await walk(sourceAssetsDir)
+    return { ok: true, copied }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 ipcMain.handle('storage:cleanup-migration-artifacts', async () => {
   const paths = [
     path.join(STORAGE_ROOT, 'data.pre-split.json'),

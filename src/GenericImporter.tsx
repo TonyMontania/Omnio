@@ -58,7 +58,12 @@ const HEADER_ALIASES: Record<FieldTarget, string[]> = {
   episodesWatched: ['episodes watched', 'episode', 'episodes', 'episodios'],
   playTime: ['playtime', 'time played', 'hours', 'horas'],
   authors: ['author', 'authors', 'autor', 'autores', 'by', 'writer'],
-  publisher: ['publisher', 'editorial', 'editor'],
+  // Playnite export uses: Name, Platform(s), Genre(s), Playtime, Source,
+  // Developer(s), Publisher(s), CompletionStatus, ReleaseDate, LastActivity.
+  // GOG Galaxy: Title, Platform, Playtime, Rating.
+  // Header aliases above already cover title / platforms / devs /
+  // publishers / genres / playtime / releaseDate / rating / status.
+  publisher: ['publisher', 'publishers', 'editorial', 'editor', 'publisher s'],
   saga: ['saga', 'series', 'collection'],
   sagaIndex: ['book number', 'volume number', 'series index', 'book in series', 'n in series'],
   pagesRead: ['pages read', 'pagina', 'paginas leidas', 'read pages'],
@@ -144,9 +149,33 @@ async function parseFile(file: File): Promise<{ table?: ParsedTable; error?: str
   return { error: 'Unsupported file. Pick a .xlsx, .csv, .tsv or .txt file.' }
 }
 
+// External-tracker status vocabulary → Omnio's internal enum. Playnite
+// uses NotPlayed / Played / Beaten / Completed / Playing / Abandoned /
+// OnHold / Plan to Play. Goodreads uses to-read / currently-reading /
+// read. Handled here so imports don't need per-tool presets.
+const STATUS_ALIASES: Record<string, Record<string, string>> = {
+  videojuegos: {
+    'not played': 'backlog', 'plan to play': 'backlog', 'wishlist': 'backlog',
+    'playing': 'playing', 'currently playing': 'playing',
+    'played': 'played', 'beaten': 'played', 'finished': 'completed',
+    'completed': 'completed', '100%': 'completed',
+    'abandoned': 'dropped', 'on hold': 'played', 'shelved': 'played',
+  },
+  libros: {
+    'to read': 'plan_to_read', 'to-read': 'plan_to_read', 'want to read': 'plan_to_read',
+    'currently reading': 'reading', 'currently-reading': 'reading', 'reading': 'reading',
+    'read': 'completed', 'finished': 'completed',
+    'did not finish': 'dropped', 'dnf': 'dropped',
+  },
+  anime: { 'watching': 'watching', 'plan to watch': 'plan_to_watch', 'on-hold': 'paused', 'on hold': 'paused' },
+  manga:  { 'reading': 'reading', 'plan to read': 'plan_to_read', 'on-hold': 'paused', 'on hold': 'paused' },
+}
+
 function mapStatus(raw: string, categoryId: string): string | undefined {
   const n = raw.toLowerCase().trim()
   if (!n) return undefined
+  const aliasMap = STATUS_ALIASES[categoryId] ?? STATUS_ALIASES[categoryId === 'donghua' ? 'anime' : categoryId === 'manhwa' || categoryId === 'manhua' || categoryId === 'comics_west' ? 'manga' : '']
+  if (aliasMap && aliasMap[n]) return aliasMap[n]
   const opts = categoryId === 'videojuegos' ? GAME_STATUS_OPTIONS
     : categoryId === 'anime' || categoryId === 'donghua' ? ANIME_STATUS_OPTIONS
     : categoryId === 'series' ? SERIES_STATUS_OPTIONS

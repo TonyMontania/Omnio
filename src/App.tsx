@@ -3268,6 +3268,75 @@ function App() {
                     </div>
                   </>
                 )}
+                {statsCategory === 'libros' && (() => {
+                  const books = items.filter((i) => i.categoryId === 'libros')
+                  const pagesPerMonth: { label: string; value: number }[] = (() => {
+                    const map: Record<string, number> = {}
+                    for (const b of books) {
+                      if (!b.finishedAt) continue
+                      const m = /^\d{4}-(\d{2})/.exec(b.finishedAt); if (!m) continue
+                      map[m[1]] = (map[m[1]] ?? 0) + parseInt(b.totalPages || '0', 10)
+                    }
+                    return Array.from({ length: 12 }, (_, i) => {
+                      const k = (i + 1).toString().padStart(2, '0')
+                      return { label: new Date(2000, i, 1).toLocaleString('en', { month: 'short' }), value: map[k] ?? 0 }
+                    })
+                  })()
+                  const tally = (getter: (b: typeof books[number]) => string[] | undefined) => {
+                    const m: Record<string, number> = {}
+                    for (const b of books) for (const v of getter(b) ?? []) m[v] = (m[v] ?? 0) + 1
+                    return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 8)
+                  }
+                  const topAuthors = tally((b) => b.authors)
+                  const publishers: Record<string, number> = {}
+                  for (const b of books) if (b.publisher) publishers[b.publisher] = (publishers[b.publisher] ?? 0) + 1
+                  const topPublishers = Object.entries(publishers).sort((a, b) => b[1] - a[1]).slice(0, 8)
+                  const maxPages = Math.max(1, ...pagesPerMonth.map((m) => m.value))
+                  return (
+                    <>
+                      <div className="insights-col">
+                        <h3 className="insights-subheading">Pages read per month</h3>
+                        <div className="bar-chart month-chart">
+                          {pagesPerMonth.map((m) => (
+                            <div key={m.label} className="bar-row">
+                              <span className="bar-label">{m.label}</span>
+                              <div className="bar-track">
+                                <div className="bar-fill" style={{ width: `${(m.value / maxPages) * 100}%`, background: 'var(--accent)' }} />
+                              </div>
+                              <span className="bar-value">{m.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="insights-col">
+                        <h3 className="insights-subheading">Top authors</h3>
+                        <div className="top-rated-list">
+                          {topAuthors.length === 0 && <p className="hint">No authors yet.</p>}
+                          {topAuthors.map(([name, count], idx) => (
+                            <div key={name} className="top-rated-row">
+                              <span className="top-rated-rank">#{idx + 1}</span>
+                              <span className="top-rated-title">{name}</span>
+                              <span className="top-rated-score">{count} {count === 1 ? 'book' : 'books'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="insights-col">
+                        <h3 className="insights-subheading">Top publishers</h3>
+                        <div className="top-rated-list">
+                          {topPublishers.length === 0 && <p className="hint">No publishers yet.</p>}
+                          {topPublishers.map(([name, count], idx) => (
+                            <div key={name} className="top-rated-row">
+                              <span className="top-rated-rank">#{idx + 1}</span>
+                              <span className="top-rated-title">{name}</span>
+                              <span className="top-rated-score">{count} {count === 1 ? 'book' : 'books'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
               </div>
             </>
@@ -3517,9 +3586,16 @@ function App() {
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={handleExport}>⬇ Export backup</button>
                         <button type="button" className="secondary-btn" onClick={() => importInputRef.current?.click()}>⬆ Import backup</button>
+                        <button type="button" className="secondary-btn" onClick={async () => {
+                          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Pick the assets folder from your other Omnio install')
+                          if (!dir) return
+                          const r = await window.ipcRenderer.invoke('storage:import-assets-from', dir) as { ok: boolean; copied?: number; error?: string }
+                          if (r?.ok) setToast(`Copied ${r.copied ?? 0} asset files into this install`)
+                          else setToast(`Assets import failed: ${r?.error ?? 'unknown'}`)
+                        }}>⬆ Import assets folder…</button>
                         <input type="file" accept="application/json" ref={importInputRef} style={{ display: 'none' }} onChange={handleImportFile} />
                       </div>
-                      <p className="hint">Save your library as a single JSON file, or restore one you exported earlier.</p>
+                      <p className="hint">Save your library as a single JSON file, or restore one you exported earlier. When migrating between installs (portable ↔ NSIS, dev ↔ portable) also use <strong>Import assets folder</strong> to copy the images so covers keep resolving.</p>
                     </div>
                     <div className="field-group">
                       <label>Automatic snapshots</label>
