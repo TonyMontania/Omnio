@@ -4831,6 +4831,10 @@ function App() {
                             </div>
                           )}
                         </div>
+                        <div className="form-section-header" data-belongs-to="history">
+                          <span className="form-section-title">Play history</span>
+                          <span className="form-section-hint">Every replay / campaign log</span>
+                        </div>
                         <div className="field-group">
                           <label>Replay history</label>
                           <RewatchListEditor
@@ -4840,6 +4844,10 @@ function App() {
                             onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
                             onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
                           />
+                        </div>
+                        <div className="form-section-header" data-belongs-to="related">
+                          <span className="form-section-title">Related &amp; recommendations</span>
+                          <span className="form-section-hint">Sequels, prequels, franchise, hand-picked recs</span>
                         </div>
                         <div className="field-group">
                           <label>Related games</label>
@@ -4992,6 +5000,9 @@ function App() {
                             </div>
                           )}
                         </div>
+                        <div className="form-section-header" data-belongs-to="history">
+                          <span className="form-section-title">Watch history</span>
+                        </div>
                         <div className="field-group">
                           <label>Rewatch history</label>
                           <RewatchListEditor
@@ -5001,6 +5012,9 @@ function App() {
                             onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
                             onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
                           />
+                        </div>
+                        <div className="form-section-header" data-belongs-to="related">
+                          <span className="form-section-title">Related &amp; recommendations</span>
                         </div>
                         <div className="field-group">
                           <label>Related movies</label>
@@ -5135,6 +5149,9 @@ function App() {
                       <label>Franchise</label>
                       <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Star Trek" />
                     </div>
+                    <div className="form-section-header" data-belongs-to="related">
+                      <span className="form-section-title">Related &amp; recommendations</span>
+                    </div>
                     <div className="field-group">
                       <label>Related series</label>
                       <RelatedListEditor
@@ -5169,6 +5186,9 @@ function App() {
                           <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>No spoilers</button>
                         </div>
                       )}
+                    </div>
+                    <div className="form-section-header" data-belongs-to="history">
+                      <span className="form-section-title">Watch history</span>
                     </div>
                     <div className="field-group">
                       <label>Rewatch history</label>
@@ -5369,6 +5389,9 @@ function App() {
                       <label>Franchise</label>
                       <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Fullmetal Alchemist" />
                     </div>
+                    <div className="form-section-header" data-belongs-to="related">
+                      <span className="form-section-title">Related &amp; recommendations</span>
+                    </div>
                     <div className="field-group">
                       <label>Related anime</label>
                       <RelatedListEditor
@@ -5389,6 +5412,9 @@ function App() {
                         onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
                         pickerPlaceholder="Add recommended anime…"
                       />
+                    </div>
+                    <div className="form-section-header" data-belongs-to="history">
+                      <span className="form-section-title">Watch history</span>
                     </div>
                     <div className="field-group">
                       <label>Rewatch history</label>
@@ -5547,6 +5573,9 @@ function App() {
                         </div>
                       )}
                     </div>
+                    <div className="form-section-header" data-belongs-to="history">
+                      <span className="form-section-title">Read history</span>
+                    </div>
                     <div className="field-group">
                       <label>Reread history</label>
                       <RewatchListEditor
@@ -5560,6 +5589,9 @@ function App() {
                     <div className="field-group">
                       <label>Franchise</label>
                       <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Naruto saga" />
+                    </div>
+                    <div className="form-section-header" data-belongs-to="related">
+                      <span className="form-section-title">Related &amp; recommendations</span>
                     </div>
                     <div className="field-group">
                       <label>Related manga</label>
@@ -5862,6 +5894,9 @@ function App() {
                         </div>
                       )}
                     </div>
+                    <div className="form-section-header" data-belongs-to="history">
+                      <span className="form-section-title">Listen history</span>
+                    </div>
                     <div className="field-group">
                       <label>Listen history</label>
                       <RewatchListEditor
@@ -5871,6 +5906,9 @@ function App() {
                         onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
                         onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
                       />
+                    </div>
+                    <div className="form-section-header" data-belongs-to="related">
+                      <span className="form-section-title">Related &amp; recommendations</span>
                     </div>
                     <div className="field-group">
                       <label>Related albums</label>
