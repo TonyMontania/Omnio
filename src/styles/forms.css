@@ -80,7 +80,42 @@
 .metadata-sources-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 8px;
+}
+
+/* Tabbed editor prototype — bar sits above the form column. */
+.editor-tabs-bar {
+  display: flex;
+  gap: 4px;
+  padding: 12px 24px 0;
+  border-bottom: 1px solid var(--border-soft);
+  flex-wrap: wrap;
+}
+.editor-tab {
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  margin-bottom: -1px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.editor-tab:hover { color: var(--text); }
+.editor-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.form .editor-hidden {
+  display: none !important;
+}
+/* When in tabbed mode, the metadata-sources-panel (which sits before
+   the first section-header) is treated as part of Overview — visible
+   only there. The JS effect above handles the toggling. */
+.form[data-editor-layout="tabbed"] {
+  padding-top: 8px;
 }
 .metadata-source-btn {
   display: flex;

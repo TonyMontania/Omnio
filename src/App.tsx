@@ -199,6 +199,10 @@ interface Settings {
   // Card-grid zoom. sm = denser, md = default, lg / xl = bigger covers.
   // Applies globally so every library respects the same preference.
   cardZoom?: 'sm' | 'md' | 'lg' | 'xl'
+  // Editor layout: 'compact' = single long scroll (default, current
+  // behaviour). 'tabbed' = section headers become a tab bar; only the
+  // active tab's sections render. Prototype behind an opt-in flag.
+  editorLayout?: 'compact' | 'tabbed'
   sgdbApiKey?: string
   tmdbApiKey?: string
   igdbClientId?: string
@@ -218,7 +222,7 @@ interface AppData {
 // About string can't drift from the packaged version number.
 const APP_VERSION = __APP_VERSION__
 
-const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, rememberCategorySort: true, categorySortModes: {}, layoutMode: 'sidebar', cardZoom: 'md' }
+const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, rememberCategorySort: true, categorySortModes: {}, layoutMode: 'sidebar', cardZoom: 'md', editorLayout: 'compact' }
 
 function getUniqueTags(list: Item[]): string[] {
   const set = new Set<string>()
@@ -450,6 +454,9 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [ctxMenu, setCtxMenu] = useState<{ item: Item; x: number; y: number } | null>(null)
+  // Active tab in the tabbed editor prototype. Reset to 'overview' each
+  // time the user opens a new item so they always land on the essentials.
+  const [editorTab, setEditorTab] = useState<'overview' | 'details' | 'media' | 'extras' | 'notes'>('overview')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
   const [bundleSgdbFor, setBundleSgdbFor] = useState<null | { entryId: string; title: string }>(null)
@@ -940,6 +947,40 @@ function App() {
     const t = setTimeout(() => setToast(null), 2000)
     return () => clearTimeout(t)
   }, [toast])
+
+  // Tabbed-editor visibility. Runs when the editor is open in tabbed mode
+  // OR when the active tab changes. Walks the form container, groups each
+  // `.form-section-header` with its following siblings until the next
+  // header, and toggles a `.editor-hidden` class on every node in a group
+  // whose assigned tab (data-belongs-to on the header) doesn't match the
+  // active tab. Sections without an assigned tab default to 'notes' so
+  // nothing is lost silently.
+  useEffect(() => {
+    if (settings.editorLayout !== 'tabbed' || !panelOpen) return
+    const root = document.querySelector<HTMLElement>('.form[data-editor-layout="tabbed"]')
+    if (!root) return
+    const headers = Array.from(root.querySelectorAll<HTMLElement>('.form-section-header'))
+    if (headers.length === 0) return
+    // Section 0 is everything before the first header (fetch-metadata panel).
+    // Keep it visible in overview only so it's the "landing pad".
+    const firstHeader = headers[0]
+    let node: ChildNode | null = root.firstChild
+    while (node && node !== firstHeader) {
+      if (node instanceof HTMLElement) node.classList.toggle('editor-hidden', editorTab !== 'overview')
+      node = node.nextSibling
+    }
+    for (let i = 0; i < headers.length; i++) {
+      const h = headers[i]
+      const belongsTo = h.getAttribute('data-belongs-to') ?? 'notes'
+      const show = belongsTo === editorTab
+      const next = headers[i + 1]
+      let cur: ChildNode | null = h
+      while (cur && cur !== next) {
+        if (cur instanceof HTMLElement) cur.classList.toggle('editor-hidden', !show)
+        cur = cur.nextSibling
+      }
+    }
+  }, [settings.editorLayout, editorTab, panelOpen, editingId, activeCategory])
 
   // Fetchers dispatch this event via downloadImageAsset when image:download
   // returns { ok: false, error }. Surfacing the reason is the whole point —
@@ -3474,6 +3515,14 @@ function App() {
                       <p className="hint">Controls how big the covers show in Grid layout. Smaller fits more per row; larger makes each cover more prominent.</p>
                     </div>
                     <div className="field-group">
+                      <label>Editor layout <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 8, letterSpacing: '0.05em' }}>PROTOTYPE</span></label>
+                      <div className="yesno">
+                        <button type="button" className={(settings.editorLayout ?? 'compact') === 'compact' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, editorLayout: 'compact' }))}>Compact (single scroll)</button>
+                        <button type="button" className={settings.editorLayout === 'tabbed' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, editorLayout: 'tabbed' }))}>Tabbed</button>
+                      </div>
+                      <p className="hint">Compact = the classic long-scroll form. Tabbed = section headers become tabs above the form; only the active tab renders. Useful once items have lots of fields filled in. See <code>docs/REDESIGN.md</code> for the full plan.</p>
+                    </div>
+                    <div className="field-group">
                       <label>Layout <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 8, letterSpacing: '0.05em' }}>PROTOTYPE</span></label>
                       <div className="yesno">
                         <button type="button" className={(settings.layoutMode ?? 'sidebar') === 'sidebar' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, layoutMode: 'sidebar' }))}>Sidebar (classic)</button>
@@ -4434,7 +4483,21 @@ function App() {
                 </aside>
                 <div className="edit-form-col">
 
-                  <div className="form">
+                  {settings.editorLayout === 'tabbed' && (
+                    <div className="editor-tabs-bar" role="tablist">
+                      {(['overview','details','media','extras','notes'] as const).map((tab) => (
+                        <button
+                          key={tab}
+                          type="button"
+                          role="tab"
+                          className={editorTab === tab ? 'editor-tab active' : 'editor-tab'}
+                          onClick={() => setEditorTab(tab)}
+                        >{tab === 'overview' ? 'Overview' : tab === 'details' ? 'Details' : tab === 'media' ? 'Media' : tab === 'extras' ? 'Extras' : 'Notes'}</button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="form" data-editor-layout={settings.editorLayout ?? 'compact'} data-editor-tab={editorTab}>
                     <div className="metadata-sources-panel">
                       <div className="metadata-sources-header">
                         <span className="metadata-sources-title">↗ Fetch metadata</span>
@@ -4518,7 +4581,7 @@ function App() {
                       </div>
                     </div>
 
-                    <div className="form-section-header">
+                    <div className="form-section-header" data-belongs-to="overview">
                       <span className="form-section-title">Basic info</span>
                     </div>
                     <div className="field-group">
@@ -4526,7 +4589,7 @@ function App() {
                       <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
                     </div>
 
-                    <div className="form-section-header">
+                    <div className="form-section-header" data-belongs-to="media">
                       <span className="form-section-title">Media</span>
                       <span className="form-section-hint">
                         {isVideojuegos ? 'Cover · banner · logo'
@@ -4600,7 +4663,7 @@ function App() {
 
                     {isVideojuegos && (
                       <>
-                        <div className="form-section-header">
+                        <div className="form-section-header" data-belongs-to="details">
                           <span className="form-section-title">Game details</span>
                           <span className="form-section-hint">Devs, publishers, platforms, franchise</span>
                         </div>
@@ -4799,7 +4862,7 @@ function App() {
                     )}
                     {activeCategory === 'peliculas' && (
                       <>
-                        <div className="form-section-header">
+                        <div className="form-section-header" data-belongs-to="details">
                           <span className="form-section-title">Movie details</span>
                           <span className="form-section-hint">Cast, crew, franchise</span>
                         </div>
@@ -4961,7 +5024,7 @@ function App() {
 
                     {isSeriesLike && (
                   <>
-                    <div className="form-section-header">
+                    <div className="form-section-header" data-belongs-to="details">
                       <span className="form-section-title">Series details</span>
                       <span className="form-section-hint">Cast, crew, network, seasons</span>
                     </div>
@@ -5141,7 +5204,7 @@ function App() {
 
                 {isAnime && (
                   <>
-                    <div className="form-section-header">
+                    <div className="form-section-header" data-belongs-to="details">
                       <span className="form-section-title">{activeCategory === 'donghua' ? 'Donghua' : 'Anime'} details</span>
                       <span className="form-section-hint">Studios, format, airing, episodes</span>
                     </div>
@@ -5361,7 +5424,7 @@ function App() {
 
                 {isManga && (
                   <>
-                    <div className="form-section-header">
+                    <div className="form-section-header" data-belongs-to="details">
                       <span className="form-section-title">Publication details</span>
                       <span className="form-section-hint">Authors, artists, chapters, magazine</span>
                     </div>
@@ -5550,7 +5613,7 @@ function App() {
 
                     {activeCategory === 'libros' && (
                   <>
-                    <div className="form-section-header">
+                    <div className="form-section-header" data-belongs-to="details">
                       <span className="form-section-title">Book details</span>
                       <span className="form-section-hint">Authors, publisher, series, pages read, ISBN, format</span>
                     </div>
@@ -5650,7 +5713,7 @@ function App() {
 
                     {activeCategory === 'musica' && (
                   <>
-                    <div className="form-section-header">
+                    <div className="form-section-header" data-belongs-to="details">
                       <span className="form-section-title">Music details</span>
                       <span className="form-section-hint">Artist, tracklist, editions, singles</span>
                     </div>
@@ -5829,7 +5892,7 @@ function App() {
                   </>
                 )}
 
-                    <div className="form-section-header">
+                    <div className="form-section-header" data-belongs-to="notes">
                       <span className="form-section-title">Notes, tags & groups</span>
                     </div>
                     <div className="field-group">
