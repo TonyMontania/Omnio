@@ -4681,10 +4681,6 @@ function App() {
                           onAdd={(v) => setPublishers((prev) => prev.includes(v) ? prev : [...prev, v])}
                           onRemove={(i) => setPublishers((prev) => prev.filter((_, idx) => idx !== i))}
                         />
-                        <div className="form-section-header" data-belongs-to="progress">
-                          <span className="form-section-title">Progress</span>
-                          <span className="form-section-hint">Time played · achievements · DLC · bundle contents</span>
-                        </div>
                         <div className="field-row">
                           <div className="field-group">
                             <label>Achievements unlocked</label>
@@ -4722,6 +4718,10 @@ function App() {
                             </select>
                           </div>
                         </div>
+                        <div className="form-section-header" data-belongs-to="progress">
+                          <span className="form-section-title">Progress</span>
+                          <span className="form-section-hint">Time played · DLC · addons · bundle contents · achievements</span>
+                        </div>
                         <div className="field-group">
                           <label>Time played (hours.minutes)</label>
                           <input placeholder="e.g. 22.49" value={playTime} onChange={(e) => handlePlayTimeChange(e.target.value)} inputMode="decimal" />
@@ -4754,6 +4754,9 @@ function App() {
                           onChange={setBundleContents}
                           onRequestSgdb={(entryId, title) => setBundleSgdbFor({ entryId, title })}
                         />
+                        <div className="form-section-header" data-belongs-to="overview">
+                          <span className="form-section-title">Rating &amp; completion</span>
+                        </div>
                         <div className="field-group">
                           <label>Rating</label>
                           <RatingPicker value={rating} onChange={setRating} />
@@ -4761,6 +4764,10 @@ function App() {
                         <div className="field-group">
                           <label>Completion date</label>
                           <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
+                        </div>
+                        <div className="form-section-header" data-belongs-to="identity">
+                          <span className="form-section-title">Extended identity</span>
+                          <span className="form-section-hint">Alt titles, genres, source, edition, age rating, franchise</span>
                         </div>
                         <TagEditor
                           label="Alternative titles"
