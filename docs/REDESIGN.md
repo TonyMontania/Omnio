@@ -30,23 +30,25 @@ top. The left column (Live Preview + sticky cover) stays put.
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Tab contents
+### Tab contents (revised — 7 tabs, more focused split)
 
-Every category maps its existing sections into one of these tabs:
+Splitting "Details" into **Identity** (who made it, how it's classified)
+and **Progress** (what you've done with it) keeps each tab focused. Every
+category maps its existing sections into these:
 
 | Tab           | Games                                                       | Music                                       | Movies / Series                            | Anime / Manga                                     | Books                                    |
 |---------------|-------------------------------------------------------------|---------------------------------------------|--------------------------------------------|---------------------------------------------------|------------------------------------------|
 | Overview      | Title, cover, status, rating, tags, franchise               | Title, cover, artist, type, rating, tags   | Title, cover, status, rating, tags, franchise | Title, cover, status, rating, tags, franchise  | Title, cover, status, rating, tags, saga |
-| Details       | Devs, publishers, platforms, genres, source, age rating     | Genres, label, source, release date        | Cast, crew, directors, production, genres | Authors, artists, publisher, magazine, source    | Authors, publisher, format, ISBN, source |
+| Identity      | Devs, publishers, platforms, genres, source, age rating, edition | Genres, label, artist, source, producers | Cast, crew, directors, production, genres, source | Authors, artists, publisher, magazine, source | Authors, publisher, format, ISBN, source, translator |
+| Progress      | Playtime, achievements, DLC, addons, bundle contents        | Tracklist, listened-per-track              | Watched status, timesWatched              | Episodes / chapters read, list, next unwatched   | Pages read / total                       |
 | Media         | Cover / banner / logo uploads + SGDB / IGDB fetchers        | Cover + single covers + edition covers     | Cover + backdrop                          | Cover + banner + volume covers                    | Cover                                    |
-| Progress      | Playtime, achievements, DLC, addons, bundle contents        | Tracklist, listened-per-track              | Rewatch count, watched-where              | Episodes / chapters read, list, next unwatched   | Pages read / total, reading log          |
 | History       | Replay history                                              | Listen history                             | Rewatch history                           | Rewatch / reread history                          | Reread history                           |
 | Related       | Related games, franchise timeline, recommendations          | Related albums, recommendations            | Related, franchise, recommendations       | Related, franchise, recommendations               | Related, saga, recommendations           |
-| Attachments † | Save games, mods, screenshots                              | Sheet music, live recordings                | Subtitles, screenplays                    | Fan translations, physical scans                  | EPUB / PDF, highlights                   |
-| Notes         | Review + spoiler toggle, notes, custom fields, tags editor  | Review + spoiler, notes, custom fields, tags | Review + spoiler, notes, custom fields, tags | Review + spoiler, notes, custom fields, tags | Review + spoiler, notes, custom fields, tags |
+| Notes         | Review + spoilers, notes, custom fields, tags editor, groups | Review + spoilers, notes, custom fields, tags, groups | Review + spoilers, notes, custom fields, tags, groups | Review + spoilers, notes, custom fields, tags, groups | Review + spoilers, notes, custom fields, tags, groups |
 
-† Attachments tab appears only when the feature is enabled in Settings
-(scheduled feature — see `project_feature_roadmap.md`).
+Attachments (save games, EPUB, subtitles, screenshots) will live inside
+Progress once the feature ships — see `project_feature_roadmap.md`. If
+Progress gets too dense we'll add Attachments as an 8th top-level tab.
 
 ### Behaviour rules
 

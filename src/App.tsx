@@ -456,7 +456,7 @@ function App() {
   const [ctxMenu, setCtxMenu] = useState<{ item: Item; x: number; y: number } | null>(null)
   // Active tab in the tabbed editor prototype. Reset to 'overview' each
   // time the user opens a new item so they always land on the essentials.
-  const [editorTab, setEditorTab] = useState<'overview' | 'details' | 'media' | 'extras' | 'notes'>('overview')
+  const [editorTab, setEditorTab] = useState<'overview' | 'identity' | 'progress' | 'media' | 'history' | 'related' | 'notes'>('overview')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
   const [bundleSgdbFor, setBundleSgdbFor] = useState<null | { entryId: string; title: string }>(null)
@@ -4485,14 +4485,14 @@ function App() {
 
                   {settings.editorLayout === 'tabbed' && (
                     <div className="editor-tabs-bar" role="tablist">
-                      {(['overview','details','media','extras','notes'] as const).map((tab) => (
+                      {(['overview','identity','progress','media','history','related','notes'] as const).map((tab) => (
                         <button
                           key={tab}
                           type="button"
                           role="tab"
                           className={editorTab === tab ? 'editor-tab active' : 'editor-tab'}
                           onClick={() => setEditorTab(tab)}
-                        >{tab === 'overview' ? 'Overview' : tab === 'details' ? 'Details' : tab === 'media' ? 'Media' : tab === 'extras' ? 'Extras' : 'Notes'}</button>
+                        >{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
                       ))}
                     </div>
                   )}
@@ -4663,7 +4663,7 @@ function App() {
 
                     {isVideojuegos && (
                       <>
-                        <div className="form-section-header" data-belongs-to="details">
+                        <div className="form-section-header" data-belongs-to="identity">
                           <span className="form-section-title">Game details</span>
                           <span className="form-section-hint">Devs, publishers, platforms, franchise</span>
                         </div>
@@ -4681,6 +4681,10 @@ function App() {
                           onAdd={(v) => setPublishers((prev) => prev.includes(v) ? prev : [...prev, v])}
                           onRemove={(i) => setPublishers((prev) => prev.filter((_, idx) => idx !== i))}
                         />
+                        <div className="form-section-header" data-belongs-to="progress">
+                          <span className="form-section-title">Progress</span>
+                          <span className="form-section-hint">Time played · achievements · DLC · bundle contents</span>
+                        </div>
                         <div className="field-row">
                           <div className="field-group">
                             <label>Achievements unlocked</label>
@@ -4862,7 +4866,7 @@ function App() {
                     )}
                     {activeCategory === 'peliculas' && (
                       <>
-                        <div className="form-section-header" data-belongs-to="details">
+                        <div className="form-section-header" data-belongs-to="identity">
                           <span className="form-section-title">Movie details</span>
                           <span className="form-section-hint">Cast, crew, franchise</span>
                         </div>
@@ -5024,7 +5028,7 @@ function App() {
 
                     {isSeriesLike && (
                   <>
-                    <div className="form-section-header" data-belongs-to="details">
+                    <div className="form-section-header" data-belongs-to="identity">
                       <span className="form-section-title">Series details</span>
                       <span className="form-section-hint">Cast, crew, network, seasons</span>
                     </div>
@@ -5204,7 +5208,7 @@ function App() {
 
                 {isAnime && (
                   <>
-                    <div className="form-section-header" data-belongs-to="details">
+                    <div className="form-section-header" data-belongs-to="identity">
                       <span className="form-section-title">{activeCategory === 'donghua' ? 'Donghua' : 'Anime'} details</span>
                       <span className="form-section-hint">Studios, format, airing, episodes</span>
                     </div>
@@ -5424,7 +5428,7 @@ function App() {
 
                 {isManga && (
                   <>
-                    <div className="form-section-header" data-belongs-to="details">
+                    <div className="form-section-header" data-belongs-to="identity">
                       <span className="form-section-title">Publication details</span>
                       <span className="form-section-hint">Authors, artists, chapters, magazine</span>
                     </div>
@@ -5613,7 +5617,7 @@ function App() {
 
                     {activeCategory === 'libros' && (
                   <>
-                    <div className="form-section-header" data-belongs-to="details">
+                    <div className="form-section-header" data-belongs-to="identity">
                       <span className="form-section-title">Book details</span>
                       <span className="form-section-hint">Authors, publisher, series, pages read, ISBN, format</span>
                     </div>
@@ -5713,7 +5717,7 @@ function App() {
 
                     {activeCategory === 'musica' && (
                   <>
-                    <div className="form-section-header" data-belongs-to="details">
+                    <div className="form-section-header" data-belongs-to="identity">
                       <span className="form-section-title">Music details</span>
                       <span className="form-section-hint">Artist, tracklist, editions, singles</span>
                     </div>
