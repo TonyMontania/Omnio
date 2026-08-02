@@ -693,14 +693,6 @@ ipcMain.handle('save-file:reveal', async (_event, rel: string) => {
   return true
 })
 
-ipcMain.handle('save-file:open', async (_event, rel: string) => {
-  const abs = safeRelative(rel)
-  if (!abs) return { ok: false, error: 'Invalid path' }
-  const { shell } = await import('electron')
-  const err = await shell.openPath(abs)
-  return err ? { ok: false, error: err } : { ok: true }
-})
-
 ipcMain.handle('save-file:delete', async (_event, rel: string) => {
   const abs = safeRelative(rel)
   if (!abs) return false

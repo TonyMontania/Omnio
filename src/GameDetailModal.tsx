@@ -220,14 +220,9 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
                       <div className="save-files-actions">
                         <button
                           type="button"
-                          onClick={() => window.ipcRenderer.invoke('save-file:open', s.path)}
-                          title="Open with default app"
-                        >Open</button>
-                        <button
-                          type="button"
                           onClick={() => window.ipcRenderer.invoke('save-file:reveal', s.path)}
-                          title="Show in file manager"
-                        >Reveal</button>
+                          title="Open folder in file manager"
+                        >Open folder</button>
                       </div>
                     </li>
                   )

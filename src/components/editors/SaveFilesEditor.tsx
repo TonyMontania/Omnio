@@ -70,12 +70,7 @@ export default function SaveFilesEditor({ gameTitle, categoryId, saveFiles, onCh
     if (ok) onChange(saveFiles.filter((s) => s.id !== entry.id))
   }
 
-  const handleOpen = async (entry: SaveFile) => {
-    const res = await window.ipcRenderer.invoke('save-file:open', entry.path) as { ok: boolean; error?: string }
-    if (!res.ok) setError(res.error ?? 'Could not open file')
-  }
-
-  const handleReveal = async (entry: SaveFile) => {
+  const handleOpenFolder = async (entry: SaveFile) => {
     await window.ipcRenderer.invoke('save-file:reveal', entry.path)
   }
 
@@ -128,8 +123,7 @@ export default function SaveFilesEditor({ gameTitle, categoryId, saveFiles, onCh
                 onChange={(e) => handleNoteChange(entry.id, e.target.value)}
               />
               <div className="save-files-actions">
-                <button type="button" onClick={() => handleOpen(entry)} title="Open with default app">Open</button>
-                <button type="button" onClick={() => handleReveal(entry)} title="Show in file manager">Reveal</button>
+                <button type="button" onClick={() => handleOpenFolder(entry)} title="Open folder in file manager">Open folder</button>
                 <button type="button" className="save-files-delete" onClick={() => handleDelete(entry)} title="Delete">✕</button>
               </div>
             </li>
