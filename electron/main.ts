@@ -1558,26 +1558,85 @@ ipcMain.handle('pcgw:search', async (_event, term: string) => {
   }
 })
 
+// PCGW's Game data templates (`{{Game data/saves|OS|path}}` and
+// `{{Game data/config|OS|path}}`) don't store to any Cargo table — they
+// just render HTML. So we fetch the page's wikitext and regex-extract the
+// template invocations directly. Path values contain PCGW macros like
+// `{{p|userprofile}}` and `{{P|localappdata}}` — we translate the common
+// ones into what a Windows/macOS/Linux user actually reads in their file
+// manager, and leave the rest as-is.
+const PCGW_MACROS: Record<string, string> = {
+  userprofile: '%USERPROFILE%',
+  localappdata: '%LOCALAPPDATA%',
+  appdata: '%APPDATA%',
+  programdata: '%PROGRAMDATA%',
+  programfiles: '%PROGRAMFILES%',
+  programfilesx86: '%PROGRAMFILES(X86)%',
+  windir: '%WINDIR%',
+  systemroot: '%SYSTEMROOT%',
+  public: '%PUBLIC%',
+  hkcu: 'HKEY_CURRENT_USER',
+  hklm: 'HKEY_LOCAL_MACHINE',
+  wow64: 'Wow6432Node',
+  game: '<path-to-game>',
+  steam: '<Steam-folder>',
+  uid: '<user-id>',
+  osxhome: '~',
+  linuxhome: '~',
+  xdgdatahome: '$XDG_DATA_HOME',
+  xdgconfighome: '$XDG_CONFIG_HOME',
+}
+
+function resolvePcgwMacros(raw: string): string {
+  // {{p|key}} / {{P|key}} → human-readable equivalent (or leave the key
+  // visible when we don't have a mapping — better than eating the token).
+  let out = raw.replace(/\{\{[pP]\|([^}|]+)(?:\|[^}]*)?\}\}/g, (_m, key: string) => {
+    const k = key.trim().toLowerCase()
+    return PCGW_MACROS[k] ?? `<${k}>`
+  })
+  // {{code|...}} wrappers → just the inner value.
+  out = out.replace(/\{\{code\|([^}]+)\}\}/gi, '$1')
+  // Reference tags <ref>...</ref> and any leftover HTML tags → strip.
+  out = out.replace(/<ref[^>]*>[\s\S]*?<\/ref>/gi, '').replace(/<[^>]+>/g, '')
+  // {{Note|...}} and other decorative wrappers → drop entirely.
+  out = out.replace(/\{\{Note[^}]*\}\}/gi, '')
+  return out.trim()
+}
+
+// System labels come from the wiki — normalize a bit for consistency but
+// keep them close to the original ("GOG.com", "Microsoft Store", "OS X",
+// "Steam Play (Linux)", …).
+function normalizeOs(raw: string): string {
+  return raw.replace(/\s+/g, ' ').trim()
+}
+
 ipcMain.handle('pcgw:save-paths', async (_event, pageName: string) => {
   if (!pageName.trim()) return { ok: false, error: 'Missing page name' }
-  // Cargo query — PCGW stores paths in a table called Path with columns
-  // OS (Windows / Linux / macOS / …), Type (Save / Config / Screenshot /
-  // Backup) and Location (the actual path template).
   const params = new URLSearchParams({
-    action: 'cargoquery',
+    action: 'parse',
     format: 'json',
-    tables: 'Path',
-    fields: 'Path.OS,Path.Type,Path.Location',
-    where: `Path._pageName="${pageName.replace(/"/g, '\\"')}" AND (Path.Type="Save" OR Path.Type="Config")`,
-    limit: '50',
+    page: pageName,
+    prop: 'wikitext',
+    redirects: '1',
   })
   try {
     const r = await fetch(`${PCGW_BASE}?${params}`)
     if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const j = await r.json() as { cargoquery?: { title: { OS?: string; Type?: string; Location?: string } }[] }
-    const rows = (j.cargoquery ?? [])
-      .map((row) => row.title)
-      .filter((r): r is { OS: string; Type: string; Location: string } => !!(r.OS && r.Type && r.Location))
+    const j = await r.json() as { parse?: { wikitext?: { '*'?: string } }; error?: { info?: string } }
+    if (j.error) return { ok: false, error: j.error.info ?? 'Wiki error' }
+    const wikitext = j.parse?.wikitext?.['*'] ?? ''
+    // Match {{Game data/saves|OS|path}} and {{Game data/config|OS|path}}.
+    // Non-greedy for the path so trailing `}}` on the same line terminates
+    // cleanly; DOTALL because some templates span multiple lines.
+    const rows: { OS: string; Type: string; Location: string }[] = []
+    const re = /\{\{Game data\/(saves|config)\|([^|]+)\|([\s\S]*?)\}\}/gi
+    let m: RegExpExecArray | null
+    while ((m = re.exec(wikitext)) !== null) {
+      const type = m[1].toLowerCase() === 'saves' ? 'Save' : 'Config'
+      const os = normalizeOs(m[2])
+      const loc = resolvePcgwMacros(m[3])
+      if (loc) rows.push({ OS: os, Type: type, Location: loc })
+    }
     return { ok: true, data: { pageName, pageUrl: `https://www.pcgamingwiki.com/wiki/${encodeURIComponent(pageName.replace(/ /g, '_'))}`, rows } }
   } catch (e) {
     return { ok: false, error: (e as Error).message }

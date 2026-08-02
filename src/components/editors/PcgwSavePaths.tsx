@@ -23,6 +23,7 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
     | { kind: 'loading' }
     | { kind: 'paths'; data: PathsResp }
     | { kind: 'pick'; hits: SearchHit[] }
+    | { kind: 'no-paths'; data: PathsResp }
     | { kind: 'not-found' }
     | { kind: 'error'; error: string }
   >({ kind: 'idle' })
@@ -34,7 +35,9 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
       | { ok: true; data: PathsResp }
       | { ok: false; error: string }
     if (!res.ok) { setState({ kind: 'error', error: res.error }); return }
-    if (res.data.rows.length === 0) { setState({ kind: 'not-found' }); return }
+    // Page exists on PCGW but its wikitext has no {{Game data/…}} templates
+    // yet — different signal from "the wiki has no page at all".
+    if (res.data.rows.length === 0) { setState({ kind: 'no-paths', data: res.data }); return }
     setState({ kind: 'paths', data: res.data })
   }, [])
 
@@ -90,7 +93,7 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
     <div className="pcgw-panel">
       <div className="pcgw-header">
         <span className="pcgw-label">Save locations · PCGamingWiki</span>
-        {state.kind === 'paths' && (
+        {(state.kind === 'paths' || state.kind === 'no-paths') && (
           <>
             <a className="pcgw-link" href={state.data.pageUrl} target="_blank" rel="noopener noreferrer" title="Open wiki page">
               {state.data.pageName} ↗
@@ -134,6 +137,13 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
           <span>No match on PCGamingWiki.</span>
           <button type="button" onClick={runSearch} disabled={!gameTitle.trim()}>Retry</button>
         </div>
+      )}
+
+      {state.kind === 'no-paths' && (
+        <p className="pcgw-status">
+          Wiki page found but no save/config paths have been documented there yet.
+          Check the page for other info (mods, cloud sync, tweaks).
+        </p>
       )}
 
       {state.kind === 'error' && (
