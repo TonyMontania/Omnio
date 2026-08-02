@@ -108,15 +108,34 @@
   text-overflow: ellipsis;
   min-width: 0;
 }
+/* Count reads as a small metric ("7 items") rather than a badge — the
+   number carries the accent so the eye lands there first, the unit is
+   uppercased-dim so it feels like a caption. No pill background — the
+   topnav-page's left border and the chips already give enough structure. */
 .topnav-page-count {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--text-dim);
-  letter-spacing: 0.02em;
-  padding: 2px 8px;
-  background: var(--surface-2);
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
   flex-shrink: 0;
+  padding-right: 4px;
+  border-right: 1px solid var(--border-soft);
+  margin-right: 2px;
+}
+.topnav-page-count .count-n {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.topnav-page-count .count-unit {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
 }
 
 /* Per-view actions on the right side of the page slot: view-toggle
@@ -191,9 +210,15 @@
    right after the count. Small so several fit in the bar; horizontal
    scroll kicks in on narrow windows so the utility cluster never
    collapses. */
+/* Status filter chips. Idle: ghost pill (no fill, thin border, dim
+   label) so the topnav stays calm. Hover: subtle surface fill. Active:
+   accent-tinted fill with accent border + accent glyph dot on the left
+   so the current filter reads at a glance without shouting.
+   Horizontal scroll on narrow windows keeps the utility cluster
+   anchored to the right. */
 .topnav-chips {
   display: flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
   overflow-x: auto;
   scrollbar-width: none;
@@ -204,27 +229,61 @@
 .topnav-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
+  gap: 6px;
+  padding: 4px 10px 4px 10px;
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 999px;
   color: var(--text-dim);
   font-size: 11.5px;
+  font-family: var(--font-body);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  position: relative;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
 }
-.topnav-chip:hover { color: var(--text); border-color: var(--border); }
+.topnav-chip:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border-soft);
+}
 .topnav-chip.active {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   color: var(--accent);
   font-weight: 600;
+  padding-left: 20px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.topnav-chip.active::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 .topnav-chip-count {
   font-family: var(--font-mono);
   font-size: 10px;
-  opacity: 0.75;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-dim) 12%, transparent);
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  transition: background 0.14s, color 0.14s;
+}
+.topnav-chip:hover .topnav-chip-count {
+  background: color-mix(in srgb, var(--text) 15%, transparent);
+  color: var(--text);
+}
+.topnav-chip.active .topnav-chip-count {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+  font-weight: 600;
 }

@@ -2338,44 +2338,45 @@ function App() {
     }))
     return []
   }
-  const pageMeta: { icon: React.ReactNode; title: string; count?: string; onBack?: () => void; actions?: React.ReactNode; chips?: PageChip[] } | null = (() => {
+  type PageCount = { n: number; unit: string }
+  const pageMeta: { icon: React.ReactNode; title: string; count?: PageCount; onBack?: () => void; actions?: React.ReactNode; chips?: PageChip[] } | null = (() => {
     if (specialView === 'home') return null
     if (specialView === 'calendar') return { icon: <CalendarIcon />, title: 'Release calendar' }
     if (specialView === 'stats') return { icon: <InsightsIcon />, title: 'Statistics' }
     if (specialView === 'settings') return { icon: <SettingsIcon />, title: 'Settings' }
     if (specialView === 'board') {
       const label = GAME_STATUS_OPTIONS.find((s) => s.value === boardStatus)?.label ?? ''
-      const count = gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus).length
-      return { icon: <GameStatusIcon value={boardStatus} />, title: label, count: `${count} ${count === 1 ? 'game' : 'games'}`, onBack: backToLibrary, actions: viewToggleBtns }
+      const n = gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus).length
+      return { icon: <GameStatusIcon value={boardStatus} />, title: label, count: { n, unit: n === 1 ? 'game' : 'games' }, onBack: backToLibrary, actions: viewToggleBtns }
     }
     if (specialView === 'musicBoard') {
-      const count = musicList.filter((m) => musicBoardFilter === 'listened' ? m.consumed : !m.consumed).length
-      return { icon: <span className="page-icon-glyph">{musicBoardFilter === 'listened' ? '✓' : '○'}</span>, title: musicBoardFilter === 'listened' ? 'Listened' : 'Not listened', count: `${count} ${count === 1 ? 'item' : 'items'}`, onBack: backToLibrary, actions: viewToggleBtns }
+      const n = musicList.filter((m) => musicBoardFilter === 'listened' ? m.consumed : !m.consumed).length
+      return { icon: <span className="page-icon-glyph">{musicBoardFilter === 'listened' ? '✓' : '○'}</span>, title: musicBoardFilter === 'listened' ? 'Listened' : 'Not listened', count: { n, unit: n === 1 ? 'item' : 'items' }, onBack: backToLibrary, actions: viewToggleBtns }
     }
     if (specialView === 'mangaBoard') {
-      const count = itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === mangaBoardStatus).length
-      return { icon: <MangaStatusIcon value={mangaBoardStatus} />, title: getMangaStatus(mangaBoardStatus).label, count: `${count} ${count === 1 ? 'item' : 'items'}`, onBack: backToLibrary, actions: viewToggleBtns }
+      const n = itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === mangaBoardStatus).length
+      return { icon: <MangaStatusIcon value={mangaBoardStatus} />, title: getMangaStatus(mangaBoardStatus).label, count: { n, unit: n === 1 ? 'item' : 'items' }, onBack: backToLibrary, actions: viewToggleBtns }
     }
     if (specialView === 'moviesBoard') {
-      const count = itemsInCategory.filter((i) => moviesBoardFilter === 'watched' ? i.consumed : !i.consumed).length
-      return { icon: <span className="page-icon-glyph">{moviesBoardFilter === 'watched' ? '✓' : '○'}</span>, title: moviesBoardFilter === 'watched' ? 'Watched' : 'Not watched', count: `${count} ${count === 1 ? 'item' : 'items'}`, onBack: backToLibrary, actions: viewToggleBtns }
+      const n = itemsInCategory.filter((i) => moviesBoardFilter === 'watched' ? i.consumed : !i.consumed).length
+      return { icon: <span className="page-icon-glyph">{moviesBoardFilter === 'watched' ? '✓' : '○'}</span>, title: moviesBoardFilter === 'watched' ? 'Watched' : 'Not watched', count: { n, unit: n === 1 ? 'item' : 'items' }, onBack: backToLibrary, actions: viewToggleBtns }
     }
     if (specialView === 'animeBoard') {
-      const count = itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === animeBoardStatus).length
-      return { icon: <AnimeStatusIcon value={animeBoardStatus} />, title: getAnimeStatus(animeBoardStatus).label, count: `${count} ${count === 1 ? 'item' : 'items'}`, onBack: backToLibrary, actions: viewToggleBtns }
+      const n = itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === animeBoardStatus).length
+      return { icon: <AnimeStatusIcon value={animeBoardStatus} />, title: getAnimeStatus(animeBoardStatus).label, count: { n, unit: n === 1 ? 'item' : 'items' }, onBack: backToLibrary, actions: viewToggleBtns }
     }
     if (specialView === 'seriesBoard') {
-      const count = itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === seriesBoardStatus).length
-      return { icon: <AnimeStatusIcon value={seriesBoardStatus} />, title: getSeriesStatus(seriesBoardStatus).label, count: `${count} ${count === 1 ? 'item' : 'items'}`, onBack: backToLibrary, actions: viewToggleBtns }
+      const n = itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === seriesBoardStatus).length
+      return { icon: <AnimeStatusIcon value={seriesBoardStatus} />, title: getSeriesStatus(seriesBoardStatus).label, count: { n, unit: n === 1 ? 'item' : 'items' }, onBack: backToLibrary, actions: viewToggleBtns }
     }
     if (specialView === 'bookBoard') {
-      const count = itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === bookBoardStatus).length
-      return { icon: <MangaStatusIcon value={bookBoardStatus as MangaStatus} />, title: getBookStatus(bookBoardStatus).label, count: `${count} ${count === 1 ? 'book' : 'books'}`, onBack: backToLibrary, actions: viewToggleBtns }
+      const n = itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === bookBoardStatus).length
+      return { icon: <MangaStatusIcon value={bookBoardStatus as MangaStatus} />, title: getBookStatus(bookBoardStatus).label, count: { n, unit: n === 1 ? 'book' : 'books' }, onBack: backToLibrary, actions: viewToggleBtns }
     }
     // specialView === 'none' → the library view (with optional collection drill-in)
-    const countText = showFolderListing
-      ? `${categoryCollections.length} ${categoryCollections.length === 1 ? 'group' : 'groups'}`
-      : `${visibleItems.length} ${visibleItems.length === 1 ? 'item' : 'items'}`
+    const count: PageCount = showFolderListing
+      ? { n: categoryCollections.length, unit: categoryCollections.length === 1 ? 'group' : 'groups' }
+      : { n: visibleItems.length, unit: visibleItems.length === 1 ? 'item' : 'items' }
     const libActions = (
       <>
         {!showFolderListing && viewToggleBtns}
@@ -2389,7 +2390,7 @@ function App() {
     return {
       icon: activeCollectionId ? <FolderIcon /> : <CategoryIcon id={current?.id ?? ''} />,
       title: (activeCollectionId ? activeCollection?.name : current?.label) ?? '',
-      count: countText,
+      count,
       onBack: activeCollectionId ? () => { setActiveCollectionId(null); resetListControls() } : undefined,
       actions: libActions,
       chips: chips.length > 0 ? chips : undefined,
@@ -2452,7 +2453,12 @@ function App() {
               )}
               <span className="topnav-page-icon">{pageMeta.icon}</span>
               <span className="topnav-page-title">{pageMeta.title}</span>
-              {pageMeta.count && <span className="topnav-page-count">{pageMeta.count}</span>}
+              {pageMeta.count && (
+                <span className="topnav-page-count">
+                  <span className="count-n">{pageMeta.count.n}</span>
+                  <span className="count-unit">{pageMeta.count.unit}</span>
+                </span>
+              )}
               {pageMeta.chips && (
                 <div className="topnav-chips">
                   {pageMeta.chips.map((c) => (
