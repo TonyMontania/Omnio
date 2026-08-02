@@ -73,6 +73,7 @@ const MovieDetailModal  = lazy(() => import('./MovieDetailModal'))
 const AnimeDetailModal  = lazy(() => import('./AnimeDetailModal'))
 const SeriesDetailModal = lazy(() => import('./SeriesDetailModal'))
 const DuplicatesModal   = lazy(() => import('./DuplicatesModal'))
+const GenreNormalizerModal = lazy(() => import('./GenreNormalizerModal'))
 const GlobalSearch      = lazy(() => import('./GlobalSearch'))
 const SteamGridDbPicker = lazy(() => import('./SteamGridDbPicker'))
 const AniListFetcher    = lazy(() => import('./AniListFetcher'))
@@ -397,6 +398,7 @@ function App() {
   const [toast, setToast] = useState<string | null>(null)
   const [dupOpen, setDupOpen] = useState(false)
   const [brokenAssetsOpen, setBrokenAssetsOpen] = useState(false)
+  const [genreNormalizerOpen, setGenreNormalizerOpen] = useState(false)
   const [brokenAssets, setBrokenAssets] = useState<{ itemId: string; itemTitle: string; category: string; field: string; rel: string }[]>([])
 
   // Mirror of storage:clear-asset-ref but for the in-memory items /
@@ -3648,6 +3650,11 @@ function App() {
                       <p className="hint">Fuzzy-matches titles across every library and lets you merge or delete the duplicates.</p>
                     </div>
                     <div className="field-group">
+                      <label>Genre normalizer</label>
+                      <button type="button" className="secondary-btn" onClick={() => setGenreNormalizerOpen(true)}>Merge duplicate genres</button>
+                      <p className="hint">Groups genre labels that look like the same concept spelled differently ("Sci-Fi" / "Science Fiction" / "Ciencia ficción"). Pick a canonical label per group and rewrite every item in one go. Applies only to <code>genres[]</code> — your <code>tags[]</code> stay untouched.</p>
+                    </div>
+                    <div className="field-group">
                       <label>Find broken covers</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={async () => {
@@ -6086,6 +6093,36 @@ function App() {
           items={items}
           onOpenItem={navigateToItem}
           onClose={() => setDupOpen(false)}
+        />
+      )}
+
+      {genreNormalizerOpen && (
+        <GenreNormalizerModal
+          items={items}
+          onClose={() => setGenreNormalizerOpen(false)}
+          onApply={(mapping) => {
+            // Rewrite every item that carries any variant. Also dedupe the
+            // resulting genres[] because two variants might collapse into
+            // one canonical that the item already had.
+            let changed = 0
+            setItems((prev) => prev.map((it) => {
+              const g = it.genres
+              if (!g || g.length === 0) return it
+              let touched = false
+              const next: string[] = []
+              const seen = new Set<string>()
+              for (const label of g) {
+                const canon = mapping[label] ?? label
+                if (canon !== label) touched = true
+                if (!seen.has(canon)) { seen.add(canon); next.push(canon) }
+              }
+              if (!touched && next.length === g.length) return it
+              changed++
+              return { ...it, genres: next }
+            }))
+            const merged = Object.keys(mapping).length
+            setToast(`Merged ${merged} variant${merged === 1 ? '' : 's'} across ${changed} item${changed === 1 ? '' : 's'}`)
+          }}
         />
       )}
 

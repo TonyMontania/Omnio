@@ -415,6 +415,37 @@
   overflow-y: auto;
   color: var(--text);
 }
+.modal-panel > .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 22px 16px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface);
+}
+.modal-panel > .modal-footer .ghost-btn {
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.14s, border-color 0.14s;
+}
+.modal-panel > .modal-footer .ghost-btn:hover { color: var(--text); border-color: var(--border); }
+.modal-panel > .modal-footer .primary-btn {
+  padding: 7px 14px;
+  background: var(--accent);
+  color: #1a1408;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.modal-panel > .modal-footer .primary-btn:hover { background: var(--accent-hover); }
 
 .modal-box {
   background: var(--surface);

@@ -970,3 +970,106 @@
   font-style: normal;
   font-variant-numeric: tabular-nums;
 }
+
+/* -------------------------------------------------------------------------
+   Genre normalizer modal — Settings → Data → Maintenance. Each detected
+   group of duplicate-looking labels renders as a card with per-variant
+   checkboxes, a "Merge as" canonical input, and a Merge button. The list
+   is empty when your genre labels all normalize to unique slugs.
+   ------------------------------------------------------------------------- */
+
+.genre-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+.genre-group {
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.genre-group-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.genre-group-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+.genre-variants {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.genre-variants li label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.14s;
+}
+.genre-variants li label:hover { border-color: var(--border); }
+.genre-variants input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 13px;
+  height: 13px;
+  margin: 0;
+}
+.genre-variant-label {
+  font-size: 12.5px;
+  color: var(--text);
+}
+.genre-variant-count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-dim) 12%, transparent);
+}
+.genre-group-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.genre-canonical-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 220px;
+}
+.genre-canonical-field > span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.genre-canonical-field input {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+}
+.genre-canonical-field input:focus { border-color: var(--accent); outline: none; }
+.genre-group-actions .secondary-btn { padding: 6px 14px; font-size: 12.5px; }
+.genre-group-actions .secondary-btn:disabled { opacity: 0.5; cursor: default; }
