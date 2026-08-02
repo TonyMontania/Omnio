@@ -27,7 +27,10 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
     | { kind: 'not-found' }
     | { kind: 'error'; error: string }
   >({ kind: 'idle' })
-  const [copied, setCopied] = useState<string | null>(null)
+  // Keyed by row index — not by location string, otherwise two rows that
+  // happen to share the same path (Save + Config often collide) both
+  // flash "Copied" when the user clicks one of them.
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
 
   const loadPaths = useCallback(async (pageName: string) => {
     setState({ kind: 'loading' })
@@ -81,11 +84,11 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
     runSearch()
   }
 
-  const copyLocation = async (loc: string) => {
+  const copyLocation = async (loc: string, idx: number) => {
     try {
       await navigator.clipboard.writeText(loc)
-      setCopied(loc)
-      window.setTimeout(() => setCopied((c) => (c === loc ? null : c)), 1400)
+      setCopiedIdx(idx)
+      window.setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1400)
     } catch { /* clipboard blocked — no fallback needed */ }
   }
 
@@ -173,9 +176,9 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
                   <button
                     type="button"
                     className="pcgw-copy"
-                    onClick={() => copyLocation(row.Location)}
+                    onClick={() => copyLocation(row.Location, i)}
                     title="Copy path to clipboard"
-                  >{copied === row.Location ? 'Copied' : 'Copy'}</button>
+                  >{copiedIdx === i ? 'Copied' : 'Copy'}</button>
                 </td>
               </tr>
             ))}

@@ -1625,16 +1625,41 @@ ipcMain.handle('pcgw:save-paths', async (_event, pageName: string) => {
     const j = await r.json() as { parse?: { wikitext?: { '*'?: string } }; error?: { info?: string } }
     if (j.error) return { ok: false, error: j.error.info ?? 'Wiki error' }
     const wikitext = j.parse?.wikitext?.['*'] ?? ''
-    // Match {{Game data/saves|OS|path}} and {{Game data/config|OS|path}}.
-    // Non-greedy for the path so trailing `}}` on the same line terminates
-    // cleanly; DOTALL because some templates span multiple lines.
+    // Nested-brace-aware parser. A naive non-greedy regex breaks the moment
+    // the path itself contains templates like {{P|localappdata}} — it stops
+    // at the inner "}}" and returns a truncated / malformed Location. We
+    // walk char-by-char instead, tracking `{{ }}` nesting depth, so the
+    // outer Game data template closes only when depth returns to 0.
     const rows: { OS: string; Type: string; Location: string }[] = []
-    const re = /\{\{Game data\/(saves|config)\|([^|]+)\|([\s\S]*?)\}\}/gi
-    let m: RegExpExecArray | null
-    while ((m = re.exec(wikitext)) !== null) {
-      const type = m[1].toLowerCase() === 'saves' ? 'Save' : 'Config'
-      const os = normalizeOs(m[2])
-      const loc = resolvePcgwMacros(m[3])
+    const opener = /\{\{Game data\/(saves|config)\|/gi
+    let om: RegExpExecArray | null
+    while ((om = opener.exec(wikitext)) !== null) {
+      const type = om[1].toLowerCase() === 'saves' ? 'Save' : 'Config'
+      // Cursor sits just past the `Game data/xxx|`. Walk until we hit the
+      // matching `}}` for the outer template (depth returns to 0).
+      let i = om.index + om[0].length
+      let depth = 1
+      const start = i
+      while (i < wikitext.length && depth > 0) {
+        if (wikitext[i] === '{' && wikitext[i + 1] === '{') { depth++; i += 2; continue }
+        if (wikitext[i] === '}' && wikitext[i + 1] === '}') { depth--; i += 2; continue }
+        i++
+      }
+      if (depth !== 0) continue // Unbalanced — give up on this entry.
+      // Body is start … i-2 (strip the closing `}}`). Split on the FIRST
+      // top-level `|` — everything after that pipe is the location, even
+      // if the location itself contains more pipes (rare but possible).
+      const body = wikitext.slice(start, i - 2)
+      let pipeAt = -1
+      let d = 0
+      for (let k = 0; k < body.length; k++) {
+        if (body[k] === '{' && body[k + 1] === '{') { d++; k++; continue }
+        if (body[k] === '}' && body[k + 1] === '}') { d--; k++; continue }
+        if (body[k] === '|' && d === 0) { pipeAt = k; break }
+      }
+      if (pipeAt < 0) continue
+      const os = normalizeOs(body.slice(0, pipeAt))
+      const loc = resolvePcgwMacros(body.slice(pipeAt + 1))
       if (loc) rows.push({ OS: os, Type: type, Location: loc })
     }
     return { ok: true, data: { pageName, pageUrl: `https://www.pcgamingwiki.com/wiki/${encodeURIComponent(pageName.replace(/ /g, '_'))}`, rows } }
