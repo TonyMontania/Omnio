@@ -1341,3 +1341,85 @@
   color: var(--text-dim);
   border: 1px solid var(--border-soft);
 }
+
+/* -------------------------------------------------------------------------
+   Highlights importer + display. The importer reuses the .importer-* shell.
+   The read-only display in BookDetailModal renders each highlight as a
+   quote card with page/location/date metadata underneath.
+   ------------------------------------------------------------------------- */
+
+.highlights-table .hl-book-title {
+  font-weight: 600;
+  color: var(--text);
+}
+.highlights-table .hl-book-author {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.highlights-table .hl-book-match {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 4px;
+}
+.highlights-table select {
+  padding: 4px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  width: 100%;
+}
+
+.highlights-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.highlights-row {
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  border-radius: var(--radius-sm);
+}
+.highlights-text {
+  margin: 0;
+  padding: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+  font-style: italic;
+}
+.highlights-note {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+}
+.highlights-note-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-right: 6px;
+}
+.highlights-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}

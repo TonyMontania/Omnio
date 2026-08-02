@@ -60,6 +60,19 @@ export interface BundleGame {
   status: GameStatus
 }
 
+// Highlight / note captured from a book while reading. Bulk-imported
+// from Kindle "My Clippings.txt" (and eventually other sources like
+// StoryGraph CSV). Read-only display in BookDetailModal — bulk-imported
+// artifacts, users delete individually if they want to prune.
+export interface Highlight {
+  id: string
+  text: string
+  note?: string          // separate note text (Kindle exports Note entries too)
+  page?: string          // "42"
+  location?: string      // Kindle location range, e.g. "1200-1204"
+  addedAt?: string       // ISO date
+}
+
 // User-uploaded save files for a game. Stored on disk under
 // assets/games/saves/<title>/<filename>. Any extension is accepted
 // (.sav / .dat / .zip / .rar / whatever) — save formats vary too much
@@ -337,6 +350,7 @@ export interface Item {
   isbn?: string
   translator?: string
   bookReview?: string
+  highlights?: Highlight[]
   // User-defined free-form fields, Notion-style. Displayed at the bottom of
   // every detail view; each item can carry its own list independently of the
   // built-in category schema.

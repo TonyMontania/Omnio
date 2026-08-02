@@ -90,6 +90,7 @@ const MalImporter       = lazy(() => import('./MalImporter'))
 const GenericImporter   = lazy(() => import('./GenericImporter'))
 const SteamImporter     = lazy(() => import('./SteamImporter'))
 const LetterboxdImporter = lazy(() => import('./LetterboxdImporter'))
+const HighlightsImporter = lazy(() => import('./HighlightsImporter'))
 const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 import { buildStaticSiteHtml } from './exportSite'
 import {
@@ -553,6 +554,7 @@ function App() {
   const [genericImportOpen, setGenericImportOpen] = useState(false)
   const [steamOpen, setSteamOpen] = useState(false)
   const [letterboxdOpen, setLetterboxdOpen] = useState(false)
+  const [highlightsImportOpen, setHighlightsImportOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -3526,8 +3528,9 @@ function App() {
                         <button type="button" className="secondary-btn" onClick={() => setGenericImportOpen(true)}>Import Excel / CSV / Notion / TXT</button>
                         <button type="button" className="secondary-btn" onClick={() => setSteamOpen(true)}>Import from Steam profile</button>
                         <button type="button" className="secondary-btn" onClick={() => setLetterboxdOpen(true)}>Import from Letterboxd</button>
+                        <button type="button" className="secondary-btn" onClick={() => setHighlightsImportOpen(true)}>Import Kindle highlights</button>
                       </div>
-                      <p className="hint">Steam import reads a public profile via the community XML endpoint — no API key. Letterboxd accepts the CSVs from your account export (Settings → Data → Export on letterboxd.com). Playtime and status pre-fill; open each item afterwards to fetch cover + metadata via IGDB or SteamGridDB / TMDb.</p>
+                      <p className="hint">Steam import reads a public profile via the community XML endpoint — no API key. Letterboxd accepts the CSVs from your account export (Settings → Data → Export on letterboxd.com). Kindle highlights import parses <code>My Clippings.txt</code> from your Kindle's <code>documents/</code> folder and attaches each highlight to a matching book (or creates one). Playtime and status pre-fill; open each item afterwards to fetch cover + metadata via IGDB or SteamGridDB / TMDb.</p>
                     </div>
                     <div className="field-group">
                       <label>Export to other trackers</label>
@@ -6452,6 +6455,23 @@ function App() {
             setToast(`Imported ${newItems.length} movie${newItems.length === 1 ? '' : 's'} from Letterboxd`)
           }}
           onClose={() => setLetterboxdOpen(false)}
+        />
+      )}
+
+      {highlightsImportOpen && (
+        <HighlightsImporter
+          existingItems={items}
+          onImport={({ updates, creates }) => {
+            setItems((all) => {
+              const next = all.map((it) => updates.has(it.id) ? { ...it, highlights: updates.get(it.id) } : it)
+              return [...next, ...creates]
+            })
+            const totalEntries = [...updates.values()].reduce((s, arr) => s + arr.length, 0)
+              + creates.reduce((s, it) => s + (it.highlights?.length ?? 0), 0)
+            const bookCount = updates.size + creates.length
+            setToast(`Imported ${totalEntries} highlight${totalEntries === 1 ? '' : 's'} across ${bookCount} book${bookCount === 1 ? '' : 's'}`)
+          }}
+          onClose={() => setHighlightsImportOpen(false)}
         />
       )}
 

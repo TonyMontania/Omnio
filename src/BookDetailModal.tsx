@@ -152,6 +152,25 @@ export default function BookDetailModal({ item, groups, allBooks, onClose, onEdi
             )}
           </div>
 
+          {item.highlights && item.highlights.length > 0 && (
+            <div className="field-group">
+              <label>Highlights &amp; notes ({item.highlights.length})</label>
+              <ul className="highlights-list">
+                {item.highlights.map((h) => (
+                  <li key={h.id} className="highlights-row">
+                    {h.text && <blockquote className="highlights-text">{h.text}</blockquote>}
+                    {h.note && <p className="highlights-note"><span className="highlights-note-label">Note</span> {h.note}</p>}
+                    <div className="highlights-meta">
+                      {h.page && <span>Page {h.page}</span>}
+                      {h.location && <span>Loc {h.location}</span>}
+                      {h.addedAt && <span>{h.addedAt}</span>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <DetailReview review={item.bookReview} hasSpoilers={item.hasSpoilers} />
           <DetailNotes notes={item.notes} />
           <DetailHistoryTable label="Reread history" entries={item.rewatches ?? []} />
