@@ -4949,6 +4949,10 @@ function App() {
                           <label>Franchise / Saga (optional)</label>
                           <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Fast & Furious" />
                         </div>
+                        <div className="form-section-header" data-belongs-to="progress">
+                          <span className="form-section-title">Progress</span>
+                          <span className="form-section-hint">Watched status · rewatch count</span>
+                        </div>
                         <div className="field-group">
                           <label>Watched?</label>
                           <div className="yesno">
@@ -5062,6 +5066,10 @@ function App() {
                     <TagEditor label="Writers" placeholder="Add writer" tags={writers} onAdd={(w) => setWriters((prev) => prev.includes(w) ? prev : [...prev, w])} onRemove={(i) => setWriters((prev) => prev.filter((_, idx) => idx !== i))} />
                     <TagEditor label="Cast" placeholder="Add actor" tags={cast} onAdd={(c) => setCast((prev) => prev.includes(c) ? prev : [...prev, c])} onRemove={(i) => setCast((prev) => prev.filter((_, idx) => idx !== i))} />
                     <TagEditor label="Genres" placeholder="Add genre" tags={genres} onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])} onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))} />
+                    <div className="form-section-header" data-belongs-to="progress">
+                      <span className="form-section-title">Progress</span>
+                      <span className="form-section-hint">Watch status · seasons watched · per-episode tracking</span>
+                    </div>
                     <div className="field-row">
                       <div className="field-group">
                         <label>Watch status</label>
@@ -5293,6 +5301,10 @@ function App() {
                         {DEMOGRAPHIC_OPTIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
                       </select>
                     </div>
+                    <div className="form-section-header" data-belongs-to="progress">
+                      <span className="form-section-title">Progress</span>
+                      <span className="form-section-hint">Watch status · episodes watched · episode list</span>
+                    </div>
                     <div className="field-group">
                       <label>Watch status</label>
                       <select value={watchStatus} onChange={(e) => setWatchStatus(e.target.value as AnimeStatus)}>
@@ -5490,6 +5502,10 @@ function App() {
                       onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
                       onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))}
                     />
+                    <div className="form-section-header" data-belongs-to="progress">
+                      <span className="form-section-title">Progress</span>
+                      <span className="form-section-hint">Reading status · chapters / volumes read · chapter list</span>
+                    </div>
                     <div className="field-row">
                       <div className="field-group">
                         <label>Publication status</label>
@@ -5682,6 +5698,10 @@ function App() {
                         </select>
                       </div>
                     </div>
+                    <div className="form-section-header" data-belongs-to="progress">
+                      <span className="form-section-title">Progress</span>
+                      <span className="form-section-hint">Pages read / total · reading log</span>
+                    </div>
                     <div className="field-grid two">
                       <div className="field-group">
                         <label>Pages read</label>
@@ -5812,6 +5832,10 @@ function App() {
                           <label>Label</label>
                           <input value={label} onChange={(e) => setLabel(e.target.value)} />
                         </div>
+                        <div className="form-section-header" data-belongs-to="progress">
+                          <span className="form-section-title">Progress</span>
+                          <span className="form-section-hint">Listened toggle · tracklist · per-track rating</span>
+                        </div>
                         <div className="field-group">
                           <label>Listened?</label>
                           <div className="yesno">
@@ -5873,6 +5897,10 @@ function App() {
                             <label>Release year</label>
                             <input value={releaseYear} onChange={(e) => yearHandler(setReleaseYear)(e.target.value)} inputMode="numeric" maxLength={4} />
                           </div>
+                        </div>
+                        <div className="form-section-header" data-belongs-to="progress">
+                          <span className="form-section-title">Progress</span>
+                          <span className="form-section-hint">Listened toggle · tracklist · per-track rating</span>
                         </div>
                         <div className="field-group">
                           <label>Listened?</label>
