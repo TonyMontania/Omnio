@@ -1,4 +1,8 @@
-.content { flex: 1; display: flex; flex-direction: column; padding: 28px 32px 0; overflow: hidden; }
+/* Top padding matches the `.sub-tabs` / `.toolbar` margin-bottom so the
+   rhythm above the first row equals the rhythm between subsequent rows,
+   now that the old .content-header (which had its own margin) is gone
+   and the topnav provides the visual separation instead. */
+.content { flex: 1; display: flex; flex-direction: column; padding: 20px 32px 0; overflow: hidden; }
 
 .content-header {
   display: flex;
