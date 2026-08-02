@@ -1535,6 +1535,55 @@ ipcMain.handle('openlibrary:work', async (_event, workKey: string) => {
   return proxyJson(`${OL_BASE}${workKey}.json`, { headers: olHeaders })
 })
 
+// PCGamingWiki — no API key. Two endpoints: opensearch to match a game
+// title against wiki pages, then Cargo query to pull the structured
+// "Path" table (Save + Config locations per OS). Companion to save-file
+// backup so users can find where their saves live on disk without leaving
+// Omnio. Location strings preserve PCGW conventions (%LOCALAPPDATA%,
+// <path-to-game>, <SteamLibrary-folder>, etc.).
+const PCGW_BASE = 'https://www.pcgamingwiki.com/w/api.php'
+
+ipcMain.handle('pcgw:search', async (_event, term: string) => {
+  if (!term.trim()) return { ok: false, error: 'Missing search term' }
+  const url = `${PCGW_BASE}?action=opensearch&format=json&search=${encodeURIComponent(term.trim())}&limit=8&namespace=0`
+  try {
+    const r = await fetch(url)
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const j = await r.json() as [string, string[], string[], string[]]
+    const titles = j[1] ?? []
+    const urls = j[3] ?? []
+    return { ok: true, data: titles.map((title, i) => ({ title, url: urls[i] ?? '' })) }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+ipcMain.handle('pcgw:save-paths', async (_event, pageName: string) => {
+  if (!pageName.trim()) return { ok: false, error: 'Missing page name' }
+  // Cargo query — PCGW stores paths in a table called Path with columns
+  // OS (Windows / Linux / macOS / …), Type (Save / Config / Screenshot /
+  // Backup) and Location (the actual path template).
+  const params = new URLSearchParams({
+    action: 'cargoquery',
+    format: 'json',
+    tables: 'Path',
+    fields: 'Path.OS,Path.Type,Path.Location',
+    where: `Path._pageName="${pageName.replace(/"/g, '\\"')}" AND (Path.Type="Save" OR Path.Type="Config")`,
+    limit: '50',
+  })
+  try {
+    const r = await fetch(`${PCGW_BASE}?${params}`)
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const j = await r.json() as { cargoquery?: { title: { OS?: string; Type?: string; Location?: string } }[] }
+    const rows = (j.cargoquery ?? [])
+      .map((row) => row.title)
+      .filter((r): r is { OS: string; Type: string; Location: string } => !!(r.OS && r.Type && r.Location))
+    return { ok: true, data: { pageName, pageUrl: `https://www.pcgamingwiki.com/wiki/${encodeURIComponent(pageName.replace(/ /g, '_'))}`, rows } }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 // Download a remote image URL and file it into assets/{category}/{kind}/{uuid}.{ext}.
 // Same pipeline as image:save (which takes a data-URL from a file picker) — the
 // difference is fetching bytes from HTTP first. Used by both metadata fetchers.

@@ -105,6 +105,7 @@ import PlatformEditor from './components/editors/PlatformEditor'
 import GameSubItems from './components/editors/GameSubItems'
 import BundleGamesEditor from './components/editors/BundleGamesEditor'
 import SaveFilesEditor from './components/editors/SaveFilesEditor'
+import PcgwSavePaths from './components/editors/PcgwSavePaths'
 import VolumeCoverEditor from './components/editors/VolumeCoverEditor'
 import TrackListEditor from './components/editors/TrackListEditor'
 import RelatedListEditor from './components/editors/RelatedListEditor'
@@ -592,6 +593,7 @@ function App() {
   const [isBundle, setIsBundle] = useState(false)
   const [bundleContents, setBundleContents] = useState<BundleGame[]>([])
   const [saveFiles, setSaveFiles] = useState<SaveFile[]>([])
+  const [pcgwPage, setPcgwPage] = useState<string | undefined>(undefined)
 
   const [releaseYear, setReleaseYear] = useState('')
   const [duration, setDuration] = useState('')
@@ -1038,7 +1040,7 @@ function App() {
     setTitle(''); setCover(''); setNotes(''); setTags([]); setRating(0); setFinishedAt('')
     setDevs([]); setPublishers([]); setAchievementsUnlocked(''); setAchievementsTotal(''); setReleaseDate(''); setBannerImage(''); setLogoImage(''); setDescription('')
     setPlatforms([]); setOwnership(''); setGameStatus('backlog'); setPlayTime('')
-    setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([]); setIsBundle(false); setBundleContents([]); setSaveFiles([])
+    setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([]); setIsBundle(false); setBundleContents([]); setSaveFiles([]); setPcgwPage(undefined)
     setReleaseYear(''); setDuration(''); setConsumed(false); setArtist(''); setMusicType('')
     setGenres([]); setLabel(''); setPartOfAlbum(''); setHasTracks(false); setTracks([]); setSingleCovers([]); setEditions([])
     setMusicSource(''); setProducers([]); setMusicReview('')
@@ -1195,6 +1197,7 @@ function App() {
     setIsBundle(item.isBundle ?? false)
     setBundleContents(item.bundleContents ?? [])
     setSaveFiles(item.saveFiles ?? [])
+    setPcgwPage(item.pcgwPage)
     setReleaseYear(item.releaseYear ?? '')
     setDuration(item.duration ?? '')
     setConsumed(item.consumed ?? false)
@@ -1719,6 +1722,7 @@ function App() {
         isBundle,
         bundleContents: isBundle && bundleContents.length > 0 ? bundleContents : undefined,
         saveFiles: saveFiles.length > 0 ? saveFiles : undefined,
+        pcgwPage: pcgwPage || undefined,
         alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
         gameSource: gameSource || undefined,
         originalWorkId: originalWorkId || undefined,
@@ -4432,6 +4436,11 @@ function App() {
                           entries={bundleContents}
                           onChange={setBundleContents}
                           onRequestSgdb={(entryId, title) => setBundleSgdbFor({ entryId, title })}
+                        />
+                        <PcgwSavePaths
+                          gameTitle={title}
+                          pcgwPage={pcgwPage}
+                          onPageMatched={setPcgwPage}
                         />
                         <SaveFilesEditor
                           gameTitle={title}

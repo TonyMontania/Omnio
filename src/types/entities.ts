@@ -229,6 +229,10 @@ export interface Item {
   isBundle?: boolean
   bundleContents?: BundleGame[]
   saveFiles?: SaveFile[]
+  // PCGamingWiki page name once matched (e.g. "Metro Exodus"). Stored so
+  // the save-paths panel doesn't re-run opensearch every time the editor
+  // opens. Cleared / re-matched via the "Re-match" button in that panel.
+  pcgwPage?: string
   releaseYear?: string
   duration?: string
   consumed?: boolean
