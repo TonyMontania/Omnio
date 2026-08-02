@@ -2280,6 +2280,71 @@ function App() {
     })
   }
 
+  // Page context surfaced in the topnav (icon + title + count + back +
+  // per-view actions). Replaces the duplicated `.content-header` blocks
+  // that used to sit at the top of every board / library / stats view.
+  // The topnav is the single header now.
+  const viewToggleBtns = (
+    <div className="view-toggle">
+      <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
+      <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
+      <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')}>≡ Compact</button>
+    </div>
+  )
+  const backToLibrary = () => setSpecialView('none')
+  const pageMeta: { icon: React.ReactNode; title: string; count?: string; onBack?: () => void; actions?: React.ReactNode } | null = (() => {
+    if (specialView === 'home') return null
+    if (specialView === 'calendar') return { icon: <CalendarIcon />, title: 'Release calendar' }
+    if (specialView === 'stats') return { icon: <InsightsIcon />, title: 'Statistics' }
+    if (specialView === 'settings') return { icon: <SettingsIcon />, title: 'Settings' }
+    if (specialView === 'board') {
+      const label = GAME_STATUS_OPTIONS.find((s) => s.value === boardStatus)?.label ?? ''
+      const count = gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus).length
+      return { icon: <GameStatusIcon value={boardStatus} />, title: label, count: `${count} ${count === 1 ? 'game' : 'games'}`, onBack: backToLibrary, actions: viewToggleBtns }
+    }
+    if (specialView === 'musicBoard') {
+      const count = musicList.filter((m) => musicBoardFilter === 'listened' ? m.consumed : !m.consumed).length
+      return { icon: <span className="page-icon-glyph">{musicBoardFilter === 'listened' ? '✓' : '○'}</span>, title: musicBoardFilter === 'listened' ? 'Listened' : 'Not listened', count: `${count} ${count === 1 ? 'item' : 'items'}`, onBack: backToLibrary, actions: viewToggleBtns }
+    }
+    if (specialView === 'mangaBoard') {
+      const count = itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === mangaBoardStatus).length
+      return { icon: <MangaStatusIcon value={mangaBoardStatus} />, title: getMangaStatus(mangaBoardStatus).label, count: `${count} ${count === 1 ? 'item' : 'items'}`, onBack: backToLibrary, actions: viewToggleBtns }
+    }
+    if (specialView === 'moviesBoard') {
+      const count = itemsInCategory.filter((i) => moviesBoardFilter === 'watched' ? i.consumed : !i.consumed).length
+      return { icon: <span className="page-icon-glyph">{moviesBoardFilter === 'watched' ? '✓' : '○'}</span>, title: moviesBoardFilter === 'watched' ? 'Watched' : 'Not watched', count: `${count} ${count === 1 ? 'item' : 'items'}`, onBack: backToLibrary, actions: viewToggleBtns }
+    }
+    if (specialView === 'animeBoard') {
+      const count = itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === animeBoardStatus).length
+      return { icon: <AnimeStatusIcon value={animeBoardStatus} />, title: getAnimeStatus(animeBoardStatus).label, count: `${count} ${count === 1 ? 'item' : 'items'}`, onBack: backToLibrary, actions: viewToggleBtns }
+    }
+    if (specialView === 'seriesBoard') {
+      const count = itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === seriesBoardStatus).length
+      return { icon: <AnimeStatusIcon value={seriesBoardStatus} />, title: getSeriesStatus(seriesBoardStatus).label, count: `${count} ${count === 1 ? 'item' : 'items'}`, onBack: backToLibrary, actions: viewToggleBtns }
+    }
+    if (specialView === 'bookBoard') {
+      const count = itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === bookBoardStatus).length
+      return { icon: <MangaStatusIcon value={bookBoardStatus as MangaStatus} />, title: getBookStatus(bookBoardStatus).label, count: `${count} ${count === 1 ? 'book' : 'books'}`, onBack: backToLibrary, actions: viewToggleBtns }
+    }
+    // specialView === 'none' → the library view (with optional collection drill-in)
+    const countText = showFolderListing
+      ? `${categoryCollections.length} ${categoryCollections.length === 1 ? 'group' : 'groups'}`
+      : `${visibleItems.length} ${visibleItems.length === 1 ? 'item' : 'items'}`
+    const libActions = (
+      <>
+        {!showFolderListing && viewToggleBtns}
+        {subView === 'items' && <button className="add-btn" onClick={openAddPanel}>+ Add</button>}
+      </>
+    )
+    return {
+      icon: activeCollectionId ? <FolderIcon /> : <CategoryIcon id={current?.id ?? ''} />,
+      title: (activeCollectionId ? activeCollection?.name : current?.label) ?? '',
+      count: countText,
+      onBack: activeCollectionId ? () => { setActiveCollectionId(null); resetListControls() } : undefined,
+      actions: libActions,
+    }
+  })()
+
   return (
     <Suspense fallback={null}>
     <div
@@ -2321,18 +2386,27 @@ function App() {
             </svg>
             <span>Omnio</span>
           </div>
-          {/* Library switching happens on Home, not here. The top nav
-              only carries the anchor buttons: Home + utility views. */}
-          <div className="topnav-libs">
-            <button
-              className={(specialView as string) === 'home' ? 'topnav-tab active' : 'topnav-tab'}
-              onClick={() => { setSpecialView('home'); closePanel(); closeAllDetailViews() }}
-              title="Home"
-            >
-              <span className="nav-icon"><HomeIcon /></span>
-              <span>Home</span>
-            </button>
-          </div>
+          <button
+            className="topnav-home"
+            onClick={() => { setSpecialView('home'); closePanel(); closeAllDetailViews() }}
+            title="Home"
+          >
+            <span className="nav-icon"><HomeIcon /></span>
+            <span>Home</span>
+          </button>
+          {pageMeta && (
+            <div className="topnav-page">
+              {pageMeta.onBack && (
+                <button className="topnav-back" onClick={pageMeta.onBack} title="Back">←</button>
+              )}
+              <span className="topnav-page-icon">{pageMeta.icon}</span>
+              <span className="topnav-page-title">{pageMeta.title}</span>
+              {pageMeta.count && <span className="topnav-page-count">{pageMeta.count}</span>}
+            </div>
+          )}
+          {pageMeta?.actions && (
+            <div className="topnav-page-actions">{pageMeta.actions}</div>
+          )}
           <div className="topnav-utils">
             <button
               className={specialView === 'calendar' ? 'topnav-util active' : 'topnav-util'}
@@ -2446,20 +2520,6 @@ function App() {
             <>
           {specialView === 'board' && (
             <>
-              <div className="content-header">
-                <div className="page-title">
-                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
-                  <span className="page-icon"><GameStatusIcon value={boardStatus} /></span>
-                  <div><h1>{GAME_STATUS_OPTIONS.find((s) => s.value === boardStatus)?.label}</h1><span className="page-count">{gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus).length} games</span></div>
-                </div>
-                <div className="header-actions">
-                  <div className="view-toggle">
-                    <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
-                    <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
-                    <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')}>≡ Compact</button>
-                  </div>
-                </div>
-              </div>
               <div className="toolbar">
                 <input
                   className="search-input"
@@ -2493,23 +2553,6 @@ function App() {
           {specialView === 'musicBoard' && (() => {
             const list = filterAndSort(musicList.filter((m) => musicBoardFilter === 'listened' ? m.consumed : !m.consumed), search, [], [], [], [], sortBy)
             return (<>
-              <div className="content-header">
-                <div className="page-title">
-                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
-                  <span className="page-icon">{musicBoardFilter === 'listened' ? '✓' : '○'}</span>
-                  <div>
-                    <h1>{musicBoardFilter === 'listened' ? 'Listened' : 'Not listened'}</h1>
-                    <span className="page-count">{list.length} items</span>
-                  </div>
-                </div>
-                <div className="header-actions">
-                  <div className="view-toggle">
-                    <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
-                    <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
-                    <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')}>≡ Compact</button>
-                  </div>
-                </div>
-              </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
                 <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
@@ -2536,23 +2579,6 @@ function App() {
           {specialView === 'mangaBoard' && (() => {
             const list = filterAndSort(itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === mangaBoardStatus), search, [], [], [], [], sortBy)
             return (<>
-              <div className="content-header">
-                <div className="page-title">
-                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
-                  <span className="page-icon"><MangaStatusIcon value={mangaBoardStatus} /></span>
-                  <div>
-                    <h1>{getMangaStatus(mangaBoardStatus).label}</h1>
-                    <span className="page-count">{list.length} items</span>
-                  </div>
-                </div>
-                <div className="header-actions">
-                  <div className="view-toggle">
-                    <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
-                    <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
-                    <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')}>≡ Compact</button>
-                  </div>
-                </div>
-              </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
                 <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
@@ -2579,23 +2605,6 @@ function App() {
           {specialView === 'moviesBoard' && (() => {
             const list = filterAndSort(itemsInCategory.filter((i) => moviesBoardFilter === 'watched' ? i.consumed : !i.consumed), search, [], [], [], [], sortBy)
             return (<>
-              <div className="content-header">
-                <div className="page-title">
-                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
-                  <span className="page-icon">{moviesBoardFilter === 'watched' ? '✓' : '○'}</span>
-                  <div>
-                    <h1>{moviesBoardFilter === 'watched' ? 'Watched' : 'Not watched'}</h1>
-                    <span className="page-count">{list.length} items</span>
-                  </div>
-                </div>
-                <div className="header-actions">
-                  <div className="view-toggle">
-                    <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
-                    <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
-                    <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')}>≡ Compact</button>
-                  </div>
-                </div>
-              </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
                 <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
@@ -2621,23 +2630,6 @@ function App() {
           {specialView === 'animeBoard' && (() => {
             const list = filterAndSort(itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === animeBoardStatus), search, [], [], [], [], sortBy)
             return (<>
-              <div className="content-header">
-                <div className="page-title">
-                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
-                  <span className="page-icon"><AnimeStatusIcon value={animeBoardStatus} /></span>
-                  <div>
-                    <h1>{getAnimeStatus(animeBoardStatus).label}</h1>
-                    <span className="page-count">{list.length} items</span>
-                  </div>
-                </div>
-                <div className="header-actions">
-                  <div className="view-toggle">
-                    <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
-                    <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
-                    <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')}>≡ Compact</button>
-                  </div>
-                </div>
-              </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
                 <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
@@ -2665,23 +2657,6 @@ function App() {
           {specialView === 'seriesBoard' && (() => {
             const list = filterAndSort(itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === seriesBoardStatus), search, [], [], [], [], sortBy)
             return (<>
-              <div className="content-header">
-                <div className="page-title">
-                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
-                  <span className="page-icon"><AnimeStatusIcon value={seriesBoardStatus} /></span>
-                  <div>
-                    <h1>{getSeriesStatus(seriesBoardStatus).label}</h1>
-                    <span className="page-count">{list.length} items</span>
-                  </div>
-                </div>
-                <div className="header-actions">
-                  <div className="view-toggle">
-                    <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
-                    <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
-                    <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')}>≡ Compact</button>
-                  </div>
-                </div>
-              </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
                 <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
@@ -2708,23 +2683,6 @@ function App() {
           {specialView === 'bookBoard' && (() => {
             const list = filterAndSort(itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === bookBoardStatus), search, [], [], [], [], sortBy)
             return (<>
-              <div className="content-header">
-                <div className="page-title">
-                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
-                  <span className="page-icon"><MangaStatusIcon value={bookBoardStatus as MangaStatus} /></span>
-                  <div>
-                    <h1>{getBookStatus(bookBoardStatus).label}</h1>
-                    <span className="page-count">{list.length} books</span>
-                  </div>
-                </div>
-                <div className="header-actions">
-                  <div className="view-toggle">
-                    <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
-                    <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
-                    <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')}>≡ Compact</button>
-                  </div>
-                </div>
-              </div>
               <div className="toolbar">
                 <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
                 <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
@@ -2748,12 +2706,6 @@ function App() {
 
           {specialView === 'stats' && (
             <>
-              <div className="content-header">
-                <div className="page-title">
-                  <span className="page-icon"><InsightsIcon /></span>
-                  <div><h1>Statistics</h1></div>
-                </div>
-              </div>
               <div className="content-scroll">
               <div className="sub-tabs">
                 {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((cat) => (
@@ -3213,12 +3165,6 @@ function App() {
 
           {specialView === 'settings' && (
             <>
-              <div className="content-header">
-                <div className="page-title">
-                  <span className="page-icon"><SettingsIcon /></span>
-                  <div><h1>Settings</h1></div>
-                </div>
-              </div>
               <div className="settings-layout">
               <aside className="settings-sidebar">
                 <button className={settingsTab === 'appearance' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('appearance')}><span className="settings-nav-icon">◐</span>Appearance</button>
@@ -3705,31 +3651,6 @@ function App() {
 
           {specialView === 'none' && (
             <>
-              <div className="content-header">
-                <div className="page-title">
-                  {activeCollectionId && <button className="back-btn" onClick={() => { setActiveCollectionId(null); resetListControls() }}>←</button>}
-                  <span className="page-icon">{activeCollectionId ? <FolderIcon /> : <CategoryIcon id={current?.id ?? ''} />}</span>
-                  <div>
-                    <h1>{activeCollectionId ? activeCollection?.name : current?.label}</h1>
-                    <span className="page-count">
-                      {showFolderListing
-                        ? `${categoryCollections.length} ${categoryCollections.length === 1 ? 'group' : 'groups'}`
-                        : `${visibleItems.length} ${visibleItems.length === 1 ? 'item' : 'items'}`}
-                    </span>
-                  </div>
-                </div>
-                <div className="header-actions">
-                  {!showFolderListing && (
-                    <div className="view-toggle">
-                      <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
-                      <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
-                      <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')}>≡ Compact</button>
-                    </div>
-                  )}
-                  {subView === 'items' && <button className="add-btn" onClick={openAddPanel}>+ Add</button>}
-                </div>
-              </div>
-
               {/* Category's Collections status filters render as chips
                   under the header. Only shows when there's a board view
                   for this library (games, movies, anime/donghua, series,

@@ -28,7 +28,10 @@
 .field-row .field-group { flex: 1; }
 
 .pills { display: flex; flex-wrap: wrap; gap: 6px; }
-.hint { color: var(--text-faint); font-size: 12px; }
+/* Small descriptive text under labels / next to controls. Bumped from
+   12px/text-faint to 13px/text-dim so it stays readable across every
+   theme — text-faint was too washed out on light/AMOLED/Rosé Pine. */
+.hint { color: var(--text-dim); font-size: 13px; line-height: 1.5; }
 
 .pill {
   background: var(--surface-2);
