@@ -1,27 +1,35 @@
-# Editor + Detail Redesign — Tabbed Layout
+# Editor + Chrome Redesign
 
-**Status:** prototype (branch `prototype/editor-tabs`), opt-in via Settings.
+**Status:** shipped (default behaviour, no toggle).
 
-The problem: as we add features (attachments, achievements, save-backup,
-per-chapter notes, session timer, quote collection, etc.) the edit modal
-and detail modal become walls of vertical scroll. Even with progressive
-disclosure hiding empty sections, a power user who fills 40+ fields ends
-up scrolling forever.
+Two shifts landed together:
 
-The fix: split both surfaces into tabs. Basic info stays visible always;
-everything else is one click away, not one thousand pixels down.
+1. **Chrome.** Sidebar is gone. A single top-nav bar carries the brand
+   on the left, a Home tab, and the utility icons (calendar, statistics,
+   settings) on the right. Library navigation happens on the Home
+   dashboard — cards per library — not in persistent chrome. The old
+   sidebar / top-nav toggle in Settings is retired.
+
+2. **Editor.** The edit modal is tabbed. Overview stays visible; the
+   rest of the form is split across focused tabs so power users with 40+
+   filled fields aren't scrolling forever. The old "Compact (single
+   scroll)" mode and its Settings toggle are retired.
+
+The **detail modal** stays as a single scroll (read-only, one Edit
+button). Progressive disclosure hides empty sections. Not tabbed on
+purpose: a reader shouldn't need an extra click to see what they own.
 
 ---
 
 ## Editor — tab structure
 
-The right column of the edit modal (the form) grows a tab bar at the
-top. The left column (Live Preview + sticky cover) stays put.
+The right column of the edit modal (the form) has a tab bar at the top.
+The left column (Live Preview + sticky cover) stays put.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ Live Preview │  [Overview] [Details] [Media] [Progress]         │
-│              │  [History] [Related] [Attachments] [Notes]       │
+│ Live Preview │  [Overview] [Identity] [Progress] [Media]        │
+│              │  [History] [Related] [Notes]                     │
 │  [cover]     │  ────────────────────────────────────────────    │
 │  Title       │                                                  │
 │  Status      │  ← content of the active tab                     │
@@ -30,11 +38,11 @@ top. The left column (Live Preview + sticky cover) stays put.
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Tab contents (revised — 7 tabs, more focused split)
+### Tab contents (7 tabs)
 
 Splitting "Details" into **Identity** (who made it, how it's classified)
-and **Progress** (what you've done with it) keeps each tab focused. Every
-category maps its existing sections into these:
+and **Progress** (what you've done with it) keeps each tab focused.
+Every category maps its existing sections into these:
 
 | Tab           | Games                                                       | Music                                       | Movies / Series                            | Anime / Manga                                     | Books                                    |
 |---------------|-------------------------------------------------------------|---------------------------------------------|--------------------------------------------|---------------------------------------------------|------------------------------------------|
@@ -57,10 +65,10 @@ Progress gets too dense we'll add Attachments as an 8th top-level tab.
    **History** tab. As soon as the user adds one, the tab appears.
    Overview and Notes are always visible.
 
-2. **Dot indicator.** Tabs with data show a small accent-colored dot
+2. **Dot indicator.** Tabs with data show a small accent-coloured dot
    next to the label. Lets you scan an item's density at a glance:
-   `[Overview •] [Details] [Media •] [Notes •]` → this item has core
-   info, no extended details, has media, has notes.
+   `[Overview •] [Identity] [Media •] [Notes •]` → this item has core
+   info, no extended identity data, has media, has notes.
 
 3. **Sticky tab bar.** Scrolling the tab content does not scroll the
    tab bar off. Users can jump between tabs without losing their place.
@@ -75,39 +83,34 @@ Progress gets too dense we'll add Attachments as an 8th top-level tab.
 
 ---
 
-## Detail modal — same treatment
-
-Hero section (cover + title + status + primary meta) stays pinned at
-the top. Every other section moves into a tab below.
+## Chrome — top-nav only
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  [cover]  Metro Exodus (2019)              [Duplicate] [Edit]   │
-│           Metro 3 · 4A Games                                    │
-│           ★ 4.5 · Backlog · M · PC                              │
-│  ────────────────────────────────────────────────────────────  │
-│  [Overview] [Progress] [Related] [History] [Attachments]        │
-│  ────────────────────────────────────────────────────────────  │
+│  ◈ Omnio      [Home]                     [📅] [📊] [⚙]         │
+├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│    ← tab content                                                │
+│  ← library grid / board / detail / editor                       │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-Same auto-hide-empty rule. Detail modal is read-only — no save button
-in the footer.
+- Left cluster: brand mark + Home tab.
+- Right cluster: calendar / statistics / settings icons.
+- Library switching lives on the Home dashboard (one card per library).
+- Collection status chips (Backlog / Playing / Beaten / …) render inside
+  the library header, not in persistent chrome.
+- The top-nav auto-hides on the Home view — Home has its own header.
 
 ---
 
-## Migration path
+## Detail modal — single scroll, progressive disclosure
 
-1. **Ship as opt-in.** Settings > Appearance > "Editor layout":
-   Compact (single scroll) — default — or Tabbed (new). Users choose.
-2. **Iterate on the tab shape** based on feedback. Nothing bakes in
-   until the tab set is proven.
-3. **Once stable**, make Tabbed default for new users; keep Compact
-   available as a preference.
-4. **Never remove Compact.** Some users prefer the scroll — respect it.
+Hero section (cover + title + status + primary meta) pinned at the top;
+sections below stack in a single scroll. Empty sections hide themselves.
+No tabs — the detail modal is read-only, and the extra click cost
+outweighs the density payoff. If a user wants to reorganise they go to
+Edit, which is where the tabs live.
 
 ---
 

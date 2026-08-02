@@ -1,8 +1,7 @@
-/* Prototype: Option A "top nav" layout.
-   Active when settings.layoutMode === 'topnav'. The .body wrapper drops
-   the sidebar entirely; a .topnav bar takes its place spanning the
-   window, and the .content pane goes full-width beneath it. Collections
-   for the active library reflow as chips inside the content header. */
+/* Top-nav chrome — the only layout. A .topnav bar spans the window
+   with Home + utility icons (calendar / stats / settings); the .content
+   pane goes full-width beneath it. Collections for the active library
+   reflow as chips inside the content header. */
 
 .app[data-layout="topnav"] .body {
   flex-direction: column;

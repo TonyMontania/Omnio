@@ -175,12 +175,10 @@ interface Settings {
   density: DensityName
   fontSize: FontSizeName
   motion: MotionMode
-  sidebarCompact: boolean
   startupCategory: StartupCategoryMode
   lastCategory?: string
   welcomeShown?: boolean
   enabledCategories?: string[]
-  sidebarHidden: boolean
   gameFields: Record<GameField, boolean>
   musicFields: Record<MusicField, boolean>
   mangaFields: Record<MangaField, boolean>
@@ -192,17 +190,9 @@ interface Settings {
   // "Rating" stays as your preference in Games without leaking into Music.
   categorySortModes?: Record<string, string>
   rememberCategorySort?: boolean
-  // Prototype: 'sidebar' (classic, default) vs 'topnav' (compact, more
-  // horizontal room for the item grid). Collections and utility buttons
-  // reflow accordingly.
-  layoutMode?: 'sidebar' | 'topnav'
   // Card-grid zoom. sm = denser, md = default, lg / xl = bigger covers.
   // Applies globally so every library respects the same preference.
   cardZoom?: 'sm' | 'md' | 'lg' | 'xl'
-  // Editor layout: 'compact' = single long scroll (default, current
-  // behaviour). 'tabbed' = section headers become a tab bar; only the
-  // active tab's sections render. Prototype behind an opt-in flag.
-  editorLayout?: 'compact' | 'tabbed'
   sgdbApiKey?: string
   tmdbApiKey?: string
   igdbClientId?: string
@@ -222,7 +212,7 @@ interface AppData {
 // About string can't drift from the packaged version number.
 const APP_VERSION = __APP_VERSION__
 
-const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', sidebarCompact: false, startupCategory: 'last', sidebarHidden: false, gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, rememberCategorySort: true, categorySortModes: {}, layoutMode: 'sidebar', cardZoom: 'md', editorLayout: 'compact' }
+const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', startupCategory: 'last', gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, rememberCategorySort: true, categorySortModes: {}, cardZoom: 'md' }
 
 function getUniqueTags(list: Item[]): string[] {
   const set = new Set<string>()
@@ -948,16 +938,16 @@ function App() {
     return () => clearTimeout(t)
   }, [toast])
 
-  // Tabbed-editor visibility. Runs when the editor is open in tabbed mode
-  // OR when the active tab changes. Walks the form container, groups each
+  // Tabbed-editor visibility. Runs when the editor is open OR when the
+  // active tab changes. Walks the form container, groups each
   // `.form-section-header` with its following siblings until the next
   // header, and toggles a `.editor-hidden` class on every node in a group
   // whose assigned tab (data-belongs-to on the header) doesn't match the
   // active tab. Sections without an assigned tab default to 'notes' so
   // nothing is lost silently.
   useEffect(() => {
-    if (settings.editorLayout !== 'tabbed' || !panelOpen) return
-    const root = document.querySelector<HTMLElement>('.form[data-editor-layout="tabbed"]')
+    if (!panelOpen) return
+    const root = document.querySelector<HTMLElement>('.form[data-editor-tab]')
     if (!root) return
     const headers = Array.from(root.querySelectorAll<HTMLElement>('.form-section-header'))
     if (headers.length === 0) return
@@ -980,7 +970,7 @@ function App() {
         cur = cur.nextSibling
       }
     }
-  }, [settings.editorLayout, editorTab, panelOpen, editingId, activeCategory])
+  }, [editorTab, panelOpen, editingId, activeCategory])
 
   // Fetchers dispatch this event via downloadImageAsset when image:download
   // returns { ok: false, error }. Surfacing the reason is the whole point —
@@ -2299,7 +2289,7 @@ function App() {
       data-density={settings.density}
       data-font-size={settings.fontSize}
       data-motion={settings.motion}
-      data-layout={settings.layoutMode ?? 'sidebar'}
+      data-layout="topnav"
       data-card-zoom={settings.cardZoom ?? 'md'}
     >
       {updateInfo && !updateBannerDismissed && (
@@ -2321,7 +2311,7 @@ function App() {
           </div>
         </div>
       )}
-      {settings.layoutMode === 'topnav' && specialView !== 'home' && (
+      {specialView !== 'home' && (
         <nav className="topnav">
           <div className="topnav-brand">
             <svg className="brand-logo" viewBox="0 0 128 128" aria-hidden="true">
@@ -2363,211 +2353,6 @@ function App() {
         </nav>
       )}
       <div className="body">
-        {settings.layoutMode !== 'topnav' && !settings.sidebarHidden && specialView !== 'home' && (
-        <nav className={settings.sidebarCompact ? 'sidebar sidebar-icons' : 'sidebar'}>
-          <div className="brand-row">
-            <svg className="brand-logo" viewBox="0 0 128 128" aria-hidden="true">
-              <circle cx="64" cy="64" r="46" fill="none" stroke="currentColor" strokeWidth="6" />
-              <path d="M64 26 L71.5 56.5 L102 64 L71.5 71.5 L64 102 L56.5 71.5 L26 64 L56.5 56.5 Z" fill="currentColor" />
-              <circle cx="64" cy="64" r="6" fill="none" stroke="currentColor" strokeWidth="4" />
-            </svg>
-            <span className="brand-mark">Omnio</span>
-            <button className="sidebar-toggle" onClick={() => setSettings((s) => ({ ...s, sidebarHidden: true }))} title="Hide sidebar">⟨⟨</button>
-          </div>
-
-          <div className="sidebar-nav">
-            <button className={(specialView as string) === 'home' ? 'nav-item active' : 'nav-item'} onClick={() => { setSpecialView('home'); closePanel(); closeAllDetailViews() }}>
-              <span className="nav-icon"><HomeIcon /></span>
-              <span>Home</span>
-            </button>
-          </div>
-          <span className="sidebar-section-title">Library</span>
-          <div className="sidebar-nav">
-            {/* Every library is a top-level nav item — no dropdown groups.
-                Order comes from CATEGORIES; visibility from enabledCategories. */}
-            {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((cat) => (
-              <button key={cat.id} className={specialView === 'none' && cat.id === activeCategory ? 'nav-item active' : 'nav-item'} onClick={() => switchCategory(cat.id)}>
-                <span className="nav-icon"><CategoryIcon id={cat.id} /></span>
-                <span>{cat.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {activeCategory === 'videojuegos' && (
-            <>
-              <div className="sidebar-divider" />
-              <span className="sidebar-section-title">Collections</span>
-              <div className="sidebar-nav">
-                {GAME_STATUS_OPTIONS.map((s) => (
-                  <button
-                    key={s.value}
-                    className={specialView === 'board' && boardStatus === s.value ? 'nav-item active' : 'nav-item'}
-                    onClick={() => { setSpecialView('board'); setBoardStatus(s.value); closePanel(); closeAllDetailViews() }}
-                  >
-                    <span className="nav-icon"><GameStatusIcon value={s.value} /></span>
-                    <span>{s.label}</span>
-                    <span className="nav-count">{gamesList.filter((g) => (g.gameStatus || 'backlog') === s.value).length}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeCategory === 'musica' && (
-            <>
-              <div className="sidebar-divider" />
-              <span className="sidebar-section-title">Collections</span>
-              <div className="sidebar-nav">
-                <button
-                  className={specialView === 'musicBoard' && musicBoardFilter === 'listened' ? 'nav-item active' : 'nav-item'}
-                  onClick={() => { setSpecialView('musicBoard'); setMusicBoardFilter('listened'); closePanel(); closeAllDetailViews() }}
-                >
-                  <span className="nav-icon">✓</span>
-                  <span>Listened</span>
-                  <span className="nav-count">{musicList.filter((m) => m.consumed).length}</span>
-                </button>
-                <button
-                  className={specialView === 'musicBoard' && musicBoardFilter === 'unlistened' ? 'nav-item active' : 'nav-item'}
-                  onClick={() => { setSpecialView('musicBoard'); setMusicBoardFilter('unlistened'); closePanel(); closeAllDetailViews() }}
-                >
-                  <span className="nav-icon">○</span>
-                  <span>Not listened</span>
-                  <span className="nav-count">{musicList.filter((m) => !m.consumed).length}</span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {activeCategory === 'peliculas' && (
-            <>
-              <div className="sidebar-divider" />
-              <span className="sidebar-section-title">Collections</span>
-              <div className="sidebar-nav">
-                <button
-                  className={specialView === 'moviesBoard' && moviesBoardFilter === 'watched' ? 'nav-item active' : 'nav-item'}
-                  onClick={() => { setSpecialView('moviesBoard'); setMoviesBoardFilter('watched'); closePanel(); closeAllDetailViews() }}
-                >
-                  <span className="nav-icon">✓</span>
-                  <span>Watched</span>
-                  <span className="nav-count">{itemsInCategory.filter((i) => i.consumed).length}</span>
-                </button>
-                <button
-                  className={specialView === 'moviesBoard' && moviesBoardFilter === 'unwatched' ? 'nav-item active' : 'nav-item'}
-                  onClick={() => { setSpecialView('moviesBoard'); setMoviesBoardFilter('unwatched'); closePanel(); closeAllDetailViews() }}
-                >
-                  <span className="nav-icon">○</span>
-                  <span>Not watched</span>
-                  <span className="nav-count">{itemsInCategory.filter((i) => !i.consumed).length}</span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {isAnime && (
-            <>
-              <div className="sidebar-divider" />
-              <span className="sidebar-section-title">Collections</span>
-              <div className="sidebar-nav">
-                {ANIME_STATUS_OPTIONS.map((s) => (
-                  <button
-                    key={s.value}
-                    className={specialView === 'animeBoard' && animeBoardStatus === s.value ? 'nav-item active' : 'nav-item'}
-                    onClick={() => { setSpecialView('animeBoard'); setAnimeBoardStatus(s.value); closePanel(); closeAllDetailViews() }}
-                  >
-                    <span className="nav-icon"><AnimeStatusIcon value={s.value} /></span>
-                    <span>{s.label}</span>
-                    <span className="nav-count">{itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === s.value).length}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          {isSeriesLike && (
-            <>
-              <div className="sidebar-divider" />
-              <span className="sidebar-section-title">Collections</span>
-              <div className="sidebar-nav">
-                {SERIES_STATUS_OPTIONS.map((s) => (
-                  <button
-                    key={s.value}
-                    className={specialView === 'seriesBoard' && seriesBoardStatus === s.value ? 'nav-item active' : 'nav-item'}
-                    onClick={() => { setSpecialView('seriesBoard'); setSeriesBoardStatus(s.value); closePanel(); closeAllDetailViews() }}
-                  >
-                    <span className="nav-icon"><AnimeStatusIcon value={s.value} /></span>
-                    <span>{s.label}</span>
-                    <span className="nav-count">{itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === s.value).length}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeCategory === 'libros' && (
-            <>
-              <div className="sidebar-divider" />
-              <span className="sidebar-section-title">Collections</span>
-              <div className="sidebar-nav">
-                {BOOK_STATUS_OPTIONS.map((s) => (
-                  <button
-                    key={s.value}
-                    className={specialView === 'bookBoard' && bookBoardStatus === s.value ? 'nav-item active' : 'nav-item'}
-                    onClick={() => { setSpecialView('bookBoard'); setBookBoardStatus(s.value); closePanel(); closeAllDetailViews() }}
-                  >
-                    <span className="nav-icon"><MangaStatusIcon value={s.value as MangaStatus} /></span>
-                    <span>{s.label}</span>
-                    <span className="nav-count">{itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === s.value).length}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          {isManga && (
-            <>
-              <div className="sidebar-divider" />
-              <span className="sidebar-section-title">Collections</span>
-              <div className="sidebar-nav">
-                {MANGA_STATUS_OPTIONS.map((s) => (
-                  <button
-                    key={s.value}
-                    className={specialView === 'mangaBoard' && mangaBoardStatus === s.value ? 'nav-item active' : 'nav-item'}
-                    onClick={() => { setSpecialView('mangaBoard'); setMangaBoardStatus(s.value); closePanel(); closeAllDetailViews() }}
-                  >
-                    <span className="nav-icon"><MangaStatusIcon value={s.value} /></span>
-                    <span>{s.label}</span>
-                    <span className="nav-count">{itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === s.value).length}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          <div className="sidebar-divider" />
-          <div className="sidebar-nav">
-            <button className={specialView === 'stats' ? 'nav-item active' : 'nav-item'} onClick={() => { setSpecialView('stats'); closePanel(); closeAllDetailViews() }}>
-              <span className="nav-icon"><InsightsIcon /></span>
-              <span>Statistics</span>
-            </button>
-            <button className={specialView === 'calendar' ? 'nav-item active' : 'nav-item'} onClick={() => { setSpecialView('calendar'); closePanel(); closeAllDetailViews() }}>
-              <span className="nav-icon"><CalendarIcon /></span>
-              <span>Release calendar</span>
-            </button>
-          </div>
-
-          <div className="sidebar-footer">
-            <button className={specialView === 'settings' ? 'sidebar-action active' : 'sidebar-action'} onClick={() => { setSpecialView('settings'); closePanel(); closeAllDetailViews() }}>
-              <span className="nav-icon"><SettingsIcon /></span>
-              <span>Settings</span>
-            </button>
-          </div>
-        </nav>
-        )}
-
-        {settings.sidebarHidden && (
-          <button className="sidebar-reveal" onClick={() => setSettings((s) => ({ ...s, sidebarHidden: false }))} title="Show sidebar">⟩⟩</button>
-        )}
-
         <main className="content">
           {viewingGame ? (
             <GameDetailModal
@@ -3497,13 +3282,6 @@ function App() {
                       </div>
                     </div>
                     <div className="field-group">
-                      <label>Sidebar</label>
-                      <div className="yesno">
-                        <button type="button" className={!settings.sidebarCompact ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, sidebarCompact: false }))}>Full</button>
-                        <button type="button" className={settings.sidebarCompact ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, sidebarCompact: true }))}>Icons only</button>
-                      </div>
-                    </div>
-                    <div className="field-group">
                       <label>Card zoom</label>
                       <div className="yesno">
                         {(['sm','md','lg','xl'] as const).map((z) => (
@@ -3511,22 +3289,6 @@ function App() {
                         ))}
                       </div>
                       <p className="hint">Controls how big the covers show in Grid layout. Smaller fits more per row; larger makes each cover more prominent.</p>
-                    </div>
-                    <div className="field-group">
-                      <label>Editor layout <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 8, letterSpacing: '0.05em' }}>PROTOTYPE</span></label>
-                      <div className="yesno">
-                        <button type="button" className={(settings.editorLayout ?? 'compact') === 'compact' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, editorLayout: 'compact' }))}>Compact (single scroll)</button>
-                        <button type="button" className={settings.editorLayout === 'tabbed' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, editorLayout: 'tabbed' }))}>Tabbed</button>
-                      </div>
-                      <p className="hint">Compact = the classic long-scroll form. Tabbed = section headers become tabs above the form; only the active tab renders. Useful once items have lots of fields filled in. See <code>docs/REDESIGN.md</code> for the full plan.</p>
-                    </div>
-                    <div className="field-group">
-                      <label>Layout <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 8, letterSpacing: '0.05em' }}>PROTOTYPE</span></label>
-                      <div className="yesno">
-                        <button type="button" className={(settings.layoutMode ?? 'sidebar') === 'sidebar' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, layoutMode: 'sidebar' }))}>Sidebar (classic)</button>
-                        <button type="button" className={settings.layoutMode === 'topnav' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, layoutMode: 'topnav' }))}>Top nav</button>
-                      </div>
-                      <p className="hint">Top nav moves the library selector to a horizontal bar above the content, reflows the Collections as chips, and gives the item grid the full width of the window. Toggle any time.</p>
                     </div>
                     <div className="field-group">
                       <label>Default view</label>
@@ -3580,7 +3342,7 @@ function App() {
                 {settingsTab === 'libraries' && (
                   <div className="field-group">
                     <label>Enabled libraries</label>
-                    <p className="hint">Uncheck a library to hide it from the sidebar and insights. Your data is preserved even if you disable one.</p>
+                    <p className="hint">Uncheck a library to hide it from Home and insights. Your data is preserved even if you disable one.</p>
                     <div className="library-toggle-list">
                       {CATEGORIES.map((cat) => {
                         const enabled = !settings.enabledCategories || settings.enabledCategories.includes(cat.id)
@@ -3968,13 +3730,11 @@ function App() {
                 </div>
               </div>
 
-              {/* Prototype: when the sidebar is gone (top-nav layout),
-                  reflow the category's Collections status filters as chips
-                  right under the header — same functionality, different
-                  place. Only shows when there's a board view for this
-                  library (games, movies, anime/donghua, series, manga
-                  variants, music, books). */}
-              {settings.layoutMode === 'topnav' && (() => {
+              {/* Category's Collections status filters render as chips
+                  under the header. Only shows when there's a board view
+                  for this library (games, movies, anime/donghua, series,
+                  manga variants, music, books). */}
+              {(() => {
                 // TS narrows specialView based on the surrounding
                 // conditional block, so cast to string for the comparisons
                 // that intentionally reach into other board views.
@@ -4481,21 +4241,19 @@ function App() {
                 </aside>
                 <div className="edit-form-col">
 
-                  {settings.editorLayout === 'tabbed' && (
-                    <div className="editor-tabs-bar" role="tablist">
-                      {(['overview','identity','progress','media','history','related','notes'] as const).map((tab) => (
-                        <button
-                          key={tab}
-                          type="button"
-                          role="tab"
-                          className={editorTab === tab ? 'editor-tab active' : 'editor-tab'}
-                          onClick={() => setEditorTab(tab)}
-                        >{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
-                      ))}
-                    </div>
-                  )}
+                  <div className="editor-tabs-bar" role="tablist">
+                    {(['overview','identity','progress','media','history','related','notes'] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        role="tab"
+                        className={editorTab === tab ? 'editor-tab active' : 'editor-tab'}
+                        onClick={() => setEditorTab(tab)}
+                      >{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
+                    ))}
+                  </div>
 
-                  <div className="form" data-editor-layout={settings.editorLayout ?? 'compact'} data-editor-tab={editorTab}>
+                  <div className="form" data-editor-tab={editorTab}>
                     <div className="metadata-sources-panel">
                       <div className="metadata-sources-header">
                         <span className="metadata-sources-title">↗ Fetch metadata</span>
@@ -6202,7 +5960,7 @@ function App() {
                   You're all set. A few tips to get started:
                 </p>
                 <ul className="welcome-tips">
-                  <li>Pick a category on the left sidebar.</li>
+                  <li>Pick a library from the Home dashboard.</li>
                   <li>Click <b>+ Add</b> or use <b>↗ Fetch metadata</b> in the editor to fill fields from AniList / TMDb / IGDB / etc.</li>
                   <li>Personalize theme, density, card fields and card zoom in <b>Settings</b>.</li>
                   <li>Press <b>?</b> anytime for the shortcuts cheatsheet · <b>Ctrl+K</b> for global search · <b>F5</b> to refresh.</li>

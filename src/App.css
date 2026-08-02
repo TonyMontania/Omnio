@@ -7,7 +7,6 @@
 
 @import './styles/tokens.css';        /* reset, :root, 6 temas, 8 accents */
 @import './styles/base.css';          /* html/body, scrollbars, focus, motion, font-size, density, toast */
-@import './styles/sidebar.css';       /* sidebar completo, nav-items, brand */
 @import './styles/layout.css';        /* content, header, toolbar, filters, sub-tabs, stats-bar, back-btn */
 @import './styles/forms.css';         /* form, inputs, pills, tags, dropdowns, rating, stars, notes */
 @import './styles/cards.css';         /* list, item-card, folder-card, empty-state, status-dots */
