@@ -1073,3 +1073,137 @@
 .genre-canonical-field input:focus { border-color: var(--accent); outline: none; }
 .genre-group-actions .secondary-btn { padding: 6px 14px; font-size: 12.5px; }
 .genre-group-actions .secondary-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* -------------------------------------------------------------------------
+   Data health audit — Settings → Data → Maintenance. Lists items missing
+   core fields for their category. Row layout: small cover · title + cat ·
+   row of "missing" chips. Whole row is a button that opens the editor.
+   ------------------------------------------------------------------------- */
+
+.audit-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 16px 0 12px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.audit-filters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.audit-filters label > span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.audit-filters select {
+  padding: 5px 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12.5px;
+}
+.audit-filters select:focus { border-color: var(--accent); outline: none; }
+.audit-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.audit-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.audit-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.14s, background 0.14s;
+}
+.audit-row:hover { border-color: var(--accent); background: var(--surface); }
+.audit-cover {
+  flex-shrink: 0;
+  width: 40px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.audit-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.audit-cover-empty {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-faint);
+}
+.audit-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.audit-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.audit-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.audit-cat {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.audit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.audit-chip {
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: color-mix(in srgb, var(--danger) 80%, var(--text));
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+}

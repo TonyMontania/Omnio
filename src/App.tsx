@@ -74,6 +74,7 @@ const AnimeDetailModal  = lazy(() => import('./AnimeDetailModal'))
 const SeriesDetailModal = lazy(() => import('./SeriesDetailModal'))
 const DuplicatesModal   = lazy(() => import('./DuplicatesModal'))
 const GenreNormalizerModal = lazy(() => import('./GenreNormalizerModal'))
+const DataHealthAuditModal = lazy(() => import('./DataHealthAuditModal'))
 const GlobalSearch      = lazy(() => import('./GlobalSearch'))
 const SteamGridDbPicker = lazy(() => import('./SteamGridDbPicker'))
 const AniListFetcher    = lazy(() => import('./AniListFetcher'))
@@ -399,6 +400,7 @@ function App() {
   const [dupOpen, setDupOpen] = useState(false)
   const [brokenAssetsOpen, setBrokenAssetsOpen] = useState(false)
   const [genreNormalizerOpen, setGenreNormalizerOpen] = useState(false)
+  const [auditOpen, setAuditOpen] = useState(false)
   const [brokenAssets, setBrokenAssets] = useState<{ itemId: string; itemTitle: string; category: string; field: string; rel: string }[]>([])
 
   // Mirror of storage:clear-asset-ref but for the in-memory items /
@@ -3655,6 +3657,11 @@ function App() {
                       <p className="hint">Groups genre labels that look like the same concept spelled differently ("Sci-Fi" / "Science Fiction" / "Ciencia ficción"). Pick a canonical label per group and rewrite every item in one go. Applies only to <code>genres[]</code> — your <code>tags[]</code> stay untouched.</p>
                     </div>
                     <div className="field-group">
+                      <label>Audit incomplete items</label>
+                      <button type="button" className="secondary-btn" onClick={() => setAuditOpen(true)}>Scan for missing core fields</button>
+                      <p className="hint">Diagnostic scan — walks every item and reports which core fields are missing for its library (cover, rating, status, authors / developers, release year, etc). Click a row to open the editor and fill in what's missing. Non-destructive: nothing is changed.</p>
+                    </div>
+                    <div className="field-group">
                       <label>Find broken covers</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={async () => {
@@ -6093,6 +6100,14 @@ function App() {
           items={items}
           onOpenItem={navigateToItem}
           onClose={() => setDupOpen(false)}
+        />
+      )}
+
+      {auditOpen && (
+        <DataHealthAuditModal
+          items={items}
+          onOpenItem={navigateToItem}
+          onClose={() => setAuditOpen(false)}
         />
       )}
 
