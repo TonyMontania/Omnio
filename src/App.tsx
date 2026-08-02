@@ -89,6 +89,7 @@ const KitsuFetcher      = lazy(() => import('./KitsuFetcher'))
 const MalImporter       = lazy(() => import('./MalImporter'))
 const GenericImporter   = lazy(() => import('./GenericImporter'))
 const SteamImporter     = lazy(() => import('./SteamImporter'))
+const LetterboxdImporter = lazy(() => import('./LetterboxdImporter'))
 const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 import { buildStaticSiteHtml } from './exportSite'
 import {
@@ -551,6 +552,7 @@ function App() {
   const [malOpen, setMalOpen] = useState(false)
   const [genericImportOpen, setGenericImportOpen] = useState(false)
   const [steamOpen, setSteamOpen] = useState(false)
+  const [letterboxdOpen, setLetterboxdOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -3523,8 +3525,9 @@ function App() {
                         <button type="button" className="secondary-btn" onClick={() => setMalOpen(true)}>Import MAL / AniList XML</button>
                         <button type="button" className="secondary-btn" onClick={() => setGenericImportOpen(true)}>Import Excel / CSV / Notion / TXT</button>
                         <button type="button" className="secondary-btn" onClick={() => setSteamOpen(true)}>Import from Steam profile</button>
+                        <button type="button" className="secondary-btn" onClick={() => setLetterboxdOpen(true)}>Import from Letterboxd</button>
                       </div>
-                      <p className="hint">Steam import reads a public profile via the community XML endpoint — no API key. Playtime and status pre-fill; open each item afterwards to fetch cover + metadata via IGDB or SteamGridDB.</p>
+                      <p className="hint">Steam import reads a public profile via the community XML endpoint — no API key. Letterboxd accepts the CSVs from your account export (Settings → Data → Export on letterboxd.com). Playtime and status pre-fill; open each item afterwards to fetch cover + metadata via IGDB or SteamGridDB / TMDb.</p>
                     </div>
                     <div className="field-group">
                       <label>Export to other trackers</label>
@@ -6439,6 +6442,17 @@ function App() {
             onClose={() => setSteamOpen(false)}
           />
         </Suspense>
+      )}
+
+      {letterboxdOpen && (
+        <LetterboxdImporter
+          existingItems={items}
+          onImport={(newItems) => {
+            setItems((all) => [...all, ...newItems])
+            setToast(`Imported ${newItems.length} movie${newItems.length === 1 ? '' : 's'} from Letterboxd`)
+          }}
+          onClose={() => setLetterboxdOpen(false)}
+        />
       )}
 
       {wrappedOpen && (
