@@ -18,7 +18,7 @@ import type {
   BookField, BookStatus, BookFormat, BookSource,
   AgeRating, RelatedItem, RewatchEntry,
   BandStatus, BandMember, SingleCover, AlbumEdition,
-  CustomField,
+  CustomField, SaveFile,
 } from './types'
 
 // Runtime constants (option lists, default field visibility)
@@ -104,6 +104,7 @@ import { pickImageToDataUrl, assetBasename } from './utils/files'
 import PlatformEditor from './components/editors/PlatformEditor'
 import GameSubItems from './components/editors/GameSubItems'
 import BundleGamesEditor from './components/editors/BundleGamesEditor'
+import SaveFilesEditor from './components/editors/SaveFilesEditor'
 import VolumeCoverEditor from './components/editors/VolumeCoverEditor'
 import TrackListEditor from './components/editors/TrackListEditor'
 import RelatedListEditor from './components/editors/RelatedListEditor'
@@ -590,6 +591,7 @@ function App() {
   const [addonsList, setAddonsList] = useState<DlcEntry[]>([])
   const [isBundle, setIsBundle] = useState(false)
   const [bundleContents, setBundleContents] = useState<BundleGame[]>([])
+  const [saveFiles, setSaveFiles] = useState<SaveFile[]>([])
 
   const [releaseYear, setReleaseYear] = useState('')
   const [duration, setDuration] = useState('')
@@ -1036,7 +1038,7 @@ function App() {
     setTitle(''); setCover(''); setNotes(''); setTags([]); setRating(0); setFinishedAt('')
     setDevs([]); setPublishers([]); setAchievementsUnlocked(''); setAchievementsTotal(''); setReleaseDate(''); setBannerImage(''); setLogoImage(''); setDescription('')
     setPlatforms([]); setOwnership(''); setGameStatus('backlog'); setPlayTime('')
-    setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([]); setIsBundle(false); setBundleContents([])
+    setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([]); setIsBundle(false); setBundleContents([]); setSaveFiles([])
     setReleaseYear(''); setDuration(''); setConsumed(false); setArtist(''); setMusicType('')
     setGenres([]); setLabel(''); setPartOfAlbum(''); setHasTracks(false); setTracks([]); setSingleCovers([]); setEditions([])
     setMusicSource(''); setProducers([]); setMusicReview('')
@@ -1192,6 +1194,7 @@ function App() {
     setAddonsList(item.addonsList ?? [])
     setIsBundle(item.isBundle ?? false)
     setBundleContents(item.bundleContents ?? [])
+    setSaveFiles(item.saveFiles ?? [])
     setReleaseYear(item.releaseYear ?? '')
     setDuration(item.duration ?? '')
     setConsumed(item.consumed ?? false)
@@ -1715,6 +1718,7 @@ function App() {
         addonsList: hasAddons && addonsList.length > 0 ? addonsList : undefined,
         isBundle,
         bundleContents: isBundle && bundleContents.length > 0 ? bundleContents : undefined,
+        saveFiles: saveFiles.length > 0 ? saveFiles : undefined,
         alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
         gameSource: gameSource || undefined,
         originalWorkId: originalWorkId || undefined,
@@ -4428,6 +4432,12 @@ function App() {
                           entries={bundleContents}
                           onChange={setBundleContents}
                           onRequestSgdb={(entryId, title) => setBundleSgdbFor({ entryId, title })}
+                        />
+                        <SaveFilesEditor
+                          gameTitle={title}
+                          categoryId={activeCategory}
+                          saveFiles={saveFiles}
+                          onChange={setSaveFiles}
                         />
                         <div className="form-section-header" data-belongs-to="overview">
                           <span className="form-section-title">Rating &amp; completion</span>

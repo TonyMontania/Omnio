@@ -454,3 +454,131 @@
   font-size: 12.5px;
   font-family: var(--font-body);
 }
+
+/* -------------------------------------------------------------------------
+   Save files editor — Games only. Sits inside the Progress tab. Dropzone
+   above, a list of accumulated saves below (newest first). Each row shows
+   filename + size + date, an inline note field, and Open / Reveal / Delete
+   actions. Read-only variant in GameDetailModal reuses the same list markup
+   with .save-files-list.detail (no note input, no delete).
+   ------------------------------------------------------------------------- */
+
+.save-files-dropzone {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.14s, background 0.14s;
+}
+.save-files-dropzone.dragover {
+  border-color: var(--accent);
+  border-style: solid;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+}
+.save-files-add {
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #1a1408;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.save-files-add:hover:not(:disabled) { background: var(--accent-hover); }
+.save-files-add:disabled { opacity: 0.55; cursor: default; }
+.save-files-hint {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.save-files-error {
+  color: var(--danger);
+  font-size: 12.5px;
+  margin: 6px 0 0;
+}
+
+.save-files-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.save-files-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(160px, 2fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.14s;
+}
+.save-files-row:hover { border-color: var(--border); }
+.save-files-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.save-files-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.save-files-sub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+.save-files-sub em {
+  font-style: normal;
+  color: var(--accent);
+}
+.save-files-note {
+  width: 100%;
+  padding: 5px 9px !important;
+  background: var(--surface) !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12.5px !important;
+  transition: border-color 0.14s;
+}
+.save-files-note:focus { border-color: var(--accent) !important; }
+.save-files-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.save-files-actions button {
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.save-files-actions button:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+.save-files-delete:hover {
+  color: var(--danger) !important;
+  border-color: var(--danger) !important;
+}
+
+/* Read-only variant in the detail modal — no note input, so the row is
+   two columns instead of three. */
+.save-files-list.detail .save-files-row {
+  grid-template-columns: 1fr auto;
+}

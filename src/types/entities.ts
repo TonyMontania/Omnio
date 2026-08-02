@@ -60,6 +60,21 @@ export interface BundleGame {
   status: GameStatus
 }
 
+// User-uploaded save files for a game. Stored on disk under
+// assets/games/saves/<title>/<filename>. Any extension is accepted
+// (.sav / .dat / .zip / .rar / whatever) — save formats vary too much
+// per engine to whitelist. Uploads accumulate over time; the `note`
+// field is what makes 20 entries for the same game useful ("post-final
+// boss", "NG+", "all collectibles").
+export interface SaveFile {
+  id: string
+  filename: string       // original filename, with (2)/(3)/… suffix on collision
+  path: string           // relative to assets/, e.g. "games/saves/Metro Exodus/Slot 3.sav"
+  size: number           // bytes
+  addedAt: string        // ISO
+  note?: string
+}
+
 export interface MangaVolume {
   id: string
   number: string
@@ -213,6 +228,7 @@ export interface Item {
   addonsList?: DlcEntry[]
   isBundle?: boolean
   bundleContents?: BundleGame[]
+  saveFiles?: SaveFile[]
   releaseYear?: string
   duration?: string
   consumed?: boolean

@@ -194,6 +194,48 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             </div>
           )}
 
+          {item.saveFiles && item.saveFiles.length > 0 && (
+            <div className="field-group">
+              <label>Save files</label>
+              <ul className="save-files-list detail">
+                {item.saveFiles.map((s) => {
+                  const size = s.size < 1024 * 1024
+                    ? `${(s.size / 1024).toFixed(1)} KB`
+                    : s.size < 1024 * 1024 * 1024
+                      ? `${(s.size / (1024 * 1024)).toFixed(1)} MB`
+                      : `${(s.size / (1024 * 1024 * 1024)).toFixed(2)} GB`
+                  const when = (() => {
+                    const d = new Date(s.addedAt)
+                    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
+                  })()
+                  return (
+                    <li key={s.id} className="save-files-row">
+                      <div className="save-files-meta">
+                        <span className="save-files-name" title={s.filename}>{s.filename}</span>
+                        <span className="save-files-sub">
+                          {size} · {when}
+                          {s.note && <> · <em>{s.note}</em></>}
+                        </span>
+                      </div>
+                      <div className="save-files-actions">
+                        <button
+                          type="button"
+                          onClick={() => window.ipcRenderer.invoke('save-file:open', s.path)}
+                          title="Open with default app"
+                        >Open</button>
+                        <button
+                          type="button"
+                          onClick={() => window.ipcRenderer.invoke('save-file:reveal', s.path)}
+                          title="Show in file manager"
+                        >Reveal</button>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+
           <DetailReview review={item.gameReview} hasSpoilers={item.hasSpoilers} />
           <DetailNotes notes={item.notes} />
           <DetailHistoryTable label="Replay history" entries={item.rewatches ?? []} />

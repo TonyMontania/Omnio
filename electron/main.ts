@@ -629,6 +629,91 @@ ipcMain.handle('image:delete', async (_event, rel: string) => {
   }
 })
 
+// ---------------------------------------------------------------------------
+// Save file backup — Games only. Files land at
+// assets/games/saves/<title>/<filename>. Any extension is accepted; save
+// formats vary too much per engine to whitelist. Multiple uploads accumulate
+// over time. Filename collisions get an (n) suffix so the history is preserved.
+// ---------------------------------------------------------------------------
+
+// Filesystem-safe folder / filename. Kept a bit more permissive than
+// buildAssetFilename (spaces + parentheses allowed) so save filenames stay
+// meaningful when browsing assets/ in Explorer.
+function safeSaveFragment(s: string): string {
+  return s.replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim()
+}
+
+// Prevent overwriting on repeated uploads of the same filename — appends
+// " (2)", " (3)" etc before the extension. Preserves the original name when
+// there is no conflict.
+async function nextAvailableSaveName(dir: string, original: string): Promise<string> {
+  if (!await fileExists(path.join(dir, original))) return original
+  const dot = original.lastIndexOf('.')
+  const stem = dot > 0 ? original.slice(0, dot) : original
+  const ext = dot > 0 ? original.slice(dot) : ''
+  for (let n = 2; n < 1000; n++) {
+    const candidate = `${stem} (${n})${ext}`
+    if (!await fileExists(path.join(dir, candidate))) return candidate
+  }
+  return `${stem}-${crypto.randomUUID().slice(0, 8)}${ext}`
+}
+
+ipcMain.handle('save-file:save', async (_event, categoryId: string, title: string, filename: string, data: ArrayBuffer | Uint8Array) => {
+  try {
+    const safeCat = assetFolderForCategory(categoryId).replace(/[^a-z0-9_-]/gi, '')
+    const safeTitle = safeSaveFragment(title || 'untitled')
+    const safeFilename = safeSaveFragment(filename || 'save.bin')
+    const dir = path.join(ASSETS_ROOT, safeCat, 'saves', safeTitle)
+    await fs.mkdir(dir, { recursive: true })
+    const resolvedName = await nextAvailableSaveName(dir, safeFilename)
+    const buf = Buffer.from(data as ArrayBuffer)
+    const abs = path.join(dir, resolvedName)
+    await fs.writeFile(abs, buf)
+    const stat = await fs.stat(abs)
+    return {
+      ok: true,
+      entry: {
+        id: crypto.randomUUID(),
+        filename: resolvedName,
+        path: `${safeCat}/saves/${safeTitle}/${resolvedName}`,
+        size: stat.size,
+        addedAt: new Date().toISOString(),
+      },
+    }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+ipcMain.handle('save-file:reveal', async (_event, rel: string) => {
+  const abs = safeRelative(rel)
+  if (!abs) return false
+  const { shell } = await import('electron')
+  shell.showItemInFolder(abs)
+  return true
+})
+
+ipcMain.handle('save-file:open', async (_event, rel: string) => {
+  const abs = safeRelative(rel)
+  if (!abs) return { ok: false, error: 'Invalid path' }
+  const { shell } = await import('electron')
+  const err = await shell.openPath(abs)
+  return err ? { ok: false, error: err } : { ok: true }
+})
+
+ipcMain.handle('save-file:delete', async (_event, rel: string) => {
+  const abs = safeRelative(rel)
+  if (!abs) return false
+  try {
+    await fs.unlink(abs)
+    // Best-effort: prune the empty per-title folder so browsing assets/ is tidy.
+    try { await fs.rmdir(path.dirname(abs)) } catch { /* not empty — leave it */ }
+    return true
+  } catch {
+    return false
+  }
+})
+
 ipcMain.handle('storage:root', async () => STORAGE_ROOT)
 
 // Copy the current data/ directory to a user-chosen folder (Dropbox,
@@ -687,6 +772,9 @@ ipcMain.handle('storage:clean-orphan-assets', async () => {
         for (const s of (it.singleCovers as { cover?: string }[] | undefined) ?? []) push(s.cover)
         for (const e of (it.editions as { cover?: string }[] | undefined) ?? []) push(e.cover)
         for (const b of (it.bundleContents as { cover?: string }[] | undefined) ?? []) push(b.cover)
+        // Save files live under assets/games/saves/<title>/ and must not be
+        // pruned by the orphan sweep.
+        for (const sf of (it.saveFiles as { path?: string }[] | undefined) ?? []) push(sf.path)
       }
     }
     return refs
