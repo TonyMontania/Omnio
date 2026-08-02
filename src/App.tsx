@@ -2292,7 +2292,53 @@ function App() {
     </div>
   )
   const backToLibrary = () => setSpecialView('none')
-  const pageMeta: { icon: React.ReactNode; title: string; count?: string; onBack?: () => void; actions?: React.ReactNode } | null = (() => {
+  type PageChip = { key: string; label: string; count: number; active: boolean; onClick: () => void }
+  const buildCategoryChips = (): PageChip[] => {
+    if (isVideojuegos) return GAME_STATUS_OPTIONS.map((s) => ({
+      key: s.value, label: s.label,
+      count: itemsInCategory.filter((i) => (i.gameStatus || 'backlog') === s.value).length,
+      active: (specialView as string) === 'board' && boardStatus === s.value,
+      onClick: () => { setSpecialView('board'); setBoardStatus(s.value); closePanel(); closeAllDetailViews() },
+    }))
+    if (activeCategory === 'musica') return (['listened', 'unlistened'] as const).map((v) => ({
+      key: v, label: v === 'listened' ? 'Listened' : 'Not listened',
+      count: itemsInCategory.filter((i) => v === 'listened' ? i.consumed : !i.consumed).length,
+      active: (specialView as string) === 'musicBoard' && musicBoardFilter === v,
+      onClick: () => { setSpecialView('musicBoard'); setMusicBoardFilter(v); closePanel(); closeAllDetailViews() },
+    }))
+    if (isManga) return MANGA_STATUS_OPTIONS.map((s) => ({
+      key: s.value, label: s.label,
+      count: itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === s.value).length,
+      active: (specialView as string) === 'mangaBoard' && mangaBoardStatus === s.value,
+      onClick: () => { setSpecialView('mangaBoard'); setMangaBoardStatus(s.value); closePanel(); closeAllDetailViews() },
+    }))
+    if (activeCategory === 'peliculas') return (['watched', 'unwatched'] as const).map((v) => ({
+      key: v, label: v === 'watched' ? 'Watched' : 'Not watched',
+      count: itemsInCategory.filter((i) => v === 'watched' ? i.consumed : !i.consumed).length,
+      active: (specialView as string) === 'moviesBoard' && moviesBoardFilter === v,
+      onClick: () => { setSpecialView('moviesBoard'); setMoviesBoardFilter(v); closePanel(); closeAllDetailViews() },
+    }))
+    if (isAnime) return ANIME_STATUS_OPTIONS.map((s) => ({
+      key: s.value, label: s.label,
+      count: itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === s.value).length,
+      active: (specialView as string) === 'animeBoard' && animeBoardStatus === s.value,
+      onClick: () => { setSpecialView('animeBoard'); setAnimeBoardStatus(s.value); closePanel(); closeAllDetailViews() },
+    }))
+    if (isSeriesLike) return SERIES_STATUS_OPTIONS.map((s) => ({
+      key: s.value, label: s.label,
+      count: itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === s.value).length,
+      active: (specialView as string) === 'seriesBoard' && seriesBoardStatus === s.value,
+      onClick: () => { setSpecialView('seriesBoard'); setSeriesBoardStatus(s.value); closePanel(); closeAllDetailViews() },
+    }))
+    if (activeCategory === 'libros') return BOOK_STATUS_OPTIONS.map((s) => ({
+      key: s.value, label: s.label,
+      count: itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === s.value).length,
+      active: (specialView as string) === 'bookBoard' && bookBoardStatus === s.value,
+      onClick: () => { setSpecialView('bookBoard'); setBookBoardStatus(s.value); closePanel(); closeAllDetailViews() },
+    }))
+    return []
+  }
+  const pageMeta: { icon: React.ReactNode; title: string; count?: string; onBack?: () => void; actions?: React.ReactNode; chips?: PageChip[] } | null = (() => {
     if (specialView === 'home') return null
     if (specialView === 'calendar') return { icon: <CalendarIcon />, title: 'Release calendar' }
     if (specialView === 'stats') return { icon: <InsightsIcon />, title: 'Statistics' }
@@ -2336,12 +2382,17 @@ function App() {
         {subView === 'items' && <button className="add-btn" onClick={openAddPanel}>+ Add</button>}
       </>
     )
+    // Only show chips at the library root (no collection drill-in and
+    // browsing items, not groups) — otherwise the topnav would try to
+    // filter by status while you're inside a group / artist list.
+    const chips = !activeCollectionId && subView === 'items' ? buildCategoryChips() : []
     return {
       icon: activeCollectionId ? <FolderIcon /> : <CategoryIcon id={current?.id ?? ''} />,
       title: (activeCollectionId ? activeCollection?.name : current?.label) ?? '',
       count: countText,
       onBack: activeCollectionId ? () => { setActiveCollectionId(null); resetListControls() } : undefined,
       actions: libActions,
+      chips: chips.length > 0 ? chips : undefined,
     }
   })()
 
@@ -2402,6 +2453,20 @@ function App() {
               <span className="topnav-page-icon">{pageMeta.icon}</span>
               <span className="topnav-page-title">{pageMeta.title}</span>
               {pageMeta.count && <span className="topnav-page-count">{pageMeta.count}</span>}
+              {pageMeta.chips && (
+                <div className="topnav-chips">
+                  {pageMeta.chips.map((c) => (
+                    <button
+                      key={c.key}
+                      className={c.active ? 'topnav-chip active' : 'topnav-chip'}
+                      onClick={c.onClick}
+                    >
+                      <span>{c.label}</span>
+                      <span className="topnav-chip-count">{c.count}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {pageMeta?.actions && (
@@ -3651,79 +3716,6 @@ function App() {
 
           {specialView === 'none' && (
             <>
-              {/* Category's Collections status filters render as chips
-                  under the header. Only shows when there's a board view
-                  for this library (games, movies, anime/donghua, series,
-                  manga variants, music, books). */}
-              {(() => {
-                // TS narrows specialView based on the surrounding
-                // conditional block, so cast to string for the comparisons
-                // that intentionally reach into other board views.
-                const sv = specialView as string
-                const chips: { key: string; label: string; count: number; active: boolean; onClick: () => void }[] = []
-                if (isVideojuegos) {
-                  GAME_STATUS_OPTIONS.forEach((s) => chips.push({
-                    key: s.value, label: s.label,
-                    count: itemsInCategory.filter((i) => (i.gameStatus || 'backlog') === s.value).length,
-                    active: sv === 'board' && boardStatus === s.value,
-                    onClick: () => { setSpecialView('board'); setBoardStatus(s.value); closePanel(); closeAllDetailViews() },
-                  }))
-                } else if (activeCategory === 'musica') {
-                  (['listened', 'unlistened'] as const).forEach((v) => chips.push({
-                    key: v, label: v === 'listened' ? 'Listened' : 'Not listened',
-                    count: itemsInCategory.filter((i) => v === 'listened' ? i.consumed : !i.consumed).length,
-                    active: sv === 'musicBoard' && musicBoardFilter === v,
-                    onClick: () => { setSpecialView('musicBoard'); setMusicBoardFilter(v); closePanel(); closeAllDetailViews() },
-                  }))
-                } else if (isManga) {
-                  MANGA_STATUS_OPTIONS.forEach((s) => chips.push({
-                    key: s.value, label: s.label,
-                    count: itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === s.value).length,
-                    active: sv === 'mangaBoard' && mangaBoardStatus === s.value,
-                    onClick: () => { setSpecialView('mangaBoard'); setMangaBoardStatus(s.value); closePanel(); closeAllDetailViews() },
-                  }))
-                } else if (activeCategory === 'peliculas') {
-                  (['watched', 'unwatched'] as const).forEach((v) => chips.push({
-                    key: v, label: v === 'watched' ? 'Watched' : 'Not watched',
-                    count: itemsInCategory.filter((i) => v === 'watched' ? i.consumed : !i.consumed).length,
-                    active: sv === 'moviesBoard' && moviesBoardFilter === v,
-                    onClick: () => { setSpecialView('moviesBoard'); setMoviesBoardFilter(v); closePanel(); closeAllDetailViews() },
-                  }))
-                } else if (isAnime) {
-                  ANIME_STATUS_OPTIONS.forEach((s) => chips.push({
-                    key: s.value, label: s.label,
-                    count: itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === s.value).length,
-                    active: sv === 'animeBoard' && animeBoardStatus === s.value,
-                    onClick: () => { setSpecialView('animeBoard'); setAnimeBoardStatus(s.value); closePanel(); closeAllDetailViews() },
-                  }))
-                } else if (isSeriesLike) {
-                  SERIES_STATUS_OPTIONS.forEach((s) => chips.push({
-                    key: s.value, label: s.label,
-                    count: itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === s.value).length,
-                    active: sv === 'seriesBoard' && seriesBoardStatus === s.value,
-                    onClick: () => { setSpecialView('seriesBoard'); setSeriesBoardStatus(s.value); closePanel(); closeAllDetailViews() },
-                  }))
-                } else if (activeCategory === 'libros') {
-                  BOOK_STATUS_OPTIONS.forEach((s) => chips.push({
-                    key: s.value, label: s.label,
-                    count: itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === s.value).length,
-                    active: sv === 'bookBoard' && bookBoardStatus === s.value,
-                    onClick: () => { setSpecialView('bookBoard'); setBookBoardStatus(s.value); closePanel(); closeAllDetailViews() },
-                  }))
-                }
-                if (chips.length === 0) return null
-                return (
-                  <div className="collection-chips">
-                    {chips.map((c) => (
-                      <button key={c.key} className={c.active ? 'collection-chip active' : 'collection-chip'} onClick={c.onClick}>
-                        <span>{c.label}</span>
-                        <span className="chip-count">{c.count}</span>
-                      </button>
-                    ))}
-                  </div>
-                )
-              })()}
-
               <div className="sub-tabs">
                 <button className={subView === 'items' ? 'sub-tab active' : 'sub-tab'} onClick={() => { setSubView('items'); setActiveCollectionId(null); resetListControls() }}>
                   All {current?.label}
