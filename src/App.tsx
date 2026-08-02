@@ -2331,6 +2331,8 @@ function App() {
             </svg>
             <span>Omnio</span>
           </div>
+          {/* Library switching happens on Home, not here. The top nav
+              only carries the anchor buttons: Home + utility views. */}
           <div className="topnav-libs">
             <button
               className={(specialView as string) === 'home' ? 'topnav-tab active' : 'topnav-tab'}
@@ -2340,17 +2342,6 @@ function App() {
               <span className="nav-icon"><HomeIcon /></span>
               <span>Home</span>
             </button>
-            {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((cat) => (
-              <button
-                key={cat.id}
-                className={specialView === 'none' && cat.id === activeCategory ? 'topnav-tab active' : 'topnav-tab'}
-                onClick={() => switchCategory(cat.id)}
-                title={cat.label}
-              >
-                <span className="nav-icon"><CategoryIcon id={cat.id} /></span>
-                <span>{cat.label}</span>
-              </button>
-            ))}
           </div>
           <div className="topnav-utils">
             <button
@@ -2672,6 +2663,7 @@ function App() {
             <>
               <div className="content-header">
                 <div className="page-title">
+                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
                   <span className="page-icon"><GameStatusIcon value={boardStatus} /></span>
                   <div><h1>{GAME_STATUS_OPTIONS.find((s) => s.value === boardStatus)?.label}</h1><span className="page-count">{gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus).length} games</span></div>
                 </div>
@@ -2718,6 +2710,7 @@ function App() {
             return (<>
               <div className="content-header">
                 <div className="page-title">
+                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
                   <span className="page-icon">{musicBoardFilter === 'listened' ? '✓' : '○'}</span>
                   <div>
                     <h1>{musicBoardFilter === 'listened' ? 'Listened' : 'Not listened'}</h1>
@@ -2760,6 +2753,7 @@ function App() {
             return (<>
               <div className="content-header">
                 <div className="page-title">
+                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
                   <span className="page-icon"><MangaStatusIcon value={mangaBoardStatus} /></span>
                   <div>
                     <h1>{getMangaStatus(mangaBoardStatus).label}</h1>
@@ -2802,6 +2796,7 @@ function App() {
             return (<>
               <div className="content-header">
                 <div className="page-title">
+                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
                   <span className="page-icon">{moviesBoardFilter === 'watched' ? '✓' : '○'}</span>
                   <div>
                     <h1>{moviesBoardFilter === 'watched' ? 'Watched' : 'Not watched'}</h1>
@@ -2843,6 +2838,7 @@ function App() {
             return (<>
               <div className="content-header">
                 <div className="page-title">
+                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
                   <span className="page-icon"><AnimeStatusIcon value={animeBoardStatus} /></span>
                   <div>
                     <h1>{getAnimeStatus(animeBoardStatus).label}</h1>
@@ -2886,6 +2882,7 @@ function App() {
             return (<>
               <div className="content-header">
                 <div className="page-title">
+                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
                   <span className="page-icon"><AnimeStatusIcon value={seriesBoardStatus} /></span>
                   <div>
                     <h1>{getSeriesStatus(seriesBoardStatus).label}</h1>
@@ -2928,6 +2925,7 @@ function App() {
             return (<>
               <div className="content-header">
                 <div className="page-title">
+                  <button className="back-btn" onClick={() => setSpecialView('none')} title="Back to library">←</button>
                   <span className="page-icon"><MangaStatusIcon value={bookBoardStatus as MangaStatus} /></span>
                   <div>
                     <h1>{getBookStatus(bookBoardStatus).label}</h1>
@@ -4828,6 +4826,10 @@ function App() {
                           <label>Franchise</label>
                           <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. The Legend of Zelda" />
                         </div>
+                        <div className="form-section-header" data-belongs-to="notes">
+                          <span className="form-section-title">Review</span>
+                          <span className="form-section-hint">Your take on this game · with optional spoiler toggle</span>
+                        </div>
                         <div className="field-group">
                           <label>Review</label>
                           <textarea value={gameReview} onChange={(e) => setGameReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
@@ -5000,6 +5002,10 @@ function App() {
                             <label>Content rating</label>
                             <input value={contentRating} onChange={(e) => setContentRating(e.target.value)} placeholder="e.g. PG-13, R" />
                           </div>
+                        </div>
+                        <div className="form-section-header" data-belongs-to="notes">
+                          <span className="form-section-title">Review</span>
+                          <span className="form-section-hint">Your take on this movie · with optional spoiler toggle</span>
                         </div>
                         <div className="field-group">
                           <label>Review</label>
@@ -5188,9 +5194,16 @@ function App() {
                         pickerPlaceholder="Add recommended series…"
                       />
                     </div>
+                    <div className="form-section-header" data-belongs-to="overview">
+                      <span className="form-section-title">Rating</span>
+                    </div>
                     <div className="field-group">
                       <label>Rating</label>
                       <RatingPicker value={rating} onChange={setRating} />
+                    </div>
+                    <div className="form-section-header" data-belongs-to="notes">
+                      <span className="form-section-title">Review</span>
+                      <span className="form-section-hint">Your take on this series · with optional spoiler toggle</span>
                     </div>
                     <div className="field-group">
                       <label>Review</label>
@@ -5394,6 +5407,10 @@ function App() {
                         </div>
                       </div>
                     )}
+                    <div className="form-section-header" data-belongs-to="notes">
+                      <span className="form-section-title">Review</span>
+                      <span className="form-section-hint">Your take · with optional spoiler toggle</span>
+                    </div>
                     <div className="field-group">
                       <label>Review</label>
                       <textarea value={animeReview} onChange={(e) => setAnimeReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
@@ -5586,6 +5603,10 @@ function App() {
                         <input value={magazine} onChange={(e) => setMagazine(e.target.value)} placeholder="e.g. Weekly Shonen Jump" />
                       </div>
                     </div>
+                    <div className="form-section-header" data-belongs-to="notes">
+                      <span className="form-section-title">Review</span>
+                      <span className="form-section-hint">Your take · with optional spoiler toggle</span>
+                    </div>
                     <div className="field-group">
                       <label>Review</label>
                       <textarea value={mangaReview} onChange={(e) => setMangaReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
@@ -5762,6 +5783,10 @@ function App() {
                       <label>Description</label>
                       <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Book synopsis" />
                     </div>
+                    <div className="form-section-header" data-belongs-to="notes">
+                      <span className="form-section-title">Review</span>
+                      <span className="form-section-hint">Your take · with optional spoiler toggle</span>
+                    </div>
                     <div className="field-group">
                       <label>Review</label>
                       <textarea value={bookReview} onChange={(e) => setBookReview(e.target.value)} rows={4} placeholder="Your review" />
@@ -5919,6 +5944,10 @@ function App() {
                         </div>
                       </>
                     )}
+                    <div className="form-section-header" data-belongs-to="notes">
+                      <span className="form-section-title">Review</span>
+                      <span className="form-section-hint">Your take · with optional spoiler toggle</span>
+                    </div>
                     <div className="field-group">
                       <label>Review</label>
                       <textarea value={musicReview} onChange={(e) => setMusicReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
