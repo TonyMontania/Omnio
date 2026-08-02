@@ -4975,6 +4975,9 @@ function App() {
                             </select>
                           </div>
                         </div>
+                        <div className="form-section-header" data-belongs-to="overview">
+                          <span className="form-section-title">Rating &amp; completion</span>
+                        </div>
                         <div className="field-group">
                           <label>Rating</label>
                           <RatingPicker value={rating} onChange={setRating} />
@@ -4982,6 +4985,10 @@ function App() {
                         <div className="field-group">
                           <label>Watched on</label>
                           <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
+                        </div>
+                        <div className="form-section-header" data-belongs-to="identity">
+                          <span className="form-section-title">Extended identity</span>
+                          <span className="form-section-hint">Alt titles · source · content rating</span>
                         </div>
                         <TagEditor
                           label="Alternative titles"
@@ -5344,9 +5351,16 @@ function App() {
                         <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
                       </div>
                     </div>
+                    <div className="form-section-header" data-belongs-to="overview">
+                      <span className="form-section-title">Rating</span>
+                    </div>
                     <div className="field-group">
                       <label>Rating</label>
                       <RatingPicker value={rating} onChange={setRating} />
+                    </div>
+                    <div className="form-section-header" data-belongs-to="identity">
+                      <span className="form-section-title">Extended identity</span>
+                      <span className="form-section-hint">Alt titles · source · age rating · duration</span>
                     </div>
                     <TagEditor
                       label="Alternative titles"
@@ -5572,9 +5586,16 @@ function App() {
                         <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
                       </div>
                     </div>
+                    <div className="form-section-header" data-belongs-to="overview">
+                      <span className="form-section-title">Rating</span>
+                    </div>
                     <div className="field-group">
                       <label>Rating</label>
                       <RatingPicker value={rating} onChange={setRating} />
+                    </div>
+                    <div className="form-section-header" data-belongs-to="identity">
+                      <span className="form-section-title">Extended identity</span>
+                      <span className="form-section-hint">Alt titles · source · age rating · magazine</span>
                     </div>
                     <TagEditor
                       label="Alternative titles"
@@ -5868,6 +5889,9 @@ function App() {
                             <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>No</button>
                           </div>
                         </div>
+                        <div className="form-section-header" data-belongs-to="overview">
+                          <span className="form-section-title">Rating &amp; day listened</span>
+                        </div>
                         <div className="field-group">
                           <label>Rating</label>
                           <RatingPicker value={rating} onChange={setRating} />
@@ -5933,6 +5957,9 @@ function App() {
                             <button type="button" className={consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(true)}>Listened</button>
                             <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>No</button>
                           </div>
+                        </div>
+                        <div className="form-section-header" data-belongs-to="overview">
+                          <span className="form-section-title">Rating &amp; day listened</span>
                         </div>
                         <div className="field-group">
                           <label>Rating</label>
