@@ -5701,6 +5701,10 @@ function App() {
                         />
                       )}
                     </div>
+                    <div className="form-section-header" data-belongs-to="media">
+                      <span className="form-section-title">Volume covers</span>
+                      <span className="form-section-hint">One cover per volume — gallery</span>
+                    </div>
                     <div className="field-group">
                       <label>Volume covers</label>
                       <VolumeCoverEditor
