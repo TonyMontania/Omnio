@@ -3,6 +3,7 @@ import { getSeriesStatus, getSeriesFormatLabel, getWatchLocationLabel, getSeason
 import { AnimeStatusIcon } from './icons'
 import type { Item, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
+import { exportItemAsJson } from './utils/files'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
 import DetailFranchiseTimeline from './components/detail/DetailFranchiseTimeline'
@@ -46,7 +47,7 @@ export default function SeriesDetailModal({ item, groups, allSeries, onClose, on
 
   return (
     <div className="game-page">
-      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} />
+      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)} />
 
       <div className="game-modal-body">
         <div className="game-modal-main">

@@ -2,6 +2,7 @@ import { getBookStatus, getBookFormatLabel, getBookSourceLabel, getPublicationSt
 import { MangaStatusIcon } from './icons'  // Book status uses the same visual language as Manga (plan/reading/completed/paused/dropped).
 import type { Item, Collection, MangaStatus } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
+import { exportItemAsJson } from './utils/files'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
 import DetailFranchiseTimeline from './components/detail/DetailFranchiseTimeline'
@@ -40,7 +41,7 @@ export default function BookDetailModal({ item, groups, allBooks, onClose, onEdi
 
   return (
     <div className="game-page">
-      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} />
+      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)} />
 
       <div className="game-modal-body">
         <div className="game-modal-main">

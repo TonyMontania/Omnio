@@ -100,7 +100,7 @@ import DistChart from './insights/DistChart'
 import Heatmap from './insights/Heatmap'
 import RatingPicker from './components/editors/RatingPicker'
 import AnimeItemPicker from './components/editors/AnimeItemPicker'
-import { pickImageToDataUrl, assetBasename } from './utils/files'
+import { pickImageToDataUrl, assetBasename, exportItemAsJson } from './utils/files'
 import PlatformEditor from './components/editors/PlatformEditor'
 import GameSubItems from './components/editors/GameSubItems'
 import BundleGamesEditor from './components/editors/BundleGamesEditor'
@@ -987,6 +987,19 @@ function App() {
     }
     window.addEventListener('omnio-image-download-error', h)
     return () => window.removeEventListener('omnio-image-download-error', h)
+  }, [])
+
+  // Generic toast bus — any component (detail modals, editors) can dispatch
+  // `omnio-toast` with a string in event.detail and it shows in the toast bar.
+  // Used by exportItemAsJson and anywhere else that needs a fire-and-forget
+  // status message without threading setToast through as a prop.
+  useEffect(() => {
+    const h = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail
+      if (detail) setToast(detail)
+    }
+    window.addEventListener('omnio-toast', h)
+    return () => window.removeEventListener('omnio-toast', h)
   }, [])
 
   const handlePlayTimeChange = (v: string) => { if (/^\d*\.?\d{0,2}$/.test(v)) setPlayTime(v) }
@@ -2086,6 +2099,7 @@ function App() {
       { label: 'Open', onClick: () => openEditPanel(item) },
       { label: 'Edit', onClick: () => { openEditPanel(item); setTimeout(() => loadItemIntoForm(item), 0); setPanelOpen(true) } },
       { label: 'Duplicate', onClick: dup },
+      { label: 'Export as JSON…', onClick: () => exportItemAsJson(item as unknown as Record<string, unknown>, item.title) },
       { divider: true, label: '', onClick: () => {} },
       // Move-to-library submenu flattened: each destination is its own row.
       // The categoryId change re-slots the item into another JSON on next save.

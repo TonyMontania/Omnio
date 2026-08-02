@@ -3,6 +3,7 @@ import { getMusicTypeLabel, isAlbumLikeMusic, getTotalDuration, getMusicSourceLa
 import { StarRatingDisplay } from './StarRating'
 import type { Item, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
+import { exportItemAsJson } from './utils/files'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
 import DetailHistoryTable from './components/detail/DetailHistoryTable'
@@ -44,7 +45,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
 
   return (
     <div className="game-page music-page">
-      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} />
+      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)} />
 
       <div className="music-modal-main">
         <div className="music-modal-cover">

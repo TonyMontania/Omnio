@@ -1070,6 +1070,28 @@ ipcMain.handle('updates:open-dmg', async (_event, filePath: string) => {
 // renderer's export flows.
 import { dialog } from 'electron'
 
+// One-item JSON export — used by the card context menu and the detail
+// modals. Writes the caller-provided object as pretty-printed JSON to a
+// user-chosen path. Returns { ok, path } | { ok: false, error }; the
+// renderer surfaces the path in a toast on success. No coupling to
+// Omnio's schema — whatever the renderer sends is what lands on disk.
+ipcMain.handle('item:export-json', async (_event, item: Record<string, unknown>, suggestedName: string) => {
+  try {
+    const safe = (suggestedName || 'item').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'item'
+    const { dialog } = await import('electron')
+    const r = await dialog.showSaveDialog({
+      title: 'Export item as JSON',
+      defaultPath: `${safe}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    })
+    if (r.canceled || !r.filePath) return { ok: false, canceled: true }
+    await fs.writeFile(r.filePath, JSON.stringify(item, null, 2), 'utf-8')
+    return { ok: true, path: r.filePath }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 ipcMain.handle('dialog:pick-directory', async (_event, title?: string) => {
   const r = await dialog.showOpenDialog({
     title: title ?? 'Choose a folder',

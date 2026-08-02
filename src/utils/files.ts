@@ -67,3 +67,19 @@ export function pickImageToDataUrl(onData: (dataUrl: string) => void) {
     e.target.value = ''
   }
 }
+
+// Export one item as JSON. Renderer sends the whole item + a suggested
+// filename; main opens a Save dialog, writes pretty-printed JSON, returns
+// { ok, path } | { ok: false, error | canceled }. On success we dispatch
+// an `omnio-toast` event so App's toast bar picks it up without every
+// detail modal needing its own toast plumbing.
+export async function exportItemAsJson(item: Record<string, unknown>, suggestedName: string): Promise<void> {
+  const r = await window.ipcRenderer.invoke('item:export-json', item, suggestedName) as
+    | { ok: true; path: string }
+    | { ok: false; canceled?: boolean; error?: string }
+  if (r.ok) {
+    window.dispatchEvent(new CustomEvent('omnio-toast', { detail: `Exported to ${r.path}` }))
+  } else if (!r.canceled) {
+    window.dispatchEvent(new CustomEvent('omnio-toast', { detail: `Export failed — ${r.error ?? 'unknown'}` }))
+  }
+}
