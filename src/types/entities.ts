@@ -104,6 +104,38 @@ export interface Highlight {
   addedAt?: string       // ISO date
 }
 
+// Detailed per-achievement record (Games). Coexists with the flat
+// achievementsUnlocked / achievementsTotal string fields — those stay
+// as a fast "12 / 40" summary; this array is opt-in richer data for
+// users who care about the full list.
+export interface Achievement {
+  id: string
+  name: string
+  description?: string
+  unlockedAt?: string    // ISO date
+  icon?: string          // relative asset path or URL
+}
+
+// Screenshot attached to a Game. Stored under assets/games/screenshots/
+// <title>/<filename>. Same shape as SaveFile without the mandatory size —
+// screenshots are always images so previews get shown in the editor +
+// detail modal.
+export interface Screenshot {
+  id: string
+  filename: string
+  path: string           // relative to assets/
+  addedAt: string        // ISO
+  caption?: string
+}
+
+// Per-chapter reading note for a Book. Chapter is free-form so "Prologue",
+// "1", "1.5", "Chapter 12 — The Return" all work.
+export interface ChapterNote {
+  id: string
+  chapter: string
+  note: string
+}
+
 // User-uploaded save files for a game. Stored on disk under
 // assets/games/saves/<title>/<filename>. Any extension is accepted
 // (.sav / .dat / .zip / .rar / whatever) — save formats vary too much
@@ -273,6 +305,8 @@ export interface Item {
   isBundle?: boolean
   bundleContents?: BundleGame[]
   saveFiles?: SaveFile[]
+  achievements?: Achievement[]
+  screenshots?: Screenshot[]
   // PCGamingWiki page name once matched (e.g. "Metro Exodus"). Stored so
   // the save-paths panel doesn't re-run opensearch every time the editor
   // opens. Cleared / re-matched via the "Re-match" button in that panel.
@@ -385,6 +419,7 @@ export interface Item {
   translator?: string
   bookReview?: string
   highlights?: Highlight[]
+  chapterNotes?: ChapterNote[]
   // User-defined free-form fields, Notion-style. Displayed at the bottom of
   // every detail view; each item can carry its own list independently of the
   // built-in category schema.

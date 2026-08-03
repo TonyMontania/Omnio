@@ -693,6 +693,46 @@ ipcMain.handle('save-file:reveal', async (_event, rel: string) => {
   return true
 })
 
+// Screenshots gallery for Games. Same on-disk pattern as save files —
+// assets/games/screenshots/<title>/<filename>. Accepts common image
+// extensions; validated on the renderer side.
+ipcMain.handle('screenshot:save', async (_event, categoryId: string, title: string, filename: string, data: ArrayBuffer | Uint8Array) => {
+  try {
+    const safeCat = assetFolderForCategory(categoryId).replace(/[^a-z0-9_-]/gi, '')
+    const safeTitle = safeSaveFragment(title || 'untitled')
+    const safeFilename = safeSaveFragment(filename || 'screenshot.png')
+    const dir = path.join(ASSETS_ROOT, safeCat, 'screenshots', safeTitle)
+    await fs.mkdir(dir, { recursive: true })
+    const resolvedName = await nextAvailableSaveName(dir, safeFilename)
+    const buf = Buffer.from(data as ArrayBuffer)
+    const abs = path.join(dir, resolvedName)
+    await fs.writeFile(abs, buf)
+    return {
+      ok: true,
+      entry: {
+        id: crypto.randomUUID(),
+        filename: resolvedName,
+        path: `${safeCat}/screenshots/${safeTitle}/${resolvedName}`,
+        addedAt: new Date().toISOString(),
+      },
+    }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+ipcMain.handle('screenshot:delete', async (_event, rel: string) => {
+  const abs = safeRelative(rel)
+  if (!abs) return false
+  try {
+    await fs.unlink(abs)
+    try { await fs.rmdir(path.dirname(abs)) } catch { /* not empty */ }
+    return true
+  } catch {
+    return false
+  }
+})
+
 ipcMain.handle('save-file:delete', async (_event, rel: string) => {
   const abs = safeRelative(rel)
   if (!abs) return false
@@ -764,9 +804,11 @@ ipcMain.handle('storage:clean-orphan-assets', async () => {
         for (const s of (it.singleCovers as { cover?: string }[] | undefined) ?? []) push(s.cover)
         for (const e of (it.editions as { cover?: string }[] | undefined) ?? []) push(e.cover)
         for (const b of (it.bundleContents as { cover?: string }[] | undefined) ?? []) push(b.cover)
-        // Save files live under assets/games/saves/<title>/ and must not be
+        // Save files + screenshots live under assets/games/ and must not be
         // pruned by the orphan sweep.
         for (const sf of (it.saveFiles as { path?: string }[] | undefined) ?? []) push(sf.path)
+        for (const sc of (it.screenshots as { path?: string }[] | undefined) ?? []) push(sc.path)
+        for (const a of (it.achievements as { icon?: string }[] | undefined) ?? []) push(a.icon)
       }
     }
     return refs

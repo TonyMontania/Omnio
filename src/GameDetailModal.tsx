@@ -195,6 +195,46 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             </div>
           )}
 
+          {item.achievements && item.achievements.length > 0 && (() => {
+            const unlocked = item.achievements!.filter((a) => a.unlockedAt).length
+            const sorted = [...item.achievements!].sort((a, b) => {
+              if (!!a.unlockedAt !== !!b.unlockedAt) return a.unlockedAt ? -1 : 1
+              if (a.unlockedAt && b.unlockedAt) return b.unlockedAt.localeCompare(a.unlockedAt)
+              return a.name.localeCompare(b.name)
+            })
+            return (
+              <div className="field-group">
+                <label>Achievements ({unlocked} / {item.achievements!.length} unlocked)</label>
+                <ul className="achievement-list detail">
+                  {sorted.map((a) => (
+                    <li key={a.id} className={a.unlockedAt ? 'achievement-row unlocked' : 'achievement-row'}>
+                      <span className="achievement-toggle-icon">{a.unlockedAt ? '★' : '☆'}</span>
+                      <div className="achievement-body">
+                        <div className="achievement-name-static">{a.name}</div>
+                        {a.description && <div className="achievement-desc-static">{a.description}</div>}
+                        {a.unlockedAt && <div className="achievement-date-static">Unlocked {a.unlockedAt.slice(0, 10)}</div>}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })()}
+
+          {item.screenshots && item.screenshots.length > 0 && (
+            <div className="field-group">
+              <label>Screenshots ({item.screenshots.length})</label>
+              <div className="screenshots-grid detail">
+                {item.screenshots.map((s) => (
+                  <figure key={s.id} className="screenshot-tile">
+                    <img src={assetSrc(s.path)} alt={s.caption || s.filename} loading="lazy" />
+                    {s.caption && <figcaption className="screenshot-caption-static">{s.caption}</figcaption>}
+                  </figure>
+                ))}
+              </div>
+            </div>
+          )}
+
           {item.saveFiles && item.saveFiles.length > 0 && (
             <div className="field-group">
               <label>Save files</label>

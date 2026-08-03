@@ -1746,3 +1746,270 @@
   line-height: 1.55;
   overflow-x: auto;
 }
+
+/* -------------------------------------------------------------------------
+   Achievement list — Games editor Progress tab + detail modal view.
+   Unlocked entries get a subtle accent tint on the left border.
+   ------------------------------------------------------------------------- */
+
+.achievement-add-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 2fr) auto;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.achievement-add-row input { padding: 6px 9px !important; font-size: 12.5px !important; }
+.achievement-add-row button {
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #1a1408;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.achievement-add-row button:disabled { opacity: 0.55; cursor: default; }
+
+.achievement-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.achievement-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-sm);
+}
+.achievement-row.unlocked {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface-2));
+}
+.achievement-toggle {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+}
+.achievement-toggle-icon {
+  color: var(--text-faint);
+  font-size: 16px;
+  padding: 0 4px;
+}
+.achievement-row.unlocked .achievement-toggle,
+.achievement-row.unlocked .achievement-toggle-icon { color: var(--accent); }
+.achievement-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.achievement-name {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  padding: 2px 4px !important;
+  font-size: 13px !important;
+  color: var(--text) !important;
+}
+.achievement-name:focus { border-color: var(--border) !important; background: var(--surface) !important; }
+.achievement-name-static { font-size: 13px; color: var(--text); font-weight: 500; }
+.achievement-desc {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  padding: 2px 4px !important;
+  font-size: 12px !important;
+  color: var(--text-dim) !important;
+}
+.achievement-desc:focus { border-color: var(--border) !important; background: var(--surface) !important; }
+.achievement-desc-static { font-size: 12px; color: var(--text-dim); }
+.achievement-date {
+  background: var(--surface) !important;
+  padding: 2px 6px !important;
+  font-family: var(--font-mono) !important;
+  font-size: 11px !important;
+  color: var(--accent) !important;
+  width: 130px !important;
+}
+.achievement-date-static {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--accent);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.achievement-delete {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 12px;
+}
+.achievement-delete:hover { color: var(--danger); }
+
+/* -------------------------------------------------------------------------
+   Screenshots gallery — Games editor + detail modal. Thumbnail grid with
+   caption input under each image.
+   ------------------------------------------------------------------------- */
+
+.screenshots-drop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.14s, background 0.14s;
+}
+.screenshots-drop.dragover {
+  border-color: var(--accent);
+  border-style: solid;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+}
+.screenshots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.screenshot-tile {
+  position: relative;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  transition: border-color 0.14s;
+}
+.screenshot-tile:hover { border-color: var(--border); }
+.screenshot-tile img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.screenshot-caption {
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+}
+.screenshot-caption:focus { border-color: var(--border) !important; background: var(--surface) !important; }
+.screenshot-caption-static {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 4px 4px 2px;
+}
+.screenshot-delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.14s;
+}
+.screenshot-tile:hover .screenshot-delete { opacity: 1; }
+.screenshot-delete:hover { background: var(--danger); }
+
+/* -------------------------------------------------------------------------
+   Chapter notes — Books editor Notes tab + detail modal.
+   ------------------------------------------------------------------------- */
+
+.chapter-notes-add {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr auto;
+  gap: 6px;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.chapter-notes-add textarea,
+.chapter-notes-add input { padding: 6px 9px !important; font-size: 12.5px !important; }
+.chapter-notes-add button {
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #1a1408;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: center;
+}
+.chapter-notes-add button:disabled { opacity: 0.55; cursor: default; }
+
+.chapter-notes-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chapter-notes-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: var(--radius-sm);
+}
+.chapter-notes-chapter {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  padding: 4px 6px !important;
+  font-family: var(--font-mono) !important;
+  font-size: 12px !important;
+  color: var(--accent) !important;
+}
+.chapter-notes-chapter:focus { border-color: var(--border) !important; background: var(--surface) !important; }
+.chapter-notes-chapter-static {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  padding: 2px 6px;
+  letter-spacing: 0.03em;
+}
+.chapter-notes-body {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  padding: 4px 6px !important;
+  font-size: 13px !important;
+  color: var(--text) !important;
+  resize: vertical;
+}
+.chapter-notes-body:focus { border-color: var(--border) !important; background: var(--surface) !important; }
+.chapter-notes-body-static {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.55;
+  margin: 0;
+}
+.chapter-notes-delete {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px;
+}
+.chapter-notes-delete:hover { color: var(--danger); }

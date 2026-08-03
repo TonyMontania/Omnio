@@ -19,7 +19,7 @@ import type {
   BookField, BookStatus, BookFormat, BookSource,
   AgeRating, RelatedItem, RewatchEntry,
   BandStatus, BandMember, SingleCover, AlbumEdition,
-  CustomField, SaveFile,
+  CustomField, SaveFile, Achievement, Screenshot, ChapterNote,
 } from './types'
 
 // Runtime constants (option lists, default field visibility)
@@ -117,6 +117,9 @@ import BundleGamesEditor from './components/editors/BundleGamesEditor'
 import SaveFilesEditor from './components/editors/SaveFilesEditor'
 import PcgwSavePaths from './components/editors/PcgwSavePaths'
 import ConcertLogEditor from './components/editors/ConcertLogEditor'
+import AchievementListEditor from './components/editors/AchievementListEditor'
+import ScreenshotsGallery from './components/editors/ScreenshotsGallery'
+import ChapterNotesEditor from './components/editors/ChapterNotesEditor'
 import VolumeCoverEditor from './components/editors/VolumeCoverEditor'
 import TrackListEditor from './components/editors/TrackListEditor'
 import RelatedListEditor from './components/editors/RelatedListEditor'
@@ -617,6 +620,9 @@ function App() {
   const [isBundle, setIsBundle] = useState(false)
   const [bundleContents, setBundleContents] = useState<BundleGame[]>([])
   const [saveFiles, setSaveFiles] = useState<SaveFile[]>([])
+  const [achievementsList, setAchievementsList] = useState<Achievement[]>([])
+  const [screenshots, setScreenshots] = useState<Screenshot[]>([])
+  const [chapterNotes, setChapterNotes] = useState<ChapterNote[]>([])
   const [pcgwPage, setPcgwPage] = useState<string | undefined>(undefined)
 
   const [releaseYear, setReleaseYear] = useState('')
@@ -1080,7 +1086,7 @@ function App() {
     setTitle(''); setCover(''); setNotes(''); setTags([]); setRating(0); setFinishedAt('')
     setDevs([]); setPublishers([]); setAchievementsUnlocked(''); setAchievementsTotal(''); setReleaseDate(''); setBannerImage(''); setLogoImage(''); setDescription('')
     setPlatforms([]); setOwnership(''); setGameStatus('backlog'); setPlayTime('')
-    setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([]); setIsBundle(false); setBundleContents([]); setSaveFiles([]); setPcgwPage(undefined)
+    setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([]); setIsBundle(false); setBundleContents([]); setSaveFiles([]); setAchievementsList([]); setScreenshots([]); setChapterNotes([]); setPcgwPage(undefined)
     setReleaseYear(''); setDuration(''); setConsumed(false); setArtist(''); setMusicType('')
     setGenres([]); setLabel(''); setPartOfAlbum(''); setHasTracks(false); setTracks([]); setSingleCovers([]); setEditions([])
     setMusicSource(''); setProducers([]); setMusicReview(''); setVinylCondition(''); setConcerts([])
@@ -1237,6 +1243,9 @@ function App() {
     setIsBundle(item.isBundle ?? false)
     setBundleContents(item.bundleContents ?? [])
     setSaveFiles(item.saveFiles ?? [])
+    setAchievementsList(item.achievements ?? [])
+    setScreenshots(item.screenshots ?? [])
+    setChapterNotes(item.chapterNotes ?? [])
     setPcgwPage(item.pcgwPage)
     setReleaseYear(item.releaseYear ?? '')
     setDuration(item.duration ?? '')
@@ -1765,6 +1774,8 @@ function App() {
         isBundle,
         bundleContents: isBundle && bundleContents.length > 0 ? bundleContents : undefined,
         saveFiles: saveFiles.length > 0 ? saveFiles : undefined,
+        achievements: achievementsList.length > 0 ? achievementsList : undefined,
+        screenshots: screenshots.length > 0 ? screenshots : undefined,
         pcgwPage: pcgwPage || undefined,
         alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
         gameSource: gameSource || undefined,
@@ -1944,6 +1955,7 @@ function App() {
         ageRating: ageRating || undefined,
         bookReview: bookReview.trim() || undefined,
         hasSpoilers: bookReview.trim() ? hasSpoilers : undefined,
+        chapterNotes: chapterNotes.length > 0 ? chapterNotes : undefined,
         rewatches: rewatches.length > 0 ? rewatches : undefined,
         franchise: franchise.trim() || undefined,
         relatedItems: relatedItems.length > 0 ? relatedItems : undefined,
@@ -4598,6 +4610,13 @@ function App() {
                           saveFiles={saveFiles}
                           onChange={setSaveFiles}
                         />
+                        <AchievementListEditor entries={achievementsList} onChange={setAchievementsList} />
+                        <ScreenshotsGallery
+                          gameTitle={title}
+                          categoryId={activeCategory}
+                          screenshots={screenshots}
+                          onChange={setScreenshots}
+                        />
                         <div className="form-section-header" data-belongs-to="overview">
                           <span className="form-section-title">Rating &amp; completion</span>
                         </div>
@@ -5676,6 +5695,7 @@ function App() {
                         </div>
                       )}
                     </div>
+                    <ChapterNotesEditor entries={chapterNotes} onChange={setChapterNotes} />
                   </>
                 )}
 

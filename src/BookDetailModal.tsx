@@ -152,6 +152,20 @@ export default function BookDetailModal({ item, groups, allBooks, onClose, onEdi
             )}
           </div>
 
+          {item.chapterNotes && item.chapterNotes.length > 0 && (
+            <div className="field-group">
+              <label>Notes per chapter ({item.chapterNotes.length})</label>
+              <ul className="chapter-notes-list detail">
+                {item.chapterNotes.map((n) => (
+                  <li key={n.id} className="chapter-notes-row">
+                    <span className="chapter-notes-chapter-static">{n.chapter}</span>
+                    <p className="chapter-notes-body-static">{n.note}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {item.highlights && item.highlights.length > 0 && (
             <div className="field-group">
               <label>Highlights &amp; notes ({item.highlights.length})</label>
