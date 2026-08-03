@@ -11,6 +11,12 @@ type Props =
       mode?: 'related'
       related: RelatedItem[]
       options: Item[]
+      /** When true, the picker also searches items from other libraries
+       *  and renders a category badge on each result — used for the
+       *  cross-library "similar to" link. Defaults to false. */
+      crossLibrary?: boolean
+      /** Full library, only used when crossLibrary is on. */
+      allItems?: Item[]
       onAdd: (itemId: string) => void
       onRemove: (itemId: string) => void
       onChangeRelation: (itemId: string, r: RelationKind) => void
@@ -20,18 +26,24 @@ type Props =
       mode: 'recommendations'
       ids: string[]
       options: Item[]
+      crossLibrary?: boolean
+      allItems?: Item[]
       onAdd: (id: string) => void
       onRemove: (id: string) => void
       pickerPlaceholder?: string
     }
 
 export default function RelatedListEditor(props: Props) {
-  const lookup = (id: string) => props.options.find((o) => o.id === id)
+  // When cross-library is on the picker + row-lookup pool is the full library,
+  // so items from other categories resolve to their real title/cover instead
+  // of showing "(missing)".
+  const pickerOptions = props.crossLibrary && props.allItems ? props.allItems : props.options
+  const lookup = (id: string) => pickerOptions.find((o) => o.id === id) ?? props.options.find((o) => o.id === id)
   const ids = props.mode === 'recommendations' ? props.ids : props.related.map((r) => r.itemId)
   const placeholder = props.pickerPlaceholder ?? (props.mode === 'recommendations' ? 'Add recommendation…' : 'Add related…')
   return (
     <div>
-      <AnimeItemPicker options={props.options} excludeIds={ids} onPick={props.onAdd} placeholder={placeholder} />
+      <AnimeItemPicker options={pickerOptions} excludeIds={ids} onPick={props.onAdd} placeholder={placeholder} showCategoryBadge={!!props.crossLibrary} />
       {ids.length > 0 && (
         <div className="related-list">
           {ids.map((id) => {

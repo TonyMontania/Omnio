@@ -2013,3 +2013,27 @@
   padding: 4px;
 }
 .chapter-notes-delete:hover { color: var(--danger); }
+
+/* Cross-library picker badge — small category label next to each result
+   when RelatedListEditor is in crossLibrary mode. Lets users tell a
+   "Berserk" manga apart from a "Berserk" game at a glance. */
+.anime-picker-cat {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-dim) 12%, transparent);
+}
+
+/* Bulk rating menu — narrower than tag/genre menus, wraps the 11 rating
+   pills into a compact grid. */
+.bulk-menu-rating {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+.bulk-menu-rating button { padding: 6px 8px !important; font-size: 12px !important; }

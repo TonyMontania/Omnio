@@ -16,6 +16,8 @@ interface Props {
   onClear: () => void
   onApplyStatus: (updater: (item: Item) => Partial<Item>) => void
   onApplyTag: (op: 'add' | 'remove', tag: string) => void
+  onApplyRating: (rating: number) => void
+  onApplyGenre: (op: 'add' | 'remove', genre: string) => void
   onAddToGroup: (collectionId: string) => void
   onMoveToLibrary: (targetCategoryId: string) => void
   onDelete: () => void
@@ -24,9 +26,9 @@ interface Props {
 
 export default function BulkActionBar({
   items, selectedIds, onClear,
-  onApplyStatus, onApplyTag, onAddToGroup, onMoveToLibrary, onDelete, collections,
+  onApplyStatus, onApplyTag, onApplyRating, onApplyGenre, onAddToGroup, onMoveToLibrary, onDelete, collections,
 }: Props) {
-  const [menu, setMenu] = useState<null | 'status' | 'tag-add' | 'tag-remove' | 'group' | 'move'>(null)
+  const [menu, setMenu] = useState<null | 'status' | 'rating' | 'tag-add' | 'tag-remove' | 'genre-add' | 'genre-remove' | 'group' | 'move'>(null)
   const [draft, setDraft] = useState('')
 
   const selected = useMemo(
@@ -67,6 +69,17 @@ export default function BulkActionBar({
     setDraft('')
     setMenu(null)
   }
+  const commitGenre = (op: 'add' | 'remove') => {
+    const g = draft.trim()
+    if (!g) return
+    onApplyGenre(op, g)
+    setDraft('')
+    setMenu(null)
+  }
+  const commitRating = (r: number) => {
+    onApplyRating(r)
+    setMenu(null)
+  }
 
   return (
     <div className="bulk-bar" role="toolbar" aria-label="Bulk actions">
@@ -105,6 +118,38 @@ export default function BulkActionBar({
                 <input autoFocus placeholder="Tag to remove" value={draft} onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') commitTag('remove') }} />
                 <button type="button" onClick={() => commitTag('remove')}>Remove from all</button>
+              </div>
+            )}
+          </div>
+          <div className="bulk-drop">
+            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'genre-add' ? null : 'genre-add')}>+ Genre</button>
+            {menu === 'genre-add' && (
+              <div className="bulk-menu">
+                <input autoFocus placeholder="Genre to add" value={draft} onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') commitGenre('add') }} />
+                <button type="button" onClick={() => commitGenre('add')}>Add to all</button>
+              </div>
+            )}
+          </div>
+          <div className="bulk-drop">
+            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'genre-remove' ? null : 'genre-remove')}>− Genre</button>
+            {menu === 'genre-remove' && (
+              <div className="bulk-menu">
+                <input autoFocus placeholder="Genre to remove" value={draft} onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') commitGenre('remove') }} />
+                <button type="button" onClick={() => commitGenre('remove')}>Remove from all</button>
+              </div>
+            )}
+          </div>
+          <div className="bulk-drop">
+            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'rating' ? null : 'rating')}>Rating ▾</button>
+            {menu === 'rating' && (
+              <div className="bulk-menu bulk-menu-rating">
+                {[0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map((r) => (
+                  <button key={r} type="button" onClick={() => commitRating(r)}>
+                    {r === 0 ? 'Clear' : `★ ${r}`}
+                  </button>
+                ))}
               </div>
             )}
           </div>

@@ -4735,10 +4735,12 @@ function App() {
                           <RelatedListEditor
                             related={relatedItems}
                             options={items.filter((i) => i.categoryId === 'videojuegos' && i.id !== editingId)}
+                            crossLibrary
+                            allItems={items.filter((i) => i.id !== editingId)}
                             onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                             onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
                             onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-                            pickerPlaceholder="Add related game…"
+                            pickerPlaceholder="Add related item… (any library)"
                           />
                         </div>
                         <div className="field-group">
@@ -4916,6 +4918,8 @@ function App() {
                           <label>Related movies</label>
                           <RelatedListEditor
                             related={relatedItems}
+                            crossLibrary
+                            allItems={items.filter((i) => i.id !== editingId)}
                             options={items.filter((i) => i.categoryId === 'peliculas' && i.id !== editingId)}
                             onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                             onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
@@ -5056,6 +5060,8 @@ function App() {
                       <label>Related series</label>
                       <RelatedListEditor
                         related={relatedItems}
+                            crossLibrary
+                            allItems={items.filter((i) => i.id !== editingId)}
                         options={items.filter((i) => i.categoryId === 'series' && i.id !== editingId)}
                         onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                         onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
@@ -5327,6 +5333,8 @@ function App() {
                       <label>Related anime</label>
                       <RelatedListEditor
                         related={relatedItems}
+                            crossLibrary
+                            allItems={items.filter((i) => i.id !== editingId)}
                         options={items.filter((i) => isAnimeLikeCategory(i.categoryId) && i.id !== editingId)}
                         onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                         onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
@@ -5556,6 +5564,8 @@ function App() {
                       <label>Related manga</label>
                       <RelatedListEditor
                         related={relatedItems}
+                            crossLibrary
+                            allItems={items.filter((i) => i.id !== editingId)}
                         options={items.filter((i) => isMangaLike(i.categoryId) && i.id !== editingId)}
                         onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                         onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
@@ -5914,6 +5924,8 @@ function App() {
                       <label>Related albums</label>
                       <RelatedListEditor
                         related={relatedItems}
+                            crossLibrary
+                            allItems={items.filter((i) => i.id !== editingId)}
                         options={items.filter((i) => i.categoryId === 'musica' && i.id !== editingId)}
                         onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                         onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
@@ -6440,6 +6452,22 @@ function App() {
         onClear={clearSelection}
         onApplyStatus={applyToSelected}
         onApplyTag={bulkAddTag}
+        onApplyRating={(r) => {
+          setItems((all) => all.map((it) => selectedIds.has(it.id) ? { ...it, rating: r || undefined } : it))
+          setToast(r ? `Rating set to ★${r} on ${selectedIds.size} items` : `Rating cleared on ${selectedIds.size} items`)
+        }}
+        onApplyGenre={(op, g) => {
+          setItems((all) => all.map((it) => {
+            if (!selectedIds.has(it.id)) return it
+            const cur = it.genres ?? []
+            if (op === 'add') {
+              if (cur.includes(g)) return it
+              return { ...it, genres: [...cur, g] }
+            }
+            return { ...it, genres: cur.filter((x) => x !== g) }
+          }))
+          setToast(op === 'add' ? `Genre "${g}" added to ${selectedIds.size} items` : `Genre "${g}" removed from ${selectedIds.size} items`)
+        }}
         onAddToGroup={bulkAddToGroup}
         onMoveToLibrary={bulkMoveToLibrary}
         onDelete={bulkDelete}
