@@ -71,6 +71,16 @@ export default function MangaDetailModal({ item, groups, allManga, onClose, onEd
                   {item.mangaSource && <span className="pill static">Source: {getMangaSourceLabel(item.mangaSource)}</span>}
                   {item.ageRating && <span className="pill static">{getAgeRatingLabel(item.ageRating)}</span>}
                   {item.magazine && <span className="pill static">{item.magazine}</span>}
+                  {item.mediaOwnership && <span className="pill static">{item.mediaOwnership === 'physical' ? 'Physical' : item.mediaOwnership === 'digital' ? 'Digital' : item.mediaOwnership === 'both' ? 'Physical + Digital' : 'Not owned'}</span>}
+                  {item.mangadexId && (
+                    <a
+                      className="pill static pcgw-link"
+                      href={`https://mangadex.org/title/${item.mangadexId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Follow this title on MangaDex to get chapter notifications in your reader"
+                    >New chapters ↗</a>
+                  )}
                 </div>
               </div>
               {groups.length > 0 && (

@@ -177,7 +177,13 @@ export interface Chapter {
   readDate?: string
   rating?: number
   notes?: string
+  scanlator?: string        // fan-translation attribution group ("MangaDex" / "Void Scans" / etc.)
 }
+
+// Physical vs digital ownership tracker (manga family). Users often
+// collect the physical volumes and read the digital release — this
+// captures both without collapsing the distinction.
+export type MediaOwnership = 'physical' | 'digital' | 'both' | 'neither'
 
 export interface Episode {
   id: string
@@ -379,6 +385,8 @@ export interface Item {
   mangaReview?: string
   hasChapters?: boolean
   chapters?: Chapter[]
+  mediaOwnership?: MediaOwnership
+  mangadexId?: string        // used to compose the "New chapters (RSS)" link in the detail modal
   movieSource?: MovieSource
   movieReview?: string
   productionCompanies?: string[]

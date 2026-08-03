@@ -6,7 +6,7 @@ import type {
   MusicType, MusicSource, MusicField,
   MangaStatus, PublicationStatus, MangaSource, MangaField,
   AnimeStatus, AiringStatus, AnimeFormat, AnimeSeason, Demographic, AnimeSource, AnimeField, Weekday,
-  VinylCondition,
+  VinylCondition, MediaOwnership,
   SeriesStatus, SeriesFormat, SeriesField,
   MovieSource, MovieField, WatchLocation,
   BookStatus, BookFormat, BookSource, BookField,
@@ -124,6 +124,15 @@ export const MUSIC_SOURCE_OPTIONS: { value: MusicSource; label: string }[] = [
   { value: 'deluxe', label: 'Deluxe edition' },
   { value: 'reissue', label: 'Reissue' },
   { value: 'other', label: 'Other' },
+]
+
+// Physical vs digital ownership (manga family). "Both" is common for
+// collectors who buy volumes but keep up chapter-by-chapter online.
+export const MEDIA_OWNERSHIP_OPTIONS: { value: MediaOwnership; label: string }[] = [
+  { value: 'physical', label: 'Physical only' },
+  { value: 'digital',  label: 'Digital only' },
+  { value: 'both',     label: 'Both physical + digital' },
+  { value: 'neither',  label: 'Neither owned' },
 ]
 
 // Goldmine standard grading — the vinyl-collector convention that

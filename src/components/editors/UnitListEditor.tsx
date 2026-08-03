@@ -14,12 +14,14 @@ export interface UnitLike {
   rating?: number
   done?: boolean
   filler?: boolean
+  scanlator?: string
 }
 
 export interface UnitListConfig {
   noun: 'chapter' | 'episode'
   doneLabel: string     // "Read" or "Watched"
   showFiller: boolean
+  showScanlator?: boolean   // per-chapter fan-translation attribution column
   numberPlaceholder: string
 }
 
@@ -30,7 +32,7 @@ export function UnitListEditor({
   config: UnitListConfig
   onAdd: (u: { number: string; title?: string }) => void
   onRemove: (id: string) => void
-  onUpdate: (id: string, patch: { title?: string }) => void
+  onUpdate: (id: string, patch: { title?: string; scanlator?: string }) => void
   onToggleDone: (id: string) => void
   onToggleFiller?: (id: string) => void
   onRatingChange: (id: string, r: number) => void
@@ -72,6 +74,7 @@ export function UnitListEditor({
               <th className="col-listened">{config.doneLabel}</th>
               <th className="col-rating">Rating</th>
               {config.showFiller && <th className="col-fav">Filler</th>}
+              {config.showScanlator && <th className="col-artist">Scanlator</th>}
               <th />
               <th className="col-spacer"></th>
             </tr>
@@ -88,6 +91,11 @@ export function UnitListEditor({
                 {config.showFiller && (
                   <td className="col-fav">
                     <button type="button" className={u.filler ? 'track-fav active' : 'track-fav'} onClick={() => onToggleFiller?.(u.id)}>F</button>
+                  </td>
+                )}
+                {config.showScanlator && (
+                  <td className="col-artist">
+                    <input className="track-artist-cell" value={u.scanlator ?? ''} onChange={(e) => onUpdate(u.id, { scanlator: e.target.value })} placeholder="—" />
                   </td>
                 )}
                 <td><button type="button" className="track-remove" onClick={() => onRemove(u.id)}>✕</button></td>

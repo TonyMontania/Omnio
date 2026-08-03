@@ -12,7 +12,7 @@ import type {
   Platform, Ownership, GameStatus, GameField, GameSource,
   MusicType, MusicField, MusicSource, Track, DlcEntry, BundleGame,
   VinylCondition, ConcertEntry,
-  MangaStatus, MangaField, MangaSource, MangaVolume, Chapter, PublicationStatus,
+  MangaStatus, MangaField, MangaSource, MangaVolume, Chapter, PublicationStatus, MediaOwnership,
   AnimeStatus, AnimeField, AnimeSource, AnimeFormat, AnimeSeason, AiringStatus, Demographic, Episode, Weekday,
   SeriesStatus, SeriesField, SeriesFormat, Season,
   MovieField, MovieSource, WatchLocation,
@@ -29,6 +29,7 @@ import {
   MUSIC_TYPE_OPTIONS, MUSIC_SOURCE_OPTIONS, MUSIC_FIELD_OPTIONS, DEFAULT_MUSIC_FIELDS,
   VINYL_CONDITION_OPTIONS,
   MANGA_STATUS_OPTIONS, MANGA_SOURCE_OPTIONS, MANGA_FIELD_OPTIONS, DEFAULT_MANGA_FIELDS,
+  MEDIA_OWNERSHIP_OPTIONS,
   PUBLICATION_STATUS_OPTIONS,
   ANIME_STATUS_OPTIONS, ANIME_FORMAT_OPTIONS, ANIME_SEASON_OPTIONS, ANIME_SOURCE_OPTIONS,
   ANIME_FIELD_OPTIONS, DEFAULT_ANIME_FIELDS, AIRING_STATUS_OPTIONS, DEMOGRAPHIC_OPTIONS, WEEKDAY_OPTIONS,
@@ -693,6 +694,8 @@ function App() {
   const [producers, setProducers] = useState<string[]>([])
   const [musicReview, setMusicReview] = useState('')
   const [mangaSource, setMangaSource] = useState<MangaSource | ''>('')
+  const [mediaOwnership, setMediaOwnership] = useState<MediaOwnership | ''>('')
+  const [mangadexId, setMangadexId] = useState('')
   const [magazine, setMagazine] = useState('')
   const [mangaReview, setMangaReview] = useState('')
   const [hasChapters, setHasChapters] = useState(false)
@@ -1092,7 +1095,7 @@ function App() {
     setMusicSource(''); setProducers([]); setMusicReview(''); setVinylCondition(''); setConcerts([])
     setUnitCount(''); setStartYear(''); setEndYear(''); setUnits([])
     setMangaAuthors([]); setMangaArtists([]); setVolumeCovers([]); setMangaDescription(''); setPubStatus(''); setReadingStatus('plan_to_read')
-    setMangaSource(''); setMagazine(''); setMangaReview(''); setHasChapters(false); setChapters([])
+    setMangaSource(''); setMagazine(''); setMangaReview(''); setHasChapters(false); setChapters([]); setMediaOwnership(''); setMangadexId('')
     setBookStatus('plan_to_read'); setBookFormat(''); setBookSource(''); setPagesRead(''); setTotalPages(''); setPublisher(''); setSaga(''); setSagaIndex(''); setIsbn(''); setTranslator(''); setBookReview('')
     setMovieSource(''); setMovieReview('')
     setGameSource(''); setOriginalWorkId(''); setGameReview('')
@@ -1271,6 +1274,8 @@ function App() {
     setMangaAuthors(item.authors ?? [])
     setMangaSource(item.mangaSource ?? '')
     setMagazine(item.magazine ?? '')
+    setMediaOwnership(item.mediaOwnership ?? '')
+    setMangadexId(item.mangadexId ?? '')
     setMangaReview(item.mangaReview ?? '')
     setHasChapters(item.hasChapters ?? false)
     setChapters(item.chapters ?? [])
@@ -1920,6 +1925,8 @@ function App() {
         alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
         mangaSource: mangaSource || undefined,
         magazine: magazine.trim() || undefined,
+        mediaOwnership: mediaOwnership || undefined,
+        mangadexId: mangadexId.trim() || undefined,
         ageRating: ageRating || undefined,
         mangaReview: mangaReview.trim() || undefined,
         hasSpoilers: mangaReview.trim() ? hasSpoilers : undefined,
@@ -5496,6 +5503,19 @@ function App() {
                       <div className="field-group">
                         <label>Magazine / serialization</label>
                         <input value={magazine} onChange={(e) => setMagazine(e.target.value)} placeholder="e.g. Weekly Shonen Jump" />
+                      </div>
+                    </div>
+                    <div className="field-row">
+                      <div className="field-group">
+                        <label>Ownership</label>
+                        <select value={mediaOwnership} onChange={(e) => setMediaOwnership(e.target.value as MediaOwnership | '')}>
+                          <option value="">— unspecified</option>
+                          {MEDIA_OWNERSHIP_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </div>
+                      <div className="field-group">
+                        <label>MangaDex ID <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>Enables the "New chapters" link in the detail view</span></label>
+                        <input value={mangadexId} onChange={(e) => setMangadexId(e.target.value)} placeholder="e.g. a1c7c817-4e59-43b7-9365-09675a149a6f" />
                       </div>
                     </div>
                     <div className="form-section-header" data-belongs-to="notes">
