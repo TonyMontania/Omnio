@@ -78,6 +78,7 @@ const DataHealthAuditModal = lazy(() => import('./DataHealthAuditModal'))
 const GlobalSearch      = lazy(() => import('./GlobalSearch'))
 const SteamGridDbPicker = lazy(() => import('./SteamGridDbPicker'))
 const AniListFetcher    = lazy(() => import('./AniListFetcher'))
+const AniDBFetcher      = lazy(() => import('./AniDBFetcher'))
 const JikanFetcher      = lazy(() => import('./JikanFetcher'))
 const TmdbFetcher       = lazy(() => import('./TmdbFetcher'))
 const IgdbFetcher       = lazy(() => import('./IgdbFetcher'))
@@ -207,6 +208,11 @@ interface Settings {
   igdbClientId?: string
   igdbClientSecret?: string
   comicvineApiKey?: string
+  // AniDB's HTTP API requires a registered client name (register at
+  // anidb.net/software/add — the site issues a name after a quick review).
+  // Empty means "AniDB fetcher disabled"; the button in the anime editor
+  // links to the settings when this is missing.
+  anidbClient?: string
 }
 
 interface AppData {
@@ -553,6 +559,7 @@ function App() {
   const [comicvineOpen, setComicvineOpen] = useState(false)
   const [mangadexOpen, setMangadexOpen] = useState(false)
   const [kitsuOpen, setKitsuOpen] = useState<null | 'anime' | 'manga'>(null)
+  const [anidbOpen, setAnidbOpen] = useState(false)
   const [malOpen, setMalOpen] = useState(false)
   const [genericImportOpen, setGenericImportOpen] = useState(false)
   const [steamOpen, setSteamOpen] = useState(false)
@@ -3703,6 +3710,19 @@ function App() {
                       />
                       <p className="hint">Free key at <code>comicvine.gamespot.com/api/</code> — Marvel, DC, Image, indies.</p>
                     </div>
+                    <div className="field-group">
+                      <label>AniDB client name (Anime · Donghua)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. omnio"
+                        value={settings.anidbClient ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, anidbClient: e.target.value }))}
+                      />
+                      <p className="hint">
+                        AniDB's HTTP API requires a client name registered at <code>anidb.net/software/add</code>.
+                        Enter the name here to enable the AniDB deep-fetch button in the anime / donghua editors. Deep metadata (creators per episode, weighted tags, cross-refs) — coexists with AniList / MAL / Kitsu. Rate-limited to one request per two seconds per AniDB's terms.
+                      </p>
+                    </div>
                     <p className="hint" style={{ marginTop: -6 }}>MusicBrainz, VGMdb, AniList, MyAnimeList, Kitsu and MangaDex need no key — they work out of the box.</p>
 
                     <div className="settings-section-title">Updates</div>
@@ -4322,6 +4342,10 @@ function App() {
                           <button type="button" className="metadata-source-btn" onClick={() => setKitsuOpen('anime')}>
                             <span className="ms-name">↗ Kitsu</span>
                             <span className="ms-desc">Fallback when other sources miss it</span>
+                          </button>
+                          <button type="button" className="metadata-source-btn" onClick={() => setAnidbOpen(true)}>
+                            <span className="ms-name">↗ AniDB</span>
+                            <span className="ms-desc">Weighted tags + tighter refs · paste AID</span>
                           </button>
                         </>}
                         {isMangaLike(activeCategory) && <>
@@ -6502,6 +6526,14 @@ function App() {
           categoryId={activeCategory}
           onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'Kitsu')}
           onClose={() => setKitsuOpen(null)}
+        />
+      )}
+
+      {anidbOpen && (
+        <AniDBFetcher
+          anidbClient={settings.anidbClient}
+          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'AniDB')}
+          onClose={() => setAnidbOpen(false)}
         />
       )}
 

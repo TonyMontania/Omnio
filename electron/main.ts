@@ -1601,6 +1601,57 @@ ipcMain.handle('discogs:collection', async (_event, username: string, token?: st
   }
 })
 
+// AniDB HTTP API — one request per AID, returns detailed anime XML. The
+// API is rate-limited to one request every two seconds per client, and
+// clients must be registered at anidb.net/software/add (the site issues a
+// name after a short review). We enforce the throttle on our end so a
+// user hammering the button never gets banned.
+let anidbLastRequestAt = 0
+async function anidbThrottle(): Promise<void> {
+  const now = Date.now()
+  const elapsed = now - anidbLastRequestAt
+  const MIN_GAP_MS = 2100 // 2.1s to leave a little slack over the 2s hard limit
+  if (elapsed < MIN_GAP_MS) {
+    await new Promise((res) => setTimeout(res, MIN_GAP_MS - elapsed))
+  }
+  anidbLastRequestAt = Date.now()
+}
+
+ipcMain.handle('anidb:anime', async (_event, client: string, aid: string | number) => {
+  const clean = String(client || '').trim()
+  if (!clean) return { ok: false, error: 'Register a client name at anidb.net/software/add and set it in Settings → Data → Integrations.' }
+  const aidStr = String(aid || '').trim()
+  if (!/^\d+$/.test(aidStr)) return { ok: false, error: 'AID must be a positive integer.' }
+  await anidbThrottle()
+  const params = new URLSearchParams({
+    request: 'anime',
+    client: clean,
+    // clientver is required. We keep it at 1 — bump only if AniDB ever
+    // makes us re-register the client after a breaking change.
+    clientver: '1',
+    protover: '1',
+    aid: aidStr,
+  })
+  try {
+    const r = await fetch(`http://api.anidb.net:9001/httpapi?${params}`, {
+      headers: {
+        Accept: 'application/xml',
+        'User-Agent': `Omnio/${app.getVersion()} (+https://github.com/TonyMontania/Omnio)`,
+      },
+    })
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const text = await r.text()
+    // AniDB returns error envelopes as XML too — <error>Banned</error>,
+    // <error>Client version missing or invalid</error> etc. Surface those
+    // rather than pretending we got real data.
+    const errMatch = /<error[^>]*>([\s\S]*?)<\/error>/i.exec(text)
+    if (errMatch) return { ok: false, error: errMatch[1].trim() }
+    return { ok: true, data: text }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 // PCGamingWiki — no API key. Two endpoints: opensearch to match a game
 // title against wiki pages, then Cargo query to pull the structured
 // "Path" table (Save + Config locations per OS). Companion to save-file

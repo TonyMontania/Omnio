@@ -1552,3 +1552,85 @@
 @media (max-width: 640px) {
   .simulcast-grid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
 }
+
+/* -------------------------------------------------------------------------
+   AniDB deep-fetch result preview. Compact card with cover + core meta +
+   tags. Reuses .discogs-creds for the input row and .pcgw-link for the
+   "Open on AniDB" outbound.
+   ------------------------------------------------------------------------- */
+
+.anidb-result {
+  margin-top: 14px;
+}
+.anidb-preview {
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.anidb-cover {
+  width: 110px;
+  height: 156px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.anidb-preview-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.anidb-preview-body h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text);
+  font-weight: 600;
+  font-family: var(--font-display);
+}
+.anidb-alts {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.anidb-meta {
+  display: flex;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.anidb-studios {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text);
+}
+.anidb-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+.anidb-tag {
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+}
+.anidb-desc {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
