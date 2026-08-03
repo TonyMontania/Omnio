@@ -92,6 +92,7 @@ const SteamImporter     = lazy(() => import('./SteamImporter'))
 const LetterboxdImporter = lazy(() => import('./LetterboxdImporter'))
 const HighlightsImporter = lazy(() => import('./HighlightsImporter'))
 const LastfmImporter    = lazy(() => import('./LastfmImporter'))
+const TraktImporter     = lazy(() => import('./TraktImporter'))
 const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 import { buildStaticSiteHtml } from './exportSite'
 import {
@@ -557,6 +558,7 @@ function App() {
   const [letterboxdOpen, setLetterboxdOpen] = useState(false)
   const [highlightsImportOpen, setHighlightsImportOpen] = useState(false)
   const [lastfmImportOpen, setLastfmImportOpen] = useState(false)
+  const [traktImportOpen, setTraktImportOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -3532,6 +3534,7 @@ function App() {
                         <button type="button" className="secondary-btn" onClick={() => setLetterboxdOpen(true)}>Import from Letterboxd</button>
                         <button type="button" className="secondary-btn" onClick={() => setHighlightsImportOpen(true)}>Import Kindle highlights</button>
                         <button type="button" className="secondary-btn" onClick={() => setLastfmImportOpen(true)}>Import Last.fm scrobbles</button>
+                        <button type="button" className="secondary-btn" onClick={() => setTraktImportOpen(true)}>Import from Trakt.tv</button>
                       </div>
                       <p className="hint">Steam import reads a public profile via the community XML endpoint — no API key. Letterboxd accepts the CSVs from your account export (Settings → Data → Export on letterboxd.com). Kindle highlights import parses <code>My Clippings.txt</code> from your Kindle's <code>documents/</code> folder and attaches each highlight to a matching book (or creates one). Playtime and status pre-fill; open each item afterwards to fetch cover + metadata via IGDB or SteamGridDB / TMDb.</p>
                     </div>
@@ -6458,6 +6461,27 @@ function App() {
             setToast(`Imported ${newItems.length} movie${newItems.length === 1 ? '' : 's'} from Letterboxd`)
           }}
           onClose={() => setLetterboxdOpen(false)}
+        />
+      )}
+
+      {traktImportOpen && (
+        <TraktImporter
+          existingItems={items}
+          onImport={({ movieUpdates, movieCreates, seriesUpdates, seriesCreates }) => {
+            setItems((all) => {
+              const next = all.map((it) => {
+                const mUp = movieUpdates.get(it.id)
+                if (mUp) return { ...it, ...mUp }
+                const sUp = seriesUpdates.get(it.id)
+                if (sUp) return { ...it, ...sUp }
+                return it
+              })
+              return [...next, ...movieCreates, ...seriesCreates]
+            })
+            const total = movieUpdates.size + movieCreates.length + seriesUpdates.size + seriesCreates.length
+            setToast(`Applied Trakt data to ${total} item${total === 1 ? '' : 's'}`)
+          }}
+          onClose={() => setTraktImportOpen(false)}
         />
       )}
 
