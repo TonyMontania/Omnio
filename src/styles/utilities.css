@@ -1467,3 +1467,88 @@
 .discogs-creds input:focus { border-color: var(--accent); outline: none; }
 .discogs-creds .importer-file-btn { align-self: flex-start; }
 .discogs-creds .importer-file-btn:disabled { opacity: 0.55; cursor: default; }
+
+/* -------------------------------------------------------------------------
+   Simulcast board (anime + donghua) — 7-column weekday grid. Each column
+   holds the ItemCards for shows airing that day. Columns scroll
+   independently on tall content so the header row stays sticky-visible.
+   ------------------------------------------------------------------------- */
+
+.simulcast-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(160px, 1fr));
+  gap: 12px;
+  min-height: 100%;
+}
+.simulcast-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.simulcast-col-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-soft);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.simulcast-day {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.simulcast-day-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+  padding: 1px 7px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-radius: 999px;
+}
+.simulcast-col-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  flex: 1;
+  min-height: 60px;
+}
+/* Cards inside the columns get a compact treatment — a single column of
+   grid cards would be too wide otherwise. Overrides the .list.grid layout
+   assumption of many-columns. */
+.simulcast-col-body .card,
+.simulcast-col-body .item-card {
+  width: 100%;
+  max-width: 100%;
+}
+.simulcast-empty {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 12px 0;
+  text-align: center;
+}
+
+/* Below ~1200px the 7-wide grid gets too cramped; wrap to 3-4 columns
+   and let each row of days sit stacked. */
+@media (max-width: 1200px) {
+  .simulcast-grid { grid-template-columns: repeat(4, minmax(160px, 1fr)); }
+}
+@media (max-width: 900px) {
+  .simulcast-grid { grid-template-columns: repeat(3, minmax(140px, 1fr)); }
+}
+@media (max-width: 640px) {
+  .simulcast-grid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+}

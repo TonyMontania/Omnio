@@ -5,7 +5,7 @@ import type {
   Ownership, GameStatus, GameSource, GameField,
   MusicType, MusicSource, MusicField,
   MangaStatus, PublicationStatus, MangaSource, MangaField,
-  AnimeStatus, AiringStatus, AnimeFormat, AnimeSeason, Demographic, AnimeSource, AnimeField,
+  AnimeStatus, AiringStatus, AnimeFormat, AnimeSeason, Demographic, AnimeSource, AnimeField, Weekday,
   SeriesStatus, SeriesFormat, SeriesField,
   MovieSource, MovieField, WatchLocation,
   BookStatus, BookFormat, BookSource, BookField,
@@ -191,6 +191,20 @@ export const AIRING_STATUS_OPTIONS: { value: AiringStatus; label: string }[] = [
   { value: 'finished', label: 'Finished' },
   { value: 'not_yet_aired', label: 'Not yet aired' },
   { value: 'cancelled', label: 'Cancelled' },
+]
+
+// Ordered Monday-first — that's how simulcast schedules read on Anichart
+// / LiveChart / MAL's Seasonal boards, and it lets the Sunday column
+// stay as the "end of the week" visual anchor. `value` is what lands in
+// item.airingDay so the storage form is language-neutral.
+export const WEEKDAY_OPTIONS: { value: Weekday; label: string; short: string }[] = [
+  { value: 'monday',    label: 'Monday',    short: 'Mon' },
+  { value: 'tuesday',   label: 'Tuesday',   short: 'Tue' },
+  { value: 'wednesday', label: 'Wednesday', short: 'Wed' },
+  { value: 'thursday',  label: 'Thursday',  short: 'Thu' },
+  { value: 'friday',    label: 'Friday',    short: 'Fri' },
+  { value: 'saturday',  label: 'Saturday',  short: 'Sat' },
+  { value: 'sunday',    label: 'Sunday',    short: 'Sun' },
 ]
 
 export const ANIME_FORMAT_OPTIONS: { value: AnimeFormat; label: string }[] = [

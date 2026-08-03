@@ -12,7 +12,7 @@ import type {
   Platform, Ownership, GameStatus, GameField, GameSource,
   MusicType, MusicField, MusicSource, Track, DlcEntry, BundleGame,
   MangaStatus, MangaField, MangaSource, MangaVolume, Chapter, PublicationStatus,
-  AnimeStatus, AnimeField, AnimeSource, AnimeFormat, AnimeSeason, AiringStatus, Demographic, Episode,
+  AnimeStatus, AnimeField, AnimeSource, AnimeFormat, AnimeSeason, AiringStatus, Demographic, Episode, Weekday,
   SeriesStatus, SeriesField, SeriesFormat, Season,
   MovieField, MovieSource, WatchLocation,
   BookField, BookStatus, BookFormat, BookSource,
@@ -29,7 +29,7 @@ import {
   MANGA_STATUS_OPTIONS, MANGA_SOURCE_OPTIONS, MANGA_FIELD_OPTIONS, DEFAULT_MANGA_FIELDS,
   PUBLICATION_STATUS_OPTIONS,
   ANIME_STATUS_OPTIONS, ANIME_FORMAT_OPTIONS, ANIME_SEASON_OPTIONS, ANIME_SOURCE_OPTIONS,
-  ANIME_FIELD_OPTIONS, DEFAULT_ANIME_FIELDS, AIRING_STATUS_OPTIONS, DEMOGRAPHIC_OPTIONS,
+  ANIME_FIELD_OPTIONS, DEFAULT_ANIME_FIELDS, AIRING_STATUS_OPTIONS, DEMOGRAPHIC_OPTIONS, WEEKDAY_OPTIONS,
   SERIES_STATUS_OPTIONS, SERIES_FORMAT_OPTIONS, SERIES_FIELD_OPTIONS, DEFAULT_SERIES_FIELDS,
   MOVIE_SOURCE_OPTIONS, MOVIE_FIELD_OPTIONS, DEFAULT_MOVIE_FIELDS, WATCH_LOCATION_OPTIONS,
   BOOK_STATUS_OPTIONS, BOOK_FORMAT_OPTIONS, BOOK_SOURCE_OPTIONS, BOOK_FIELD_OPTIONS, DEFAULT_BOOK_FIELDS,
@@ -326,7 +326,7 @@ function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [loaded, setLoaded] = useState(false)
   const [layout, setLayout] = useState<Layout>('grid')
-  const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'stats' | 'calendar' | 'settings'>('none')
+  const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'simulcastBoard' | 'stats' | 'calendar' | 'settings'>('none')
   const [animeBoardStatus, setAnimeBoardStatus] = useState<AnimeStatus>('plan_to_watch')
   const [seriesBoardStatus, setSeriesBoardStatus] = useState<SeriesStatus>('plan_to_watch')
   const [bookBoardStatus, setBookBoardStatus] = useState<BookStatus>('plan_to_read')
@@ -634,6 +634,7 @@ function App() {
   const [studios, setStudios] = useState<string[]>([])
   const [animeFormat, setAnimeFormat] = useState<AnimeFormat | ''>('')
   const [airingStatus, setAiringStatus] = useState<AiringStatus | ''>('')
+  const [airingDay, setAiringDay] = useState<Weekday | ''>('')
   const [watchStatus, setWatchStatus] = useState<AnimeStatus>('plan_to_watch')
   const [episodesWatched, setEpisodesWatched] = useState('')
   const [totalEpisodes, setTotalEpisodes] = useState('')
@@ -1078,7 +1079,7 @@ function App() {
     setMovieSource(''); setMovieReview('')
     setGameSource(''); setOriginalWorkId(''); setGameReview('')
     setDirectors([]); setCast([]); setProductionCompanies([]); setDistributors([]); setMovieDescription(''); setFranchise(''); setWatchedWhere(''); setMovieBanner(''); setHasSpoilers(false); setTimesWatched('')
-    setStudios([]); setAnimeFormat(''); setAiringStatus(''); setWatchStatus('plan_to_watch'); setEpisodesWatched(''); setTotalEpisodes(''); setAnimeDescription('')
+    setStudios([]); setAnimeFormat(''); setAiringStatus(''); setAiringDay(''); setWatchStatus('plan_to_watch'); setEpisodesWatched(''); setTotalEpisodes(''); setAnimeDescription('')
     setSeason(''); setSeasonYear(''); setDemographic('')
     setAlternativeTitles([]); setAnimeSource(''); setEpisodeDuration(''); setAiredFrom(''); setAiredTo(''); setAgeRating('')
     setFavoriteEpisode(''); setFavoriteEpisodeNote(''); setDroppedAtEpisode(''); setDroppedReason('')
@@ -1277,6 +1278,7 @@ function App() {
     setStudios(item.studios ?? [])
     setAnimeFormat(item.animeFormat ?? '')
     setAiringStatus(item.airingStatus ?? '')
+    setAiringDay(item.airingDay ?? '')
     setWatchStatus(item.watchStatus ?? 'plan_to_watch')
     setEpisodesWatched(item.episodesWatched ?? '')
     setTotalEpisodes(item.totalEpisodes ?? '')
@@ -1841,6 +1843,7 @@ function App() {
         genres: genres.length > 0 ? genres : undefined,
         animeFormat: animeFormat || undefined,
         airingStatus: airingStatus || undefined,
+        airingDay: airingStatus === 'airing' && airingDay ? airingDay : undefined,
         watchStatus,
         episodesWatched: derivedWatched,
         totalEpisodes: derivedTotal,
@@ -2409,13 +2412,25 @@ function App() {
       const n = itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === bookBoardStatus).length
       return { icon: <MangaStatusIcon value={bookBoardStatus as MangaStatus} />, title: getBookStatus(bookBoardStatus).label, count: { n, unit: n === 1 ? 'book' : 'books' }, onBack: backToLibrary, actions: viewToggleBtns }
     }
+    if (specialView === 'simulcastBoard') {
+      const airing = itemsInCategory.filter((i) => i.airingStatus === 'airing' && i.airingDay)
+      return { icon: <CategoryIcon id={activeCategory} />, title: 'This season', count: { n: airing.length, unit: airing.length === 1 ? 'show' : 'shows' }, onBack: backToLibrary }
+    }
     // specialView === 'none' → the library view (with optional collection drill-in)
     const count: PageCount = showFolderListing
       ? { n: categoryCollections.length, unit: categoryCollections.length === 1 ? 'group' : 'groups' }
       : { n: visibleItems.length, unit: visibleItems.length === 1 ? 'item' : 'items' }
+    const isAnimeLike = activeCategory === 'anime' || activeCategory === 'donghua'
     const libActions = (
       <>
         {!showFolderListing && viewToggleBtns}
+        {isAnimeLike && subView === 'items' && !activeCollectionId && (
+          <button
+            className="secondary-btn"
+            onClick={() => { setSpecialView('simulcastBoard'); closePanel(); closeAllDetailViews() }}
+            title="Airing anime grouped by weekday"
+          >This season</button>
+        )}
         {subView === 'items' && <button className="add-btn" onClick={openAddPanel}>+ Add</button>}
       </>
     )
@@ -2809,6 +2824,65 @@ function App() {
               </div>
               </div>
             </>)
+          })()}
+
+          {specialView === 'simulcastBoard' && (() => {
+            // Only anime + donghua are simulcast-relevant. Items surface here
+            // when the user set airingStatus='airing' AND picked an airingDay
+            // in the editor. Everything else stays out — showing "unknown day"
+            // slots would just be noise.
+            const airing = itemsInCategory.filter((i) => i.airingStatus === 'airing' && i.airingDay)
+            const byDay = new Map<string, Item[]>()
+            for (const w of WEEKDAY_OPTIONS) byDay.set(w.value, [])
+            for (const item of airing) byDay.get(item.airingDay!)?.push(item)
+            for (const list of byDay.values()) list.sort((a, b) => a.title.localeCompare(b.title))
+            const totalAiring = itemsInCategory.filter((i) => i.airingStatus === 'airing').length
+            const missingDay = totalAiring - airing.length
+            return (
+              <div className="content-scroll">
+                {airing.length === 0 && (
+                  <p className="empty">
+                    No airing shows with a weekday set. In the editor, set <b>Airing status</b> to
+                    <em> Airing</em> and pick a weekday under <b>Airs on</b> for anything you're
+                    currently watching this season.
+                  </p>
+                )}
+                {missingDay > 0 && airing.length > 0 && (
+                  <p className="hint" style={{ margin: '0 0 12px' }}>
+                    {missingDay} airing show{missingDay === 1 ? ' has' : 's have'} no weekday set — open the
+                    editor and pick one under <b>Airs on</b> to slot it here.
+                  </p>
+                )}
+                {airing.length > 0 && (
+                  <div className="simulcast-grid">
+                    {WEEKDAY_OPTIONS.map((w) => {
+                      const list = byDay.get(w.value) ?? []
+                      return (
+                        <div key={w.value} className="simulcast-col">
+                          <div className="simulcast-col-header">
+                            <span className="simulcast-day">{w.short}</span>
+                            <span className="simulcast-day-count">{list.length}</span>
+                          </div>
+                          <div className="simulcast-col-body">
+                            {list.length === 0 && <span className="simulcast-empty">—</span>}
+                            {list.map((i) => (
+                              <ItemCard
+                                key={i.id}
+                                item={i}
+                                layout="grid"
+                                onOpen={openEditPanel}
+                                onDelete={handleDelete}
+                                animeFields={settings.animeFields}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
           })()}
 
           {specialView === 'stats' && (
@@ -5040,6 +5114,15 @@ function App() {
                         </select>
                       </div>
                     </div>
+                    {airingStatus === 'airing' && (
+                      <div className="field-group">
+                        <label>Airs on <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>Simulcast board slots the show into this weekday column</span></label>
+                        <select value={airingDay} onChange={(e) => setAiringDay(e.target.value as Weekday | '')}>
+                          <option value="">Unknown</option>
+                          {WEEKDAY_OPTIONS.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
+                        </select>
+                      </div>
+                    )}
                     <div className="field-row">
                       <div className="field-group">
                         <label>Season aired</label>

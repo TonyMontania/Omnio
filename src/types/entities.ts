@@ -18,6 +18,7 @@ export type MangaField = 'title' | 'status' | 'chapters'
 
 export type AnimeStatus = 'plan_to_watch' | 'watching' | 'completed' | 'paused' | 'dropped'
 export type AiringStatus = 'airing' | 'finished' | 'not_yet_aired' | 'cancelled'
+export type Weekday = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
 export type AnimeFormat = 'tv' | 'movie' | 'ova' | 'ona' | 'special' | 'music'
 export type AnimeSeason = 'winter' | 'spring' | 'summer' | 'fall'
 export type Demographic = 'shonen' | 'shojo' | 'seinen' | 'josei'
@@ -266,6 +267,7 @@ export interface Item {
   studios?: string[]
   animeFormat?: AnimeFormat
   airingStatus?: AiringStatus
+  airingDay?: Weekday        // used by the Simulcast board to slot the show into its weekday column
   watchStatus?: AnimeStatus
   episodesWatched?: string
   totalEpisodes?: string
