@@ -1423,3 +1423,47 @@
   color: var(--text-dim);
   text-transform: uppercase;
 }
+
+/* Discogs importer needs a two-field credential row (username + PAT) that
+   the other importers didn't. Uses the shared importer shell for the rest. */
+.discogs-creds {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0 6px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.discogs-creds label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.discogs-creds label > span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.discogs-creds label > span em {
+  font-style: normal;
+  color: var(--text-dim);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+.discogs-creds input {
+  padding: 7px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-body);
+}
+.discogs-creds input:focus { border-color: var(--accent); outline: none; }
+.discogs-creds .importer-file-btn { align-self: flex-start; }
+.discogs-creds .importer-file-btn:disabled { opacity: 0.55; cursor: default; }

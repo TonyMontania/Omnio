@@ -1557,6 +1557,50 @@ ipcMain.handle('openlibrary:work', async (_event, workKey: string) => {
   return proxyJson(`${OL_BASE}${workKey}.json`, { headers: olHeaders })
 })
 
+// Discogs — user collection reader. Public collections need no auth;
+// private ones require a Personal Access Token (Settings → Developers on
+// discogs.com). We proxy through main to keep the PAT out of the renderer
+// and to comply with Discogs' User-Agent requirement.
+ipcMain.handle('discogs:collection', async (_event, username: string, token?: string) => {
+  if (!username || !username.trim()) return { ok: false, error: 'Missing username' }
+  const headers: Record<string, string> = {
+    'User-Agent': `Omnio/${app.getVersion()} (+https://github.com/TonyMontania/Omnio)`,
+    Accept: 'application/json',
+  }
+  if (token && token.trim()) headers.Authorization = `Discogs token=${token.trim()}`
+  const releases: unknown[] = []
+  // Discogs paginates at 100 per_page max. Cap total fetches so a huge
+  // collection doesn't spin forever — 20 pages = 2000 releases, which
+  // is well above the typical user. Surfacing the truncation lets the
+  // renderer inform the user.
+  const MAX_PAGES = 20
+  let page = 1
+  let pages = 1
+  try {
+    while (page <= Math.min(MAX_PAGES, pages)) {
+      const url = `https://api.discogs.com/users/${encodeURIComponent(username.trim())}/collection/folders/0/releases?per_page=100&page=${page}`
+      const r = await fetch(url, { headers })
+      if (r.status === 401) return { ok: false, error: 'Unauthorized — this collection is private. Add a Personal Access Token from your Discogs account (Settings → Developers).' }
+      if (r.status === 404) return { ok: false, error: `No collection found for user "${username}".` }
+      if (r.status === 429) {
+        // Rate limit — Discogs replies with a Retry-After header; back off
+        // for that many seconds then retry the same page.
+        const retry = parseInt(r.headers.get('retry-after') ?? '5', 10)
+        await new Promise((res) => setTimeout(res, (Number.isFinite(retry) ? retry : 5) * 1000))
+        continue
+      }
+      if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+      const j = await r.json() as { releases?: unknown[]; pagination?: { pages?: number } }
+      if (Array.isArray(j.releases)) releases.push(...j.releases)
+      pages = j.pagination?.pages ?? 1
+      page++
+    }
+    return { ok: true, data: { releases, truncated: pages > MAX_PAGES, totalPages: pages } }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 // PCGamingWiki — no API key. Two endpoints: opensearch to match a game
 // title against wiki pages, then Cargo query to pull the structured
 // "Path" table (Save + Config locations per OS). Companion to save-file

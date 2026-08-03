@@ -93,6 +93,7 @@ const LetterboxdImporter = lazy(() => import('./LetterboxdImporter'))
 const HighlightsImporter = lazy(() => import('./HighlightsImporter'))
 const LastfmImporter    = lazy(() => import('./LastfmImporter'))
 const TraktImporter     = lazy(() => import('./TraktImporter'))
+const DiscogsImporter   = lazy(() => import('./DiscogsImporter'))
 const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 import { buildStaticSiteHtml } from './exportSite'
 import {
@@ -559,6 +560,7 @@ function App() {
   const [highlightsImportOpen, setHighlightsImportOpen] = useState(false)
   const [lastfmImportOpen, setLastfmImportOpen] = useState(false)
   const [traktImportOpen, setTraktImportOpen] = useState(false)
+  const [discogsImportOpen, setDiscogsImportOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -3535,6 +3537,7 @@ function App() {
                         <button type="button" className="secondary-btn" onClick={() => setHighlightsImportOpen(true)}>Import Kindle highlights</button>
                         <button type="button" className="secondary-btn" onClick={() => setLastfmImportOpen(true)}>Import Last.fm scrobbles</button>
                         <button type="button" className="secondary-btn" onClick={() => setTraktImportOpen(true)}>Import from Trakt.tv</button>
+                        <button type="button" className="secondary-btn" onClick={() => setDiscogsImportOpen(true)}>Import Discogs collection</button>
                       </div>
                       <p className="hint">Steam import reads a public profile via the community XML endpoint — no API key. Letterboxd accepts the CSVs from your account export (Settings → Data → Export on letterboxd.com). Kindle highlights import parses <code>My Clippings.txt</code> from your Kindle's <code>documents/</code> folder and attaches each highlight to a matching book (or creates one). Playtime and status pre-fill; open each item afterwards to fetch cover + metadata via IGDB or SteamGridDB / TMDb.</p>
                     </div>
@@ -6461,6 +6464,21 @@ function App() {
             setToast(`Imported ${newItems.length} movie${newItems.length === 1 ? '' : 's'} from Letterboxd`)
           }}
           onClose={() => setLetterboxdOpen(false)}
+        />
+      )}
+
+      {discogsImportOpen && (
+        <DiscogsImporter
+          existingItems={items}
+          onImport={({ updates, creates }) => {
+            setItems((all) => {
+              const next = all.map((it) => updates.has(it.id) ? { ...it, ...updates.get(it.id)! } : it)
+              return [...next, ...creates]
+            })
+            const total = updates.size + creates.length
+            setToast(`Applied Discogs data to ${total} release${total === 1 ? '' : 's'}`)
+          }}
+          onClose={() => setDiscogsImportOpen(false)}
         />
       )}
 
