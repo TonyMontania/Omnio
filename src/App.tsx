@@ -11,6 +11,7 @@ import type {
   Item, Collection, Unit, MusicArtist,
   Platform, Ownership, GameStatus, GameField, GameSource,
   MusicType, MusicField, MusicSource, Track, DlcEntry, BundleGame,
+  VinylCondition, ConcertEntry,
   MangaStatus, MangaField, MangaSource, MangaVolume, Chapter, PublicationStatus,
   AnimeStatus, AnimeField, AnimeSource, AnimeFormat, AnimeSeason, AiringStatus, Demographic, Episode, Weekday,
   SeriesStatus, SeriesField, SeriesFormat, Season,
@@ -26,6 +27,7 @@ import {
   OWNERSHIP_OPTIONS,
   GAME_STATUS_OPTIONS, GAME_SOURCE_OPTIONS, GAME_FIELD_OPTIONS, DEFAULT_GAME_FIELDS,
   MUSIC_TYPE_OPTIONS, MUSIC_SOURCE_OPTIONS, MUSIC_FIELD_OPTIONS, DEFAULT_MUSIC_FIELDS,
+  VINYL_CONDITION_OPTIONS,
   MANGA_STATUS_OPTIONS, MANGA_SOURCE_OPTIONS, MANGA_FIELD_OPTIONS, DEFAULT_MANGA_FIELDS,
   PUBLICATION_STATUS_OPTIONS,
   ANIME_STATUS_OPTIONS, ANIME_FORMAT_OPTIONS, ANIME_SEASON_OPTIONS, ANIME_SOURCE_OPTIONS,
@@ -114,6 +116,7 @@ import GameSubItems from './components/editors/GameSubItems'
 import BundleGamesEditor from './components/editors/BundleGamesEditor'
 import SaveFilesEditor from './components/editors/SaveFilesEditor'
 import PcgwSavePaths from './components/editors/PcgwSavePaths'
+import ConcertLogEditor from './components/editors/ConcertLogEditor'
 import VolumeCoverEditor from './components/editors/VolumeCoverEditor'
 import TrackListEditor from './components/editors/TrackListEditor'
 import RelatedListEditor from './components/editors/RelatedListEditor'
@@ -679,6 +682,8 @@ function App() {
   const [seasons, setSeasons] = useState<Season[]>([])
   const [seriesReview, setSeriesReview] = useState('')
   const [musicSource, setMusicSource] = useState<MusicSource | ''>('')
+  const [vinylCondition, setVinylCondition] = useState<VinylCondition | ''>('')
+  const [concerts, setConcerts] = useState<ConcertEntry[]>([])
   const [producers, setProducers] = useState<string[]>([])
   const [musicReview, setMusicReview] = useState('')
   const [mangaSource, setMangaSource] = useState<MangaSource | ''>('')
@@ -1078,7 +1083,7 @@ function App() {
     setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([]); setIsBundle(false); setBundleContents([]); setSaveFiles([]); setPcgwPage(undefined)
     setReleaseYear(''); setDuration(''); setConsumed(false); setArtist(''); setMusicType('')
     setGenres([]); setLabel(''); setPartOfAlbum(''); setHasTracks(false); setTracks([]); setSingleCovers([]); setEditions([])
-    setMusicSource(''); setProducers([]); setMusicReview('')
+    setMusicSource(''); setProducers([]); setMusicReview(''); setVinylCondition(''); setConcerts([])
     setUnitCount(''); setStartYear(''); setEndYear(''); setUnits([])
     setMangaAuthors([]); setMangaArtists([]); setVolumeCovers([]); setMangaDescription(''); setPubStatus(''); setReadingStatus('plan_to_read')
     setMangaSource(''); setMagazine(''); setMangaReview(''); setHasChapters(false); setChapters([])
@@ -1243,6 +1248,8 @@ function App() {
     setMusicSource(item.musicSource ?? '')
     setProducers(item.producers ?? [])
     setMusicReview(item.musicReview ?? '')
+    setVinylCondition(item.vinylCondition ?? '')
+    setConcerts(item.concerts ?? [])
     setLabel(item.label ?? '')
     setHasTracks(item.hasTracks ?? false)
     setTracks(item.tracks ?? [])
@@ -1969,6 +1976,8 @@ function App() {
         producers: producers.length > 0 ? producers : undefined,
         musicReview: musicReview.trim() || undefined,
         hasSpoilers: musicReview.trim() ? hasSpoilers : undefined,
+        vinylCondition: vinylCondition || undefined,
+        concerts: concerts.length > 0 ? concerts : undefined,
         rewatches: rewatches.length > 0 ? rewatches : undefined,
         relatedItems: relatedItems.length > 0 ? relatedItems : undefined,
         recommendedItems: recommendedItems.length > 0 ? recommendedItems : undefined,
@@ -5703,6 +5712,13 @@ function App() {
                         </select>
                       </div>
                     </div>
+                    <div className="field-group">
+                      <label>Vinyl condition <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>Goldmine grading scale — leave blank if you don't own a physical copy</span></label>
+                      <select value={vinylCondition} onChange={(e) => setVinylCondition(e.target.value as VinylCondition | '')}>
+                        <option value="">— not owned</option>
+                        {VINYL_CONDITION_OPTIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                      </select>
+                    </div>
                     <TagEditor
                       label="Producers"
                       placeholder="Add producer"
@@ -5760,6 +5776,7 @@ function App() {
                             <TrackListEditor
                               tracks={tracks}
                               mainArtist={artist}
+                              albumTitle={title}
                               onAdd={(t) => setTracks((prev) => [...prev, { ...t, id: crypto.randomUUID() }])}
                               onRemove={(id) => setTracks((prev) => prev.filter((t) => t.id !== id))}
                               onToggleFavorite={(id) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, favorite: !t.favorite } : t)))}
@@ -5767,6 +5784,7 @@ function App() {
                               onArtistChange={(id, a) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, artist: a || undefined } : t)))}
                               onFillAllArtist={() => setTracks((prev) => prev.map((t) => ({ ...t, artist })))}
                               onToggleListened={(id) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, listened: !t.listened } : t)))}
+                              onLyricsChange={(id, lyrics) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, lyrics } : t)))}
                             />
                           )}
                         </div>
@@ -5848,6 +5866,7 @@ function App() {
                         onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
                       />
                     </div>
+                    <ConcertLogEditor entries={concerts} onChange={setConcerts} />
                     <div className="form-section-header" data-belongs-to="related">
                       <span className="form-section-title">Related &amp; recommendations</span>
                     </div>

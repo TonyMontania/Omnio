@@ -6,6 +6,7 @@ import type {
   MusicType, MusicSource, MusicField,
   MangaStatus, PublicationStatus, MangaSource, MangaField,
   AnimeStatus, AiringStatus, AnimeFormat, AnimeSeason, Demographic, AnimeSource, AnimeField, Weekday,
+  VinylCondition,
   SeriesStatus, SeriesFormat, SeriesField,
   MovieSource, MovieField, WatchLocation,
   BookStatus, BookFormat, BookSource, BookField,
@@ -123,6 +124,20 @@ export const MUSIC_SOURCE_OPTIONS: { value: MusicSource; label: string }[] = [
   { value: 'deluxe', label: 'Deluxe edition' },
   { value: 'reissue', label: 'Reissue' },
   { value: 'other', label: 'Other' },
+]
+
+// Goldmine standard grading — the vinyl-collector convention that
+// Discogs, Popsike and virtually every marketplace use. Labels stay
+// human-readable; storage form uses snake_case for stable comparisons.
+export const VINYL_CONDITION_OPTIONS: { value: VinylCondition; label: string }[] = [
+  { value: 'mint',            label: 'Mint (M)' },
+  { value: 'near_mint',       label: 'Near Mint (NM)' },
+  { value: 'very_good_plus',  label: 'Very Good Plus (VG+)' },
+  { value: 'very_good',       label: 'Very Good (VG)' },
+  { value: 'good_plus',       label: 'Good Plus (G+)' },
+  { value: 'good',            label: 'Good (G)' },
+  { value: 'fair',            label: 'Fair (F)' },
+  { value: 'poor',            label: 'Poor (P)' },
 ]
 
 export const MUSIC_FIELD_OPTIONS: { value: MusicField; label: string }[] = [

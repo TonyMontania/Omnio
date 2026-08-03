@@ -10,6 +10,36 @@ export type GameField = 'title' | 'status' | 'playTime' | 'rating' | 'tags'
 export type MusicType = 'single' | 'ep' | 'album' | 'ost' | 'live' | 'recopilation'
 export type MusicSource = 'original' | 'compilation' | 'soundtrack' | 'remaster' | 'deluxe' | 'reissue' | 'other'
 export type MusicField = 'title' | 'artist' | 'releaseYear' | 'type' | 'rating' | 'tags'
+// Standard Goldmine grading scale for physical media condition.
+export type VinylCondition = 'mint' | 'near_mint' | 'very_good_plus' | 'very_good' | 'good_plus' | 'good' | 'fair' | 'poor'
+
+// User-defined tracklist spanning multiple albums / artists. Lives at
+// the top-level (data/playlists.json) rather than on any single Music
+// item — a playlist references tracks by (itemId, trackId).
+export interface PlaylistTrackRef {
+  itemId: string        // Music Item that owns the track
+  trackId: string       // Track.id inside that item
+}
+export interface Playlist {
+  id: string
+  name: string
+  description?: string
+  cover?: string        // relative asset path or URL
+  tracks: PlaylistTrackRef[]
+  createdAt: number
+}
+
+// One entry per live show the user has attended. Similar shape to a
+// RewatchEntry but with venue/city metadata that only makes sense for
+// concerts.
+export interface ConcertEntry {
+  id: string
+  date: string          // ISO date
+  venue: string
+  city?: string
+  setlist?: string      // free-form multiline
+  notes?: string
+}
 
 export type MangaStatus = 'plan_to_read' | 'reading' | 'completed' | 'paused' | 'dropped'
 export type PublicationStatus = 'publishing' | 'finished' | 'hiatus' | 'cancelled' | 'not_yet_released'
@@ -308,6 +338,8 @@ export interface Item {
   musicReview?: string
   singleCovers?: SingleCover[]
   editions?: AlbumEdition[]
+  vinylCondition?: VinylCondition
+  concerts?: ConcertEntry[]
   mangaSource?: MangaSource
   magazine?: string
   mangaReview?: string

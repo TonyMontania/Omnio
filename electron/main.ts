@@ -1601,6 +1601,33 @@ ipcMain.handle('discogs:collection', async (_event, username: string, token?: st
   }
 })
 
+// lrclib.net lyrics API — free, no key. Given (track, artist, album)
+// returns { syncedLyrics: "[00:00.00]…", plainLyrics: "…" }. Falls back
+// to plain lyrics when synced aren't available. lrcget uses the same
+// backend so results match what most Linux lyric-fetcher tools show.
+ipcMain.handle('lrclib:track', async (_event, trackName: string, artistName: string, albumName?: string) => {
+  if (!trackName.trim() || !artistName.trim()) return { ok: false, error: 'Missing track or artist name' }
+  const params = new URLSearchParams({
+    track_name: trackName.trim(),
+    artist_name: artistName.trim(),
+  })
+  if (albumName?.trim()) params.set('album_name', albumName.trim())
+  try {
+    const r = await fetch(`https://lrclib.net/api/get?${params}`, {
+      headers: { Accept: 'application/json', 'User-Agent': `Omnio/${app.getVersion()}` },
+    })
+    if (r.status === 404) return { ok: false, error: 'No lyrics found on lrclib for this track.' }
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
+    const j = await r.json() as { syncedLyrics?: string; plainLyrics?: string; instrumental?: boolean }
+    if (j.instrumental) return { ok: true, data: { lyrics: '[Instrumental]', synced: false } }
+    const lyrics = j.syncedLyrics || j.plainLyrics
+    if (!lyrics) return { ok: false, error: 'lrclib returned an empty result.' }
+    return { ok: true, data: { lyrics, synced: !!j.syncedLyrics } }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 // AniDB HTTP API — one request per AID, returns detailed anime XML. The
 // API is rate-limited to one request every two seconds per client, and
 // clients must be registered at anidb.net/software/add (the site issues a

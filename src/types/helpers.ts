@@ -7,7 +7,7 @@ import type {
   MangaStatus, PublicationStatus,
   AnimeStatus, AiringStatus, AnimeFormat, AnimeSeason, Demographic, AnimeSource,
   SeriesStatus, SeriesFormat,
-  MusicSource, MangaSource, MovieSource, GameSource, WatchLocation,
+  MusicSource, MangaSource, MovieSource, GameSource, WatchLocation, VinylCondition,
   BookStatus, BookFormat, BookSource,
   AgeRating, RelationKind, BandStatus,
   Chapter, Episode, Season, Track, Item,
@@ -17,7 +17,7 @@ import {
   OWNERSHIP_OPTIONS, GAME_STATUS_OPTIONS,
   ANIME_STATUS_OPTIONS, AIRING_STATUS_OPTIONS, ANIME_FORMAT_OPTIONS, ANIME_SEASON_OPTIONS, DEMOGRAPHIC_OPTIONS, ANIME_SOURCE_OPTIONS,
   SERIES_STATUS_OPTIONS, SERIES_FORMAT_OPTIONS,
-  MUSIC_SOURCE_OPTIONS, MUSIC_TYPE_OPTIONS,
+  MUSIC_SOURCE_OPTIONS, MUSIC_TYPE_OPTIONS, VINYL_CONDITION_OPTIONS,
   MANGA_STATUS_OPTIONS, PUBLICATION_STATUS_OPTIONS, MANGA_SOURCE_OPTIONS,
   MOVIE_SOURCE_OPTIONS,
   GAME_SOURCE_OPTIONS,
@@ -132,6 +132,10 @@ export function getAgeRatingLabel(v: AgeRating): string {
 
 export function getSeriesFormatLabel(v: SeriesFormat): string {
   return SERIES_FORMAT_OPTIONS.find((f) => f.value === v)?.label ?? v
+}
+
+export function getVinylConditionLabel(v: VinylCondition): string {
+  return VINYL_CONDITION_OPTIONS.find((s) => s.value === v)?.label ?? v
 }
 
 export function getMusicSourceLabel(v: MusicSource): string {
