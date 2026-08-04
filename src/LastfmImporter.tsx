@@ -24,6 +24,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item } from './types'
+import { parseCsv, colIndex } from './utils/csv'
 
 interface Props {
   existingItems: Item[]
@@ -44,43 +45,6 @@ type AggAlbum = {
   album: string
   plays: number
   lastPlayed?: string // ISO date
-}
-
-// Same minimal CSV parser as LetterboxdImporter. Kept local to avoid a
-// premature utils/csv.ts extraction — three sites is when I'll move it.
-function parseCsv(input: string): string[][] {
-  const rows: string[][] = []
-  let cur: string[] = []
-  let field = ''
-  let inQuotes = false
-  const stripped = input.charCodeAt(0) === 0xFEFF ? input.slice(1) : input
-  for (let i = 0; i < stripped.length; i++) {
-    const ch = stripped[i]
-    if (inQuotes) {
-      if (ch === '"') {
-        if (stripped[i + 1] === '"') { field += '"'; i++ }
-        else { inQuotes = false }
-      } else { field += ch }
-    } else {
-      if (ch === '"') inQuotes = true
-      else if (ch === ',') { cur.push(field); field = '' }
-      else if (ch === '\n') { cur.push(field); rows.push(cur); cur = []; field = '' }
-      else if (ch === '\r') { /* skip */ }
-      else field += ch
-    }
-  }
-  if (field.length > 0 || cur.length > 0) { cur.push(field); rows.push(cur) }
-  return rows.filter((r) => r.some((f) => f.length > 0))
-}
-
-// Column-index by name (case-insensitive). Returns -1 if the column isn't
-// present so callers can pick a fallback strategy.
-function colIndex(headers: string[], ...names: string[]): number {
-  for (const n of names) {
-    const idx = headers.findIndex((h) => h.trim().toLowerCase() === n.toLowerCase())
-    if (idx >= 0) return idx
-  }
-  return -1
 }
 
 // Parses a header row and returns which column each field lives in — or

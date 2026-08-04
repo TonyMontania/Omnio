@@ -17,6 +17,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item, MovieSource } from './types'
+import { parseCsv, colIndex } from './utils/csv'
 
 interface Props {
   existingItems: Item[]
@@ -40,40 +41,6 @@ function parseRating(raw: string): number | undefined {
   if (!raw) return undefined
   const n = parseFloat(raw)
   return Number.isFinite(n) && n > 0 ? n : undefined
-}
-
-// Minimal CSV parser — same shape as GenericImporter's. Handles Letterboxd's
-// double-quoting for titles with commas ("It's a Wonderful Life, Charlie Brown").
-function parseCsv(input: string): string[][] {
-  const rows: string[][] = []
-  let cur: string[] = []
-  let field = ''
-  let inQuotes = false
-  const stripped = input.charCodeAt(0) === 0xFEFF ? input.slice(1) : input
-  for (let i = 0; i < stripped.length; i++) {
-    const ch = stripped[i]
-    if (inQuotes) {
-      if (ch === '"') {
-        if (stripped[i + 1] === '"') { field += '"'; i++ }
-        else { inQuotes = false }
-      } else { field += ch }
-    } else {
-      if (ch === '"') inQuotes = true
-      else if (ch === ',') { cur.push(field); field = '' }
-      else if (ch === '\n') { cur.push(field); rows.push(cur); cur = []; field = '' }
-      else if (ch === '\r') { /* skip */ }
-      else field += ch
-    }
-  }
-  if (field.length > 0 || cur.length > 0) { cur.push(field); rows.push(cur) }
-  return rows.filter((r) => r.some((f) => f.length > 0))
-}
-
-// Column-index lookup by lower-cased header — accommodates future Letterboxd
-// column reordering without breaking parsing.
-function colIndex(headers: string[], name: string): number {
-  const target = name.toLowerCase()
-  return headers.findIndex((h) => h.trim().toLowerCase() === target)
 }
 
 function keyOf(name: string, year?: string): string {
@@ -207,9 +174,17 @@ export default function LetterboxdImporter({ existingItems, onImport, onClose }:
     setSelected(next)
   }
 
+  // Precompute matches once so per-row lookup + dupe count don't rescan
+  // existingItems on every render. Matches the pattern used by the other
+  // importers (Discogs / Lastfm / Highlights / Trakt).
+  const matches = useMemo(() => {
+    const map = new Map<string, Item | undefined>()
+    for (const r of rows) map.set(r.key, findExisting(existingItems, r.name, r.year))
+    return map
+  }, [rows, existingItems])
   const dupeCount = useMemo(
-    () => rows.filter((r) => findExisting(existingItems, r.name, r.year)).length,
-    [rows, existingItems],
+    () => rows.reduce((n, r) => (matches.get(r.key) ? n + 1 : n), 0),
+    [rows, matches],
   )
   const newCount = rows.length - dupeCount
 
@@ -299,7 +274,7 @@ export default function LetterboxdImporter({ existingItems, onImport, onClose }:
                   </thead>
                   <tbody>
                     {rows.map((r) => {
-                      const existing = findExisting(existingItems, r.name, r.year)
+                      const existing = matches.get(r.key)
                       return (
                         <tr key={r.key} className={existing ? 'dupe' : ''}>
                           <td>

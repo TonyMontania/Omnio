@@ -32,7 +32,8 @@ export default function ScreenshotsGallery({ gameTitle, categoryId, screenshots,
         if (!/^image\//.test(f.type)) continue
         const buf = await f.arrayBuffer()
         const res = await window.ipcRenderer.invoke(
-          'screenshot:save',
+          'asset-blob:save',
+          'screenshots',
           categoryId,
           gameTitle.trim(),
           f.name,
@@ -48,7 +49,7 @@ export default function ScreenshotsGallery({ gameTitle, categoryId, screenshots,
   }
 
   const remove = async (entry: Screenshot) => {
-    const ok = await window.ipcRenderer.invoke('screenshot:delete', entry.path) as boolean
+    const ok = await window.ipcRenderer.invoke('asset-blob:delete', entry.path) as boolean
     if (ok) onChange(screenshots.filter((s) => s.id !== entry.id))
   }
 

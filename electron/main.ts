@@ -630,23 +630,24 @@ ipcMain.handle('image:delete', async (_event, rel: string) => {
 })
 
 // ---------------------------------------------------------------------------
-// Save file backup — Games only. Files land at
-// assets/games/saves/<title>/<filename>. Any extension is accepted; save
-// formats vary too much per engine to whitelist. Multiple uploads accumulate
-// over time. Filename collisions get an (n) suffix so the history is preserved.
+// Per-item blob storage (save files, screenshots, any future kind).
+// Files land at assets/<category>/<kind>/<title>/<filename>. Any extension
+// accepted; the renderer can filter by MIME (screenshots restrict to
+// image/*, save files allow anything). Filename collisions get an (n)
+// suffix so the history is preserved on repeated uploads.
 // ---------------------------------------------------------------------------
 
 // Filesystem-safe folder / filename. Kept a bit more permissive than
-// buildAssetFilename (spaces + parentheses allowed) so save filenames stay
+// buildAssetFilename (spaces + parentheses allowed) so filenames stay
 // meaningful when browsing assets/ in Explorer.
-function safeSaveFragment(s: string): string {
+function safeAssetFragment(s: string): string {
   return s.replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim()
 }
 
 // Prevent overwriting on repeated uploads of the same filename — appends
 // " (2)", " (3)" etc before the extension. Preserves the original name when
 // there is no conflict.
-async function nextAvailableSaveName(dir: string, original: string): Promise<string> {
+async function nextAvailableAssetName(dir: string, original: string): Promise<string> {
   if (!await fileExists(path.join(dir, original))) return original
   const dot = original.lastIndexOf('.')
   const stem = dot > 0 ? original.slice(0, dot) : original
@@ -658,14 +659,20 @@ async function nextAvailableSaveName(dir: string, original: string): Promise<str
   return `${stem}-${crypto.randomUUID().slice(0, 8)}${ext}`
 }
 
-ipcMain.handle('save-file:save', async (_event, categoryId: string, title: string, filename: string, data: ArrayBuffer | Uint8Array) => {
+// Whitelist of per-item blob kinds. Adding a new kind (mods? videos?
+// subtitles?) only needs an entry here plus the corresponding field on
+// the Item type and the orphan-sweep ASSET_FIELDS registry.
+const ASSET_BLOB_KINDS = new Set(['saves', 'screenshots'])
+
+ipcMain.handle('asset-blob:save', async (_event, kind: string, categoryId: string, title: string, filename: string, data: ArrayBuffer | Uint8Array) => {
+  if (!ASSET_BLOB_KINDS.has(kind)) return { ok: false, error: `Unknown asset kind "${kind}"` }
   try {
     const safeCat = assetFolderForCategory(categoryId).replace(/[^a-z0-9_-]/gi, '')
-    const safeTitle = safeSaveFragment(title || 'untitled')
-    const safeFilename = safeSaveFragment(filename || 'save.bin')
-    const dir = path.join(ASSETS_ROOT, safeCat, 'saves', safeTitle)
+    const safeTitle = safeAssetFragment(title || 'untitled')
+    const safeFilename = safeAssetFragment(filename || `${kind}.bin`)
+    const dir = path.join(ASSETS_ROOT, safeCat, kind, safeTitle)
     await fs.mkdir(dir, { recursive: true })
-    const resolvedName = await nextAvailableSaveName(dir, safeFilename)
+    const resolvedName = await nextAvailableAssetName(dir, safeFilename)
     const buf = Buffer.from(data as ArrayBuffer)
     const abs = path.join(dir, resolvedName)
     await fs.writeFile(abs, buf)
@@ -675,7 +682,7 @@ ipcMain.handle('save-file:save', async (_event, categoryId: string, title: strin
       entry: {
         id: crypto.randomUUID(),
         filename: resolvedName,
-        path: `${safeCat}/saves/${safeTitle}/${resolvedName}`,
+        path: `${safeCat}/${kind}/${safeTitle}/${resolvedName}`,
         size: stat.size,
         addedAt: new Date().toISOString(),
       },
@@ -685,55 +692,7 @@ ipcMain.handle('save-file:save', async (_event, categoryId: string, title: strin
   }
 })
 
-ipcMain.handle('save-file:reveal', async (_event, rel: string) => {
-  const abs = safeRelative(rel)
-  if (!abs) return false
-  const { shell } = await import('electron')
-  shell.showItemInFolder(abs)
-  return true
-})
-
-// Screenshots gallery for Games. Same on-disk pattern as save files —
-// assets/games/screenshots/<title>/<filename>. Accepts common image
-// extensions; validated on the renderer side.
-ipcMain.handle('screenshot:save', async (_event, categoryId: string, title: string, filename: string, data: ArrayBuffer | Uint8Array) => {
-  try {
-    const safeCat = assetFolderForCategory(categoryId).replace(/[^a-z0-9_-]/gi, '')
-    const safeTitle = safeSaveFragment(title || 'untitled')
-    const safeFilename = safeSaveFragment(filename || 'screenshot.png')
-    const dir = path.join(ASSETS_ROOT, safeCat, 'screenshots', safeTitle)
-    await fs.mkdir(dir, { recursive: true })
-    const resolvedName = await nextAvailableSaveName(dir, safeFilename)
-    const buf = Buffer.from(data as ArrayBuffer)
-    const abs = path.join(dir, resolvedName)
-    await fs.writeFile(abs, buf)
-    return {
-      ok: true,
-      entry: {
-        id: crypto.randomUUID(),
-        filename: resolvedName,
-        path: `${safeCat}/screenshots/${safeTitle}/${resolvedName}`,
-        addedAt: new Date().toISOString(),
-      },
-    }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
-})
-
-ipcMain.handle('screenshot:delete', async (_event, rel: string) => {
-  const abs = safeRelative(rel)
-  if (!abs) return false
-  try {
-    await fs.unlink(abs)
-    try { await fs.rmdir(path.dirname(abs)) } catch { /* not empty */ }
-    return true
-  } catch {
-    return false
-  }
-})
-
-ipcMain.handle('save-file:delete', async (_event, rel: string) => {
+ipcMain.handle('asset-blob:delete', async (_event, rel: string) => {
   const abs = safeRelative(rel)
   if (!abs) return false
   try {
@@ -744,6 +703,14 @@ ipcMain.handle('save-file:delete', async (_event, rel: string) => {
   } catch {
     return false
   }
+})
+
+ipcMain.handle('asset-blob:reveal', async (_event, rel: string) => {
+  const abs = safeRelative(rel)
+  if (!abs) return false
+  const { shell } = await import('electron')
+  shell.showItemInFolder(abs)
+  return true
 })
 
 ipcMain.handle('storage:root', async () => STORAGE_ROOT)
@@ -778,6 +745,21 @@ ipcMain.handle('storage:copy-data-to', async (_event, targetDir: string) => {
 // Frees disk from old one-shot migration / restore safety nets that pile up
 // as the user experiments with restores. Never touches the live data/ or the
 // numbered snapshots under data/backups/.
+// Every Item field that can hold an on-disk asset path. Adding a new
+// asset-bearing field means adding it here — forgetting is a data-loss
+// bug (orphan sweep would delete the user's file). Scalar = one path per
+// field; array = one path per element under `sub`.
+const SCALAR_ASSET_FIELDS = ['cover', 'bannerImage', 'bannerImage2', 'logoImage', 'photo'] as const
+const ARRAY_ASSET_FIELDS: [string, string][] = [
+  ['volumeCovers', 'cover'],
+  ['singleCovers', 'cover'],
+  ['editions', 'cover'],
+  ['bundleContents', 'cover'],
+  ['saveFiles', 'path'],
+  ['screenshots', 'path'],
+  ['achievements', 'icon'],
+]
+
 // Walk every file under assets/ and remove ones not referenced by any JSON.
 // Handles the leaks that pre-date the "unlink transient assets on cancel"
 // fix — users who had accumulated fetched-then-discarded covers before it
@@ -799,16 +781,14 @@ ipcMain.handle('storage:clean-orphan-assets', async () => {
       try { parsed = JSON.parse(raw) } catch { continue }
       if (!Array.isArray(parsed)) continue
       for (const it of parsed as Record<string, unknown>[]) {
-        push(it.cover); push(it.bannerImage); push(it.bannerImage2); push(it.logoImage); push(it.photo)
-        for (const v of (it.volumeCovers as { cover?: string }[] | undefined) ?? []) push(v.cover)
-        for (const s of (it.singleCovers as { cover?: string }[] | undefined) ?? []) push(s.cover)
-        for (const e of (it.editions as { cover?: string }[] | undefined) ?? []) push(e.cover)
-        for (const b of (it.bundleContents as { cover?: string }[] | undefined) ?? []) push(b.cover)
-        // Save files + screenshots live under assets/games/ and must not be
-        // pruned by the orphan sweep.
-        for (const sf of (it.saveFiles as { path?: string }[] | undefined) ?? []) push(sf.path)
-        for (const sc of (it.screenshots as { path?: string }[] | undefined) ?? []) push(sc.path)
-        for (const a of (it.achievements as { icon?: string }[] | undefined) ?? []) push(a.icon)
+        // Flat asset fields — one referenced path per Item field.
+        for (const key of SCALAR_ASSET_FIELDS) push(it[key])
+        // Array asset fields — each element carries one path under a sub-key.
+        for (const [key, sub] of ARRAY_ASSET_FIELDS) {
+          const arr = it[key] as Record<string, unknown>[] | undefined
+          if (!Array.isArray(arr)) continue
+          for (const entry of arr) push(entry[sub])
+        }
       }
     }
     return refs
@@ -1119,7 +1099,7 @@ import { dialog } from 'electron'
 // Omnio's schema — whatever the renderer sends is what lands on disk.
 ipcMain.handle('item:export-json', async (_event, item: Record<string, unknown>, suggestedName: string) => {
   try {
-    const safe = (suggestedName || 'item').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'item'
+    const safe = sanitizeAssetName(suggestedName || 'item') || 'item'
     const { dialog } = await import('electron')
     const r = await dialog.showSaveDialog({
       title: 'Export item as JSON',
@@ -1732,16 +1712,14 @@ const PCGW_BASE = 'https://www.pcgamingwiki.com/w/api.php'
 ipcMain.handle('pcgw:search', async (_event, term: string) => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
   const url = `${PCGW_BASE}?action=opensearch&format=json&search=${encodeURIComponent(term.trim())}&limit=8&namespace=0`
-  try {
-    const r = await fetch(url)
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` }
-    const j = await r.json() as [string, string[], string[], string[]]
-    const titles = j[1] ?? []
-    const urls = j[3] ?? []
-    return { ok: true, data: titles.map((title, i) => ({ title, url: urls[i] ?? '' })) }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
+  return proxyJson<{ title: string; url: string }[]>(url, {
+    pick: (j) => {
+      const arr = j as [string, string[], string[], string[]]
+      const titles = arr[1] ?? []
+      const urls = arr[3] ?? []
+      return titles.map((title, i) => ({ title, url: urls[i] ?? '' }))
+    },
+  })
 })
 
 // PCGW's Game data templates (`{{Game data/saves|OS|path}}` and

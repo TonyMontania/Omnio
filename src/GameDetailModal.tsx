@@ -5,6 +5,7 @@ import type { Item, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import ImageLightbox from './components/ImageLightbox'
 import { exportItemAsJson } from './utils/files'
+import { formatBytes, formatDate } from './utils/format'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
 import DetailFranchiseTimeline from './components/detail/DetailFranchiseTimeline'
@@ -259,15 +260,8 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
               <label>Save files</label>
               <ul className="save-files-list detail">
                 {item.saveFiles.map((s) => {
-                  const size = s.size < 1024 * 1024
-                    ? `${(s.size / 1024).toFixed(1)} KB`
-                    : s.size < 1024 * 1024 * 1024
-                      ? `${(s.size / (1024 * 1024)).toFixed(1)} MB`
-                      : `${(s.size / (1024 * 1024 * 1024)).toFixed(2)} GB`
-                  const when = (() => {
-                    const d = new Date(s.addedAt)
-                    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
-                  })()
+                  const size = formatBytes(s.size)
+                  const when = formatDate(s.addedAt)
                   return (
                     <li key={s.id} className="save-files-row">
                       <div className="save-files-meta">
@@ -280,7 +274,7 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
                       <div className="save-files-actions">
                         <button
                           type="button"
-                          onClick={() => window.ipcRenderer.invoke('save-file:reveal', s.path)}
+                          onClick={() => window.ipcRenderer.invoke('asset-blob:reveal', s.path)}
                           title="Open folder in file manager"
                         >Open folder</button>
                       </div>

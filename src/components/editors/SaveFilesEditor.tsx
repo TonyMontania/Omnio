@@ -5,25 +5,13 @@
 
 import { useRef, useState } from 'react'
 import type { SaveFile } from '../../types'
+import { formatBytes, formatDateTime } from '../../utils/format'
 
 type Props = {
   gameTitle: string
   categoryId: string
   saveFiles: SaveFile[]
   onChange: (next: SaveFile[]) => void
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`
-  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 export default function SaveFilesEditor({ gameTitle, categoryId, saveFiles, onChange }: Props) {
@@ -44,7 +32,8 @@ export default function SaveFilesEditor({ gameTitle, categoryId, saveFiles, onCh
       for (const file of Array.from(files)) {
         const buf = await file.arrayBuffer()
         const res = await window.ipcRenderer.invoke(
-          'save-file:save',
+          'asset-blob:save',
+          'saves',
           categoryId,
           gameTitle.trim(),
           file.name,
@@ -66,12 +55,12 @@ export default function SaveFilesEditor({ gameTitle, categoryId, saveFiles, onCh
   }
 
   const handleDelete = async (entry: SaveFile) => {
-    const ok = await window.ipcRenderer.invoke('save-file:delete', entry.path) as boolean
+    const ok = await window.ipcRenderer.invoke('asset-blob:delete', entry.path) as boolean
     if (ok) onChange(saveFiles.filter((s) => s.id !== entry.id))
   }
 
   const handleOpenFolder = async (entry: SaveFile) => {
-    await window.ipcRenderer.invoke('save-file:reveal', entry.path)
+    await window.ipcRenderer.invoke('asset-blob:reveal', entry.path)
   }
 
   const handleNoteChange = (id: string, note: string) => {
@@ -113,7 +102,7 @@ export default function SaveFilesEditor({ gameTitle, categoryId, saveFiles, onCh
               <div className="save-files-meta">
                 <span className="save-files-name" title={entry.filename}>{entry.filename}</span>
                 <span className="save-files-sub">
-                  {formatBytes(entry.size)} · {formatDate(entry.addedAt)}
+                  {formatBytes(entry.size)} · {formatDateTime(entry.addedAt)}
                 </span>
               </div>
               <input

@@ -157,10 +157,12 @@ export default function DataHealthAuditModal({ items, onOpenItem, onClose }: Pro
     })
   }, [rows, categoryFilter, severityFilter])
 
-  const categoriesInResults = useMemo(() => {
-    const set = new Set<string>()
-    for (const r of rows) set.add(r.item.categoryId)
-    return Array.from(set)
+  // Categories with hits + their per-category count in one pass — avoids the
+  // O(N × cats) rescans the dropdown would otherwise do inside its .map.
+  const { categoriesInResults, countByCat } = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const r of rows) counts.set(r.item.categoryId, (counts.get(r.item.categoryId) ?? 0) + 1)
+    return { categoriesInResults: Array.from(counts.keys()), countByCat: counts }
   }, [rows])
 
   return (
@@ -185,7 +187,7 @@ export default function DataHealthAuditModal({ items, onOpenItem, onClose }: Pro
                   <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
                     <option value="__all__">All ({rows.length})</option>
                     {categoriesInResults.map((c) => {
-                      const count = rows.filter((r) => r.item.categoryId === c).length
+                      const count = countByCat.get(c) ?? 0
                       return <option key={c} value={c}>{categoryLabelOf(c)} ({count})</option>
                     })}
                   </select>

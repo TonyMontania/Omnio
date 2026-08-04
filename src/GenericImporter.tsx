@@ -17,6 +17,7 @@ import { useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
 import type { Item } from './types'
 import { CATEGORIES } from './categories'
+import { parseCsv } from './utils/csv'
 import {
   GAME_STATUS_OPTIONS, MANGA_STATUS_OPTIONS,
   ANIME_STATUS_OPTIONS, SERIES_STATUS_OPTIONS,
@@ -83,32 +84,8 @@ function autoMap(header: string): FieldTarget {
   return 'ignore'
 }
 
-// Minimal CSV parser: handles quoted fields with embedded commas / quotes /
-// newlines. Notion CSV uses a UTF-8 BOM, comma delimiter and double-quoting.
-function parseCsv(input: string, delimiter = ','): string[][] {
-  const rows: string[][] = []
-  let cur: string[] = []
-  let field = ''
-  let inQuotes = false
-  const stripped = input.charCodeAt(0) === 0xFEFF ? input.slice(1) : input
-  for (let i = 0; i < stripped.length; i++) {
-    const ch = stripped[i]
-    if (inQuotes) {
-      if (ch === '"') {
-        if (stripped[i + 1] === '"') { field += '"'; i++ }
-        else { inQuotes = false }
-      } else { field += ch }
-    } else {
-      if (ch === '"') inQuotes = true
-      else if (ch === delimiter) { cur.push(field); field = '' }
-      else if (ch === '\n') { cur.push(field); rows.push(cur); cur = []; field = '' }
-      else if (ch === '\r') { /* skip */ }
-      else field += ch
-    }
-  }
-  if (field.length > 0 || cur.length > 0) { cur.push(field); rows.push(cur) }
-  return rows.filter((r) => r.some((f) => f.length > 0))
-}
+// CSV parsing lives in utils/csv.ts — shared with LetterboxdImporter,
+// LastfmImporter, and any future CSV importer.
 
 interface ParsedTable {
   headers: string[]

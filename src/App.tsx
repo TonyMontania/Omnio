@@ -1085,6 +1085,14 @@ function App() {
   )
   const editingItem = items.find((i) => i.id === editingId) || null
 
+  // Memoized once for every RelatedListEditor's cross-library allItems prop —
+  // otherwise each render passed a fresh array literal to N sites and cascaded
+  // child re-renders through the picker.
+  const relatedCrossLibraryOptions = useMemo(
+    () => items.filter((i) => i.id !== editingId),
+    [items, editingId],
+  )
+
   const resetForm = () => {
     setTitle(''); setCover(''); setNotes(''); setTags([]); setRating(0); setFinishedAt('')
     setDevs([]); setPublishers([]); setAchievementsUnlocked(''); setAchievementsTotal(''); setReleaseDate(''); setBannerImage(''); setLogoImage(''); setDescription('')
@@ -4741,7 +4749,7 @@ function App() {
                             related={relatedItems}
                             options={items.filter((i) => i.categoryId === 'videojuegos' && i.id !== editingId)}
                             crossLibrary
-                            allItems={items.filter((i) => i.id !== editingId)}
+                            allItems={relatedCrossLibraryOptions}
                             onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                             onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
                             onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
@@ -4924,7 +4932,7 @@ function App() {
                           <RelatedListEditor
                             related={relatedItems}
                             crossLibrary
-                            allItems={items.filter((i) => i.id !== editingId)}
+                            allItems={relatedCrossLibraryOptions}
                             options={items.filter((i) => i.categoryId === 'peliculas' && i.id !== editingId)}
                             onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                             onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
@@ -5066,7 +5074,7 @@ function App() {
                       <RelatedListEditor
                         related={relatedItems}
                             crossLibrary
-                            allItems={items.filter((i) => i.id !== editingId)}
+                            allItems={relatedCrossLibraryOptions}
                         options={items.filter((i) => i.categoryId === 'series' && i.id !== editingId)}
                         onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                         onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
@@ -5339,7 +5347,7 @@ function App() {
                       <RelatedListEditor
                         related={relatedItems}
                             crossLibrary
-                            allItems={items.filter((i) => i.id !== editingId)}
+                            allItems={relatedCrossLibraryOptions}
                         options={items.filter((i) => isAnimeLikeCategory(i.categoryId) && i.id !== editingId)}
                         onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                         onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
@@ -5570,7 +5578,7 @@ function App() {
                       <RelatedListEditor
                         related={relatedItems}
                             crossLibrary
-                            allItems={items.filter((i) => i.id !== editingId)}
+                            allItems={relatedCrossLibraryOptions}
                         options={items.filter((i) => isMangaLike(i.categoryId) && i.id !== editingId)}
                         onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                         onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
@@ -5930,7 +5938,7 @@ function App() {
                       <RelatedListEditor
                         related={relatedItems}
                             crossLibrary
-                            allItems={items.filter((i) => i.id !== editingId)}
+                            allItems={relatedCrossLibraryOptions}
                         options={items.filter((i) => i.categoryId === 'musica' && i.id !== editingId)}
                         onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
                         onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
