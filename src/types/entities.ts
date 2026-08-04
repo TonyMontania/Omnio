@@ -246,8 +246,21 @@ export interface Unit {
 
 export type BandStatus = 'active' | 'disbanded' | 'hiatus' | 'unknown'
 
+// One period of a member's tenure with a specific role set. Members who
+// only ever did one thing don't need `stints[]` — the top-level roles +
+// joinedIn/leftIn cover the common case. Stints kick in when a member
+// switched instruments over time (bassist who later became rhythm
+// guitarist, etc.); each entry stands on its own.
+export interface MemberStint {
+  id: string
+  roles: string[]
+  from?: string           // free-text year: "1998", "March 2003", "?"
+  to?: string             // empty = still doing this role in this stint
+}
+
 // A band member with one or more roles (Vocals, Guitar, Bass, Drums…).
 // `former` marks ex-members so the UI can split current vs. past line-ups.
+// `deceased` renders a † next to the name.
 export interface BandMember {
   id: string
   name: string
@@ -255,6 +268,8 @@ export interface BandMember {
   former?: boolean
   joinedIn?: string        // free-text year: "1998", "March 2003", "?"
   leftIn?: string          // only meaningful when former=true
+  deceased?: boolean
+  stints?: MemberStint[]   // optional extra periods with different role sets
 }
 
 export interface MusicArtist {

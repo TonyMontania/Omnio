@@ -102,9 +102,18 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
                 <div className="artist-members">
                   {currentMembers.map((m) => (
                     <div key={m.id} className="artist-member-row">
-                      <span className="m-name">{m.name}</span>
+                      <span className="m-name">
+                        {m.name}
+                        {m.deceased && <span className="m-deceased" title="Deceased"> †</span>}
+                      </span>
                       {m.roles.length > 0 && <span className="m-roles">— {m.roles.join(', ')}</span>}
                       {m.joinedIn && <span className="m-period">· {m.joinedIn} – present</span>}
+                      {m.stints && m.stints.length > 0 && m.stints.map((s) => (
+                        <span key={s.id} className="m-stint">
+                          · also {s.roles.length > 0 ? s.roles.join(', ') : '—'}
+                          {(s.from || s.to) && ` (${s.from || '?'} – ${s.to || 'present'})`}
+                        </span>
+                      ))}
                     </div>
                   ))}
                 </div>
@@ -115,11 +124,20 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
                   <div className="artist-members">
                     {formerMembers.map((m) => (
                       <div key={m.id} className="artist-member-row former">
-                        <span className="m-name">{m.name}</span>
+                        <span className="m-name">
+                          {m.name}
+                          {m.deceased && <span className="m-deceased" title="Deceased"> †</span>}
+                        </span>
                         {m.roles.length > 0 && <span className="m-roles">— {m.roles.join(', ')}</span>}
                         {(m.joinedIn || m.leftIn) && (
                           <span className="m-period">· {m.joinedIn || '?'} – {m.leftIn || '?'}</span>
                         )}
+                        {m.stints && m.stints.length > 0 && m.stints.map((s) => (
+                          <span key={s.id} className="m-stint">
+                            · also {s.roles.length > 0 ? s.roles.join(', ') : '—'}
+                            {(s.from || s.to) && ` (${s.from || '?'} – ${s.to || '?'})`}
+                          </span>
+                        ))}
                       </div>
                     ))}
                   </div>
