@@ -59,45 +59,56 @@ Download the latest build for your platform from the [releases page](https://git
 
 ## Highlights
 
+- **Tabbed editor** — every item edits inside Overview / Identity / Progress / Media / History / Related / Notes tabs. Empty tabs auto-hide so a lightly-annotated item stays lean.
 - **Full-screen edit modal** with live preview on the left (card / detail) and a metadata-fetch panel at the top.
 - **Move items between libraries** (bulk or single) — reassign a manga to manhwa, an anime to donghua, without re-typing.
-- **Bulk actions**: select many cards, then change status, add/remove tags, add to group, move library, or delete in one click.
+- **Bulk actions**: select many cards, then change status, rating, add/remove tags or genres, add to group, move library, or delete in one click.
+- **Cross-library "similar to"** — link a manga to its anime adaptation, a game to the book it's based on. Each result carries a category badge.
+- **Per-item JSON export** — right-click any card or use the Export button in a detail modal to share one entry's full spec as JSON.
 - **Rolling snapshots**: 5 automatic backups taken on each save; restore any of them from Settings.
 - **Yearly heatmap + Wrapped** end-of-year recap.
 - **Related items & franchise timelines** — link sequels, remakes, spin-offs, and see everything in the same franchise as a scrollable row.
+- **Simulcast board** for airing anime + donghua — 7-column weekday grid, populated from the `Airs on` field.
+- **Data health audit** — Settings → Data → Maintenance scans every item and flags what's missing (cover, rating, status, authors, release year, …) per library.
+- **Genre normalizer** — merge duplicate genre labels ("Sci-Fi" / "Science Fiction" / "Ciencia ficción") into a canonical form across the whole library in one pass.
 - **Review with spoilers** toggle, separate from notes.
 - **Play / watch / read / listen history** — full session log per item.
 - **11 themes** (Dark, Light, AMOLED, Nord, Tokyo Night, Solarized Dark, Dracula, Catppuccin, Rosé Pine, Gruvbox, Everforest) × **8 accents**, plus density and font-size controls.
 
 ## Categories at a glance
 
-- **Games** — banner + logo + cover, multiple devs/publishers, free-form platforms, playtime, achievements, DLC + bundles, edition, source (remake/remaster/port…), franchise, related games.
-- **Music** — Single / EP / Album / OST / Live / Compilation, per-track rating + lyrics, single covers gallery, editions (Deluxe, Japan, Anniversary…), Spotify-style Artist profile with members and years active.
+Sorted alphabetically — the way the app itself lists them.
+
+- **Anime & Donghua** — AniList-style card, studios, episodes watched/total, episode list with rating/notes, rewatch log, weekday-slotted **simulcast board** for the airing season.
+- **Books** — authors, publisher, series/saga, pages read/total, ISBN, format (paperback / hardcover / ebook / audiobook), reread history, **per-chapter notes**, **Kindle highlights** imported from `My Clippings.txt`. OpenLibrary metadata + covers, no key needed.
+- **Games** — banner + logo + cover, multiple devs/publishers, free-form platforms, playtime, DLC + bundles, edition, source (remake/remaster/port…), franchise, related games, **detailed achievement list** with per-entry unlocked date, **screenshots gallery** with click-to-view lightbox, **save file backup** stored under `assets/games/saves/`, and inline **PCGamingWiki save + config paths** so you know where the game keeps its data.
+- **Manga / Manhwa / Manhua / Western Comics** — authors + artists, chapters/volumes, volume covers gallery with lightbox, chapter list with per-chapter **scanlator** attribution, magazine, **physical / digital ownership** tracker, direct link to the title's MangaDex page for new-chapter follow.
 - **Movies** — directors, writers, cast, production, franchise, rewatch history, backdrop.
+- **Music** — Single / EP / Album / OST / Live / Compilation, per-track rating + **one-click lyrics fetch (lrclib.net, no key)**, single covers gallery, editions (Deluxe, Japan, Anniversary…), Spotify-style Artist profile with members and years active, **vinyl condition** (Goldmine grading), **concert log** with venue + setlist per attended show.
 - **Series** — cast, directors, showrunners, seasons with per-episode tracking.
-- **Anime & Donghua** — AniList-style card, studios, episodes watched/total, episode list with rating/notes, rewatch log.
-- **Manga / Manhwa / Manhua / Western Comics** — authors + artists, chapters/volumes, volume covers gallery, chapter list, magazine.
-- **Books** — authors, publisher, series/saga, pages read/total, ISBN, format (paperback / hardcover / ebook / audiobook), reread history. OpenLibrary metadata + covers, no key needed.
 
 For a full field-by-field reference (English + Spanish labels), see [`docs/FIELDS.md`](docs/FIELDS.md).
 
 ## Metadata sources
 
-Nine sources are wired directly into the editors — click the **↗** button next to the cover field to search, pick and auto-fill. Keys go in **Settings → Data → Integrations**.
+13 sources wired directly into the editors — click the **↗** button on the "Fetch metadata" panel to search, pick and auto-fill. Keys go in **Settings → Data → Integrations**. Sorted alphabetically.
 
 | Source | Library | Auth |
 | --- | --- | --- |
-| [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes | Free API key |
-| [IGDB](https://www.igdb.com/) | Games — full metadata | Twitch Client ID + Secret (free) |
-| [TMDb](https://www.themoviedb.org/) | Movies + Series | Free API key |
-| [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Music | No key |
-| [VGMdb](https://vgmdb.net/) | Music — game/anime OSTs | No key |
+| [AniDB](https://anidb.net/) | Anime · Donghua — weighted tags, tighter cross-refs (paste AID) | Registered client name |
 | [AniList](https://anilist.co/) | Anime · Donghua · Manga · Manhwa · Manhua | No key |
-| [MyAnimeList](https://myanimelist.net/) (via Jikan) | Anime · Manga | No key |
-| [Kitsu](https://kitsu.app/) | Anime · Manga fallback | No key |
-| [MangaDex](https://mangadex.org/) | Manga · Manhwa · Manhua | No key |
 | [ComicVine](https://comicvine.gamespot.com/) | Western Comics | Free API key |
+| [IGDB](https://www.igdb.com/) | Games — full metadata | Twitch Client ID + Secret (free) |
+| [Kitsu](https://kitsu.app/) | Anime · Manga fallback | No key |
+| [lrclib](https://lrclib.net/) | Music — per-track lyrics (synced when available) | No key |
+| [MangaDex](https://mangadex.org/) | Manga · Manhwa · Manhua | No key |
+| [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Music | No key |
+| [MyAnimeList](https://myanimelist.net/) (via Jikan) | Anime · Manga | No key |
 | [OpenLibrary](https://openlibrary.org/) | Books | No key |
+| [PCGamingWiki](https://www.pcgamingwiki.com/) | Games — save + config paths per OS | No key |
+| [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes | Free API key |
+| [TMDb](https://www.themoviedb.org/) | Movies + Series | Free API key |
+| [VGMdb](https://vgmdb.net/) | Music — game/anime OSTs | No key |
 
 ## Storage & portability
 
@@ -114,6 +125,8 @@ data/
   backups/1..5/      ← 5 rotating snapshots
 assets/
   games/cover/  games/banner/  games/logo/  games/bundle/
+  games/saves/<title>/…    ← user-uploaded save files per game
+  games/screenshots/<title>/…  ← per-game screenshot gallery
   music/cover/  movies/cover/  movies/banner/
   series/cover/  anime/cover/  manga/cover/  manga/volume/
   artists/photo/  ...
@@ -126,11 +139,11 @@ assets/
 
 ## Settings tabs
 
-- **Appearance** — theme, accent, density, font size, card zoom, sidebar mode, layout (sidebar / top nav), motion.
+- **Appearance** — theme, accent, density, font size, card zoom, motion.
 - **Behavior** — confirm before deleting, startup screen (Home dashboard / last category / first category), remember sort per library.
 - **Libraries** — turn any of the 11 categories on/off.
 - **Card Fields** — pick which fields show on cards, per library.
-- **Data** — backup & restore (JSON + assets folder), snapshots (5 rotated), remote backup, import (MAL/AniList XML, Excel/CSV/Notion, Steam profile), export (HTML, MAL XML for anime/manga, iCal for calendar), Yearly Wrapped with PNG export, API keys, updates, maintenance (find broken covers, rename all assets, clean orphans), reset settings, delete all data.
+- **Data** — backup & restore (JSON + assets folder), snapshots (5 rotated), remote backup, import (MAL/AniList XML, Excel/CSV/Notion, Steam profile, **Letterboxd**, **Kindle highlights**, **Last.fm scrobbles**, **Trakt.tv**, **Discogs collection**), export (HTML, MAL XML for anime/manga, iCal for calendar), Yearly Wrapped with PNG export, API keys, updates, maintenance (find broken covers, rename all assets, clean orphans, **duplicate finder**, **genre normalizer**, **incomplete-items audit**), reset settings, delete all data.
 
 ## License
 
