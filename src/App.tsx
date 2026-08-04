@@ -367,6 +367,7 @@ function App() {
   const [viewingArtist, setViewingArtist] = useState<MusicArtist | null>(null)
   const [artistPanelOpen, setArtistPanelOpen] = useState(false)
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null)
+  const [artistEditorTab, setArtistEditorTab] = useState<'overview' | 'details' | 'members'>('overview')
   const [artistNameField, setArtistNameField] = useState('')
   const [artistPhotoField, setArtistPhotoField] = useState('')
   const [artistBannerField, setArtistBannerField] = useState('')
@@ -1152,6 +1153,7 @@ function App() {
     setArtistActiveTo(a.activeTo ?? '')
     setArtistLabels(a.labels ?? [])
     setArtistMembers(a.members ?? [])
+    setArtistEditorTab('overview')
     setArtistPanelOpen(true)
   }
 
@@ -6209,76 +6211,97 @@ function App() {
                 <button className="panel-close" onClick={closeArtistPanel}>✕</button>
               </div>
             </div>
+            <div className="editor-tabs-bar" role="tablist">
+              {(['overview', 'details', 'members'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  className={artistEditorTab === tab ? 'editor-tab active' : 'editor-tab'}
+                  onClick={() => setArtistEditorTab(tab)}
+                >{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
+              ))}
+            </div>
             <div className="panel-body">
               <div className="form">
-                <div className="field-group">
-                  <label>Name</label>
-                  <input value={artistNameField} onChange={(e) => setArtistNameField(e.target.value)} />
-                </div>
-                <div className="field-group">
-                  <label>Photo</label>
-                  <input
-                    placeholder={artistPhotoField.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
-                    value={artistPhotoField.startsWith('data:') ? '' : artistPhotoField}
-                    onChange={(e) => setArtistPhotoField(e.target.value)}
-                  />
-                  <div className="upload-row">
-                    <button type="button" className="upload-btn" onClick={() => artistPhotoFileInputRef.current?.click()}>Upload from PC</button>
-                    {artistPhotoField && <button type="button" className="upload-btn clear" onClick={() => setArtistPhotoField('')}>Clear</button>}
-                  </div>
-                  <input type="file" accept="image/*" ref={artistPhotoFileInputRef} style={{ display: 'none' }} onChange={handleArtistPhotoFile} />
-                </div>
-                <div className="field-group">
-                  <label>Banner image</label>
-                  <input
-                    placeholder={artistBannerField.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
-                    value={artistBannerField.startsWith('data:') ? '' : artistBannerField}
-                    onChange={(e) => setArtistBannerField(e.target.value)}
-                  />
-                  <div className="upload-row">
-                    <button type="button" className="upload-btn" onClick={() => artistBannerFileInputRef.current?.click()}>Upload from PC</button>
-                    {artistBannerField && <button type="button" className="upload-btn clear" onClick={() => setArtistBannerField('')}>Clear</button>}
-                  </div>
-                  <input type="file" accept="image/*" ref={artistBannerFileInputRef} style={{ display: 'none' }} onChange={handleArtistBannerFile} />
-                </div>
-                <div className="field-group">
-                  <label>Origin</label>
-                  <input value={artistOrigin} onChange={(e) => setArtistOrigin(e.target.value)} placeholder="e.g. London, England" />
-                </div>
-                <div className="field-row">
-                  <div className="field-group">
-                    <label>Status</label>
-                    <select value={artistBandStatus} onChange={(e) => setArtistBandStatus(e.target.value as BandStatus | '')}>
-                      <option value="">Unspecified</option>
-                      {BAND_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                    </select>
-                  </div>
-                  <div className="field-group">
-                    <label>Years active</label>
-                    <div className="field-row">
-                      <input value={artistActiveFrom} onChange={(e) => setArtistActiveFrom(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="From" />
-                      <input value={artistActiveTo} onChange={(e) => setArtistActiveTo(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="To" />
+                {artistEditorTab === 'overview' && (
+                  <>
+                    <div className="field-group">
+                      <label>Name</label>
+                      <input value={artistNameField} onChange={(e) => setArtistNameField(e.target.value)} />
                     </div>
+                    <div className="field-group">
+                      <label>Photo</label>
+                      <input
+                        placeholder={artistPhotoField.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                        value={artistPhotoField.startsWith('data:') ? '' : artistPhotoField}
+                        onChange={(e) => setArtistPhotoField(e.target.value)}
+                      />
+                      <div className="upload-row">
+                        <button type="button" className="upload-btn" onClick={() => artistPhotoFileInputRef.current?.click()}>Upload from PC</button>
+                        {artistPhotoField && <button type="button" className="upload-btn clear" onClick={() => setArtistPhotoField('')}>Clear</button>}
+                      </div>
+                      <input type="file" accept="image/*" ref={artistPhotoFileInputRef} style={{ display: 'none' }} onChange={handleArtistPhotoFile} />
+                    </div>
+                    <div className="field-group">
+                      <label>Banner image</label>
+                      <input
+                        placeholder={artistBannerField.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                        value={artistBannerField.startsWith('data:') ? '' : artistBannerField}
+                        onChange={(e) => setArtistBannerField(e.target.value)}
+                      />
+                      <div className="upload-row">
+                        <button type="button" className="upload-btn" onClick={() => artistBannerFileInputRef.current?.click()}>Upload from PC</button>
+                        {artistBannerField && <button type="button" className="upload-btn clear" onClick={() => setArtistBannerField('')}>Clear</button>}
+                      </div>
+                      <input type="file" accept="image/*" ref={artistBannerFileInputRef} style={{ display: 'none' }} onChange={handleArtistBannerFile} />
+                    </div>
+                  </>
+                )}
+                {artistEditorTab === 'details' && (
+                  <>
+                    <div className="field-group">
+                      <label>Origin</label>
+                      <input value={artistOrigin} onChange={(e) => setArtistOrigin(e.target.value)} placeholder="e.g. London, England" />
+                    </div>
+                    <div className="field-row">
+                      <div className="field-group">
+                        <label>Status</label>
+                        <select value={artistBandStatus} onChange={(e) => setArtistBandStatus(e.target.value as BandStatus | '')}>
+                          <option value="">Unspecified</option>
+                          {BAND_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                      </div>
+                      <div className="field-group">
+                        <label>Years active</label>
+                        <div className="field-row">
+                          <input value={artistActiveFrom} onChange={(e) => setArtistActiveFrom(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="From" />
+                          <input value={artistActiveTo} onChange={(e) => setArtistActiveTo(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="To" />
+                        </div>
+                      </div>
+                    </div>
+                    <TagEditor
+                      label="Genres"
+                      placeholder="Add genre"
+                      tags={artistGenres}
+                      onAdd={(g) => setArtistGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
+                      onRemove={(i) => setArtistGenres((prev) => prev.filter((_, idx) => idx !== i))}
+                    />
+                    <TagEditor
+                      label="Labels"
+                      placeholder="Add record label"
+                      tags={artistLabels}
+                      onAdd={(l) => setArtistLabels((prev) => prev.includes(l) ? prev : [...prev, l])}
+                      onRemove={(i) => setArtistLabels((prev) => prev.filter((_, idx) => idx !== i))}
+                    />
+                  </>
+                )}
+                {artistEditorTab === 'members' && (
+                  <div className="field-group">
+                    <label>Members</label>
+                    <BandMembersEditor members={artistMembers} onChange={setArtistMembers} />
                   </div>
-                </div>
-                <TagEditor
-                  label="Genres"
-                  placeholder="Add genre"
-                  tags={artistGenres}
-                  onAdd={(g) => setArtistGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
-                  onRemove={(i) => setArtistGenres((prev) => prev.filter((_, idx) => idx !== i))}
-                />
-                <TagEditor
-                  label="Labels"
-                  placeholder="Add record label"
-                  tags={artistLabels}
-                  onAdd={(l) => setArtistLabels((prev) => prev.includes(l) ? prev : [...prev, l])}
-                  onRemove={(i) => setArtistLabels((prev) => prev.filter((_, idx) => idx !== i))}
-                />
-                <div className="field-group">
-                  <label>Members</label>
-                  <BandMembersEditor members={artistMembers} onChange={setArtistMembers} />
-                </div>
+                )}
               </div>
             </div>
             <div className="panel-footer">
