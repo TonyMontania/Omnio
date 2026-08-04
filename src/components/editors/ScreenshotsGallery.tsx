@@ -6,6 +6,7 @@
 import { useRef, useState } from 'react'
 import type { Screenshot } from '../../types'
 import { assetSrc } from '../../types'
+import ImageLightbox from '../ImageLightbox'
 
 type Props = {
   gameTitle: string
@@ -19,6 +20,7 @@ export default function ScreenshotsGallery({ gameTitle, categoryId, screenshots,
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   const upload = async (files: FileList | File[]) => {
     if (!gameTitle.trim()) { setError('Give the game a title before adding screenshots.'); return }
@@ -85,9 +87,15 @@ export default function ScreenshotsGallery({ gameTitle, categoryId, screenshots,
       {error && <p className="save-files-error">{error}</p>}
       {screenshots.length > 0 && (
         <div className="screenshots-grid">
-          {screenshots.map((s) => (
+          {screenshots.map((s, i) => (
             <figure key={s.id} className="screenshot-tile">
-              <img src={assetSrc(s.path)} alt={s.caption || s.filename} loading="lazy" />
+              <img
+                src={assetSrc(s.path)}
+                alt={s.caption || s.filename}
+                loading="lazy"
+                onClick={() => setLightboxIndex(i)}
+                title="Click to view full size"
+              />
               <input
                 className="screenshot-caption"
                 placeholder="Caption (optional)"
@@ -98,6 +106,14 @@ export default function ScreenshotsGallery({ gameTitle, categoryId, screenshots,
             </figure>
           ))}
         </div>
+      )}
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          images={screenshots.map((s) => ({ src: s.path, caption: s.caption, label: s.filename }))}
+          index={lightboxIndex}
+          onIndex={setLightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
     </div>
   )

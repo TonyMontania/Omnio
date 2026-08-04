@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { getOwnershipLabel, getGameStatus, getGameSourceLabel, getAgeRatingLabel, assetSrc } from './types'
 import { GameStatusIcon } from './icons'
 import type { Item, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
+import ImageLightbox from './components/ImageLightbox'
 import { exportItemAsJson } from './utils/files'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
@@ -24,6 +26,7 @@ const timelineSortKey = (i: Item) => i.releaseDate || i.releaseYear || ''
 const yearOf = (i: Item) => timelineSortKey(i).slice(0, 4)
 
 export default function GameDetailModal({ item, groups, allGames, onClose, onEdit, onDuplicate, onNavigate }: Props) {
+  const [screenshotLightbox, setScreenshotLightbox] = useState<number | null>(null)
   const gs = getGameStatus(item.gameStatus)
   const year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null
   const franchiseItems = item.franchise
@@ -225,14 +228,30 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             <div className="field-group">
               <label>Screenshots ({item.screenshots.length})</label>
               <div className="screenshots-grid detail">
-                {item.screenshots.map((s) => (
+                {item.screenshots.map((s, i) => (
                   <figure key={s.id} className="screenshot-tile">
-                    <img src={assetSrc(s.path)} alt={s.caption || s.filename} loading="lazy" />
+                    <img
+                      src={assetSrc(s.path)}
+                      alt={s.caption || s.filename}
+                      loading="lazy"
+                      onClick={() => setScreenshotLightbox(i)}
+                      title="Click to view full size"
+                      style={{ cursor: 'zoom-in' }}
+                    />
                     {s.caption && <figcaption className="screenshot-caption-static">{s.caption}</figcaption>}
                   </figure>
                 ))}
               </div>
             </div>
+          )}
+
+          {screenshotLightbox !== null && item.screenshots && (
+            <ImageLightbox
+              images={item.screenshots.map((s) => ({ src: s.path, caption: s.caption, label: s.filename }))}
+              index={screenshotLightbox}
+              onIndex={setScreenshotLightbox}
+              onClose={() => setScreenshotLightbox(null)}
+            />
           )}
 
           {item.saveFiles && item.saveFiles.length > 0 && (

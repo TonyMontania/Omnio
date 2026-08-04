@@ -3691,15 +3691,29 @@ function App() {
                       <p className="hint">Wrapped is a year-in-review view. Export builds a standalone <code>index.html</code> and copies your <code>assets/</code> folder — send the folder to a friend and it just opens. Scope defaults to the whole library; pick a single library to share just that one.</p>
                     </div>
                     <div className="settings-section-title">Integrations · API keys</div>
+                    {/* Sorted alphabetically by service name so users can scan the list. */}
                     <div className="field-group">
-                      <label>SteamGridDB (Games — covers / banners / logos)</label>
+                      <label>AniDB client name (Anime · Donghua)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. omnio"
+                        value={settings.anidbClient ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, anidbClient: e.target.value }))}
+                      />
+                      <p className="hint">
+                        AniDB's HTTP API requires a client name registered at <code>anidb.net/software/add</code>.
+                        Enter the name here to enable the AniDB deep-fetch button in the anime / donghua editors. Deep metadata (creators per episode, weighted tags, cross-refs) — coexists with AniList / MAL / Kitsu. Rate-limited to one request per two seconds per AniDB's terms.
+                      </p>
+                    </div>
+                    <div className="field-group">
+                      <label>ComicVine (Western Comics)</label>
                       <input
                         type="password"
-                        placeholder="Paste your SteamGridDB key…"
-                        value={settings.sgdbApiKey ?? ''}
-                        onChange={(e) => setSettings((s) => ({ ...s, sgdbApiKey: e.target.value }))}
+                        placeholder="Paste your ComicVine key…"
+                        value={settings.comicvineApiKey ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, comicvineApiKey: e.target.value }))}
                       />
-                      <p className="hint">Free key at <code>steamgriddb.com/profile/preferences/api</code>.</p>
+                      <p className="hint">Free key at <code>comicvine.gamespot.com/api/</code> — Marvel, DC, Image, indies.</p>
                     </div>
                     <div className="field-group">
                       <label>IGDB (Games — full metadata) — Twitch Client ID + Secret</label>
@@ -3719,6 +3733,16 @@ function App() {
                       <p className="hint">Free Twitch app at <code>dev.twitch.tv/console/apps</code> (Application Integration, any localhost redirect).</p>
                     </div>
                     <div className="field-group">
+                      <label>SteamGridDB (Games — covers / banners / logos)</label>
+                      <input
+                        type="password"
+                        placeholder="Paste your SteamGridDB key…"
+                        value={settings.sgdbApiKey ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, sgdbApiKey: e.target.value }))}
+                      />
+                      <p className="hint">Free key at <code>steamgriddb.com/profile/preferences/api</code>.</p>
+                    </div>
+                    <div className="field-group">
                       <label>TMDb (Movies + Series)</label>
                       <input
                         type="password"
@@ -3728,30 +3752,7 @@ function App() {
                       />
                       <p className="hint">Free v3 key at <code>themoviedb.org/settings/api</code>.</p>
                     </div>
-                    <div className="field-group">
-                      <label>ComicVine (Western Comics)</label>
-                      <input
-                        type="password"
-                        placeholder="Paste your ComicVine key…"
-                        value={settings.comicvineApiKey ?? ''}
-                        onChange={(e) => setSettings((s) => ({ ...s, comicvineApiKey: e.target.value }))}
-                      />
-                      <p className="hint">Free key at <code>comicvine.gamespot.com/api/</code> — Marvel, DC, Image, indies.</p>
-                    </div>
-                    <div className="field-group">
-                      <label>AniDB client name (Anime · Donghua)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. omnio"
-                        value={settings.anidbClient ?? ''}
-                        onChange={(e) => setSettings((s) => ({ ...s, anidbClient: e.target.value }))}
-                      />
-                      <p className="hint">
-                        AniDB's HTTP API requires a client name registered at <code>anidb.net/software/add</code>.
-                        Enter the name here to enable the AniDB deep-fetch button in the anime / donghua editors. Deep metadata (creators per episode, weighted tags, cross-refs) — coexists with AniList / MAL / Kitsu. Rate-limited to one request per two seconds per AniDB's terms.
-                      </p>
-                    </div>
-                    <p className="hint" style={{ marginTop: -6 }}>MusicBrainz, VGMdb, AniList, MyAnimeList, Kitsu and MangaDex need no key — they work out of the box.</p>
+                    <p className="hint" style={{ marginTop: -6 }}>AniList, Kitsu, MangaDex, MusicBrainz, MyAnimeList and VGMdb need no key — they work out of the box.</p>
 
                     <div className="settings-section-title">Updates</div>
                     <div className="field-group">
@@ -4359,48 +4360,52 @@ function App() {
                           </button>
                         )}
                         {(activeCategory === 'anime' || activeCategory === 'donghua') && <>
+                          {/* Sorted alphabetically. */}
+                          <button type="button" className="metadata-source-btn" onClick={() => setAnidbOpen(true)}>
+                            <span className="ms-name">↗ AniDB</span>
+                            <span className="ms-desc">Weighted tags + tighter refs · paste AID</span>
+                          </button>
                           <button type="button" className="metadata-source-btn" onClick={() => setAnilistOpen('ANIME')}>
                             <span className="ms-name">↗ AniList</span>
                             <span className="ms-desc">Metadata + cover + banner</span>
-                          </button>
-                          <button type="button" className="metadata-source-btn" onClick={() => setJikanOpen('anime')}>
-                            <span className="ms-name">↗ MyAnimeList</span>
-                            <span className="ms-desc">Via Jikan — metadata + cover</span>
                           </button>
                           <button type="button" className="metadata-source-btn" onClick={() => setKitsuOpen('anime')}>
                             <span className="ms-name">↗ Kitsu</span>
                             <span className="ms-desc">Fallback when other sources miss it</span>
                           </button>
-                          <button type="button" className="metadata-source-btn" onClick={() => setAnidbOpen(true)}>
-                            <span className="ms-name">↗ AniDB</span>
-                            <span className="ms-desc">Weighted tags + tighter refs · paste AID</span>
+                          <button type="button" className="metadata-source-btn" onClick={() => setJikanOpen('anime')}>
+                            <span className="ms-name">↗ MyAnimeList</span>
+                            <span className="ms-desc">Via Jikan — metadata + cover</span>
                           </button>
                         </>}
                         {isMangaLike(activeCategory) && <>
+                          {/* Sorted alphabetically. */}
                           <button type="button" className="metadata-source-btn" onClick={() => setAnilistOpen('MANGA')}>
                             <span className="ms-name">↗ AniList</span>
                             <span className="ms-desc">Metadata + cover</span>
                           </button>
-                          <button type="button" className="metadata-source-btn" onClick={() => setJikanOpen('manga')}>
-                            <span className="ms-name">↗ MyAnimeList</span>
-                            <span className="ms-desc">Via Jikan — authors + magazine</span>
-                          </button>
-                          {activeCategory !== 'comics_west' && <>
-                            <button type="button" className="metadata-source-btn" onClick={() => setMangadexOpen(true)}>
-                              <span className="ms-name">↗ MangaDex</span>
-                              <span className="ms-desc">Deep catalog incl. obscure titles</span>
-                            </button>
-                            <button type="button" className="metadata-source-btn" onClick={() => setKitsuOpen('manga')}>
-                              <span className="ms-name">↗ Kitsu</span>
-                              <span className="ms-desc">Fallback when other sources miss it</span>
-                            </button>
-                          </>}
                           {activeCategory === 'comics_west' && (
                             <button type="button" className="metadata-source-btn" onClick={() => setComicvineOpen(true)}>
                               <span className="ms-name">↗ ComicVine</span>
                               <span className="ms-desc">Marvel, DC, Image, indies + creator credits</span>
                             </button>
                           )}
+                          {activeCategory !== 'comics_west' && (
+                            <button type="button" className="metadata-source-btn" onClick={() => setKitsuOpen('manga')}>
+                              <span className="ms-name">↗ Kitsu</span>
+                              <span className="ms-desc">Fallback when other sources miss it</span>
+                            </button>
+                          )}
+                          {activeCategory !== 'comics_west' && (
+                            <button type="button" className="metadata-source-btn" onClick={() => setMangadexOpen(true)}>
+                              <span className="ms-name">↗ MangaDex</span>
+                              <span className="ms-desc">Deep catalog incl. obscure titles</span>
+                            </button>
+                          )}
+                          <button type="button" className="metadata-source-btn" onClick={() => setJikanOpen('manga')}>
+                            <span className="ms-name">↗ MyAnimeList</span>
+                            <span className="ms-desc">Via Jikan — authors + magazine</span>
+                          </button>
                         </>}
                         {activeCategory === 'libros' && (
                           <button type="button" className="metadata-source-btn" onClick={() => setOpenLibraryOpen(true)}>
@@ -5163,31 +5168,13 @@ function App() {
                       onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
                       onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))}
                     />
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Format</label>
-                        <select value={animeFormat} onChange={(e) => setAnimeFormat(e.target.value as AnimeFormat | '')}>
-                          <option value="">Unspecified</option>
-                          {ANIME_FORMAT_OPTIONS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>Airing status</label>
-                        <select value={airingStatus} onChange={(e) => setAiringStatus(e.target.value as AiringStatus | '')}>
-                          <option value="">Unknown</option>
-                          {AIRING_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
+                    <div className="field-group">
+                      <label>Format</label>
+                      <select value={animeFormat} onChange={(e) => setAnimeFormat(e.target.value as AnimeFormat | '')}>
+                        <option value="">Unspecified</option>
+                        {ANIME_FORMAT_OPTIONS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                      </select>
                     </div>
-                    {airingStatus === 'airing' && (
-                      <div className="field-group">
-                        <label>Airs on <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>Simulcast board slots the show into this weekday column</span></label>
-                        <select value={airingDay} onChange={(e) => setAiringDay(e.target.value as Weekday | '')}>
-                          <option value="">Unknown</option>
-                          {WEEKDAY_OPTIONS.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
-                        </select>
-                      </div>
-                    )}
                     <div className="field-row">
                       <div className="field-group">
                         <label>Season aired</label>
@@ -5210,14 +5197,32 @@ function App() {
                     </div>
                     <div className="form-section-header" data-belongs-to="progress">
                       <span className="form-section-title">Progress</span>
-                      <span className="form-section-hint">Watch status · episodes watched · episode list</span>
+                      <span className="form-section-hint">Watch status · airing · episodes watched · episode list</span>
                     </div>
-                    <div className="field-group">
-                      <label>Watch status</label>
-                      <select value={watchStatus} onChange={(e) => setWatchStatus(e.target.value as AnimeStatus)}>
-                        {ANIME_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                      </select>
+                    <div className="field-row">
+                      <div className="field-group">
+                        <label>Watch status</label>
+                        <select value={watchStatus} onChange={(e) => setWatchStatus(e.target.value as AnimeStatus)}>
+                          {ANIME_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                      </div>
+                      <div className="field-group">
+                        <label>Airing status</label>
+                        <select value={airingStatus} onChange={(e) => setAiringStatus(e.target.value as AiringStatus | '')}>
+                          <option value="">Unknown</option>
+                          {AIRING_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                      </div>
                     </div>
+                    {airingStatus === 'airing' && (
+                      <div className="field-group">
+                        <label>Airs on <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>Simulcast board slots the show into this weekday column</span></label>
+                        <select value={airingDay} onChange={(e) => setAiringDay(e.target.value as Weekday | '')}>
+                          <option value="">Unknown</option>
+                          {WEEKDAY_OPTIONS.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
+                        </select>
+                      </div>
+                    )}
                     <div className="field-row">
                       <div className="field-group">
                         <label>Episodes watched</label>
@@ -5805,17 +5810,6 @@ function App() {
                             <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>No</button>
                           </div>
                         </div>
-                        <div className="form-section-header" data-belongs-to="overview">
-                          <span className="form-section-title">Rating &amp; day listened</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Rating</label>
-                          <RatingPicker value={rating} onChange={setRating} />
-                        </div>
-                        <div className="field-group">
-                          <label>Day listened</label>
-                          <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
-                        </div>
                         <div className="field-group">
                           <label>Add tracks?</label>
                           <div className="yesno">
@@ -5837,6 +5831,17 @@ function App() {
                               onLyricsChange={(id, lyrics) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, lyrics } : t)))}
                             />
                           )}
+                        </div>
+                        <div className="form-section-header" data-belongs-to="overview">
+                          <span className="form-section-title">Rating &amp; day listened</span>
+                        </div>
+                        <div className="field-group">
+                          <label>Rating</label>
+                          <RatingPicker value={rating} onChange={setRating} />
+                        </div>
+                        <div className="field-group">
+                          <label>Day listened</label>
+                          <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
                         </div>
                         <div className="field-group">
                           <label>Single covers</label>

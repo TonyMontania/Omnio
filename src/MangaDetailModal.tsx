@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { getMangaStatus, getPublicationStatusLabel, getMangaSourceLabel, getAgeRatingLabel, getNextUnreadChapter, assetSrc } from './types'
 import { MangaStatusIcon } from './icons'
 import type { Item, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
+import ImageLightbox from './components/ImageLightbox'
 import { exportItemAsJson } from './utils/files'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
@@ -24,6 +26,7 @@ interface Props {
 }
 
 export default function MangaDetailModal({ item, groups, allManga, onClose, onEdit, onDuplicate, onNavigate }: Props) {
+  const [volumeLightbox, setVolumeLightbox] = useState<number | null>(null)
   const ms = getMangaStatus(item.mangaStatus)
   const nextCh = item.hasChapters ? getNextUnreadChapter(item.chapters) : null
   const franchiseItems = item.franchise
@@ -189,14 +192,28 @@ export default function MangaDetailModal({ item, groups, allManga, onClose, onEd
         <div className="field-group volume-gallery">
           <label>Volumes</label>
           <div className="volume-grid">
-            {item.volumeCovers.map((v) => (
+            {item.volumeCovers.map((v, i) => (
               <div key={v.id} className="volume-card">
                 <span className="volume-label">Volume {v.number}</span>
-                <img src={assetSrc(v.cover)} alt={`Volume ${v.number}`} />
+                <img
+                  src={assetSrc(v.cover)}
+                  alt={`Volume ${v.number}`}
+                  onClick={() => setVolumeLightbox(i)}
+                  title="Click to view full size"
+                  style={{ cursor: 'zoom-in' }}
+                />
               </div>
             ))}
           </div>
         </div>
+      )}
+      {volumeLightbox !== null && item.volumeCovers && (
+        <ImageLightbox
+          images={item.volumeCovers.map((v) => ({ src: v.cover, label: `Vol. ${v.number}` }))}
+          index={volumeLightbox}
+          onIndex={setVolumeLightbox}
+          onClose={() => setVolumeLightbox(null)}
+        />
       )}
     </div>
   )

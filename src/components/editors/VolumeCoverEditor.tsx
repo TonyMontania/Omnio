@@ -5,11 +5,13 @@ import { useState, useRef } from 'react'
 import type { MangaVolume } from '../../types'
 import { assetSrc } from '../../types'
 import { pickImageToDataUrl } from '../../utils/files'
+import ImageLightbox from '../ImageLightbox'
 
 export default function VolumeCoverEditor({ volumes, onAdd, onRemove }: { volumes: MangaVolume[]; onAdd: (v: Omit<MangaVolume, 'id'>) => void; onRemove: (id: string) => void }) {
   const [number, setNumber] = useState('')
   const [cover, setCover] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   const handleFile = pickImageToDataUrl(setCover)
 
@@ -31,14 +33,28 @@ export default function VolumeCoverEditor({ volumes, onAdd, onRemove }: { volume
       </div>
       {volumes.length > 0 && (
         <div className="volume-grid-preview">
-          {volumes.map((v) => (
+          {volumes.map((v, i) => (
             <div key={v.id} className="volume-preview-card">
-              <img src={assetSrc(v.cover)} alt={`Volume ${v.number}`} />
+              <img
+                src={assetSrc(v.cover)}
+                alt={`Volume ${v.number}`}
+                onClick={() => setLightboxIndex(i)}
+                title="Click to view full size"
+                style={{ cursor: 'zoom-in' }}
+              />
               <span>Vol. {v.number}</span>
               <button type="button" onClick={() => onRemove(v.id)}>✕</button>
             </div>
           ))}
         </div>
+      )}
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          images={volumes.map((v) => ({ src: v.cover, label: `Vol. ${v.number}` }))}
+          index={lightboxIndex}
+          onIndex={setLightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
     </div>
   )
