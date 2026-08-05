@@ -317,6 +317,9 @@
   height: 260px;
   border-radius: var(--radius-lg);
   object-fit: cover;
+  /* Band photos usually put faces near the top; the default center crop
+     ate them. Bias the crop toward the top so heads stay in frame. */
+  object-position: center 20%;
   display: block;
 }
 
