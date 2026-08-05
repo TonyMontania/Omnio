@@ -3893,6 +3893,22 @@ function App() {
                         <p className="about-title">Omnio <span className="about-version">v{APP_VERSION}</span></p>
                         <p className="about-tagline">A personal hobby backlog tracker for games, music, movies, series, anime and comics.</p>
                         <p className="about-line">Local-only. No accounts, no telemetry, no cloud. Your data lives in this machine.</p>
+                        <p className="about-section-title">New in this release</p>
+                        <ul className="about-changelog">
+                          <li><b>Tabbed editor everywhere</b> — Overview / Identity / Progress / Media / History / Related / Notes with progressive disclosure (empty tabs auto-hide).</li>
+                          <li><b>Fused top-nav</b> — the library header lives in the topnav now: title, count, status chips, view toggle and +Add on a single row.</li>
+                          <li><b>Save file backup + PCGamingWiki paths</b> (Games) — attach saves to any game, and see the game's Save + Config paths per OS without leaving the app.</li>
+                          <li><b>Achievement list + screenshots gallery</b> (Games) — detailed per-entry achievements with unlocked date; screenshots with click-to-view lightbox.</li>
+                          <li><b>AniDB deep-fetch + Simulcast board</b> (Anime · Donghua) — coexists with AniList / MAL / Kitsu; airing shows slot into a 7-column weekday grid via a new "Airs on" field.</li>
+                          <li><b>Vinyl condition, concert log, per-track lyrics</b> (Music) — Goldmine grading, venue + setlist log, one-click lyrics fetch from lrclib (no key).</li>
+                          <li><b>Chapter notes + Kindle highlights import</b> (Books) — per-chapter notes; import <code>My Clippings.txt</code> directly.</li>
+                          <li><b>5 new importers</b> — Letterboxd (Movies), Kindle highlights (Books), Last.fm scrobbles (Music), Trakt.tv (Movies + Series), Discogs collection (Music).</li>
+                          <li><b>Data health audit + genre normalizer + per-item JSON export</b> — under Settings → Data → Maintenance.</li>
+                          <li><b>Cross-library "similar to"</b> — link items across libraries (Berserk manga ↔ Berserk anime ↔ Berserk game).</li>
+                          <li><b>Bulk edit rating &amp; genre</b> — shift-click cards, apply rating or add/remove genres to many at once.</li>
+                          <li><b>Artist editor</b> — centered modal, tabbed (Overview / Details / Members), multi-stint role periods per member and a † deceased mark.</li>
+                          <li><b>Banners for anime, donghua and manga family</b> — upload / fetch per-item, rendered at the top of the detail view.</li>
+                        </ul>
                         <p className="about-line about-stack">Built with Electron · React · Vite · TypeScript</p>
                       </div>
                     </div>
