@@ -46,7 +46,14 @@ export default function AnimeDetailModal({ item, groups, allAnime, onClose, onEd
     <div className="game-page">
       <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)} />
 
-      <div className="game-modal-body">
+      {item.bannerImage && (
+        <div className="game-modal-banner">
+          <img src={assetSrc(item.bannerImage)} alt="" />
+          <div className="banner-fade" />
+        </div>
+      )}
+
+      <div className="game-modal-body" style={item.bannerImage ? { marginTop: 110 } : undefined}>
         <div className="game-modal-main">
           <div className="game-modal-cover">
             {item.cover ? <img src={assetSrc(item.cover)} alt="" /> : <div className="cover-preview-placeholder">No cover</div>}

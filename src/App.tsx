@@ -4461,6 +4461,7 @@ function App() {
                       <span className="form-section-hint">
                         {isVideojuegos ? 'Cover · banner · logo'
                           : (activeCategory === 'peliculas' || activeCategory === 'series') ? 'Cover · backdrop'
+                          : (isAnime || isMangaLike(activeCategory)) ? 'Cover · banner'
                           : 'Cover'}
                       </span>
                     </div>
@@ -4492,6 +4493,22 @@ function App() {
                           {movieBanner && <button type="button" className="upload-btn clear" onClick={() => setMovieBanner('')}>Clear</button>}
                         </div>
                         <input type="file" accept="image/*" ref={movieBannerFileInputRef} style={{ display: 'none' }} onChange={handleMovieBannerFile} />
+                      </div>
+                    )}
+
+                    {(isAnime || isMangaLike(activeCategory)) && (
+                      <div className="field-group">
+                        <label>Banner image</label>
+                        <input
+                          placeholder={bannerImage.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                          value={bannerImage.startsWith('data:') ? '' : bannerImage}
+                          onChange={(e) => setBannerImage(e.target.value)}
+                        />
+                        <div className="upload-row">
+                          <button type="button" className="upload-btn" onClick={() => bannerFileInputRef.current?.click()}>Upload from PC</button>
+                          {bannerImage && <button type="button" className="upload-btn clear" onClick={() => setBannerImage('')}>Clear</button>}
+                        </div>
+                        <input type="file" accept="image/*" ref={bannerFileInputRef} style={{ display: 'none' }} onChange={handleBannerFile} />
                       </div>
                     )}
 
@@ -5637,9 +5654,19 @@ function App() {
 
                     {activeCategory === 'libros' && (
                   <>
+                    <div className="form-section-header" data-belongs-to="overview">
+                      <span className="form-section-title">Reading status</span>
+                    </div>
+                    <div className="field-group">
+                      <label>Status</label>
+                      <select value={bookStatus} onChange={(e) => setBookStatus(e.target.value as BookStatus)}>
+                        {BOOK_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                    </div>
+
                     <div className="form-section-header" data-belongs-to="identity">
                       <span className="form-section-title">Book details</span>
-                      <span className="form-section-hint">Authors, publisher, series, pages read, ISBN, format</span>
+                      <span className="form-section-hint">Authors, publisher, series, ISBN, format, source</span>
                     </div>
                     <TagEditor
                       label="Authors"
@@ -5650,31 +5677,18 @@ function App() {
                     />
                     <div className="field-grid two">
                       <div className="field-group">
-                        <label>Status</label>
-                        <select value={bookStatus} onChange={(e) => setBookStatus(e.target.value as BookStatus)}>
-                          {BOOK_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
                         <label>Format</label>
                         <select value={bookFormat} onChange={(e) => setBookFormat(e.target.value as BookFormat | '')}>
                           <option value="">—</option>
                           {BOOK_FORMAT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
                       </div>
-                    </div>
-                    <div className="form-section-header" data-belongs-to="progress">
-                      <span className="form-section-title">Progress</span>
-                      <span className="form-section-hint">Pages read / total · reading log</span>
-                    </div>
-                    <div className="field-grid two">
                       <div className="field-group">
-                        <label>Pages read</label>
-                        <input value={pagesRead} onChange={(e) => setPagesRead(e.target.value.replace(/[^\d]/g, ''))} placeholder="e.g. 120" />
-                      </div>
-                      <div className="field-group">
-                        <label>Total pages</label>
-                        <input value={totalPages} onChange={(e) => setTotalPages(e.target.value.replace(/[^\d]/g, ''))} placeholder="e.g. 350" />
+                        <label>Publication status</label>
+                        <select value={pubStatus} onChange={(e) => setPubStatus(e.target.value as PublicationStatus | '')}>
+                          <option value="">—</option>
+                          {PUBLICATION_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
                       </div>
                     </div>
                     <div className="field-grid two">
@@ -5699,34 +5713,53 @@ function App() {
                     </div>
                     <div className="field-grid two">
                       <div className="field-group">
-                        <label>Publication status</label>
-                        <select value={pubStatus} onChange={(e) => setPubStatus(e.target.value as PublicationStatus | '')}>
-                          <option value="">—</option>
-                          {PUBLICATION_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
                         <label>Source</label>
                         <select value={bookSource} onChange={(e) => setBookSource(e.target.value as BookSource | '')}>
                           <option value="">—</option>
                           {BOOK_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
                       </div>
-                    </div>
-                    <div className="field-grid two">
                       <div className="field-group">
                         <label>Translator</label>
                         <input value={translator} onChange={(e) => setTranslator(e.target.value)} placeholder="Optional" />
-                      </div>
-                      <div className="field-group">
-                        <label>Started reading</label>
-                        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                       </div>
                     </div>
                     <div className="field-group">
                       <label>Description</label>
                       <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Book synopsis" />
                     </div>
+
+                    <div className="form-section-header" data-belongs-to="progress">
+                      <span className="form-section-title">Progress</span>
+                      <span className="form-section-hint">Pages read / total · start date</span>
+                    </div>
+                    <div className="field-grid two">
+                      <div className="field-group">
+                        <label>Pages read</label>
+                        <input value={pagesRead} onChange={(e) => setPagesRead(e.target.value.replace(/[^\d]/g, ''))} placeholder="e.g. 120" />
+                      </div>
+                      <div className="field-group">
+                        <label>Total pages</label>
+                        <input value={totalPages} onChange={(e) => setTotalPages(e.target.value.replace(/[^\d]/g, ''))} placeholder="e.g. 350" />
+                      </div>
+                    </div>
+                    <div className="field-group">
+                      <label>Started reading</label>
+                      <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                    </div>
+
+                    <div className="form-section-header" data-belongs-to="overview">
+                      <span className="form-section-title">Rating &amp; completion</span>
+                    </div>
+                    <div className="field-group">
+                      <label>Rating</label>
+                      <RatingPicker value={rating} onChange={setRating} />
+                    </div>
+                    <div className="field-group">
+                      <label>Completion date</label>
+                      <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
+                    </div>
+
                     <div className="form-section-header" data-belongs-to="notes">
                       <span className="form-section-title">Review</span>
                       <span className="form-section-hint">Your take · with optional spoiler toggle</span>
@@ -5741,6 +5774,52 @@ function App() {
                       )}
                     </div>
                     <ChapterNotesEditor entries={chapterNotes} onChange={setChapterNotes} />
+
+                    <div className="form-section-header" data-belongs-to="history">
+                      <span className="form-section-title">Reread history</span>
+                      <span className="form-section-hint">Log each reread with date + optional rating and notes</span>
+                    </div>
+                    <div className="field-group">
+                      <label>Rereads</label>
+                      <RewatchListEditor
+                        rewatches={rewatches}
+                        onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
+                        onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
+                        onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
+                        onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
+                      />
+                    </div>
+
+                    <div className="form-section-header" data-belongs-to="related">
+                      <span className="form-section-title">Related &amp; recommendations</span>
+                    </div>
+                    <div className="field-group">
+                      <label>Franchise</label>
+                      <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Cosmere, Middle-earth…" />
+                    </div>
+                    <div className="field-group">
+                      <label>Related books</label>
+                      <RelatedListEditor
+                        related={relatedItems}
+                        options={items.filter((i) => i.categoryId === 'libros' && i.id !== editingId)}
+                        crossLibrary
+                        allItems={relatedCrossLibraryOptions}
+                        onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
+                        onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
+                        onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
+                        pickerPlaceholder="Add related item… (any library)"
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label>Recommendations</label>
+                      <RecommendationsEditor
+                        ids={recommendedItems}
+                        options={items.filter((i) => i.categoryId === 'libros' && i.id !== editingId)}
+                        onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
+                        onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
+                        pickerPlaceholder="Add recommended book…"
+                      />
+                    </div>
                   </>
                 )}
 
