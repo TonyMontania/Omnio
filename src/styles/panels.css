@@ -446,6 +446,29 @@
   transition: background 0.14s;
 }
 .modal-panel > .modal-footer .primary-btn:hover { background: var(--accent-hover); }
+.modal-panel > .modal-footer .danger-btn {
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+.modal-panel > .modal-footer .danger-btn:hover {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: var(--danger);
+}
+
+/* Tab bar sitting between modal-header and modal-body (Edit Artist uses
+   this pattern). Keeps the tabs visually anchored to the header block. */
+.modal-panel > .editor-tabs-bar {
+  padding: 0 22px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
 
 .modal-box {
   background: var(--surface);

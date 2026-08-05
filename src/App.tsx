@@ -6202,14 +6202,11 @@ function App() {
       )}
 
       {artistPanelOpen && (
-        <>
-          <div className="panel-backdrop" />
-          <aside className="detail-panel" style={{ width: 480 }}>
-            <div className="panel-header">
-              <h3>Edit Artist</h3>
-              <div className="panel-header-actions">
-                <button className="panel-close" onClick={closeArtistPanel}>✕</button>
-              </div>
+        <div className="modal-overlay" onClick={closeArtistPanel}>
+          <div className="modal-panel artist-editor-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: '94vw', maxHeight: '88vh' }}>
+            <div className="modal-header">
+              <h2>Edit Artist</h2>
+              <button type="button" className="panel-close" onClick={closeArtistPanel}>✕</button>
             </div>
             <div className="editor-tabs-bar" role="tablist">
               {(['overview', 'details', 'members'] as const).map((tab) => (
@@ -6222,7 +6219,7 @@ function App() {
                 >{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
               ))}
             </div>
-            <div className="panel-body">
+            <div className="modal-body">
               <div className="form">
                 {artistEditorTab === 'overview' && (
                   <>
@@ -6304,15 +6301,13 @@ function App() {
                 )}
               </div>
             </div>
-            <div className="panel-footer">
-              <button className="danger" onClick={() => { const id = editingArtistId!; closeArtistPanel(); handleDeleteArtist(id) }}>Delete</button>
-              <div className="panel-footer-right">
-                <button className="ghost" onClick={closeArtistPanel}>Cancel</button>
-                <button className="primary" onClick={handleSaveArtistEdit}>Save changes</button>
-              </div>
+            <div className="modal-footer">
+              <button type="button" className="danger-btn" onClick={() => { const id = editingArtistId!; closeArtistPanel(); handleDeleteArtist(id) }} style={{ marginRight: 'auto' }}>Delete</button>
+              <button type="button" className="ghost-btn" onClick={closeArtistPanel}>Cancel</button>
+              <button type="button" className="primary-btn" onClick={handleSaveArtistEdit}>Save changes</button>
             </div>
-          </aside>
-        </>
+          </div>
+        </div>
       )}
 
       <GlobalSearch
