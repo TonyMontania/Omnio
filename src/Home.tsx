@@ -43,17 +43,6 @@ function parseYear(y?: string): Date | null {
   return new Date(parseInt(y, 10), 0, 1)
 }
 
-// Per-category "in progress" predicate. Matches Games playing, manga
-// reading, anime watching, series watching, books reading, music unheard.
-function isInProgress(it: Item): boolean {
-  if (it.categoryId === 'videojuegos') return it.gameStatus === 'playing'
-  if (it.categoryId === 'anime' || it.categoryId === 'donghua') return it.watchStatus === 'watching'
-  if (it.categoryId === 'series') return it.seriesStatus === 'watching'
-  if (it.categoryId === 'manga' || it.categoryId === 'manhwa' || it.categoryId === 'manhua' || it.categoryId === 'comics_west') return it.mangaStatus === 'reading'
-  if (it.categoryId === 'libros') return it.bookStatus === 'reading'
-  return false
-}
-
 // One-line status summary shown at the bottom of each library card.
 function summarizeCategory(catId: string, list: Item[]): string {
   if (list.length === 0) return 'Empty'
@@ -102,11 +91,6 @@ export default function Home({ items, enabledCategories, onOpenCategory, onOpenI
   const dateLabel = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
   const cats = CATEGORIES.filter((c) => !enabledCategories || enabledCategories.includes(c.id))
-
-  const inProgress = useMemo(
-    () => items.filter(isInProgress).sort((a, b) => recencyScore(b) - recencyScore(a)).slice(0, 12),
-    [items],
-  )
 
   const upcoming = useMemo(() => {
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
@@ -203,33 +187,6 @@ export default function Home({ items, enabledCategories, onOpenCategory, onOpenI
             )
           })}
         </div>
-
-        {inProgress.length > 0 && (
-          <section className="home-section">
-            <div className="home-section-header">
-              <h2>Currently in progress</h2>
-              <span className="page-count">{inProgress.length}</span>
-            </div>
-            <div className="home-progress-strip">
-              {inProgress.map((it) => (
-                <button
-                  key={it.id}
-                  type="button"
-                  className="home-progress-card"
-                  onClick={() => onOpenItem(it)}
-                >
-                  <div className="home-progress-cover">
-                    {it.cover
-                      ? <img src={assetSrc(it.cover)} alt="" loading="lazy" />
-                      : <span>{it.title.charAt(0).toUpperCase()}</span>}
-                  </div>
-                  <div className="home-progress-title">{it.title}</div>
-                  <div className="home-progress-sub">{CATEGORIES.find((c) => c.id === it.categoryId)?.label}</div>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
 
         {upcoming.length > 0 && (
           <section className="home-section">
