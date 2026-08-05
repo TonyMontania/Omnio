@@ -6,7 +6,14 @@
 ![Platform: Windows · macOS · Linux](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-informational.svg)
 ![Local-first](https://img.shields.io/badge/local--first-yes-success.svg)
 
-![Omnio screenshot](https://github.com/user-attachments/assets/f7abdd85-ae6b-4deb-b1c1-00441e0456f3)
+![Omnio — Games library grid](https://github.com/user-attachments/assets/ffba12f6-f3b2-44b2-a531-91d16c804204)
+*The Games library — 176 covers at a glance, quick status chips (Backlog / Playing / Played / Completed / Dropped) in the topbar, alphabetized grid, and the same Add + Filters + Sort controls every library carries.*
+
+![Omnio — Full-screen tabbed editor with live preview and one-click metadata fetch](https://github.com/user-attachments/assets/f16b4de2-d0b5-4d6e-972d-86fa5ae57f7c)
+*Every item edits in a tabbed editor (Overview / Identity / Progress / Media / History / Related / Notes). Live card + detail preview stays pinned on the left; the metadata-fetch panel at the top pulls from IGDB / SteamGridDB / TMDb / AniList / MangaDex / MusicBrainz / Discogs / … in one click.*
+
+![Omnio — Detail view with banner, franchise, bundle contents](https://github.com/user-attachments/assets/88b6a8dd-8f62-432d-8ce4-4c9742371b97)
+*Detail view for a bundled release — banner, cover, description, status, source, age rating, groups, genres, platforms, ownership, playtime, and the individual games inside the collection, each linkable to its own entry.*
 
 **Omnio** is a local desktop app to track your hobbies — games, music, movies, series, anime, donghua, manga, manhwa, manhua and western comics — all in one place. No accounts, no telemetry, no cloud. Your data lives in a `data/` folder next to the executable, portable enough to carry on a USB stick.
 
