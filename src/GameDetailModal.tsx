@@ -50,21 +50,21 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
 
       {item.bannerImage && (
         <div className="game-modal-banner">
-          <img src={assetSrc(item.bannerImage)} alt="" />
+          <img className="zoomable" src={assetSrc(item.bannerImage)} alt={item.title} data-zoom-label="Banner" />
           <div className="banner-fade" />
         </div>
       )}
-      {item.bannerImage && item.logoImage && <img className="game-modal-logo" src={assetSrc(item.logoImage)} alt="" />}
+      {item.bannerImage && item.logoImage && <img className="game-modal-logo zoomable" src={assetSrc(item.logoImage)} alt={item.title} data-zoom-label="Logo" />}
 
       <div className="game-modal-body" style={item.bannerImage ? { marginTop: 110 } : undefined}>
         <div className="game-modal-main">
           <div className="game-modal-cover">
-            {item.cover ? <img src={assetSrc(item.cover)} alt="" /> : <div className="cover-preview-placeholder">No cover</div>}
+            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder">No cover</div>}
           </div>
           <div className="game-modal-info">
             <div className="game-modal-title-row">
               <h1>{item.title} {year && <span className="game-modal-year">({year})</span>}</h1>
-              {!item.bannerImage && item.logoImage && <img className="game-modal-logo-inline" src={assetSrc(item.logoImage)} alt="" />}
+              {!item.bannerImage && item.logoImage && <img className="game-modal-logo-inline zoomable" src={assetSrc(item.logoImage)} alt={item.title} data-zoom-label="Logo" />}
             </div>
             {item.alternativeTitles && item.alternativeTitles.length > 0 && (
               <p className="game-modal-alt-titles">{item.alternativeTitles.join(' · ')}</p>
@@ -158,7 +158,7 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
                   <div key={b.id} className="bundle-view-card">
                     <div className="bundle-view-cover">
                       {b.cover
-                        ? <img src={assetSrc(b.cover)} alt={b.name} />
+                        ? <img className="zoomable" src={assetSrc(b.cover)} alt={b.name} data-zoom-group={`game-bundle-${item.id}`} data-zoom-label={b.name} />
                         : <span>{b.name.charAt(0).toUpperCase()}</span>}
                     </div>
                     <div className="bundle-view-text">

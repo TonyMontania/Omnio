@@ -227,6 +227,7 @@ export interface AlbumEdition {
   id: string
   name: string
   cover?: string
+  releaseDate?: string     // ISO date; each edition often ships months/years after the base album
   tracks?: Track[]
 }
 
@@ -343,7 +344,8 @@ export interface Item {
   artist?: string
   genres?: string[]
   label?: string
-  partOfAlbum?: string
+  partOfAlbum?: string        // free-text fallback (imports, legacy entries where the album isn't in the library)
+  partOfAlbumId?: string      // preferred: live reference to another Music item (typically an album). Set on non-albums that were later absorbed into an album — EPs, singles collected into a compilation, OSTs bundled into a deluxe edition. The detail view resolves this to a clickable link.
   authors?: string[]
   mangaArtists?: string[]
   pubStatus?: PublicationStatus

@@ -2043,6 +2043,11 @@
    (in both the editor and the corresponding detail modals).
    ------------------------------------------------------------------------- */
 
+/* Global click-to-zoom: any <img class="zoomable"> shows the resize cursor
+   and opens the app-level lightbox on click (the listener lives in App.tsx). */
+img.zoomable { cursor: zoom-in; }
+img.zoomable:hover { filter: brightness(1.05); }
+
 .lightbox-overlay {
   position: fixed;
   inset: 0;

@@ -41,7 +41,7 @@ export default function MovieDetailModal({ item, groups, allMovies, onClose, onE
 
       {banner && (
         <div className="game-modal-banner">
-          <img src={assetSrc(banner)} alt="" />
+          <img className="zoomable" src={assetSrc(banner)} alt={item.title} data-zoom-label="Backdrop" />
           <div className="banner-fade" />
         </div>
       )}
@@ -49,7 +49,7 @@ export default function MovieDetailModal({ item, groups, allMovies, onClose, onE
       <div className="game-modal-body" style={banner ? { marginTop: 110 } : undefined}>
         <div className="game-modal-main">
           <div className="game-modal-cover">
-            {item.cover ? <img src={assetSrc(item.cover)} alt="" /> : <div className="cover-preview-placeholder">No cover</div>}
+            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder">No cover</div>}
           </div>
           <div className="game-modal-info">
             <div className="game-modal-title-row">

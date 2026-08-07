@@ -50,6 +50,8 @@
 .pill.active:hover { background: var(--accent-soft); }
 .pill.static { cursor: default; }
 .pill.static:hover { color: var(--text-dim); background: var(--surface-2); border-color: var(--border); }
+.pill.static.clickable { cursor: pointer; }
+.pill.static.clickable:hover { color: var(--text); border-color: var(--accent); }
 
 .upload-row { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
 

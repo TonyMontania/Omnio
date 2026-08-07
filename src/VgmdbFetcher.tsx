@@ -114,16 +114,47 @@ export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) 
       }
     }
 
+    // Producer roles live on `organizations` (or occasionally on
+    // publisher/distributor entries themselves) — role strings VGMdb uses:
+    // "Producer", "Executive Producer", "Music Producer", "Sound Producer".
+    // Composers are surfaced separately as tags at the end so both credits
+    // survive without one clobbering the other.
+    const producerOrgs = (d.organizations ?? []).filter((o) => /producer/i.test(o.role ?? ''))
+    const producers: string[] = producerOrgs
+      .map((o) => displayName(o.names))
+      .filter(Boolean)
+    // Fallback: when VGMdb doesn't split roles, treat composers as the
+    // production credit (matches how the vast majority of game/anime OSTs
+    // are attributed — the composer IS the producer of the album).
+    if (producers.length === 0 && d.composers && d.composers.length > 0) {
+      for (const c of d.composers) {
+        const n = displayName(c.names)
+        if (n) producers.push(n)
+      }
+    }
+
+    // VGMdb release_date is ISO "YYYY-MM-DD" when the day is known and
+    // "YYYY-MM" or just "YYYY" otherwise. Keep whatever precision is
+    // available: full date to `releaseDate`, always the year to
+    // `releaseYear` so the card still shows a year on partial data.
+    const dateRaw = (d.release_date ?? '').trim()
+    const releaseDate = /^\d{4}-\d{2}-\d{2}$/.test(dateRaw) ? dateRaw : undefined
+
     const title = displayName(d.names) || d.name || ''
     const patch: Partial<Item> = {
       title,
       artist: joinNames(d.performers) || joinNames(d.composers),
-      releaseYear: (d.release_date ?? '').slice(0, 4) || undefined,
+      releaseYear: dateRaw.slice(0, 4) || undefined,
+      releaseDate,
       musicType: 'ost',
       musicSource: 'soundtrack',
       label: displayName(d.publisher?.names) || undefined,
+      // Distributor is a distinct role in VGMdb's model (the org that
+      // physically shipped the CDs, often different from the label) and
+      // maps cleanly onto Omnio's distributors field.
+      distributors: d.distributor?.names ? [displayName(d.distributor.names)].filter(Boolean) : undefined,
       genres: d.categories && d.categories.length ? d.categories : undefined,
-      producers: joinNames(d.composers) ? [joinNames(d.composers)!] : undefined,
+      producers: producers.length > 0 ? Array.from(new Set(producers)) : undefined,
       alternativeTitles: altsFromNames(d.names, title),
       hasTracks: tracks.length > 0,
       tracks: tracks.length > 0 ? tracks : undefined,
@@ -139,9 +170,11 @@ export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) 
       hint={
         <>Video-game music database. No API key — routed through the community
         <code> vgmdb.info </code> JSON proxy. Applying overwrites title, artist
-        (performers or composers), release year, label, tracklist, cover; sets
-        type to <em>OST</em> and source to <em>Soundtrack</em>. Best fit for
-        game/anime OSTs and Japanese physical releases.</>
+        (performers or composers), alternative titles, full release date, label,
+        distributor, genres, producers (falling back to composers when VGMdb
+        doesn't split the role), cover and tracklist; sets type to <em>OST</em>
+        and source to <em>Soundtrack</em>. Best fit for game/anime OSTs and
+        Japanese physical releases.</>
       }
       placeholder="Search album, e.g. 'nier automata ost'…"
       initialQuery={initialQuery}

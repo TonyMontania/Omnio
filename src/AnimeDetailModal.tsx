@@ -48,7 +48,7 @@ export default function AnimeDetailModal({ item, groups, allAnime, onClose, onEd
 
       {item.bannerImage && (
         <div className="game-modal-banner">
-          <img src={assetSrc(item.bannerImage)} alt="" />
+          <img className="zoomable" src={assetSrc(item.bannerImage)} alt={item.title} data-zoom-label="Banner" />
           <div className="banner-fade" />
         </div>
       )}
@@ -56,7 +56,7 @@ export default function AnimeDetailModal({ item, groups, allAnime, onClose, onEd
       <div className="game-modal-body" style={item.bannerImage ? { marginTop: 110 } : undefined}>
         <div className="game-modal-main">
           <div className="game-modal-cover">
-            {item.cover ? <img src={assetSrc(item.cover)} alt="" /> : <div className="cover-preview-placeholder">No cover</div>}
+            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder">No cover</div>}
           </div>
           <div className="game-modal-info">
             <div className="game-modal-title-row">

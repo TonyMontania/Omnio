@@ -49,7 +49,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
 
       <div className="music-modal-main">
         <div className="music-modal-cover">
-          {item.cover ? <img src={assetSrc(item.cover)} alt="" /> : <div className="cover-preview-placeholder">No cover</div>}
+          {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder">No cover</div>}
         </div>
         <div className="music-modal-info">
           <h1>{item.title}</h1>
@@ -92,7 +92,25 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
             <div className="field-group">
               <label>Status</label>
               <span className="pill static">{item.consumed ? '✓ Listened' : 'Not listened'}</span>
-              {!albumLike && item.partOfAlbum && <span className="pill static">Part of: {item.partOfAlbum}</span>}
+              {!albumLike && (() => {
+                // Prefer the live reference over the free-text label — when
+                // both are set, the ID always wins. Clicking navigates to
+                // the target album's detail view via the same handler that
+                // the "Related" strip uses.
+                const linkedAlbum = item.partOfAlbumId ? allMusic.find((a) => a.id === item.partOfAlbumId) : null
+                if (linkedAlbum) {
+                  return (
+                    <button
+                      type="button"
+                      className="pill static clickable"
+                      onClick={() => onNavigate(linkedAlbum.id)}
+                      title="Open linked album"
+                    >Part of: {linkedAlbum.title}</button>
+                  )
+                }
+                if (item.partOfAlbum) return <span className="pill static">Part of: {item.partOfAlbum}</span>
+                return null
+              })()}
             </div>
             {item.rating ? (
               <div className="field-group">
@@ -190,7 +208,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
           <div className="single-covers-grid">
             {item.singleCovers.map((s) => (
               <div key={s.id} className="single-cover-card">
-                <img src={assetSrc(s.cover)} alt={s.name} />
+                <img className="zoomable" src={assetSrc(s.cover)} alt={s.name} data-zoom-group={`music-singles-${item.id}`} data-zoom-label={s.name} data-zoom-caption={s.year ? String(s.year) : undefined} />
                 <span>{s.name}{s.year ? ` (${s.year})` : ''}</span>
               </div>
             ))}
@@ -201,27 +219,35 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
       {albumLike && item.editions && item.editions.length > 0 && (
         <div className="field-group music-editions">
           <label>Editions</label>
-          {item.editions.map((ed) => (
-            <div key={ed.id} className="music-edition">
-              {ed.cover
-                ? <img className="music-edition-cover" src={assetSrc(ed.cover)} alt="" />
-                : <div className="music-edition-cover placeholder">No cover</div>}
-              <div className="music-edition-info">
-                <h4>{ed.name}</h4>
-                {ed.tracks && ed.tracks.length > 0 && (
-                  <div className="music-edition-tracks">
-                    {ed.tracks.map((t) => (
-                      <div key={t.id} className="music-edition-track">
-                        <span className="t-num">{t.number}</span>
-                        <span className="t-name">{t.name}{t.favorite ? ' ★' : ''}</span>
-                        {t.duration && <span>{t.duration}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
+          {item.editions.map((ed) => {
+            // Editions without their own cover fall back to the album's main
+            // cover — Deluxe / Anniversary re-issues almost always share
+            // the base artwork, and forcing the user to re-upload it was
+            // creating a "No cover" placeholder on nearly every entry.
+            const displayCover = ed.cover ?? item.cover
+            return (
+              <div key={ed.id} className="music-edition">
+                {displayCover
+                  ? <img className="music-edition-cover zoomable" src={assetSrc(displayCover)} alt={ed.name} data-zoom-group={`music-editions-${item.id}`} data-zoom-label={ed.name} data-zoom-caption={ed.releaseDate || undefined} />
+                  : <div className="music-edition-cover placeholder">No cover</div>}
+                <div className="music-edition-info">
+                  <h4>{ed.name}</h4>
+                  {ed.releaseDate && <p className="music-edition-date">{ed.releaseDate}</p>}
+                  {ed.tracks && ed.tracks.length > 0 && (
+                    <div className="music-edition-tracks">
+                      {ed.tracks.map((t) => (
+                        <div key={t.id} className="music-edition-track">
+                          <span className="t-num">{t.number}</span>
+                          <span className="t-name">{t.name}{t.favorite ? ' ★' : ''}</span>
+                          {t.duration && <span>{t.duration}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

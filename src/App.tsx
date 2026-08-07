@@ -61,6 +61,7 @@ import {
 // modal's JS the first time they open it (imperceptible on local disk).
 import ItemCard from './ItemCard'
 import CardContextMenu, { type CardMenuAction } from './components/CardContextMenu'
+import ImageLightbox from './components/ImageLightbox'
 import Toast from './Toast'
 import BackupList from './BackupList'
 import BulkActionBar from './BulkActionBar'
@@ -636,6 +637,7 @@ function App() {
   const [genres, setGenres] = useState<string[]>([])
   const [label, setLabel] = useState('')
   const [partOfAlbum, setPartOfAlbum] = useState('')
+  const [partOfAlbumId, setPartOfAlbumId] = useState('')
   const [hasTracks, setHasTracks] = useState(false)
   const [tracks, setTracks] = useState<Track[]>([])
   const [singleCovers, setSingleCovers] = useState<SingleCover[]>([])
@@ -1085,6 +1087,46 @@ function App() {
     return () => window.removeEventListener('omnio-toast', h)
   }, [])
 
+  // Global click-to-zoom: any <img class="zoomable"> anywhere opens a
+  // full-screen lightbox. When multiple `.zoomable` images share a
+  // `data-zoom-group` value (e.g. a covers gallery), the arrow-key
+  // navigation walks between them; otherwise it's a single-image view.
+  // Registered on document instead of per-modal so wiring a new cover /
+  // banner / logo only takes adding the class.
+  const [zoomState, setZoomState] = useState<{ images: { src: string; label?: string; caption?: string }[]; index: number } | null>(null)
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target || target.tagName !== 'IMG') return
+      const img = target as HTMLImageElement
+      if (!img.classList.contains('zoomable')) return
+      // Never intercept clicks that already have a specific handler on
+      // the image itself (existing lightbox owners inside GameDetail /
+      // MangaDetail have their own onClick and this global one would
+      // fire in addition, opening two views).
+      if (img.dataset.zoomHandled === '1') return
+      e.preventDefault()
+      e.stopPropagation()
+      const group = img.dataset.zoomGroup
+      let siblings: HTMLImageElement[] = [img]
+      if (group) {
+        siblings = Array.from(document.querySelectorAll<HTMLImageElement>(`img.zoomable[data-zoom-group="${CSS.escape(group)}"]`))
+      }
+      const startIndex = Math.max(0, siblings.indexOf(img))
+      const images = siblings.map((s) => ({
+        // The `src` attribute is already the fully resolved URL (Electron's
+        // omnio-asset:// or a http URL). ImageLightbox re-runs assetSrc on
+        // its input which is a no-op for those forms — safe to pass along.
+        src: s.currentSrc || s.src,
+        label: s.dataset.zoomLabel,
+        caption: s.dataset.zoomCaption || s.alt || undefined,
+      }))
+      setZoomState({ images, index: startIndex })
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [])
+
   const handlePlayTimeChange = (v: string) => { if (/^\d*\.?\d{0,2}$/.test(v)) setPlayTime(v) }
   const intHandler = (setter: (v: string) => void) => (v: string) => { if (/^\d*$/.test(v)) setter(v) }
   const yearHandler = (setter: (v: string) => void) => (v: string) => { if (/^\d{0,4}$/.test(v)) setter(v) }
@@ -1146,7 +1188,7 @@ function App() {
     setPlatforms([]); setOwnership(''); setGameStatus('backlog'); setPlayTime('')
     setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([]); setIsBundle(false); setBundleContents([]); setSaveFiles([]); setAchievementsList([]); setScreenshots([]); setChapterNotes([]); setPcgwPage(undefined)
     setReleaseYear(''); setDuration(''); setConsumed(false); setArtist(''); setMusicType('')
-    setGenres([]); setLabel(''); setPartOfAlbum(''); setHasTracks(false); setTracks([]); setSingleCovers([]); setEditions([])
+    setGenres([]); setLabel(''); setPartOfAlbum(''); setPartOfAlbumId(''); setHasTracks(false); setTracks([]); setSingleCovers([]); setEditions([])
     setMusicSource(''); setProducers([]); setMusicReview(''); setVinylCondition('')
     setUnitCount(''); setStartYear(''); setEndYear(''); setUnits([])
     setMangaAuthors([]); setMangaArtists([]); setVolumeCovers([]); setMangaDescription(''); setPubStatus(''); setReadingStatus('plan_to_read')
@@ -1315,6 +1357,7 @@ function App() {
     setMusicType(item.musicType ?? '')
     setGenres(item.genres ?? [])
     setPartOfAlbum(item.partOfAlbum ?? '')
+    setPartOfAlbumId(item.partOfAlbumId ?? '')
     setMusicSource(item.musicSource ?? '')
     setProducers(item.producers ?? [])
     setMusicReview(item.musicReview ?? '')
@@ -2042,6 +2085,7 @@ function App() {
         artist: artist.trim() || undefined,
         genres: albumLike && genres.length > 0 ? genres : undefined,
         partOfAlbum: !albumLike ? (partOfAlbum.trim() || undefined) : undefined,
+        partOfAlbumId: !albumLike && partOfAlbumId ? partOfAlbumId : undefined,
         label: albumLike ? (label.trim() || undefined) : undefined,
         hasTracks: albumLike ? hasTracks : undefined,
         tracks: albumLike && hasTracks && tracks.length > 0 ? tracks : undefined,
@@ -6025,6 +6069,40 @@ function App() {
                             <input value={releaseYear} onChange={(e) => yearHandler(setReleaseYear)(e.target.value)} inputMode="numeric" maxLength={4} />
                           </div>
                         </div>
+                        <div className="field-row">
+                          <div className="field-group">
+                            <label>Part of album</label>
+                            <select
+                              value={partOfAlbumId}
+                              onChange={(e) => {
+                                const id = e.target.value
+                                setPartOfAlbumId(id)
+                                // Copy the picked album's title into the free-text
+                                // fallback so exports / imports / detail cards
+                                // without live resolution still show a label.
+                                if (id) {
+                                  const picked = items.find((i) => i.id === id)
+                                  if (picked) setPartOfAlbum(picked.title)
+                                }
+                              }}
+                            >
+                              <option value="">— none —</option>
+                              {items
+                                .filter((i) => i.categoryId === 'musica' && i.id !== editingId && isAlbumLikeMusic(i.musicType) && (!artist.trim() || (i.artist ?? '').toLowerCase() === artist.trim().toLowerCase()))
+                                .sort((a, b) => a.title.localeCompare(b.title))
+                                .map((i) => <option key={i.id} value={i.id}>{i.title}</option>)}
+                            </select>
+                            <p className="hint">Link this single / EP / OST to the album it was later collected into. Options are filtered to album-like Music entries by the same artist.</p>
+                          </div>
+                          <div className="field-group">
+                            <label>…or free-text</label>
+                            <input
+                              value={partOfAlbum}
+                              onChange={(e) => setPartOfAlbum(e.target.value)}
+                              placeholder="Album title (used when it isn't in your library)"
+                            />
+                          </div>
+                        </div>
                         <div className="form-section-header" data-belongs-to="progress">
                           <span className="form-section-title">Progress</span>
                           <span className="form-section-hint">Listened toggle · tracklist · per-track rating</span>
@@ -6983,6 +7061,15 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {zoomState && (
+        <ImageLightbox
+          images={zoomState.images}
+          index={zoomState.index}
+          onIndex={(i) => setZoomState((s) => (s ? { ...s, index: i } : s))}
+          onClose={() => setZoomState(null)}
+        />
       )}
     </div>
     </Suspense>

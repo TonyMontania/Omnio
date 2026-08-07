@@ -75,6 +75,14 @@ export default function EditionsEditor({ editions, mainArtist, onChange }: {
                     <input type="file" accept="image/*" ref={(el) => { fileRefs.current[ed.id] = el }} style={{ display: 'none' }} onChange={handleCoverFile(ed.id)} />
                   </div>
                 </div>
+                <div className="field-group">
+                  <label>Release date</label>
+                  <input
+                    type="date"
+                    value={ed.releaseDate ?? ''}
+                    onChange={(e) => patchEdition(ed.id, { releaseDate: e.target.value || undefined })}
+                  />
+                </div>
                 <TrackListEditor
                   tracks={ed.tracks ?? []}
                   mainArtist={mainArtist}

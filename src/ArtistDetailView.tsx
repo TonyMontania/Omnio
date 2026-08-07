@@ -61,11 +61,11 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
       </div>
 
       <div className="artist-banner">
-        {artist.bannerImage ? <img src={assetSrc(artist.bannerImage)} alt="" /> : <div className="artist-banner-placeholder" />}
+        {artist.bannerImage ? <img className="zoomable" src={assetSrc(artist.bannerImage)} alt={artist.name} data-zoom-label="Banner" /> : <div className="artist-banner-placeholder" />}
         <div className="banner-fade" />
         <div className="artist-header-row">
           <div className="artist-avatar">
-            {artist.photo ? <img src={assetSrc(artist.photo)} alt="" /> : <span>{artist.name.charAt(0).toUpperCase()}</span>}
+            {artist.photo ? <img className="zoomable" src={assetSrc(artist.photo)} alt={artist.name} data-zoom-label="Photo" /> : <span>{artist.name.charAt(0).toUpperCase()}</span>}
           </div>
           <div className="artist-header-info">
             <span className="artist-eyebrow">Artist</span>
