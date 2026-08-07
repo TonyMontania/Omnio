@@ -20,10 +20,10 @@
 ## What it does
 
 - **11 libraries** in one app: Games, Music, Movies, Series, Anime, Donghua, Manga, Manhwa, Manhua, Western Comics, Books.
-- **Home dashboard** — landing view with a portal card per library, "currently in progress" strip and next-30-days upcoming releases. Optional startup screen.
-- **Two layouts** — classic sidebar or top-nav bar with libraries as tabs. Toggle in Settings → Appearance.
-- **One-click metadata + covers** from 10 sources — SteamGridDB, IGDB, TMDb, MusicBrainz + Cover Art Archive, VGMdb, AniList, MyAnimeList, Kitsu, MangaDex, ComicVine, OpenLibrary.
-- **Import**: MyAnimeList / AniList XML, Steam profile (no key), Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads vocab presets.
+- **Home dashboard** — landing view with a portal card per library and a next-30-days upcoming releases panel. Optional startup screen.
+- **Tabbed editor + fused top-nav** — every item edits inside Overview / Identity / Progress / Media / History / Related / Notes; the library header (title, count, status chips, view toggle, +Add) lives on a single top-nav row.
+- **One-click metadata + covers** from 14 sources — AniDB, AniList, ComicVine, IGDB, Kitsu, lrclib, MangaDex, MusicBrainz + Cover Art Archive, MyAnimeList, OpenLibrary, PCGamingWiki, SteamGridDB, TMDb, VGMdb.
+- **Import**: MyAnimeList / AniList XML, Steam profile, Letterboxd, Kindle highlights (`My Clippings.txt`), Last.fm scrobbles, Trakt.tv, Discogs collection, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads vocab presets.
 - **Export**: HTML site (search + light/dark toggle built in), MAL-compatible XML for anime + manga, iCal (.ics) for the release calendar.
 - **In-app updater** — silent check at boot, one-click download of the exact build for your platform.
 - **Local-first**: everything lives in `data/` + `assets/` next to the executable. No accounts, no cloud, no telemetry.
@@ -86,19 +86,19 @@ Download the latest build for your platform from the [releases page](https://git
 
 Sorted alphabetically — the way the app itself lists them.
 
-- **Anime & Donghua** — AniList-style card, studios, episodes watched/total, episode list with rating/notes, rewatch log, weekday-slotted **simulcast board** for the airing season.
+- **Anime & Donghua** — AniList-style card, studios, episodes watched/total, episode list with rating/notes, rewatch log, per-item **banner image**, **AniDB deep-fetch** for weighted tags + tighter cross-refs (coexists with AniList / MAL / Kitsu), and a weekday-slotted **simulcast board** for the airing season.
 - **Books** — authors, publisher, series/saga, pages read/total, ISBN, format (paperback / hardcover / ebook / audiobook), reread history, **per-chapter notes**, **Kindle highlights** imported from `My Clippings.txt`. OpenLibrary metadata + covers, no key needed.
 - **Games** — banner + logo + cover, multiple devs/publishers, free-form platforms, playtime, DLC + bundles, edition, source (remake/remaster/port…), franchise, related games, **detailed achievement list** with per-entry unlocked date, **screenshots gallery** with click-to-view lightbox, **save file backup** stored under `assets/games/saves/`, and inline **PCGamingWiki save + config paths** so you know where the game keeps its data.
-- **Manga / Manhwa / Manhua / Western Comics** — authors + artists, chapters/volumes, volume covers gallery with lightbox, chapter list with per-chapter **scanlator** attribution, magazine, **physical / digital ownership** tracker, direct link to the title's MangaDex page for new-chapter follow.
-- **Movies** — directors, writers, cast, production, franchise, rewatch history, backdrop.
-- **Music** — Single / EP / Album / OST / Live / Compilation, per-track rating + **one-click lyrics fetch (lrclib.net, no key)**, single covers gallery, editions (Deluxe, Japan, Anniversary…), Spotify-style Artist profile with members and years active, **vinyl condition** (Goldmine grading), **concert log** with venue + setlist per attended show.
-- **Series** — cast, directors, showrunners, seasons with per-episode tracking.
+- **Manga / Manhwa / Manhua / Western Comics** — authors + artists, chapters/volumes, volume covers gallery with lightbox, chapter list with per-chapter **scanlator** attribution, magazine, per-item **banner image**, **physical / digital ownership** tracker, direct link to the title's MangaDex page for new-chapter follow.
+- **Movies** — directors, writers, cast, production, franchise, rewatch history, backdrop, **streaming availability** + **physical media type** (Blu-Ray / 4K UHD / DVD / VHS / Digital), **Letterboxd** CSV import.
+- **Music** — Single / EP / Album / OST / Live / Compilation, per-track rating + **one-click lyrics fetch (lrclib.net, no key)**, single covers gallery, editions (Deluxe, Japan, Anniversary…), Spotify-style Artist profile in a tabbed modal with **multi-stint role periods** per member and a † **deceased mark**, **vinyl condition** (Goldmine grading), **concert log** with venue + setlist per attended show, **Last.fm scrobbles** + **Discogs collection** import.
+- **Series** — cast, directors, showrunners, seasons with per-episode tracking, **Sub/Dub** tracker, **Trakt.tv** watched-history import.
 
 For a full field-by-field reference (English + Spanish labels), see [`docs/FIELDS.md`](docs/FIELDS.md).
 
 ## Metadata sources
 
-13 sources wired directly into the editors — click the **↗** button on the "Fetch metadata" panel to search, pick and auto-fill. Keys go in **Settings → Data → Integrations**. Sorted alphabetically.
+14 sources wired directly into the editors — click the **↗** button on the "Fetch metadata" panel to search, pick and auto-fill. Keys go in **Settings → Data → Integrations**. Sorted alphabetically.
 
 | Source | Library | Auth |
 | --- | --- | --- |
