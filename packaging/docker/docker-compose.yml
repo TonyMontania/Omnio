@@ -1,19 +1,19 @@
 # Omnio — headless (KasmVNC) deployment.
 #
-# From the repo root:  docker compose -f packaging/docker/docker-compose.yml up -d
+# From this folder:    docker compose up -d
 # Open:                http://localhost:3000
 #
-# The image is built locally from the Dockerfile in this folder. Once a
-# release image is published to GHCR you can drop the `build:` block and
-# uncomment the `image:` line.
+# Default pulls the published image from GitHub Container Registry — no
+# clone or Node toolchain needed on the host. To build from local source
+# instead (dev / bisecting), comment out `image:` and uncomment `build:`.
 
 services:
   omnio:
     container_name: omnio
-    build:
-      context: ../..
-      dockerfile: packaging/docker/Dockerfile
-    # image: ghcr.io/tonymontania/omnio:latest
+    image: ghcr.io/tonymontania/omnio:latest
+    # build:
+    #   context: ../..
+    #   dockerfile: packaging/docker/Dockerfile
     restart: unless-stopped
     ports:
       - "3000:3000"   # HTTP  (KasmVNC web UI)

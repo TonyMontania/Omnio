@@ -1,0 +1,96 @@
+# Build the headless Docker image and publish it to GitHub Container
+# Registry. Triggers:
+#
+#   * `push` to main         → `ghcr.io/tonymontania/omnio:latest`
+#   * `push` of a `v*` tag   → `:X.Y.Z`, `:X.Y`, and `:latest` (via meta-action
+#                              policy: only when the tag is on the default branch)
+#   * `workflow_dispatch`    → manual smoke-test from the Actions tab
+#
+# Kept separate from release.yml so a broken docker build never blocks a
+# desktop-installer release and vice-versa. The desktop builds are the
+# primary artifact of a release; this is the packaged-app-in-a-server flavor.
+#
+# Single-arch (linux/amd64) on purpose. Multi-arch via QEMU is 30+ minutes
+# and Electron under emulated arm64 has been flaky historically; adding
+# arm64 belongs behind a separate PR that proves the runtime works on a
+# real Raspberry Pi / Apple Silicon before we publish it.
+#
+# Auth: GITHUB_TOKEN with `packages: write` (declared below). The token is
+# scoped to this repo — the resulting image lives under the same org.
+
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  # Only one docker build per ref at a time. A rapid succession of main
+  # pushes cancels the in-flight one so we don't queue up builds that
+  # would all publish the same `:latest`.
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Turns the trigger + git metadata into a sensible tag set:
+      #   v0.3.6 tag → ghcr.io/…/omnio:0.3.6, :0.3, :latest
+      #   main push  → ghcr.io/…/omnio:main (no :latest — reserved for tags)
+      #   PR / other → ghcr.io/…/omnio:pr-N (skipped since we don't trigger on PRs)
+      - name: Compute image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/tonymontania/omnio
+          # `latest` only on semver tags so a broken commit on main can't
+          # squat the tag every NAS deploy tracks.
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=ref,event=branch
+          labels: |
+            org.opencontainers.image.title=Omnio
+            org.opencontainers.image.description=Local-first hobby tracker (headless / KasmVNC)
+            org.opencontainers.image.source=https://github.com/TonyMontania/Omnio
+            org.opencontainers.image.licenses=MIT
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packaging/docker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Bake the current version into the runtime manifest so the
+          # container knows what version it is (surfaced in the KasmVNC
+          # session title via TITLE=Omnio and in `docker inspect`).
+          build-args: |
+            OMNIO_VERSION=${{ steps.meta.outputs.version }}
+          # Cache the buildx layer graph in GitHub Actions storage so
+          # rebuilds only redo what actually changed (typically just the
+          # `vite build` step when src/ changes).
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -13,15 +13,20 @@ the native installer is still the better choice.
 
 ## Quick start (docker compose)
 
-From the repo root:
+From this folder:
 
 ```bash
-docker compose -f packaging/docker/docker-compose.yml up -d --build
+docker compose up -d
 ```
 
-Open <http://localhost:3000> in any browser. Your library lives under
+Open <http://localhost:3000> in any browser. The image is pulled from
+`ghcr.io/tonymontania/omnio:latest` and your library lives under
 `packaging/docker/omnio-config/` on the host (change the volume mapping
 in [`docker-compose.yml`](docker-compose.yml) to move it).
+
+To build from local source instead of pulling (dev / bisecting),
+comment out `image:` and uncomment `build:` in the compose file, then
+run `docker compose up -d --build`.
 
 ## Quick start (docker run)
 

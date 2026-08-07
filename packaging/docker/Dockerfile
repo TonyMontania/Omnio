@@ -38,7 +38,9 @@ COPY build ./build
 
 # tsc + vite build → dist/ + dist-electron/. Skip electron-builder here;
 # the runtime stage runs the app directly via the electron binary, no
-# installer wrapping needed.
+# installer wrapping needed. Also skip `npm run icon` — the packaged
+# desktop builds use it to bake .ico/.icns; Docker only needs the .png
+# for BrowserWindow.icon, which is already committed under build/.
 RUN npx tsc && npx vite build
 
 # ---------------------------------------------------------------------------
@@ -49,47 +51,52 @@ RUN npx tsc && npx vite build
 FROM lscr.io/linuxserver/baseimage-kasmvnc:debianbookworm
 
 ARG OMNIO_VERSION=dev
+# TITLE feeds the KasmVNC web UI's tab title and the taskbar of the
+# streamed session. PORTABLE_EXECUTABLE_DIR redirects Omnio's storage
+# root onto the /config bind-mount so nothing lands in a container path
+# that vanishes on recreate. HOME follows for consistency.
 ENV OMNIO_VERSION=${OMNIO_VERSION} \
     TITLE=Omnio \
     HOME=/config \
     PORTABLE_EXECUTABLE_DIR=/config
 
 # Electron 30 runtime deps. libgtk-3-0, libnss3, libgbm1, libasound2 are
-# the ones the base image doesn't already pull in.
+# the ones the base image doesn't already pull in. Node comes in the same
+# apt transaction so the image builds in one layer.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
       libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
       libpango-1.0-0 libcairo2 libasound2 libgtk-3-0 libnss3 libnspr4 \
       libx11-xcb1 fonts-noto-color-emoji ca-certificates curl && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Node — the runtime needs the `electron` npm package to launch
-# the app. Using the same major as the build stage keeps ABI in sync.
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Only the runtime bits: built bundles + package.json (drives `main`) +
-# icons that Electron loads at window-create time.
+# Only the runtime bits: built bundles + icons for BrowserWindow.icon.
 WORKDIR /app
 COPY --from=build /src/dist          ./dist
 COPY --from=build /src/dist-electron ./dist-electron
 COPY --from=build /src/build         ./build
 COPY --from=build /src/public        ./public
-COPY package.json ./
 
-# Production-only install — electron is the only runtime dep we actually
-# need. `npm ci` would fail without a lockfile in this stage, so use
-# `npm install --production` scoped to just electron.
-RUN npm install --no-audit --no-fund --omit=dev electron@30 && \
+# Minimal manifest — `main` tells Electron where to load, and Electron is
+# the sole runtime dependency. We deliberately do NOT copy the source
+# package.json: it lists React / xlsx / TypeScript / etc as (dev)deps,
+# and `npm install` on that manifest would drag ~200 MB of code into the
+# runtime image even though every one of those packages is already bundled
+# into dist/ by vite. This 3-line manifest keeps the runtime lean.
+RUN printf '{\n  "name": "omnio-runtime",\n  "version": "%s",\n  "main": "dist-electron/main.js",\n  "dependencies": { "electron": "30.0.1" }\n}\n' "${OMNIO_VERSION}" > package.json && \
+    npm install --no-audit --no-fund --no-package-lock && \
     npm cache clean --force
 
 # Startup file — the linuxserver base runs /defaults/autostart inside the
-# KasmVNC session on boot. Our copy launches Electron pointed at the app.
+# KasmVNC session on boot. Explicit chmod because Windows checkouts strip
+# the executable bit and the base image's runner treats non-executable
+# scripts as "no autostart configured".
 COPY packaging/docker/root/ /
+RUN chmod +x /defaults/autostart
 
 # Ports: 3000 = HTTP, 3001 = HTTPS (self-signed). Volumes: /config holds
 # the whole data/ + assets/ tree so nothing is trapped inside the image.
