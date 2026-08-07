@@ -120,9 +120,12 @@ export default function AniListFetcher({ initialQuery, kind, categoryId, onApply
     const bannerPath = banner
       ? await downloadImageAsset( banner, categoryId, 'banner', assetBasename(title, 'banner'))
       : undefined
+    const desc = stripHtml(m.description)
     const patch: Partial<Item> = {
       title,
-      description: stripHtml(m.description),
+      // Detail views render the category-specific description field. Writing
+      // to the generic `description` was silently no-op'd in Anime/Manga.
+      ...(kind === 'ANIME' ? { animeDescription: desc } : { mangaDescription: desc }),
       alternativeTitles: Array.from(new Set([m.title.romaji, m.title.english, m.title.native, ...(m.synonyms ?? [])].filter(Boolean).filter((t) => t !== title))) as string[],
       genres: m.genres,
       releaseDate: formatDate(m.startDate),

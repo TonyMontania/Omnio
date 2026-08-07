@@ -367,7 +367,7 @@ function App() {
   const [viewingArtist, setViewingArtist] = useState<MusicArtist | null>(null)
   const [artistPanelOpen, setArtistPanelOpen] = useState(false)
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null)
-  const [artistEditorTab, setArtistEditorTab] = useState<'overview' | 'details' | 'members'>('overview')
+  const [artistEditorTab, setArtistEditorTab] = useState<'overview' | 'details' | 'members' | 'concerts'>('overview')
   const [artistNameField, setArtistNameField] = useState('')
   const [artistPhotoField, setArtistPhotoField] = useState('')
   const [artistBannerField, setArtistBannerField] = useState('')
@@ -378,6 +378,7 @@ function App() {
   const [artistActiveTo, setArtistActiveTo] = useState('')
   const [artistLabels, setArtistLabels] = useState<string[]>([])
   const [artistMembers, setArtistMembers] = useState<BandMember[]>([])
+  const [artistConcerts, setArtistConcerts] = useState<ConcertEntry[]>([])
   const artistPhotoFileInputRef = useRef<HTMLInputElement>(null)
   const artistBannerFileInputRef = useRef<HTMLInputElement>(null)
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null)
@@ -691,7 +692,6 @@ function App() {
   const [seriesReview, setSeriesReview] = useState('')
   const [musicSource, setMusicSource] = useState<MusicSource | ''>('')
   const [vinylCondition, setVinylCondition] = useState<VinylCondition | ''>('')
-  const [concerts, setConcerts] = useState<ConcertEntry[]>([])
   const [producers, setProducers] = useState<string[]>([])
   const [musicReview, setMusicReview] = useState('')
   const [mangaSource, setMangaSource] = useState<MangaSource | ''>('')
@@ -803,6 +803,40 @@ function App() {
     items = itemsRes.list
     const artistsRes = await migrateArtists(artists)
     artists = artistsRes.list
+
+    // 0.3.6 migration: Music Item.concerts → MusicArtist.concerts. Older
+    // versions kept a concerts list on every album/single; now it lives
+    // on the artist. Match by exact artist name, create the artist if
+    // there is no existing one, and dedupe on (date + venue) so re-runs
+    // are idempotent. Item.concerts is cleared once merged.
+    {
+      const withConcerts = items.filter((i) => i.categoryId === 'musica' && Array.isArray(i.concerts) && i.concerts.length > 0)
+      if (withConcerts.length > 0) {
+        const byName = new Map<string, MusicArtist>()
+        for (const a of artists) byName.set(a.name.trim().toLowerCase(), a)
+        for (const it of withConcerts) {
+          const key = (it.artist ?? '').trim().toLowerCase()
+          if (!key) continue
+          let artist = byName.get(key)
+          if (!artist) {
+            artist = { id: crypto.randomUUID(), name: (it.artist ?? '').trim(), createdAt: Date.now() }
+            byName.set(key, artist)
+            artists = [...artists, artist]
+          }
+          const seen = new Set((artist.concerts ?? []).map((c) => `${c.date}|${c.venue.toLowerCase()}`))
+          const merged = [...(artist.concerts ?? [])]
+          for (const c of it.concerts!) {
+            const k = `${c.date}|${c.venue.toLowerCase()}`
+            if (seen.has(k)) continue
+            seen.add(k)
+            merged.push(c)
+          }
+          artist.concerts = merged.length > 0 ? merged : undefined
+        }
+        items = items.map((i) => (i.categoryId === 'musica' && i.concerts ? { ...i, concerts: undefined } : i))
+      }
+    }
+
     skipHistoryRef.current = true
     setItems(items)
     setCollections(data?.collections ?? [])
@@ -979,38 +1013,50 @@ function App() {
     return () => clearTimeout(t)
   }, [toast])
 
-  // Tabbed-editor visibility. Runs when the editor is open OR when the
-  // active tab changes. Walks the form container, groups each
+  // Tabbed-editor visibility. Walks the form container, groups each
   // `.form-section-header` with its following siblings until the next
   // header, and toggles a `.editor-hidden` class on every node in a group
   // whose assigned tab (data-belongs-to on the header) doesn't match the
   // active tab. Sections without an assigned tab default to 'notes' so
   // nothing is lost silently.
+  //
+  // A MutationObserver watches childList changes on the form so nodes that
+  // mount post-render — a fetcher applying metadata that populates a
+  // previously-empty section, editions/tracks appearing, etc. — get the
+  // class applied immediately, instead of bleeding into the current tab
+  // until the user switches tabs and back. `attributes` is intentionally
+  // NOT observed, so toggling .editor-hidden ourselves doesn't self-trigger.
   useEffect(() => {
     if (!panelOpen) return
     const root = document.querySelector<HTMLElement>('.form[data-editor-tab]')
     if (!root) return
-    const headers = Array.from(root.querySelectorAll<HTMLElement>('.form-section-header'))
-    if (headers.length === 0) return
-    // Section 0 is everything before the first header (fetch-metadata panel).
-    // Keep it visible in overview only so it's the "landing pad".
-    const firstHeader = headers[0]
-    let node: ChildNode | null = root.firstChild
-    while (node && node !== firstHeader) {
-      if (node instanceof HTMLElement) node.classList.toggle('editor-hidden', editorTab !== 'overview')
-      node = node.nextSibling
-    }
-    for (let i = 0; i < headers.length; i++) {
-      const h = headers[i]
-      const belongsTo = h.getAttribute('data-belongs-to') ?? 'notes'
-      const show = belongsTo === editorTab
-      const next = headers[i + 1]
-      let cur: ChildNode | null = h
-      while (cur && cur !== next) {
-        if (cur instanceof HTMLElement) cur.classList.toggle('editor-hidden', !show)
-        cur = cur.nextSibling
+    const apply = () => {
+      const headers = Array.from(root.querySelectorAll<HTMLElement>('.form-section-header'))
+      if (headers.length === 0) return
+      const firstHeader = headers[0]
+      // Section 0 is everything before the first header (fetch-metadata
+      // panel + basic-info block). Keep it visible in overview only.
+      let node: ChildNode | null = root.firstChild
+      while (node && node !== firstHeader) {
+        if (node instanceof HTMLElement) node.classList.toggle('editor-hidden', editorTab !== 'overview')
+        node = node.nextSibling
+      }
+      for (let i = 0; i < headers.length; i++) {
+        const h = headers[i]
+        const belongsTo = h.getAttribute('data-belongs-to') ?? 'notes'
+        const show = belongsTo === editorTab
+        const next = headers[i + 1]
+        let cur: ChildNode | null = h
+        while (cur && cur !== next) {
+          if (cur instanceof HTMLElement) cur.classList.toggle('editor-hidden', !show)
+          cur = cur.nextSibling
+        }
       }
     }
+    apply()
+    const observer = new MutationObserver(apply)
+    observer.observe(root, { childList: true, subtree: true })
+    return () => observer.disconnect()
   }, [editorTab, panelOpen, editingId, activeCategory])
 
   // Fetchers dispatch this event via downloadImageAsset when image:download
@@ -1101,7 +1147,7 @@ function App() {
     setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([]); setIsBundle(false); setBundleContents([]); setSaveFiles([]); setAchievementsList([]); setScreenshots([]); setChapterNotes([]); setPcgwPage(undefined)
     setReleaseYear(''); setDuration(''); setConsumed(false); setArtist(''); setMusicType('')
     setGenres([]); setLabel(''); setPartOfAlbum(''); setHasTracks(false); setTracks([]); setSingleCovers([]); setEditions([])
-    setMusicSource(''); setProducers([]); setMusicReview(''); setVinylCondition(''); setConcerts([])
+    setMusicSource(''); setProducers([]); setMusicReview(''); setVinylCondition('')
     setUnitCount(''); setStartYear(''); setEndYear(''); setUnits([])
     setMangaAuthors([]); setMangaArtists([]); setVolumeCovers([]); setMangaDescription(''); setPubStatus(''); setReadingStatus('plan_to_read')
     setMangaSource(''); setMagazine(''); setMangaReview(''); setHasChapters(false); setChapters([]); setMediaOwnership(''); setMangadexId('')
@@ -1153,6 +1199,7 @@ function App() {
     setArtistActiveTo(a.activeTo ?? '')
     setArtistLabels(a.labels ?? [])
     setArtistMembers(a.members ?? [])
+    setArtistConcerts(a.concerts ?? [])
     setArtistEditorTab('overview')
     setArtistPanelOpen(true)
   }
@@ -1188,6 +1235,7 @@ function App() {
       activeTo: artistActiveTo.trim() || undefined,
       labels: artistLabels.length > 0 ? artistLabels : undefined,
       members: cleanMembers.length > 0 ? cleanMembers : undefined,
+      concerts: artistConcerts.length > 0 ? artistConcerts : undefined,
     }
     // Delete replaced/cleared image files.
     const oldArtist = musicArtists.find((a) => a.id === editingArtistId)
@@ -1271,7 +1319,6 @@ function App() {
     setProducers(item.producers ?? [])
     setMusicReview(item.musicReview ?? '')
     setVinylCondition(item.vinylCondition ?? '')
-    setConcerts(item.concerts ?? [])
     setLabel(item.label ?? '')
     setHasTracks(item.hasTracks ?? false)
     setTracks(item.tracks ?? [])
@@ -2006,7 +2053,6 @@ function App() {
         musicReview: musicReview.trim() || undefined,
         hasSpoilers: musicReview.trim() ? hasSpoilers : undefined,
         vinylCondition: vinylCondition || undefined,
-        concerts: concerts.length > 0 ? concerts : undefined,
         rewatches: rewatches.length > 0 ? rewatches : undefined,
         relatedItems: relatedItems.length > 0 ? relatedItems : undefined,
         recommendedItems: recommendedItems.length > 0 ? recommendedItems : undefined,
@@ -3895,12 +3941,16 @@ function App() {
                         <p className="about-line">Local-only. No accounts, no telemetry, no cloud. Your data lives in this machine.</p>
                         <p className="about-section-title">New in this release</p>
                         <ul className="about-changelog">
+                          <li><b>Concert log lives on the artist</b> — every show you attend is now attached to the band, not to a specific album. Existing entries are auto-merged on first load (deduped by date + venue) and appear in the Artist editor's new Concerts tab.</li>
+                          <li><b>Editor tabs no longer bleed after a fetch</b> — a MutationObserver reapplies the tab-visibility rule when metadata mounts new sections, so Overview stops accidentally showing Progress / Media / History fields until you switch tabs and back.</li>
+                          <li><b>Metadata fetcher fixes</b> — MangaDex now sets the MangaDex ID (fixes the "New chapters (RSS)" link) and the publication demographic; AniList / MAL write the category-specific description so it lands in the field the detail view actually reads; AniDB downloads the cover into <code>assets/</code> instead of leaving a remote URL.</li>
+                          <li><b>Docker (headless / server) deployment</b> — full Electron app running under KasmVNC, reachable from any browser. Ships a Dockerfile, docker-compose and an Unraid template under <code>packaging/docker/</code>.</li>
                           <li><b>Tabbed editor everywhere</b> — Overview / Identity / Progress / Media / History / Related / Notes with progressive disclosure (empty tabs auto-hide).</li>
                           <li><b>Fused top-nav</b> — the library header lives in the topnav now: title, count, status chips, view toggle and +Add on a single row.</li>
                           <li><b>Save file backup + PCGamingWiki paths</b> (Games) — attach saves to any game, and see the game's Save + Config paths per OS without leaving the app.</li>
                           <li><b>Achievement list + screenshots gallery</b> (Games) — detailed per-entry achievements with unlocked date; screenshots with click-to-view lightbox.</li>
                           <li><b>AniDB deep-fetch + Simulcast board</b> (Anime · Donghua) — coexists with AniList / MAL / Kitsu; airing shows slot into a 7-column weekday grid via a new "Airs on" field.</li>
-                          <li><b>Vinyl condition, concert log, per-track lyrics</b> (Music) — Goldmine grading, venue + setlist log, one-click lyrics fetch from lrclib (no key).</li>
+                          <li><b>Vinyl condition, per-track lyrics</b> (Music) — Goldmine grading, one-click lyrics fetch from lrclib (no key). Concert log has moved to the artist editor.</li>
                           <li><b>Chapter notes + Kindle highlights import</b> (Books) — per-chapter notes; import <code>My Clippings.txt</code> directly.</li>
                           <li><b>5 new importers</b> — Letterboxd (Movies), Kindle highlights (Books), Last.fm scrobbles (Music), Trakt.tv (Movies + Series), Discogs collection (Music).</li>
                           <li><b>Data health audit + genre normalizer + per-item JSON export</b> — under Settings → Data → Maintenance.</li>
@@ -6026,7 +6076,6 @@ function App() {
                         onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
                       />
                     </div>
-                    <ConcertLogEditor entries={concerts} onChange={setConcerts} />
                     <div className="form-section-header" data-belongs-to="related">
                       <span className="form-section-title">Related &amp; recommendations</span>
                     </div>
@@ -6304,7 +6353,7 @@ function App() {
               <button type="button" className="panel-close" onClick={closeArtistPanel}>✕</button>
             </div>
             <div className="editor-tabs-bar" role="tablist">
-              {(['overview', 'details', 'members'] as const).map((tab) => (
+              {(['overview', 'details', 'members', 'concerts'] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -6393,6 +6442,9 @@ function App() {
                     <label>Members</label>
                     <BandMembersEditor members={artistMembers} onChange={setArtistMembers} />
                   </div>
+                )}
+                {artistEditorTab === 'concerts' && (
+                  <ConcertLogEditor entries={artistConcerts} onChange={setArtistConcerts} />
                 )}
               </div>
             </div>
@@ -6745,6 +6797,7 @@ function App() {
       {anidbOpen && (
         <AniDBFetcher
           anidbClient={settings.anidbClient}
+          categoryId={activeCategory}
           onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'AniDB')}
           onClose={() => setAnidbOpen(false)}
         />

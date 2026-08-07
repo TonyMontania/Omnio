@@ -3,6 +3,8 @@
 <img src="public/omnio-logo.svg" width="80" align="right" alt="Omnio logo">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-c9a227.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/TonyMontania/Omnio?color=c9a227)](https://github.com/TonyMontania/Omnio/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/TonyMontania/Omnio/total.svg?color=c9a227)](https://github.com/TonyMontania/Omnio/releases)
 ![Platform: Windows · macOS · Linux](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-informational.svg)
 ![Local-first](https://img.shields.io/badge/local--first-yes-success.svg)
 
@@ -17,12 +19,18 @@
 ![Omnio — Detail view with banner, franchise, bundle contents](https://github.com/user-attachments/assets/88b6a8dd-8f62-432d-8ce4-4c9742371b97)
 *Detail view for a bundled release — banner, cover, description, status, source, age rating, groups, genres, platforms, ownership, playtime, and the individual games inside the collection, each linkable to its own entry.*
 
+![Omnio — Home dashboard](https://github.com/user-attachments/assets/b5173ea8-5ed1-4c59-81e0-fa54bc5f04ba)
+*Home dashboard — a portal card per active library with total / completed counters and the three most recent titles. Header shows a time-of-day greeting, and the topbar surfaces global Search, Calendar, Stats and Settings.*
+
+![Omnio — Simulcast board for the current anime & donghua season](https://github.com/user-attachments/assets/bb150be5-e96e-410b-876a-ec196f80104c)
+*Simulcast board — a 7-column weekday grid populated from each show's `Airs on` field, so the airing season is at a glance. Works across Anime and Donghua together.*
+
 ## What it does
 
 - **11 libraries** in one app: Games, Music, Movies, Series, Anime, Donghua, Manga, Manhwa, Manhua, Western Comics, Books.
 - **Home dashboard** — landing view with a portal card per library and a next-30-days upcoming releases panel. Optional startup screen.
 - **Tabbed editor + fused top-nav** — every item edits inside Overview / Identity / Progress / Media / History / Related / Notes; the library header (title, count, status chips, view toggle, +Add) lives on a single top-nav row.
-- **One-click metadata + covers** from 14 sources — AniDB, AniList, ComicVine, IGDB, Kitsu, lrclib, MangaDex, MusicBrainz + Cover Art Archive, MyAnimeList, OpenLibrary, PCGamingWiki, SteamGridDB, TMDb, VGMdb.
+- **One-click metadata + covers** from 14 sources across the 11 libraries — AniDB, AniList, ComicVine, IGDB, Kitsu, lrclib, MangaDex, MusicBrainz (with Cover Art Archive), MyAnimeList, OpenLibrary, PCGamingWiki, SteamGridDB, TMDb, VGMdb.
 - **Import**: MyAnimeList / AniList XML, Steam profile, Letterboxd, Kindle highlights (`My Clippings.txt`), Last.fm scrobbles, Trakt.tv, Discogs collection, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads vocab presets.
 - **Export**: HTML site (search + light/dark toggle built in), MAL-compatible XML for anime + manga, iCal (.ics) for the release calendar.
 - **In-app updater** — silent check at boot, one-click download of the exact build for your platform.
@@ -49,6 +57,23 @@ Download the latest build for your platform from the [releases page](https://git
 - **Flatpak**: `flatpak install flathub com.omnio.app`
 - **Snap**: `sudo snap install omnio`
 - **AUR**: `yay -S omnio-bin`
+
+### Docker (headless / server)
+The full Electron app runs inside a KasmVNC session in the container, and you reach it from any browser on your LAN. Meant for NAS setups (Unraid, TrueNAS Scale, Synology, Proxmox LXC) — on a normal desktop the native installer is still the better choice.
+
+```bash
+docker run -d --name omnio \
+  -p 3000:3000 -p 3001:3001 \
+  -v /path/to/omnio/config:/config \
+  -e PUID=1000 -e PGID=1000 -e TZ=Etc/UTC \
+  --shm-size=1gb \
+  --restart unless-stopped \
+  ghcr.io/tonymontania/omnio:latest
+```
+
+Then open <http://localhost:3000>. Your entire library (data + assets + snapshots) lives under the mounted `/config` folder.
+
+A `docker-compose.yml`, an Unraid template and detailed NAS notes live in [`packaging/docker/`](packaging/docker/).
 
 **Portable builds** (portable EXE, tarball, AppImage) keep `data/` + `assets/` next to the executable — move the folder or drop it on a USB stick and your library travels with you. Installer builds follow each OS's standard data location.
 
@@ -152,8 +177,41 @@ assets/
 - **Card Fields** — pick which fields show on cards, per library.
 - **Data** — backup & restore (JSON + assets folder), snapshots (5 rotated), remote backup, import (MAL/AniList XML, Excel/CSV/Notion, Steam profile, **Letterboxd**, **Kindle highlights**, **Last.fm scrobbles**, **Trakt.tv**, **Discogs collection**), export (HTML, MAL XML for anime/manga, iCal for calendar), Yearly Wrapped with PNG export, API keys, updates, maintenance (find broken covers, rename all assets, clean orphans, **duplicate finder**, **genre normalizer**, **incomplete-items audit**), reset settings, delete all data.
 
+## Build from source
+
+Omnio is an Electron + React + Vite + TypeScript app. Requires **Node.js 18+** and **npm 9+**.
+
+```bash
+git clone https://github.com/TonyMontania/Omnio.git
+cd Omnio
+npm install
+npm run dev        # launches Vite + Electron in dev mode with HMR
+npm run build      # type-check, bundle, and produce an installer/portable
+                   # for the current platform via electron-builder
+npm run lint       # ESLint (zero-warning gate)
+```
+
+Build artifacts land in `release/`. See [`electron-builder.json5`](electron-builder.json5) for per-target settings.
+
+## Privacy
+
+Omnio is local-first: your library never leaves your machine.
+
+- **No accounts, no telemetry, no analytics.** Nothing is sent home.
+- **Outbound requests happen only when you trigger them**: (1) metadata lookups against the 14 sources listed above — one request per search you run in an editor; (2) the in-app updater checks GitHub Releases at startup and when you press "Check for updates".
+- **API keys** you paste into Settings → Data → Integrations are stored in `data/settings.json` on your disk and used only to sign the corresponding source's requests.
+- **No third-party trackers** are embedded in the app or the exported HTML site.
+
+## Changelog
+
+Release notes for every version live on the [releases page](https://github.com/TonyMontania/Omnio/releases). Each build lists new features, fixes and any migration steps.
+
 ## License
 
 [MIT](LICENSE) — feel free to fork, modify and distribute.
 
-Bug reports and feature requests → [issues](https://github.com/TonyMontania/Omnio/issues). PRs welcome.
+---
+
+- Bug reports and feature requests → [issues](https://github.com/TonyMontania/Omnio/issues)
+- Want to contribute? → [CONTRIBUTING.md](CONTRIBUTING.md) · [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- Found a security issue? → [SECURITY.md](SECURITY.md)

@@ -15,9 +15,11 @@
 
 import { useState } from 'react'
 import type { Item, AnimeFormat, AiringStatus } from './types'
+import { assetBasename, downloadImageAsset } from './utils/files'
 
 interface Props {
   initialUrl?: string
+  categoryId: string       // active category so the cover lands in the right assets folder
   onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string) => void
   onClose: () => void
   anidbClient?: string
@@ -142,7 +144,7 @@ function parseAnidbXml(xml: string, aid: string): ParsedAnime | null {
   }
 }
 
-export default function AniDBFetcher({ initialUrl, onApply, onClose, anidbClient }: Props) {
+export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose, anidbClient }: Props) {
   const [input, setInput] = useState(initialUrl ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -169,7 +171,7 @@ export default function AniDBFetcher({ initialUrl, onApply, onClose, anidbClient
     }
   }
 
-  const apply = () => {
+  const apply = async () => {
     if (!result) return
     const patch: Partial<Item> = {
       title: result.mainTitle,
@@ -183,9 +185,17 @@ export default function AniDBFetcher({ initialUrl, onApply, onClose, anidbClient
       studios: result.studios.length > 0 ? result.studios : undefined,
       genres: result.tags.length > 0 ? result.tags.map((t) => t.name) : undefined,
     }
-    // Cover: pass the remote CDN URL; the parent applyFetchedPatch handles
-    // download-to-assets in the same way it does for AniList / TMDb.
-    onApply(patch, result.pictureUrl)
+    // Download the cover into assets/ so it stays local (matches every other
+    // fetcher). AniDB's image CDN is `https://cdn-eu.anidb.net/images/main/{file}`
+    // when the API returns a bare filename; a full URL is passed through.
+    let coverUrl = result.pictureUrl
+    if (coverUrl && !/^https?:\/\//i.test(coverUrl)) {
+      coverUrl = `https://cdn-eu.anidb.net/images/main/${coverUrl}`
+    }
+    const coverPath = coverUrl
+      ? await downloadImageAsset(coverUrl, categoryId, 'cover', assetBasename(result.mainTitle, 'cover')) ?? undefined
+      : undefined
+    onApply(patch, coverPath)
     onClose()
   }
 

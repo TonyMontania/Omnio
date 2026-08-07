@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<!--
+  Unraid Community Applications template for Omnio.
+  Drop this into /boot/config/plugins/dockerMan/templates-user/omnio.xml
+  (or import through the Docker tab) to add Omnio as a one-click app.
+-->
+<Container version="2">
+  <Name>Omnio</Name>
+  <Repository>ghcr.io/tonymontania/omnio:latest</Repository>
+  <Registry>https://ghcr.io/tonymontania/omnio</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/TonyMontania/Omnio/issues</Support>
+  <Project>https://github.com/TonyMontania/Omnio</Project>
+  <Overview>Local-first desktop app to track your hobbies — games, music, movies, series, anime, donghua, manga, manhwa, manhua, western comics and books — all in one place. This container runs the full Electron app inside a KasmVNC session so you can reach it from any browser on your LAN.</Overview>
+  <Category>MediaApp:Other Productivity:</Category>
+  <WebUI>http://[IP]:[PORT:3000]</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/TonyMontania/Omnio/main/public/omnio-logo.svg</Icon>
+  <ExtraParams>--shm-size=1gb</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+
+  <Config Name="WebUI (HTTP)"  Target="3000" Default="3000" Mode="tcp" Description="KasmVNC web UI (HTTP)."  Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="WebUI (HTTPS)" Target="3001" Default="3001" Mode="tcp" Description="KasmVNC web UI (HTTPS, self-signed)." Type="Port" Display="always" Required="false" Mask="false">3001</Config>
+
+  <Config Name="Config" Target="/config" Default="/mnt/user/appdata/omnio" Mode="rw" Description="Library storage — holds data/ (JSONs) and assets/ (covers, banners, saves, screenshots)." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/omnio</Config>
+
+  <Config Name="PUID" Target="PUID" Default="99"    Mode=""    Description="User ID that owns files under /config." Type="Variable" Display="advanced" Required="true"  Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100"   Mode=""    Description="Group ID that owns files under /config." Type="Variable" Display="advanced" Required="true"  Mask="false">100</Config>
+  <Config Name="TZ"   Target="TZ"   Default="Etc/UTC" Mode=""  Description="Timezone (e.g. America/Buenos_Aires)."   Type="Variable" Display="advanced" Required="false" Mask="false">Etc/UTC</Config>
+  <Config Name="Username" Target="CUSTOM_USER" Default="" Mode="" Description="Optional login for the web UI (leave blank to disable auth)." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Password" Target="PASSWORD"    Default="" Mode="" Description="Password for the web UI login."                              Type="Variable" Display="advanced" Required="false" Mask="true"/>
+</Container>

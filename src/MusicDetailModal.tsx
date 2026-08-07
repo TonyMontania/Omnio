@@ -136,24 +136,6 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
         <DetailReview review={item.musicReview} hasSpoilers={item.hasSpoilers} />
         <DetailNotes notes={item.notes} />
         <DetailHistoryTable label="Listen history" entries={item.rewatches ?? []} />
-        {item.concerts && item.concerts.length > 0 && (
-          <div className="field-group">
-            <label>Concerts attended ({item.concerts.length})</label>
-            <ul className="concert-list detail">
-              {[...item.concerts].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((c) => (
-                <li key={c.id} className="concert-row">
-                  <div className="concert-head">
-                    <span className="concert-date">{c.date || '—'}</span>
-                    <span className="concert-venue">{c.venue}</span>
-                    {c.city && <span className="concert-city">{c.city}</span>}
-                  </div>
-                  {c.setlist && <pre className="concert-setlist">{c.setlist}</pre>}
-                  {c.notes && <p className="concert-notes">{c.notes}</p>}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
         <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
         <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
           <CustomFieldsView fields={item.customFields} />

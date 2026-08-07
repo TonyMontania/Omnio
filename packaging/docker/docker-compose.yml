@@ -1,0 +1,36 @@
+# Omnio — headless (KasmVNC) deployment.
+#
+# From the repo root:  docker compose -f packaging/docker/docker-compose.yml up -d
+# Open:                http://localhost:3000
+#
+# The image is built locally from the Dockerfile in this folder. Once a
+# release image is published to GHCR you can drop the `build:` block and
+# uncomment the `image:` line.
+
+services:
+  omnio:
+    container_name: omnio
+    build:
+      context: ../..
+      dockerfile: packaging/docker/Dockerfile
+    # image: ghcr.io/tonymontania/omnio:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"   # HTTP  (KasmVNC web UI)
+      - "3001:3001"   # HTTPS (self-signed)
+    environment:
+      # Passed through to the linuxserver base. Match to your host so
+      # /config files are owned by you and not root.
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      # Optional login for the KasmVNC web UI. Leave unset for no auth
+      # (fine on a home LAN; set both when exposing to the internet).
+      # - CUSTOM_USER=admin
+      # - PASSWORD=changeme
+    volumes:
+      # Your entire library — data/ (JSONs + backups) and assets/ (covers,
+      # banners, save files, screenshots) live under this one folder so
+      # backing up Omnio is one `cp -r`.
+      - ./omnio-config:/config
+    shm_size: "1gb"

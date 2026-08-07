@@ -114,7 +114,9 @@ export default function JikanFetcher({ initialQuery, kind, categoryId, onApply, 
     const alts = Array.from(new Set([m.title, m.title_english, m.title_japanese, ...(m.title_synonyms ?? [])].filter(Boolean))) as string[]
     const patch: Partial<Item> = {
       title: displayTitle,
-      description: m.synopsis,
+      // Detail views render the category-specific description field. Writing
+      // to the generic `description` was silently no-op'd in Anime/Manga.
+      ...(kind === 'anime' ? { animeDescription: m.synopsis } : { mangaDescription: m.synopsis }),
       alternativeTitles: alts.filter((t) => t !== displayTitle),
       genres: m.genres?.map((g) => g.name),
       releaseDate: isoDate(m.aired?.from ?? m.published?.from),

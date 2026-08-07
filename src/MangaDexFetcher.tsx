@@ -3,7 +3,7 @@
 // show every match regardless of origin language, tagging each row with
 // its origin so it's obvious when a hit belongs elsewhere.
 
-import type { Item, MangaSource, PublicationStatus, MangaVolume, AgeRating } from './types'
+import type { Item, MangaSource, PublicationStatus, MangaVolume, AgeRating, Demographic } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
 
@@ -87,6 +87,13 @@ const CONTENT_RATING_MAP: Record<string, AgeRating> = {
   erotica: 'm',
   pornographic: 'ao',
 }
+// MangaDex publicationDemographic strings → our Demographic union.
+const DEMOGRAPHIC_MAP: Record<string, Demographic> = {
+  shounen: 'shonen',
+  shoujo:  'shojo',
+  seinen:  'seinen',
+  josei:   'josei',
+}
 
 function originLabel(lang?: string): string {
   if (!lang) return 'unknown'
@@ -126,6 +133,8 @@ function mangaToPatch(m: MdManga): Partial<Item> {
     pubStatus: a.status ? STATUS_MAP[a.status] : undefined,
     mangaSource: a.originalLanguage ? (SOURCE_LABEL[a.originalLanguage] ?? undefined) : undefined,
     ageRating: a.contentRating ? CONTENT_RATING_MAP[a.contentRating] : undefined,
+    demographic: a.publicationDemographic ? (DEMOGRAPHIC_MAP[a.publicationDemographic] ?? undefined) : undefined,
+    mangadexId: m.id,
   }
 }
 

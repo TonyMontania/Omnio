@@ -148,6 +148,27 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
         </div>
       )}
 
+      {artist.concerts && artist.concerts.length > 0 && (
+        <div className="artist-info-grid">
+          <div className="artist-info-block" style={{ gridColumn: '1 / -1' }}>
+            <h4>Concerts attended ({artist.concerts.length})</h4>
+            <ul className="concert-list detail">
+              {[...artist.concerts].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((c) => (
+                <li key={c.id} className="concert-row">
+                  <div className="concert-head">
+                    <span className="concert-date">{c.date || '—'}</span>
+                    <span className="concert-venue">{c.venue}</span>
+                    {c.city && <span className="concert-city">{c.city}</span>}
+                  </div>
+                  {c.setlist && <pre className="concert-setlist">{c.setlist}</pre>}
+                  {c.notes && <p className="concert-notes">{c.notes}</p>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       <div className="content-header artist-content-header">
         <div />
         <div className="view-toggle">

@@ -285,6 +285,11 @@ export interface MusicArtist {
   activeTo?: string
   labels?: string[]
   members?: BandMember[]
+  // Live shows attended for this artist. Moved from Item (albums used to
+  // carry their own concerts list, which meant re-typing the same show
+  // for every album by the same band). Legacy Item.concerts arrays are
+  // migrated onto the matching artist on first load post-0.3.6.
+  concerts?: ConcertEntry[]
 }
 
 export interface Collection {

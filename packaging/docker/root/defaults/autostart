@@ -1,0 +1,24 @@
+#!/usr/bin/with-contenv bash
+# Launched by the linuxserver KasmVNC base once the graphical session is
+# up. We exec electron directly so its window becomes the whole session —
+# there is no window manager or panel underneath.
+
+set -e
+
+# /config is the mounted volume where the user wants their library to live.
+# PORTABLE_EXECUTABLE_DIR (set in the Dockerfile) makes Omnio treat it as
+# the storage root, so data/ and assets/ land here instead of ~/.config.
+mkdir -p /config/data /config/assets
+
+cd /app
+
+# --no-sandbox: Electron's Chromium sandbox needs CAP_SYS_ADMIN or a
+# suid helper, neither of which the KasmVNC base grants. The container
+# is already isolated, so dropping the extra layer is the pragmatic call.
+# --disable-dev-shm-usage: /dev/shm defaults to 64 MB in Docker; without
+# this flag Chromium OOMs on big lists. The compose file also raises
+# shm-size to 1 GB for good measure.
+exec /usr/bin/node /app/node_modules/electron/cli.js \
+  --no-sandbox \
+  --disable-dev-shm-usage \
+  /app
