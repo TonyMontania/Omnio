@@ -61,16 +61,20 @@ ENV OMNIO_VERSION=${OMNIO_VERSION} \
     PORTABLE_EXECUTABLE_DIR=/config
 
 # Electron 30 runtime deps. libgtk-3-0, libnss3, libgbm1, libasound2 are
-# the ones the base image doesn't already pull in. Node comes in the same
-# apt transaction so the image builds in one layer.
+# the ones the base image doesn't already pull in.
+#
+# We deliberately do NOT install a fresh Node from NodeSource here — the
+# linuxserver base ships Node 18 for its own /kclient audio helper, and
+# that helper's native modules (pulseaudio2, compiled against ABI 108)
+# crash on boot if we swap the system Node for a newer one. Electron's
+# cli.js runs happily under the pinned Node 18 anyway; all it does is
+# spawn the Electron binary and pass along argv.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
       libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
       libpango-1.0-0 libcairo2 libasound2 libgtk-3-0 libnss3 libnspr4 \
-      libx11-xcb1 fonts-noto-color-emoji ca-certificates curl && \
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs && \
+      libx11-xcb1 fonts-noto-color-emoji ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -87,7 +91,9 @@ COPY --from=build /src/public        ./public
 # and `npm install` on that manifest would drag ~200 MB of code into the
 # runtime image even though every one of those packages is already bundled
 # into dist/ by vite. This 3-line manifest keeps the runtime lean.
-RUN printf '{\n  "name": "omnio-runtime",\n  "version": "%s",\n  "main": "dist-electron/main.js",\n  "dependencies": { "electron": "30.0.1" }\n}\n' "${OMNIO_VERSION}" > package.json && \
+# `"type": "module"` matches the source package.json — vite emits ESM
+# main.js / preload.mjs and Node refuses to load them without it.
+RUN printf '{\n  "name": "omnio-runtime",\n  "version": "%s",\n  "type": "module",\n  "main": "dist-electron/main.js",\n  "dependencies": { "electron": "30.0.1" }\n}\n' "${OMNIO_VERSION}" > package.json && \
     npm install --no-audit --no-fund --no-package-lock && \
     npm cache clean --force
 
