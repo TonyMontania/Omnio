@@ -1359,10 +1359,29 @@ ipcMain.handle('mb:release-group-details', async (_event, releaseGroupId: string
     if (!chosen) return { ok: false, error: 'No releases found in group' }
 
     await mbThrottle()
-    const relUrl = `${MB_BASE}/release/${chosen.id}?fmt=json&inc=recordings+artist-credits+labels+release-groups+media`
+    // `inc` reads: standard release payload (recordings + artist-credits +
+    // labels + media) plus tags/genres for the genre picker, plus the
+    // release-group so we can lift its higher-quality tags/genres (release
+    // groups accumulate community tags across every pressing), plus
+    // artist-rels which is how MB exposes producer / mixer / engineer /
+    // composer credits on a release.
+    const relUrl = `${MB_BASE}/release/${chosen.id}?fmt=json&inc=recordings+artist-credits+labels+release-groups+media+tags+genres+artist-rels+release-group-rels`
     const rel = await fetch(relUrl, { headers: { 'User-Agent': MB_UA, Accept: 'application/json' } })
     if (!rel.ok) return { ok: false, error: `HTTP ${rel.status}` }
-    return { ok: true, data: await rel.json(), chosenReleaseId: chosen.id, releaseGroupId }
+    const relData = await rel.json() as Record<string, unknown>
+    // Release-group tags/genres are often richer than the release-specific
+    // ones (people tag "Radiohead – OK Computer" the release-group, not
+    // each pressing). Fetch them separately when the release group id is
+    // known so the fetcher can prefer whichever list is fuller.
+    const rgMbid = (relData['release-group'] as { id?: string } | undefined)?.id
+    if (rgMbid) {
+      await mbThrottle()
+      try {
+        const rg2 = await fetch(`${MB_BASE}/release-group/${rgMbid}?fmt=json&inc=tags+genres+aliases`, { headers: { 'User-Agent': MB_UA, Accept: 'application/json' } })
+        if (rg2.ok) relData._releaseGroup = await rg2.json()
+      } catch { /* enrichment is best-effort */ }
+    }
+    return { ok: true, data: relData, chosenReleaseId: chosen.id, releaseGroupId }
   } catch (e) {
     return { ok: false, error: (e as Error).message }
   }

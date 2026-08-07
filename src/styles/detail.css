@@ -305,7 +305,7 @@
 
 .artist-banner {
   position: relative;
-  height: 260px;
+  height: 470px;
   border-radius: var(--radius-lg);
   overflow: visible;
   margin-bottom: 70px;
@@ -314,7 +314,7 @@
 .artist-banner img,
 .artist-banner-placeholder {
   width: 100%;
-  height: 260px;
+  height: 470px;
   border-radius: var(--radius-lg);
   object-fit: cover;
   /* Band photos usually put faces near the top; the default center crop
