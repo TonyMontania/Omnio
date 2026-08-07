@@ -15,7 +15,7 @@ Report privately via one of:
 1. **GitHub Security Advisories** — preferred. Go to the
    [Security tab](https://github.com/TonyMontania/Omnio/security/advisories/new)
    of the repo and click *Report a vulnerability*.
-2. **Email** — `eze.bigplanet@gmail.com` with `[Omnio Security]` in the subject.
+2. **Email** — `ezebigplanet@gmail.com` with `[Omnio Security]` in the subject.
 
 Include enough detail to reproduce the issue: Omnio version, OS, steps, and
 what the observed vs. expected behavior is. If you have a proof-of-concept
