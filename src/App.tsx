@@ -3985,23 +3985,14 @@ function App() {
                         <p className="about-line">Local-only. No accounts, no telemetry, no cloud. Your data lives in this machine.</p>
                         <p className="about-section-title">New in this release</p>
                         <ul className="about-changelog">
-                          <li><b>Concert log lives on the artist</b> — every show you attend is now attached to the band, not to a specific album. Existing entries are auto-merged on first load (deduped by date + venue) and appear in the Artist editor's new Concerts tab.</li>
-                          <li><b>Editor tabs no longer bleed after a fetch</b> — a MutationObserver reapplies the tab-visibility rule when metadata mounts new sections, so Overview stops accidentally showing Progress / Media / History fields until you switch tabs and back.</li>
-                          <li><b>Metadata fetcher fixes</b> — MangaDex now sets the MangaDex ID (fixes the "New chapters (RSS)" link) and the publication demographic; AniList / MAL write the category-specific description so it lands in the field the detail view actually reads; AniDB downloads the cover into <code>assets/</code> instead of leaving a remote URL.</li>
-                          <li><b>Docker (headless / server) deployment</b> — full Electron app running under KasmVNC, reachable from any browser. Ships a Dockerfile, docker-compose and an Unraid template under <code>packaging/docker/</code>.</li>
-                          <li><b>Tabbed editor everywhere</b> — Overview / Identity / Progress / Media / History / Related / Notes with progressive disclosure (empty tabs auto-hide).</li>
-                          <li><b>Fused top-nav</b> — the library header lives in the topnav now: title, count, status chips, view toggle and +Add on a single row.</li>
-                          <li><b>Save file backup + PCGamingWiki paths</b> (Games) — attach saves to any game, and see the game's Save + Config paths per OS without leaving the app.</li>
-                          <li><b>Achievement list + screenshots gallery</b> (Games) — detailed per-entry achievements with unlocked date; screenshots with click-to-view lightbox.</li>
-                          <li><b>AniDB deep-fetch + Simulcast board</b> (Anime · Donghua) — coexists with AniList / MAL / Kitsu; airing shows slot into a 7-column weekday grid via a new "Airs on" field.</li>
-                          <li><b>Vinyl condition, per-track lyrics</b> (Music) — Goldmine grading, one-click lyrics fetch from lrclib (no key). Concert log has moved to the artist editor.</li>
-                          <li><b>Chapter notes + Kindle highlights import</b> (Books) — per-chapter notes; import <code>My Clippings.txt</code> directly.</li>
-                          <li><b>5 new importers</b> — Letterboxd (Movies), Kindle highlights (Books), Last.fm scrobbles (Music), Trakt.tv (Movies + Series), Discogs collection (Music).</li>
-                          <li><b>Data health audit + genre normalizer + per-item JSON export</b> — under Settings → Data → Maintenance.</li>
-                          <li><b>Cross-library "similar to"</b> — link items across libraries (Berserk manga ↔ Berserk anime ↔ Berserk game).</li>
-                          <li><b>Bulk edit rating &amp; genre</b> — shift-click cards, apply rating or add/remove genres to many at once.</li>
-                          <li><b>Artist editor</b> — centered modal, tabbed (Overview / Details / Members), multi-stint role periods per member and a † deceased mark.</li>
-                          <li><b>Banners for anime, donghua and manga family</b> — upload / fetch per-item, rendered at the top of the detail view.</li>
+                          <li><b>Click-to-zoom on every cover, banner and logo</b> — full-screen lightbox opens on click across every library's detail view (Games, Music, Movies, Series, Anime, Donghua, Manga family, Books, Artists), matching the behavior screenshots and volume covers already had. Grouped images support arrow-key navigation.</li>
+                          <li><b>Music: EP ↔ album link</b> — singles / EPs / live / OST entries can now point at the parent album they were later collected into, via a picker filtered to same-artist album-like entries. The detail view renders it as a clickable pill that navigates to the album.</li>
+                          <li><b>Music: Editions get a release date</b> — each Deluxe / Anniversary / Japan edition can carry its own release date. Editions without their own cover automatically fall back to the base album cover.</li>
+                          <li><b>Music: Single covers at album size</b> — the single-covers gallery jumps from stamp-sized 110px tiles to 260px, matching the main album cover so singles read as first-class artwork.</li>
+                          <li><b>Artist banner size parity</b> — the artist detail banner grew to the same 470px height as the games hero banner.</li>
+                          <li><b>MusicBrainz fetcher — bulkier patch</b> — now applies producers (from release artist-relations), genres (preferring release-group curated genres over user tags), full ISO release date, alternative titles from aliases, and label. Results sorted by score and filtered below 50% relevance so loose queries stop surfacing unrelated ringtones. Each result shows its relevance score.</li>
+                          <li><b>VGMdb fetcher — bulkier patch</b> — producers (from organizations, with composers as fallback), distributors, and full release date. Genres and per-track data unchanged.</li>
+                          <li><b>Docker (headless / server) deployment</b> — full Electron app running under KasmVNC, reachable from any browser on <code>:3000</code>. Ships a Dockerfile, docker-compose, an Unraid template and a GitHub Actions workflow that publishes <code>ghcr.io/tonymontania/omnio:latest</code> on every release.</li>
                         </ul>
                         <p className="about-line about-stack">Built with Electron · React · Vite · TypeScript</p>
                       </div>
