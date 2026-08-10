@@ -6019,6 +6019,9 @@ function App() {
                               onFillAllArtist={() => setTracks((prev) => prev.map((t) => ({ ...t, artist })))}
                               onToggleListened={(id) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, listened: !t.listened } : t)))}
                               onLyricsChange={(id, lyrics) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, lyrics } : t)))}
+                              onNumberChange={(id, number) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, number } : t)))}
+                              onNameChange={(id, name) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, name } : t)))}
+                              onDurationChange={(id, duration) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, duration } : t)))}
                             />
                           )}
                         </div>

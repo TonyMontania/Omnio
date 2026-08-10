@@ -269,9 +269,21 @@
 .col-spacer { width: auto; }
 
 .track-artist-input { min-width: 0; }
-.track-artist-cell { width: 100%; padding: 4px 6px; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--text-dim); font-size: 12.5px; }
-.track-artist-cell:focus { background: var(--surface); border-color: var(--border); }
-.track-artist-cell:hover { background: var(--surface); }
+.track-artist-cell,
+.track-num-cell,
+.track-name-cell,
+.track-dur-cell { width: 100%; padding: 4px 6px; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--text-dim); font-size: 12.5px; }
+.track-artist-cell:focus,
+.track-num-cell:focus,
+.track-name-cell:focus,
+.track-dur-cell:focus { background: var(--surface); border-color: var(--border); color: var(--text); }
+.track-artist-cell:hover,
+.track-num-cell:hover,
+.track-name-cell:hover,
+.track-dur-cell:hover { background: var(--surface); }
+.track-num-cell,
+.track-dur-cell { text-align: center; font-variant-numeric: tabular-nums; }
+.track-name-cell { color: var(--text); font-weight: 500; }
 
 .fill-artist-btn {
   align-self: flex-start;

@@ -93,6 +93,9 @@ export default function EditionsEditor({ editions, mainArtist, onChange }: {
                   onArtistChange={(tid, a) => setEditionTracks(ed.id, (prev) => prev.map((t) => (t.id === tid ? { ...t, artist: a || undefined } : t)))}
                   onFillAllArtist={() => setEditionTracks(ed.id, (prev) => prev.map((t) => ({ ...t, artist: mainArtist })))}
                   onToggleListened={(tid) => setEditionTracks(ed.id, (prev) => prev.map((t) => (t.id === tid ? { ...t, listened: !t.listened } : t)))}
+                  onNumberChange={(tid, number) => setEditionTracks(ed.id, (prev) => prev.map((t) => (t.id === tid ? { ...t, number } : t)))}
+                  onNameChange={(tid, name) => setEditionTracks(ed.id, (prev) => prev.map((t) => (t.id === tid ? { ...t, name } : t)))}
+                  onDurationChange={(tid, duration) => setEditionTracks(ed.id, (prev) => prev.map((t) => (t.id === tid ? { ...t, duration } : t)))}
                 />
               </div>
             )}

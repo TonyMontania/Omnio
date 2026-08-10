@@ -6,13 +6,16 @@ import { useState } from 'react'
 import type { Track } from '../../types'
 import { StarRatingInput } from '../../StarRating'
 
-export default function TrackListEditor({ tracks, mainArtist, albumTitle, onAdd, onRemove, onToggleFavorite, onRatingChange, onArtistChange, onFillAllArtist, onToggleListened, onLyricsChange }: {
+export default function TrackListEditor({ tracks, mainArtist, albumTitle, onAdd, onRemove, onToggleFavorite, onRatingChange, onArtistChange, onFillAllArtist, onToggleListened, onLyricsChange, onNumberChange, onNameChange, onDurationChange }: {
   tracks: Track[]; mainArtist: string; albumTitle?: string
   onAdd: (t: Omit<Track, 'id'>) => void; onRemove: (id: string) => void
   onToggleFavorite: (id: string) => void; onRatingChange: (id: string, rating: number) => void
   onArtistChange: (id: string, artist: string) => void; onFillAllArtist: () => void
   onToggleListened: (id: string) => void
   onLyricsChange?: (id: string, lyrics: string | undefined) => void
+  onNumberChange?: (id: string, number: string) => void
+  onNameChange?: (id: string, name: string) => void
+  onDurationChange?: (id: string, duration: string) => void
 }) {
   const [fetching, setFetching] = useState<string | null>(null)
   const [viewing, setViewing] = useState<Track | null>(null)
@@ -81,10 +84,22 @@ export default function TrackListEditor({ tracks, mainArtist, albumTitle, onAdd,
                   <td className="col-fav">
                     <button type="button" className={t.favorite ? 'track-fav active' : 'track-fav'} onClick={() => onToggleFavorite(t.id)}>★</button>
                   </td>
-                  <td className="col-num">{t.number}</td>
-                  <td className="col-title">{t.name}</td>
+                  <td className="col-num">
+                    {onNumberChange
+                      ? <input className="track-num-cell" value={t.number} onChange={(e) => onNumberChange(t.id, e.target.value)} placeholder="—" />
+                      : t.number}
+                  </td>
+                  <td className="col-title">
+                    {onNameChange
+                      ? <input className="track-name-cell" value={t.name} onChange={(e) => onNameChange(t.id, e.target.value)} placeholder="Track name" />
+                      : t.name}
+                  </td>
                   <td className="col-artist"><input className="track-artist-cell" value={t.artist ?? ''} onChange={(e) => onArtistChange(t.id, e.target.value)} placeholder="—" /></td>
-                  <td className="col-duration">{t.duration}</td>
+                  <td className="col-duration">
+                    {onDurationChange
+                      ? <input className="track-dur-cell" value={t.duration ?? ''} onChange={(e) => onDurationChange(t.id, e.target.value)} placeholder="3:40" />
+                      : t.duration}
+                  </td>
                   <td className="col-rating">
                     <StarRatingInput value={t.rating ?? 0} onChange={(v) => onRatingChange(t.id, v)} />
                   </td>
