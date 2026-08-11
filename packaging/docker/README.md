@@ -11,6 +11,14 @@ This is the pragmatic path for NAS setups (Unraid, TrueNAS Scale,
 Synology, Proxmox LXC) and headless home servers. On a normal desktop,
 the native installer is still the better choice.
 
+**Architectures:** the published image is a multi-arch manifest with
+`linux/amd64` + `linux/arm64` slices. Docker picks the right one
+automatically, so Raspberry Pi 5, Asustor ARM NASes, Apple Silicon
+Docker Desktop and AWS Graviton hosts all pull the same tag. The
+arm64 slice is Chromium under QEMU emulation for the CI build, so
+expect the first pull of a new version to be slightly larger; runtime
+performance is native once the image is on-disk.
+
 ## Quick start (docker compose)
 
 From this folder:

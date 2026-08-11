@@ -10,10 +10,11 @@
 # desktop-installer release and vice-versa. The desktop builds are the
 # primary artifact of a release; this is the packaged-app-in-a-server flavor.
 #
-# Single-arch (linux/amd64) on purpose. Multi-arch via QEMU is 30+ minutes
-# and Electron under emulated arm64 has been flaky historically; adding
-# arm64 belongs behind a separate PR that proves the runtime works on a
-# real Raspberry Pi / Apple Silicon before we publish it.
+# Multi-arch (linux/amd64 + linux/arm64) via QEMU emulation. The arm64
+# build is 3-4× slower than native because it's Chromium under QEMU, so
+# expect a ~15 min publish per tag. Users on Raspberry Pi 5, Asustor
+# ARM NASes, Apple Silicon Docker Desktop and AWS Graviton pick up the
+# right slice automatically via the manifest list.
 #
 # Auth: GITHUB_TOKEN with `packages: write` (declared below). The token is
 # scoped to this repo — the resulting image lives under the same org.
@@ -43,6 +44,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -81,6 +87,7 @@ jobs:
         with:
           context: .
           file: packaging/docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -91,6 +98,7 @@ jobs:
             OMNIO_VERSION=${{ steps.meta.outputs.version }}
           # Cache the buildx layer graph in GitHub Actions storage so
           # rebuilds only redo what actually changed (typically just the
-          # `vite build` step when src/ changes).
+          # `vite build` step when src/ changes). Per-platform cache
+          # scopes because amd64 and arm64 have separate layer graphs.
           cache-from: type=gha
           cache-to: type=gha,mode=max

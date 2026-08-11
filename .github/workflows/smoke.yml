@@ -1,0 +1,43 @@
+# Electron smoke test — boots the app on Ubuntu, checks the window opens
+# and the renderer bundle mounts. Runs on every push to main and on PRs
+# so regressions in main.ts / preload / vite bundle surface fast.
+#
+# Ubuntu-only because Playwright + Electron under headless is deterministic
+# there (xvfb wrapper included in ubuntu-latest). macOS and Windows have
+# their own quirks with headless Electron and aren't worth the runtime
+# minutes for a smoke test — the Release workflow already produces per-OS
+# builds and any missing symbols would surface there.
+
+name: Smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Build renderer + main
+        # Skip electron-builder — the smoke test launches Electron directly
+        # against dist-electron/main.js, no installer needed.
+        run: npx tsc && npx vite build
+      - name: Xvfb + smoke test
+        run: xvfb-run --auto-servernum -- npm run smoke

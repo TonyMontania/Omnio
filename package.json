@@ -12,14 +12,17 @@
     "packaging:stamp": "node scripts/stamp-packaging.mjs",
     "packaging:check": "node scripts/stamp-packaging.mjs --check",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "smoke": "playwright test",
     "preview": "vite preview"
   },
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "undici": "^8.10.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
     "@typescript-eslint/eslint-plugin": "^7.1.1",
@@ -30,6 +33,7 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "playwright": "^1.62.1",
     "png-to-ico": "^3.0.2",
     "sharp": "^0.35.3",
     "typescript": "^5.2.2",

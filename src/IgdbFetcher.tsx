@@ -251,7 +251,6 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
     // Dev-tools breadcrumb: DevTools' default filter hides `debug` under
     // "10 hidden" so we use `log` here — an unmapped shape is worth being
     // loud about. Screenshot the object and it lands in an issue.
-    // eslint-disable-next-line no-console
     console.log('[IGDB] game:', g.name, '| age_ratings:', g.age_ratings, '| category:', g.category, '| parent_game:', g.parent_game)
     onApply(
       gameToPatch(g),

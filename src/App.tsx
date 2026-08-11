@@ -96,6 +96,9 @@ const MalImporter       = lazy(() => import('./MalImporter'))
 const GenericImporter   = lazy(() => import('./GenericImporter'))
 const SteamImporter     = lazy(() => import('./SteamImporter'))
 const LetterboxdImporter = lazy(() => import('./LetterboxdImporter'))
+const BackloggdImporter  = lazy(() => import('./BackloggdImporter'))
+const SerializdImporter  = lazy(() => import('./SerializdImporter'))
+const SpotifyImporter    = lazy(() => import('./SpotifyImporter'))
 const HighlightsImporter = lazy(() => import('./HighlightsImporter'))
 const LastfmImporter    = lazy(() => import('./LastfmImporter'))
 const TraktImporter     = lazy(() => import('./TraktImporter'))
@@ -223,6 +226,10 @@ interface Settings {
   // Empty means "AniDB fetcher disabled"; the button in the anime editor
   // links to the settings when this is missing.
   anidbClient?: string
+  // Optional HTTP/HTTPS proxy URL applied to every outbound fetch in the
+  // main process. Useful for NAS containers behind corporate firewalls
+  // or Pi-hole-style DNS filters. Format: `http://user:pass@host:port`.
+  httpProxy?: string
 }
 
 interface AppData {
@@ -523,7 +530,6 @@ function App() {
     // Silent check once at boot; renderer decides when so we don't block startup.
     const t = setTimeout(() => { runUpdateCheck(true) }, 1500)
     return () => clearTimeout(t)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -580,6 +586,9 @@ function App() {
   const [lastfmImportOpen, setLastfmImportOpen] = useState(false)
   const [traktImportOpen, setTraktImportOpen] = useState(false)
   const [discogsImportOpen, setDiscogsImportOpen] = useState(false)
+  const [backloggdOpen, setBackloggdOpen] = useState(false)
+  const [serializdOpen, setSerializdOpen] = useState(false)
+  const [spotifyOpen, setSpotifyOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -744,7 +753,6 @@ function App() {
 
   useEffect(() => {
     loadFromDisk({ applySettings: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Reads the split JSON files off disk and hydrates state. Runs once on
@@ -862,6 +870,12 @@ function App() {
       }
       setSettings(merged)
       setLayout(merged.defaultLayout)
+      // Apply the HTTP proxy setting (if any) to the main-process fetch
+      // dispatcher so every metadata / cover / updater request routes
+      // through it. Cheap no-op when unset.
+      if (merged.httpProxy !== undefined) {
+        window.ipcRenderer.invoke('proxy:apply', merged.httpProxy)
+      }
       if (merged.startupCategory === 'last' && merged.lastCategory && CATEGORIES.some((c) => c.id === merged.lastCategory)) {
         setActiveCategory(merged.lastCategory)
       }
@@ -950,6 +964,10 @@ function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+    // closePanel + closeAllDetailViews are stable enough here — including
+    // them re-registers the handler on every render since they're not
+    // memoized. The effect only reads them, never depends on their identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subView, specialView])
 
   // Track library mutations and stash them on a bounded history stack.
@@ -1168,8 +1186,13 @@ function App() {
   const availablePlatforms = Array.from(new Set(scopedItems.flatMap((i) => i.platforms || [])))
   const availableGenres = Array.from(new Set(scopedItems.flatMap((i) => i.genres || []))).sort()
   // Inside a collection, `custom` order reads the collection's own itemIds
-  // list; outside, it reads the per-category custom order map.
-  const effectiveCustomOrder = activeCollection ? activeCollection.itemIds : (customOrders[activeCategory] || [])
+  // list; outside, it reads the per-category custom order map. Wrapped in
+  // its own useMemo so the visibleItems memo below has a stable array
+  // reference between renders (ESLint exhaustive-deps was flagging it).
+  const effectiveCustomOrder = useMemo(
+    () => activeCollection ? activeCollection.itemIds : (customOrders[activeCategory] || []),
+    [activeCollection, customOrders, activeCategory],
+  )
   const visibleItems = useMemo(
     () => filterAndSort(scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating),
     [scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating],
@@ -3745,6 +3768,9 @@ function App() {
                         <button type="button" className="secondary-btn" onClick={() => setGenericImportOpen(true)}>Import Excel / CSV / Notion / TXT</button>
                         <button type="button" className="secondary-btn" onClick={() => setSteamOpen(true)}>Import from Steam profile</button>
                         <button type="button" className="secondary-btn" onClick={() => setLetterboxdOpen(true)}>Import from Letterboxd</button>
+                        <button type="button" className="secondary-btn" onClick={() => setBackloggdOpen(true)}>Import from Backloggd</button>
+                        <button type="button" className="secondary-btn" onClick={() => setSerializdOpen(true)}>Import from Serializd</button>
+                        <button type="button" className="secondary-btn" onClick={() => setSpotifyOpen(true)}>Import Spotify library</button>
                         <button type="button" className="secondary-btn" onClick={() => setHighlightsImportOpen(true)}>Import Kindle highlights</button>
                         <button type="button" className="secondary-btn" onClick={() => setLastfmImportOpen(true)}>Import Last.fm scrobbles</button>
                         <button type="button" className="secondary-btn" onClick={() => setTraktImportOpen(true)}>Import from Trakt.tv</button>
@@ -3805,6 +3831,22 @@ function App() {
                         }}>Export as CSV</button>
                       </div>
                       <p className="hint">Wrapped is a year-in-review view. HTML export builds a standalone <code>index.html</code> and copies your <code>assets/</code> folder — send the folder to a friend and it just opens. CSV export drops one file per category so spreadsheets/BI tools can round-trip your library. Scope defaults to the whole library; pick a single library to share just that one.</p>
+                    </div>
+                    <div className="settings-section-title">Network</div>
+                    <div className="field-group">
+                      <label>HTTP proxy (optional)</label>
+                      <input
+                        type="text"
+                        placeholder="http://user:pass@host:port"
+                        value={settings.httpProxy ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, httpProxy: e.target.value }))}
+                        onBlur={() => window.ipcRenderer.invoke('proxy:apply', settings.httpProxy ?? '').then((r) => {
+                          setToast(r?.ok ? (settings.httpProxy ? 'Proxy applied' : 'Proxy cleared') : `Proxy failed: ${r?.error ?? 'unknown'}`)
+                        })}
+                      />
+                      <p className="hint">
+                        Routes every outbound request from Omnio (metadata fetchers, cover downloads, in-app updater) through the given HTTP(S) proxy. Useful for Docker / NAS deployments behind a corporate firewall or a Pi-hole. Leave empty for a direct connection. Takes effect on blur; also re-applied on every startup.
+                      </p>
                     </div>
                     <div className="settings-section-title">Integrations · API keys</div>
                     {/* Sorted alphabetically by service name so users can scan the list. */}
@@ -6941,6 +6983,45 @@ function App() {
           }}
           onClose={() => setLetterboxdOpen(false)}
         />
+      )}
+
+      {backloggdOpen && (
+        <Suspense fallback={null}>
+          <BackloggdImporter
+            existingItems={items}
+            onImport={(newItems) => {
+              setItems((all) => [...all, ...newItems])
+              setToast(`Imported ${newItems.length} game${newItems.length === 1 ? '' : 's'} from Backloggd`)
+            }}
+            onClose={() => setBackloggdOpen(false)}
+          />
+        </Suspense>
+      )}
+
+      {serializdOpen && (
+        <Suspense fallback={null}>
+          <SerializdImporter
+            existingItems={items}
+            onImport={(newItems) => {
+              setItems((all) => [...all, ...newItems])
+              setToast(`Imported ${newItems.length} show${newItems.length === 1 ? '' : 's'} from Serializd`)
+            }}
+            onClose={() => setSerializdOpen(false)}
+          />
+        </Suspense>
+      )}
+
+      {spotifyOpen && (
+        <Suspense fallback={null}>
+          <SpotifyImporter
+            existingItems={items}
+            onImport={(newItems) => {
+              setItems((all) => [...all, ...newItems])
+              setToast(`Imported ${newItems.length} album${newItems.length === 1 ? '' : 's'} from Spotify`)
+            }}
+            onClose={() => setSpotifyOpen(false)}
+          />
+        </Suspense>
       )}
 
       {discogsImportOpen && (

@@ -3,6 +3,30 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import crypto from 'node:crypto'
+import { ProxyAgent, setGlobalDispatcher, getGlobalDispatcher, Agent } from 'undici'
+
+// Remembered so we can restore it if the user clears the proxy setting.
+const defaultDispatcher = getGlobalDispatcher()
+
+// Applies an HTTP(S) proxy to every subsequent global fetch() call —
+// covers all 21 metadata / CAA / GitHub Releases requests in one shot.
+// Called at startup from data/settings.json and from the settings IPC
+// whenever the user updates the proxy field. Empty string / undefined
+// restores the built-in direct dispatcher.
+function applyProxySetting(proxyUrl: string | undefined | null): void {
+  if (proxyUrl && /^https?:\/\//i.test(proxyUrl.trim())) {
+    setGlobalDispatcher(new ProxyAgent(proxyUrl.trim()))
+  } else {
+    // Restore the built-in dispatcher. Prefer the remembered original,
+    // fall back to a fresh Agent if that was already a ProxyAgent.
+    setGlobalDispatcher(defaultDispatcher ?? new Agent())
+  }
+}
+
+ipcMain.handle('proxy:apply', async (_event, url: string | undefined | null) => {
+  try { applyProxySetting(url); return { ok: true } }
+  catch (e) { return { ok: false, error: (e as Error).message } }
+})
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -1015,6 +1039,7 @@ ipcMain.handle('updates:download', async (event, url: string, filename: string) 
   try {
     const downloadsDir = app.getPath('downloads')
     await fs.mkdir(downloadsDir, { recursive: true })
+    // eslint-disable-next-line no-control-regex
     const safeName = filename.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
     const targetPath = path.join(downloadsDir, safeName)
 
@@ -1027,7 +1052,7 @@ ipcMain.handle('updates:download', async (event, url: string, filename: string) 
     let received = 0
     let lastReport = 0
     const reader = (r.body as ReadableStream<Uint8Array>).getReader()
-    while (true) {
+    for (;;) {
       const { done, value } = await reader.read()
       if (done) break
       if (!value) continue
@@ -2164,7 +2189,6 @@ app.whenReady().then(() => {
     const rel = decodeURIComponent(url.hostname + url.pathname)
     const resolved = safeRelative(rel)
     if (!resolved) {
-      // eslint-disable-next-line no-console
       console.warn('[omnio-asset] rejected path traversal or bad path:', rel)
       return new Response('Not found', { status: 404 })
     }
@@ -2173,7 +2197,6 @@ app.whenReady().then(() => {
     // a stack-trace from net.fetch. Helps triage the "still broken after
     // audit" cases.
     if (!await fileExists(resolved)) {
-      // eslint-disable-next-line no-console
       console.warn('[omnio-asset] MISSING:', rel, '(resolved to', resolved, ')')
       return new Response('Not found', { status: 404 })
     }
