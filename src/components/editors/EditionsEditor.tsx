@@ -7,6 +7,7 @@ import type { AlbumEdition, Track } from '../../types'
 import { assetSrc } from '../../types'
 import TrackListEditor from './TrackListEditor'
 import { pickImageToDataUrl } from '../../utils/files'
+import CoverPlaceholder from '../CoverPlaceholder'
 
 export default function EditionsEditor({ editions, mainArtist, onChange }: {
   editions: AlbumEdition[]
@@ -68,7 +69,7 @@ export default function EditionsEditor({ editions, mainArtist, onChange }: {
                 <div className="edition-cover-row">
                   {ed.cover
                     ? <img className="edition-cover" src={assetSrc(ed.cover)} alt="" />
-                    : <div className="edition-cover placeholder">No cover</div>}
+                    : <div className="edition-cover placeholder"><CoverPlaceholder categoryId="musica" /></div>}
                   <div className="upload-row">
                     <button type="button" className="upload-btn" onClick={() => fileRefs.current[ed.id]?.click()}>Upload cover</button>
                     {ed.cover && <button type="button" className="upload-btn clear" onClick={() => patchEdition(ed.id, { cover: undefined })}>Clear</button>}

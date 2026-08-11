@@ -31,8 +31,8 @@
 - **Home dashboard** — landing view with a portal card per library and a next-30-days upcoming releases panel. Optional startup screen.
 - **Tabbed editor + fused top-nav** — every item edits inside Overview / Identity / Progress / Media / History / Related / Notes; the library header (title, count, status chips, view toggle, +Add) lives on a single top-nav row.
 - **One-click metadata + covers** from 14 sources across the 11 libraries — AniDB, AniList, ComicVine, IGDB, Kitsu, lrclib, MangaDex, MusicBrainz (with Cover Art Archive), MyAnimeList, OpenLibrary, PCGamingWiki, SteamGridDB, TMDb, VGMdb.
-- **Import**: MyAnimeList / AniList XML, Steam profile, Letterboxd, Kindle highlights (`My Clippings.txt`), Last.fm scrobbles, Trakt.tv, Discogs collection, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads vocab presets.
-- **Export**: HTML site (search + light/dark toggle built in), MAL-compatible XML for anime + manga, iCal (.ics) for the release calendar.
+- **Import**: MyAnimeList / AniList XML, Steam profile, Letterboxd, **Backloggd** (Games), **Serializd** (Series), **Spotify library** (Music), Kindle highlights (`My Clippings.txt`), Last.fm scrobbles, Trakt.tv, Discogs collection, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads vocab presets.
+- **Export**: HTML site (search + light/dark toggle built in), MAL-compatible XML for anime + manga, iCal (.ics) for the release calendar, per-category CSV for spreadsheet round-trip.
 - **In-app updater** — silent check at boot, one-click download of the exact build for your platform.
 - **Local-first**: everything lives in `data/` + `assets/` next to the executable. No accounts, no cloud, no telemetry.
 
@@ -113,11 +113,11 @@ Sorted alphabetically — the way the app itself lists them.
 
 - **Anime & Donghua** — AniList-style card, studios, episodes watched/total, episode list with rating/notes, rewatch log, per-item **banner image**, **AniDB deep-fetch** for weighted tags + tighter cross-refs (coexists with AniList / MAL / Kitsu), and a weekday-slotted **simulcast board** for the airing season.
 - **Books** — authors, publisher, series/saga, pages read/total, ISBN, format (paperback / hardcover / ebook / audiobook), reread history, **per-chapter notes**, **Kindle highlights** imported from `My Clippings.txt`. OpenLibrary metadata + covers, no key needed.
-- **Games** — banner + logo + cover, multiple devs/publishers, free-form platforms, playtime, DLC + bundles, edition, source (remake/remaster/port…), franchise, related games, **detailed achievement list** with per-entry unlocked date, **screenshots gallery** with click-to-view lightbox, **save file backup** stored under `assets/games/saves/`, and inline **PCGamingWiki save + config paths** so you know where the game keeps its data.
+- **Games** — banner + logo + cover, multiple devs/publishers, free-form platforms, playtime, DLC + bundles, edition, source (remake/remaster/port…), franchise, related games, **detailed achievement list** with per-entry unlocked date, **screenshots gallery** with click-to-view lightbox, **save file backup** stored under `assets/games/saves/`, and inline **PCGamingWiki save + config paths** so you know where the game keeps its data. **Backloggd** CSV import.
 - **Manga / Manhwa / Manhua / Western Comics** — authors + artists, chapters/volumes, volume covers gallery with lightbox, chapter list with per-chapter **scanlator** attribution, magazine, per-item **banner image**, **physical / digital ownership** tracker, direct link to the title's MangaDex page for new-chapter follow.
 - **Movies** — directors, writers, cast, production, franchise, rewatch history, backdrop, **streaming availability** + **physical media type** (Blu-Ray / 4K UHD / DVD / VHS / Digital), **Letterboxd** CSV import.
-- **Music** — Single / EP / Album / OST / Live / Compilation, per-track rating + **one-click lyrics fetch (lrclib.net, no key)**, single covers gallery, editions (Deluxe, Japan, Anniversary…), Spotify-style Artist profile in a tabbed modal with **multi-stint role periods** per member and a † **deceased mark**, **vinyl condition** (Goldmine grading), **concert log** with venue + setlist per attended show, **Last.fm scrobbles** + **Discogs collection** import.
-- **Series** — cast, directors, showrunners, seasons with per-episode tracking, **Sub/Dub** tracker, **Trakt.tv** watched-history import.
+- **Music** — Single / EP / Album / OST / Live / Compilation, per-track rating + inline-editable number / title / artist / duration + **one-click lyrics fetch (lrclib.net, no key)**, single covers gallery at album-cover size, editions (Deluxe, Japan, Anniversary…) with per-edition release date and cover falling back to the base album, **EP ↔ album link** for singles / EPs / OSTs that were later collected into a full album, Spotify-style Artist profile in a tabbed modal with **multi-stint role periods** per member, a † **deceased mark**, and a **concert log** attached to the artist (venue + setlist per attended show), **vinyl condition** (Goldmine grading), **Last.fm scrobbles** + **Discogs collection** + **Spotify library** import.
+- **Series** — cast, directors, showrunners, seasons with per-episode tracking, **Sub/Dub** tracker, **Trakt.tv** + **Serializd** watched-history import.
 
 For a full field-by-field reference (English + Spanish labels), see [`docs/FIELDS.md`](docs/FIELDS.md).
 
@@ -134,13 +134,13 @@ For a full field-by-field reference (English + Spanish labels), see [`docs/FIELD
 | [Kitsu](https://kitsu.app/) | Anime · Manga fallback | No key |
 | [lrclib](https://lrclib.net/) | Music — per-track lyrics (synced when available) | No key |
 | [MangaDex](https://mangadex.org/) | Manga · Manhwa · Manhua | No key |
-| [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Music | No key |
+| [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Music — title, artist, alt titles, full release date, type/source, label, producers (from artist-relations), genres (prefers curated genres over tags), tracklist, cover | No key |
 | [MyAnimeList](https://myanimelist.net/) (via Jikan) | Anime · Manga | No key |
 | [OpenLibrary](https://openlibrary.org/) | Books | No key |
 | [PCGamingWiki](https://www.pcgamingwiki.com/) | Games — save + config paths per OS | No key |
 | [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes | Free API key |
 | [TMDb](https://www.themoviedb.org/) | Movies + Series | Free API key |
-| [VGMdb](https://vgmdb.net/) | Music — game/anime OSTs | No key |
+| [VGMdb](https://vgmdb.net/) | Music — game/anime OSTs. Title, artist, alt titles, full release date, label, distributor, genres, producers (falling back to composers), tracklist, cover | No key |
 
 ## Storage & portability
 

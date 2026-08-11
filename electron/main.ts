@@ -1141,10 +1141,105 @@ ipcMain.handle('export:site', async (_event, targetDir: string, htmlContent: str
   }
 })
 
+// Per-category CSV export. Renderer builds the file map (filename → text)
+// and this handler writes them side-by-side into the chosen folder.
+// Returns count so the toast can be specific ("Wrote 4 CSV files to …").
+ipcMain.handle('export:csv', async (_event, targetDir: string, files: Record<string, string>) => {
+  try {
+    if (!targetDir) return { ok: false, error: 'No folder chosen' }
+    await fs.mkdir(targetDir, { recursive: true })
+    let written = 0
+    for (const [name, content] of Object.entries(files)) {
+      // Refuse anything that would escape the chosen folder — filenames
+      // come from the renderer, no reason to trust them blindly.
+      const safe = path.basename(name)
+      if (!safe.endsWith('.csv')) continue
+      await fs.writeFile(path.join(targetDir, safe), content, 'utf-8')
+      written++
+    }
+    return { ok: true, path: targetDir, count: written }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 // ---- External metadata fetchers ----
 // We proxy through the main process so (a) API keys stay out of the renderer's
 // devtools if the user opens them and (b) we avoid CORS entirely. Neither
 // endpoint stores data on our end — we're just forwarding.
+
+// ---------------------------------------------------------------------------
+// Search cache — the ten metadata fetchers all hit paged HTTP endpoints and
+// most searches during an editor session are duplicates (user types the
+// title, browses hits, closes, reopens; user searches the same album on MB
+// then again on Cover Art Archive; user re-runs the same query after
+// changing a filter). Caching by (source, query) with a 24h TTL kills the
+// duplicate traffic, is friendly to MB's 1-req/s rate limit, and lets a
+// second search inside the same edit session feel instant.
+//
+// Storage: in-memory Map, persisted to data/cache/searches.json after every
+// write. Eviction: TTL only (no size cap). File missing / corrupt = start
+// empty; a cache miss is always safe. Callers opt in via `cachedSearch`;
+// details / follow-up fetches are intentionally NOT cached — those are
+// keyed off ids the user picked from a fresh result set and rarely repeat.
+const SEARCH_CACHE_FILE = () => path.join(DATA_DIR, 'cache', 'searches.json')
+const SEARCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000
+interface SearchCacheEntry { result: unknown; expires: number }
+const searchCache = new Map<string, SearchCacheEntry>()
+let searchCacheLoaded = false
+
+async function loadSearchCache(): Promise<void> {
+  if (searchCacheLoaded) return
+  searchCacheLoaded = true
+  try {
+    const raw = await fs.readFile(SEARCH_CACHE_FILE(), 'utf-8')
+    const parsed = JSON.parse(raw) as Record<string, SearchCacheEntry>
+    const now = Date.now()
+    for (const [k, v] of Object.entries(parsed)) {
+      // Drop already-expired entries at load time so the map stays small.
+      if (v && typeof v.expires === 'number' && v.expires > now) searchCache.set(k, v)
+    }
+  } catch { /* first run / missing file / bad JSON — start empty */ }
+}
+
+let searchCacheWritePending: NodeJS.Timeout | null = null
+function scheduleCachePersist(): void {
+  // Coalesce writes: a burst of new entries during one user search
+  // (e.g. MB search + release-group details) becomes one file write.
+  if (searchCacheWritePending) return
+  searchCacheWritePending = setTimeout(async () => {
+    searchCacheWritePending = null
+    try {
+      await fs.mkdir(path.dirname(SEARCH_CACHE_FILE()), { recursive: true })
+      const snapshot: Record<string, SearchCacheEntry> = {}
+      for (const [k, v] of searchCache.entries()) snapshot[k] = v
+      await fs.writeFile(SEARCH_CACHE_FILE(), JSON.stringify(snapshot), 'utf-8')
+    } catch { /* non-fatal — cache is best-effort */ }
+  }, 500)
+}
+
+async function cachedSearch<T>(source: string, key: string, fn: () => Promise<T>): Promise<T> {
+  await loadSearchCache()
+  const cacheKey = `${source}::${key.trim().toLowerCase()}`
+  const now = Date.now()
+  const hit = searchCache.get(cacheKey)
+  if (hit && hit.expires > now) return hit.result as T
+  const result = await fn()
+  // Only cache successful envelopes — persisting a network error would
+  // hide the retry that would have worked on the next attempt.
+  const looksOk = !!result && typeof result === 'object' && 'ok' in (result as object) && (result as unknown as { ok: unknown }).ok === true
+  if (looksOk) {
+    searchCache.set(cacheKey, { result, expires: now + SEARCH_CACHE_TTL_MS })
+    scheduleCachePersist()
+  }
+  return result
+}
+
+ipcMain.handle('cache:clear-searches', async () => {
+  searchCache.clear()
+  try { await fs.unlink(SEARCH_CACHE_FILE()) } catch { /* absent = fine */ }
+  return { ok: true }
+})
 
 // Every fetcher shares the same skeleton: build URL, fetch, translate HTTP or
 // JSON-level errors into a { ok, data | error } envelope the renderer can
@@ -1199,32 +1294,33 @@ ipcMain.handle('sgdb:assets', async (_event, apiKey: string, kind: 'grids' | 'he
 // times with backoff on transient errors before surfacing the failure.
 ipcMain.handle('jikan:search', async (_event, term: string, kind: 'anime' | 'manga') => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  const url = `https://api.jikan.moe/v4/${kind}?q=${encodeURIComponent(term.trim())}&limit=12&sfw=false`
-  const isRetryable = (status: number) => status === 504 || status === 502 || status === 503 || status === 429 || status === 408
-  const maxAttempts = 3
-  let lastError = 'Search failed'
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const r = await fetch(url)
-      if (r.ok) {
-        const json = await r.json() as { data?: unknown[] }
-        return { ok: true, data: json.data ?? [] }
+  return cachedSearch(`jikan:${kind}`, term, async () => {
+    const url = `https://api.jikan.moe/v4/${kind}?q=${encodeURIComponent(term.trim())}&limit=12&sfw=false`
+    const isRetryable = (status: number) => status === 504 || status === 502 || status === 503 || status === 429 || status === 408
+    const maxAttempts = 3
+    let lastError = 'Search failed'
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const r = await fetch(url)
+        if (r.ok) {
+          const json = await r.json() as { data?: unknown[] }
+          return { ok: true, data: json.data ?? [] }
+        }
+        const hint = r.status === 504 ? ' — MAL upstream timed out, retry in a moment'
+          : r.status === 429 ? ' — Jikan rate limit hit (3/sec, 60/min). Wait a few seconds and retry.'
+          : ''
+        lastError = `HTTP ${r.status}${hint}`
+        if (!isRetryable(r.status)) return { ok: false, error: lastError }
+      } catch (e) {
+        lastError = (e as Error).message
       }
-      const hint = r.status === 504 ? ' — MAL upstream timed out, retry in a moment'
-        : r.status === 429 ? ' — Jikan rate limit hit (3/sec, 60/min). Wait a few seconds and retry.'
-        : ''
-      lastError = `HTTP ${r.status}${hint}`
-      if (!isRetryable(r.status)) return { ok: false, error: lastError }
-    } catch (e) {
-      lastError = (e as Error).message
+      if (attempt < maxAttempts - 1) {
+        const wait = lastError.includes('429') ? 3000 * (attempt + 1) : 800 * (attempt + 1)
+        await new Promise((res) => setTimeout(res, wait))
+      }
     }
-    // Longer backoff when we hit rate-limit; short backoff for timeouts.
-    if (attempt < maxAttempts - 1) {
-      const wait = lastError.includes('429') ? 3000 * (attempt + 1) : 800 * (attempt + 1)
-      await new Promise((res) => setTimeout(res, wait))
-    }
-  }
-  return { ok: false, error: lastError }
+    return { ok: false, error: lastError }
+  })
 })
 
 // Kitsu — free, no-key anime/manga fallback. JSON:API spec: everything
@@ -1234,16 +1330,18 @@ const KITSU_BASE = 'https://kitsu.io/api/edge'
 
 ipcMain.handle('kitsu:search', async (_event, term: string, kind: 'anime' | 'manga') => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  const params = new URLSearchParams()
-  params.set('filter[text]', term.trim())
-  params.set('page[limit]', '15')
-  return proxyJson(`${KITSU_BASE}/${kind}?${params.toString()}`, {
-    headers: { Accept: 'application/vnd.api+json' },
-    pick: (j) => (j as { data?: unknown[] }).data,
-    softError: (j) => {
-      const errs = (j as { errors?: { title?: string; detail?: string }[] }).errors
-      return errs && errs.length ? (errs[0].detail ?? errs[0].title ?? 'Kitsu error') : null
-    },
+  return cachedSearch(`kitsu:${kind}`, term, () => {
+    const params = new URLSearchParams()
+    params.set('filter[text]', term.trim())
+    params.set('page[limit]', '15')
+    return proxyJson(`${KITSU_BASE}/${kind}?${params.toString()}`, {
+      headers: { Accept: 'application/vnd.api+json' },
+      pick: (j) => (j as { data?: unknown[] }).data,
+      softError: (j) => {
+        const errs = (j as { errors?: { title?: string; detail?: string }[] }).errors
+        return errs && errs.length ? (errs[0].detail ?? errs[0].title ?? 'Kitsu error') : null
+      },
+    })
   })
 })
 
@@ -1255,16 +1353,17 @@ const MD_UA = 'Omnio/0.1 ( https://github.com/TonyMontania/Omnio )'
 
 ipcMain.handle('mangadex:search', async (_event, term: string) => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  const params = new URLSearchParams({ title: term.trim(), limit: '15' })
-  // Multiple `includes[]` values must be repeated, not comma-joined.
-  for (const inc of ['cover_art', 'author', 'artist']) params.append('includes[]', inc)
-  return proxyJson(`${MD_BASE}/manga?${params.toString()}`, {
-    headers: { 'User-Agent': MD_UA, Accept: 'application/json' },
-    pick: (j) => (j as { data?: unknown[] }).data,
-    softError: (j) => {
-      const r = (j as { result?: string; errors?: { detail?: string }[] })
-      return r.result === 'error' ? (r.errors?.[0]?.detail ?? 'MangaDex returned an error') : null
-    },
+  return cachedSearch('mangadex', term, () => {
+    const params = new URLSearchParams({ title: term.trim(), limit: '15' })
+    for (const inc of ['cover_art', 'author', 'artist']) params.append('includes[]', inc)
+    return proxyJson(`${MD_BASE}/manga?${params.toString()}`, {
+      headers: { 'User-Agent': MD_UA, Accept: 'application/json' },
+      pick: (j) => (j as { data?: unknown[] }).data,
+      softError: (j) => {
+        const r = (j as { result?: string; errors?: { detail?: string }[] })
+        return r.result === 'error' ? (r.errors?.[0]?.detail ?? 'MangaDex returned an error') : null
+      },
+    })
   })
 })
 
@@ -1298,10 +1397,10 @@ const cvHeaders = { 'User-Agent': CV_UA, Accept: 'application/json' }
 
 ipcMain.handle('comicvine:search', async (_event, apiKey: string, term: string) => {
   if (!apiKey || !term.trim()) return { ok: false, error: 'Missing API key or search term' }
-  return proxyJson(
+  return cachedSearch('comicvine', term, () => proxyJson(
     `${CV_BASE}/search/?api_key=${encodeURIComponent(apiKey)}&format=json&resources=volume&query=${encodeURIComponent(term.trim())}&limit=15&field_list=id,name,deck,start_year,count_of_issues,publisher,image,api_detail_url`,
     { headers: cvHeaders, pick: (j) => (j as { results?: unknown[] }).results, softError: cvSoftError },
-  )
+  ))
 })
 
 ipcMain.handle('comicvine:volume', async (_event, apiKey: string, id: number | string) => {
@@ -1332,12 +1431,12 @@ const mbHeaders = { 'User-Agent': MB_UA, Accept: 'application/json' }
 
 ipcMain.handle('mb:search', async (_event, term: string) => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  await mbThrottle()
-  // release-group covers albums/EPs/singles/soundtracks as a unit
-  // (versus release, which is one specific pressing / country release).
-  return proxyJson(`${MB_BASE}/release-group?query=${encodeURIComponent(term.trim())}&limit=15&fmt=json`, {
-    headers: mbHeaders,
-    pick: (j) => (j as { 'release-groups'?: unknown[] })['release-groups'],
+  return cachedSearch('mb', term, async () => {
+    await mbThrottle()
+    return proxyJson(`${MB_BASE}/release-group?query=${encodeURIComponent(term.trim())}&limit=15&fmt=json`, {
+      headers: mbHeaders,
+      pick: (j) => (j as { 'release-groups'?: unknown[] })['release-groups'],
+    })
   })
 })
 
@@ -1395,9 +1494,9 @@ const VGMDB_BASE = 'https://vgmdb.info'
 
 ipcMain.handle('vgmdb:search', async (_event, term: string) => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  return proxyJson(`${VGMDB_BASE}/search/albums/${encodeURIComponent(term.trim())}?format=json`, {
+  return cachedSearch('vgmdb', term, () => proxyJson(`${VGMDB_BASE}/search/albums/${encodeURIComponent(term.trim())}?format=json`, {
     pick: (j) => (j as { results?: { albums?: unknown[] } }).results?.albums,
-  })
+  }))
 })
 
 ipcMain.handle('vgmdb:album', async (_event, link: string) => {
@@ -1465,18 +1564,20 @@ const IGDB_FIELDS = [
 
 ipcMain.handle('igdb:search', async (_event, clientId: string, clientSecret: string, term: string) => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  const auth = await ensureIgdbToken(clientId, clientSecret)
-  if (!auth.ok) return auth
-  const safeTerm = term.trim().replace(/"/g, '\\"')
-  return proxyJson('https://api.igdb.com/v4/games', {
-    method: 'POST',
-    headers: {
-      'Client-ID': clientId,
-      'Authorization': `Bearer ${auth.token}`,
-      'Accept': 'application/json',
-    },
-    body: `search "${safeTerm}"; fields ${IGDB_FIELDS}; limit 12;`,
-    httpErrorPrefix: 'IGDB HTTP',
+  return cachedSearch('igdb', term, async () => {
+    const auth = await ensureIgdbToken(clientId, clientSecret)
+    if (!auth.ok) return auth
+    const safeTerm = term.trim().replace(/"/g, '\\"')
+    return proxyJson('https://api.igdb.com/v4/games', {
+      method: 'POST',
+      headers: {
+        'Client-ID': clientId,
+        'Authorization': `Bearer ${auth.token}`,
+        'Accept': 'application/json',
+      },
+      body: `search "${safeTerm}"; fields ${IGDB_FIELDS}; limit 12;`,
+      httpErrorPrefix: 'IGDB HTTP',
+    })
   })
 })
 
@@ -1486,10 +1587,10 @@ const TMDB_BASE = 'https://api.themoviedb.org/3'
 
 ipcMain.handle('tmdb:search', async (_event, apiKey: string, term: string, kind: 'movie' | 'tv') => {
   if (!apiKey || !term.trim()) return { ok: false, error: 'Missing API key or search term' }
-  return proxyJson(
+  return cachedSearch(`tmdb:${kind}`, term, () => proxyJson(
     `${TMDB_BASE}/search/${kind}?api_key=${encodeURIComponent(apiKey)}&query=${encodeURIComponent(term.trim())}&include_adult=false`,
     { pick: (j) => (j as { results?: unknown[] }).results },
-  )
+  ))
 })
 
 // Full details include credits (cast+crew) and images. TV details also carry
@@ -1537,7 +1638,7 @@ ipcMain.handle('anilist:search', async (_event, term: string, kind: 'ANIME' | 'M
         }
       }
     }`
-  return proxyJson('https://graphql.anilist.co', {
+  return cachedSearch(`anilist:${kind}`, term, () => proxyJson('https://graphql.anilist.co', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ query: q, variables: { search: term.trim(), type: kind } }),
@@ -1546,7 +1647,7 @@ ipcMain.handle('anilist:search', async (_event, term: string, kind: 'ANIME' | 'M
       const errs = (j as { errors?: { message: string }[] }).errors
       return errs && errs.length ? errs[0].message : null
     },
-  })
+  }))
 })
 
 // Steam community XML endpoint proxy. Given a full profile URL or a
@@ -1584,11 +1685,12 @@ const olHeaders = { 'User-Agent': OL_UA, Accept: 'application/json' }
 
 ipcMain.handle('openlibrary:search', async (_event, term: string) => {
   if (!term.trim()) return { ok: false, error: 'Missing search term' }
-  // Only ask for the fields we actually use — smaller payload than the default.
-  const fields = ['key', 'title', 'author_name', 'first_publish_year', 'publisher', 'isbn', 'number_of_pages_median', 'cover_i', 'subject', 'language'].join(',')
-  return proxyJson(`${OL_BASE}/search.json?q=${encodeURIComponent(term.trim())}&limit=15&fields=${fields}`, {
-    headers: olHeaders,
-    pick: (j) => (j as { docs?: unknown[] }).docs,
+  return cachedSearch('openlibrary', term, () => {
+    const fields = ['key', 'title', 'author_name', 'first_publish_year', 'publisher', 'isbn', 'number_of_pages_median', 'cover_i', 'subject', 'language'].join(',')
+    return proxyJson(`${OL_BASE}/search.json?q=${encodeURIComponent(term.trim())}&limit=15&fields=${fields}`, {
+      headers: olHeaders,
+      pick: (j) => (j as { docs?: unknown[] }).docs,
+    })
   })
 })
 

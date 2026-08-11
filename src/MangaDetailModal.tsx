@@ -3,6 +3,7 @@ import { getMangaStatus, getPublicationStatusLabel, getMangaSourceLabel, getAgeR
 import { MangaStatusIcon } from './icons'
 import type { Item, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
+import CoverPlaceholder from './components/CoverPlaceholder'
 import ImageLightbox from './components/ImageLightbox'
 import { exportItemAsJson } from './utils/files'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
@@ -55,7 +56,7 @@ export default function MangaDetailModal({ item, groups, allManga, onClose, onEd
       <div className="game-modal-body" style={item.bannerImage ? { marginTop: 110 } : undefined}>
         <div className="game-modal-main">
           <div className="game-modal-cover">
-            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder">No cover</div>}
+            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder"><CoverPlaceholder categoryId={item.categoryId} /></div>}
           </div>
           <div className="game-modal-info">
             <div className="game-modal-title-row">

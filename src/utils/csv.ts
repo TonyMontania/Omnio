@@ -39,3 +39,32 @@ export function colIndex(headers: string[], ...names: string[]): number {
   }
   return -1
 }
+
+// Escape one CSV cell. Quotes only when the value contains a comma,
+// quote, or newline (RFC 4180). Empty / undefined → empty cell.
+function csvCell(v: unknown): string {
+  if (v === undefined || v === null) return ''
+  const s = Array.isArray(v) ? v.join('; ') : String(v)
+  if (s === '') return ''
+  if (/[",\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"'
+  return s
+}
+
+// Turn a list of rows (each row an object) into a CSV string. Headers
+// come from the union of all keys in the input, preserving first-seen
+// order — deterministic across runs when the caller feeds objects with
+// the same shape (which we always do, from a schema-known row builder).
+export function buildCsv(rows: Record<string, unknown>[]): string {
+  if (rows.length === 0) return ''
+  const seen = new Set<string>()
+  const headers: string[] = []
+  for (const r of rows) {
+    for (const k of Object.keys(r)) {
+      if (!seen.has(k)) { seen.add(k); headers.push(k) }
+    }
+  }
+  const lines: string[] = [headers.map(csvCell).join(',')]
+  for (const r of rows) lines.push(headers.map((h) => csvCell(r[h])).join(','))
+  // CRLF matches Excel's expectation on Windows and is harmless elsewhere.
+  return lines.join('\r\n') + '\r\n'
+}

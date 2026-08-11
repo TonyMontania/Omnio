@@ -3,6 +3,7 @@ import { getSeriesStatus, getSeriesFormatLabel, getWatchLocationLabel, getSeason
 import { AnimeStatusIcon } from './icons'
 import type { Item, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
+import CoverPlaceholder from './components/CoverPlaceholder'
 import { exportItemAsJson } from './utils/files'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
@@ -52,7 +53,7 @@ export default function SeriesDetailModal({ item, groups, allSeries, onClose, on
       <div className="game-modal-body">
         <div className="game-modal-main">
           <div className="game-modal-cover">
-            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder">No cover</div>}
+            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder"><CoverPlaceholder categoryId={item.categoryId} /></div>}
           </div>
           <div className="game-modal-info">
             <div className="game-modal-title-row">

@@ -9,6 +9,7 @@ import CustomFieldsView from './components/CustomFieldsView'
 import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
 import DetailNotes from './components/detail/DetailNotes'
+import CoverPlaceholder from './components/CoverPlaceholder'
 
 
 interface Props {
@@ -49,7 +50,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
 
       <div className="music-modal-main">
         <div className="music-modal-cover">
-          {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder">No cover</div>}
+          {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder"><CoverPlaceholder categoryId={item.categoryId} /></div>}
         </div>
         <div className="music-modal-info">
           <h1>{item.title}</h1>
@@ -229,7 +230,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
               <div key={ed.id} className="music-edition">
                 {displayCover
                   ? <img className="music-edition-cover zoomable" src={assetSrc(displayCover)} alt={ed.name} data-zoom-group={`music-editions-${item.id}`} data-zoom-label={ed.name} data-zoom-caption={ed.releaseDate || undefined} />
-                  : <div className="music-edition-cover placeholder">No cover</div>}
+                  : <div className="music-edition-cover placeholder"><CoverPlaceholder categoryId={item.categoryId} /></div>}
                 <div className="music-edition-info">
                   <h4>{ed.name}</h4>
                   {ed.releaseDate && <p className="music-edition-date">{ed.releaseDate}</p>}

@@ -62,6 +62,7 @@ import {
 import ItemCard from './ItemCard'
 import CardContextMenu, { type CardMenuAction } from './components/CardContextMenu'
 import ImageLightbox from './components/ImageLightbox'
+import FirstRunWizard from './FirstRunWizard'
 import Toast from './Toast'
 import BackupList from './BackupList'
 import BulkActionBar from './BulkActionBar'
@@ -101,6 +102,7 @@ const TraktImporter     = lazy(() => import('./TraktImporter'))
 const DiscogsImporter   = lazy(() => import('./DiscogsImporter'))
 const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 import { buildStaticSiteHtml } from './exportSite'
+import { buildCsvExports } from './CsvExporter'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
   // ChevronIcon removed — no more collapsible library groups.
@@ -3787,8 +3789,22 @@ function App() {
                           if (r?.ok) setToast(`Exported to ${r.path}`)
                           else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
                         }}>{exporting ? 'Exporting…' : 'Export as HTML'}</button>
+                        <button type="button" className="secondary-btn" disabled={exporting} onClick={async () => {
+                          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Choose where to save the CSV files')
+                          if (!dir) return
+                          setExporting(true)
+                          const scopedItems = exportScope === 'all' ? items : items.filter((i) => i.categoryId === exportScope)
+                          const scopedArtists = exportScope === 'musica' || exportScope === 'all' ? musicArtists : []
+                          const files = buildCsvExports(scopedItems, scopedArtists, exportScope)
+                          const fileCount = Object.keys(files).length
+                          if (fileCount === 0) { setExporting(false); setToast('Nothing to export'); return }
+                          const r = await window.ipcRenderer.invoke('export:csv', dir, files)
+                          setExporting(false)
+                          if (r?.ok) setToast(`Wrote ${r.count} CSV file${r.count === 1 ? '' : 's'} to ${r.path}`)
+                          else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
+                        }}>Export as CSV</button>
                       </div>
-                      <p className="hint">Wrapped is a year-in-review view. Export builds a standalone <code>index.html</code> and copies your <code>assets/</code> folder — send the folder to a friend and it just opens. Scope defaults to the whole library; pick a single library to share just that one.</p>
+                      <p className="hint">Wrapped is a year-in-review view. HTML export builds a standalone <code>index.html</code> and copies your <code>assets/</code> folder — send the folder to a friend and it just opens. CSV export drops one file per category so spreadsheets/BI tools can round-trip your library. Scope defaults to the whole library; pick a single library to share just that one.</p>
                     </div>
                     <div className="settings-section-title">Integrations · API keys</div>
                     {/* Sorted alphabetically by service name so users can scan the list. */}
@@ -3994,6 +4010,13 @@ function App() {
                           <li><b>VGMdb fetcher — bulkier patch</b> — producers (from organizations, with composers as fallback), distributors, and full release date. Genres and per-track data unchanged.</li>
                           <li><b>Docker (headless / server) deployment</b> — full Electron app running under KasmVNC, reachable from any browser on <code>:3000</code>. Ships a Dockerfile, docker-compose, an Unraid template and a GitHub Actions workflow that publishes <code>ghcr.io/tonymontania/omnio:latest</code> on every release.</li>
                         </ul>
+                        <p className="about-line">
+                          <a
+                            href="https://github.com/TonyMontania/Omnio/releases"
+                            className="about-releases-link"
+                            onClick={(e) => { e.preventDefault(); window.ipcRenderer.invoke('updates:open-url', 'https://github.com/TonyMontania/Omnio/releases') }}
+                          >Show all release notes →</a>
+                        </p>
                         <p className="about-line about-stack">Built with Electron · React · Vite · TypeScript</p>
                       </div>
                     </div>
@@ -7063,6 +7086,18 @@ function App() {
           index={zoomState.index}
           onIndex={(i) => setZoomState((s) => (s ? { ...s, index: i } : s))}
           onClose={() => setZoomState(null)}
+        />
+      )}
+
+      {/* First-run wizard: shown once on a fresh install. Any of the three
+          CTAs dismisses it permanently (setting welcomeShown=true) and
+          routes the user to the matching entry point. */}
+      {items.length === 0 && !settings.welcomeShown && (
+        <FirstRunWizard
+          onImport={() => { setSettings((s) => ({ ...s, welcomeShown: true })); setSpecialView('settings') }}
+          onOpenIntegrations={() => { setSettings((s) => ({ ...s, welcomeShown: true })); setSpecialView('settings') }}
+          onAddFirst={(cat) => { setSettings((s) => ({ ...s, welcomeShown: true })); switchCategory(cat); setTimeout(() => openAddPanel(), 0) }}
+          onDismiss={() => setSettings((s) => ({ ...s, welcomeShown: true }))}
         />
       )}
     </div>

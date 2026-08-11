@@ -31,6 +31,8 @@
 .about-version { font-family: var(--font-mono); font-size: 12px; color: var(--text-faint); margin-left: 6px; }
 .about-tagline { margin: 4px 0 0; color: var(--text); font-size: 13px; }
 .about-line { margin: 4px 0 0; color: var(--text-dim); font-size: 12.5px; }
+.about-releases-link { color: var(--accent); text-decoration: none; font-weight: 500; }
+.about-releases-link:hover { text-decoration: underline; }
 .about-stack { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); margin-top: 10px; }
 .about-section-title {
   font-family: var(--font-mono);
