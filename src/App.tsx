@@ -24,10 +24,8 @@ import type {
 
 // Runtime constants (option lists, default field visibility)
 import {
-  OWNERSHIP_OPTIONS,
-  GAME_STATUS_OPTIONS, GAME_SOURCE_OPTIONS, GAME_FIELD_OPTIONS, DEFAULT_GAME_FIELDS,
-  MUSIC_TYPE_OPTIONS, MUSIC_SOURCE_OPTIONS, MUSIC_FIELD_OPTIONS, DEFAULT_MUSIC_FIELDS,
-  VINYL_CONDITION_OPTIONS,
+  GAME_STATUS_OPTIONS, GAME_FIELD_OPTIONS, DEFAULT_GAME_FIELDS,
+  MUSIC_FIELD_OPTIONS, DEFAULT_MUSIC_FIELDS,
   MANGA_STATUS_OPTIONS, MANGA_SOURCE_OPTIONS, MANGA_FIELD_OPTIONS, DEFAULT_MANGA_FIELDS,
   MEDIA_OWNERSHIP_OPTIONS,
   PUBLICATION_STATUS_OPTIONS,
@@ -116,19 +114,12 @@ import {
 import DistChart from './insights/DistChart'
 import Heatmap from './insights/Heatmap'
 import RatingPicker from './components/editors/RatingPicker'
-import AnimeItemPicker from './components/editors/AnimeItemPicker'
 import { pickImageToDataUrl, assetBasename, exportItemAsJson } from './utils/files'
-import PlatformEditor from './components/editors/PlatformEditor'
-import GameSubItems from './components/editors/GameSubItems'
-import BundleGamesEditor from './components/editors/BundleGamesEditor'
-import SaveFilesEditor from './components/editors/SaveFilesEditor'
-import PcgwSavePaths from './components/editors/PcgwSavePaths'
 import ConcertLogEditor from './components/editors/ConcertLogEditor'
-import AchievementListEditor from './components/editors/AchievementListEditor'
-import ScreenshotsGallery from './components/editors/ScreenshotsGallery'
 import ChapterNotesEditor from './components/editors/ChapterNotesEditor'
 import VolumeCoverEditor from './components/editors/VolumeCoverEditor'
-import TrackListEditor from './components/editors/TrackListEditor'
+import MusicEditorSection from './components/editors/MusicEditorSection'
+import GameEditorSection from './components/editors/GameEditorSection'
 import RelatedListEditor from './components/editors/RelatedListEditor'
 import RecommendationsEditor from './components/editors/RecommendationsEditor'
 import RewatchListEditor from './components/editors/RewatchListEditor'
@@ -137,8 +128,6 @@ import ChapterListEditor from './components/editors/ChapterListEditor'
 import EpisodeListEditor from './components/editors/EpisodeListEditor'
 import TagEditor from './components/editors/TagEditor'
 import BandMembersEditor from './components/editors/BandMembersEditor'
-import SingleCoverEditor from './components/editors/SingleCoverEditor'
-import EditionsEditor from './components/editors/EditionsEditor'
 import FiltersDropdown from './components/editors/FiltersDropdown'
 
 import './App.css'
@@ -4712,247 +4701,45 @@ function App() {
                     )}
 
                     {isVideojuegos && (
-                      <>
-                        <div className="form-section-header" data-belongs-to="identity">
-                          <span className="form-section-title">Game details</span>
-                          <span className="form-section-hint">Devs, publishers, platforms, franchise</span>
-                        </div>
-                        <TagEditor
-                          label="Developers"
-                          placeholder="Add developer"
-                          tags={devs}
-                          onAdd={(v) => setDevs((prev) => prev.includes(v) ? prev : [...prev, v])}
-                          onRemove={(i) => setDevs((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <TagEditor
-                          label="Publishers"
-                          placeholder="Add publisher"
-                          tags={publishers}
-                          onAdd={(v) => setPublishers((prev) => prev.includes(v) ? prev : [...prev, v])}
-                          onRemove={(i) => setPublishers((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <div className="field-row">
-                          <div className="field-group">
-                            <label>Achievements unlocked</label>
-                            <input placeholder="0" value={achievementsUnlocked} onChange={(e) => setAchievementsUnlocked(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
-                          </div>
-                          <div className="field-group">
-                            <label>Achievements total</label>
-                            <input placeholder="0" value={achievementsTotal} onChange={(e) => setAchievementsTotal(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
-                          </div>
-                        </div>
-                        <div className="field-group">
-                          <label>Release date</label>
-                          <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
-                        </div>
-                        <div className="field-group">
-                          <label>Description</label>
-                          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
-                        </div>
-                        <div className="field-group">
-                          <label>Platforms</label>
-                          <PlatformEditor value={platforms} onChange={setPlatforms} existing={Array.from(new Set(items.filter((i) => i.categoryId === 'videojuegos').flatMap((i) => i.platforms || [])))} />
-                        </div>
-                        <div className="field-row">
-                          <div className="field-group">
-                            <label>Ownership</label>
-                            <select value={ownership} onChange={(e) => setOwnership(e.target.value as Ownership | '')}>
-                              <option value="">Unspecified</option>
-                              {OWNERSHIP_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                            </select>
-                          </div>
-                          <div className="field-group">
-                            <label>Status</label>
-                            <select value={gameStatus} onChange={(e) => setGameStatus(e.target.value as GameStatus)}>
-                              {GAME_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                        <div className="form-section-header" data-belongs-to="progress">
-                          <span className="form-section-title">Progress</span>
-                          <span className="form-section-hint">Time played · DLC · addons · bundle contents · achievements</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Time played (hours.minutes)</label>
-                          <input placeholder="e.g. 22.49" value={playTime} onChange={(e) => handlePlayTimeChange(e.target.value)} inputMode="decimal" />
-                        </div>
-                        <GameSubItems
-                          question="Has DLC or expansions?"
-                          placeholder="DLC/expansion name"
-                          enabled={hasDlc}
-                          onToggle={(v) => { setHasDlc(v); if (!v) setDlcList([]) }}
-                          entries={dlcList}
-                          onAdd={(name) => setDlcList((prev) => [...prev, { id: crypto.randomUUID(), name, status: 'backlog' }])}
-                          onRemove={(id) => setDlcList((prev) => prev.filter((d) => d.id !== id))}
-                          onStatusChange={(id, s) => setDlcList((prev) => prev.map((d) => (d.id === id ? { ...d, status: s } : d)))}
-                        />
-                        <GameSubItems
-                          question="Has addons or packs?"
-                          placeholder="Addon/pack name"
-                          enabled={hasAddons}
-                          onToggle={(v) => { setHasAddons(v); if (!v) setAddonsList([]) }}
-                          entries={addonsList}
-                          onAdd={(name) => setAddonsList((prev) => [...prev, { id: crypto.randomUUID(), name, status: 'backlog' }])}
-                          onRemove={(id) => setAddonsList((prev) => prev.filter((d) => d.id !== id))}
-                          onStatusChange={(id, s) => setAddonsList((prev) => prev.map((d) => (d.id === id ? { ...d, status: s } : d)))}
-                          showStatus={false}
-                        />
-                        <BundleGamesEditor
-                          enabled={isBundle}
-                          onToggle={(v) => { setIsBundle(v); if (!v) setBundleContents([]) }}
-                          entries={bundleContents}
-                          onChange={setBundleContents}
-                          onRequestSgdb={(entryId, title) => setBundleSgdbFor({ entryId, title })}
-                        />
-                        <PcgwSavePaths
-                          gameTitle={title}
-                          pcgwPage={pcgwPage}
-                          onPageMatched={setPcgwPage}
-                        />
-                        <SaveFilesEditor
-                          gameTitle={title}
-                          categoryId={activeCategory}
-                          saveFiles={saveFiles}
-                          onChange={setSaveFiles}
-                        />
-                        <AchievementListEditor entries={achievementsList} onChange={setAchievementsList} />
-                        <ScreenshotsGallery
-                          gameTitle={title}
-                          categoryId={activeCategory}
-                          screenshots={screenshots}
-                          onChange={setScreenshots}
-                        />
-                        <div className="form-section-header" data-belongs-to="overview">
-                          <span className="form-section-title">Rating &amp; completion</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Rating</label>
-                          <RatingPicker value={rating} onChange={setRating} />
-                        </div>
-                        <div className="field-group">
-                          <label>Completion date</label>
-                          <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
-                        </div>
-                        <div className="form-section-header" data-belongs-to="identity">
-                          <span className="form-section-title">Extended identity</span>
-                          <span className="form-section-hint">Alt titles, genres, source, edition, age rating, franchise</span>
-                        </div>
-                        <TagEditor
-                          label="Alternative titles"
-                          placeholder="Add title (regional, original…)"
-                          tags={alternativeTitles}
-                          onAdd={(t) => setAlternativeTitles((prev) => prev.includes(t) ? prev : [...prev, t])}
-                          onRemove={(i) => setAlternativeTitles((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <TagEditor
-                          label="Genres"
-                          placeholder="Add genre"
-                          tags={genres}
-                          onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
-                          onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <div className="field-row">
-                          <div className="field-group">
-                            <label>Source</label>
-                            <select value={gameSource} onChange={(e) => setGameSource(e.target.value as GameSource | '')}>
-                              <option value="">Unspecified</option>
-                              {GAME_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                            </select>
-                          </div>
-                          <div className="field-group">
-                            <label>Age rating</label>
-                            <select value={ageRating} onChange={(e) => setAgeRating(e.target.value as AgeRating | '')}>
-                              <option value="">Unspecified</option>
-                              {AGE_RATING_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                            </select>
-                          </div>
-                        </div>
-
-                        {gameSource && gameSource !== 'original' && gameSource !== 'other' && (() => {
-                          const linked = items.find((i) => i.id === originalWorkId)
-                          return (
-                            <div className="field-group">
-                              <label>Original work</label>
-                              {linked ? (
-                                <div className="tag-pill-list">
-                                  <span className="tag-pill">
-                                    {linked.title}
-                                    <button type="button" onClick={() => setOriginalWorkId('')}>✕</button>
-                                  </span>
-                                </div>
-                              ) : (
-                                <AnimeItemPicker
-                                  options={items.filter((i) => i.categoryId === 'videojuegos' && i.id !== editingId)}
-                                  excludeIds={[]}
-                                  onPick={(id) => setOriginalWorkId(id)}
-                                  placeholder="Search another game to link as the original…"
-                                />
-                              )}
-                              <p className="hint">Points at the game this one derives from — e.g. Freedom Cry is a standalone expansion of AC IV: Black Flag. Both cards will show the link.</p>
-                            </div>
-                          )
-                        })()}
-                        <div className="field-group">
-                          <label>Franchise</label>
-                          <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. The Legend of Zelda" />
-                        </div>
-                        <div className="form-section-header" data-belongs-to="notes">
-                          <span className="form-section-title">Review</span>
-                          <span className="form-section-hint">Your take on this game · with optional spoiler toggle</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Review</label>
-                          <textarea value={gameReview} onChange={(e) => setGameReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
-                          {gameReview.trim() && (
-                            <div className="yesno">
-                              <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>Contains spoilers</button>
-                              <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>No spoilers</button>
-                            </div>
-                          )}
-                        </div>
-                        <div className="form-section-header" data-belongs-to="history">
-                          <span className="form-section-title">Play history</span>
-                          <span className="form-section-hint">Every replay / campaign log</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Replay history</label>
-                          <RewatchListEditor
-                            rewatches={rewatches}
-                            onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
-                            onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
-                            onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
-                            onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-                          />
-                        </div>
-                        <div className="form-section-header" data-belongs-to="related">
-                          <span className="form-section-title">Related &amp; recommendations</span>
-                          <span className="form-section-hint">Sequels, prequels, franchise, hand-picked recs</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Related games</label>
-                          <RelatedListEditor
-                            related={relatedItems}
-                            options={items.filter((i) => i.categoryId === 'videojuegos' && i.id !== editingId)}
-                            crossLibrary
-                            allItems={relatedCrossLibraryOptions}
-                            onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
-                            onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
-                            onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-                            pickerPlaceholder="Add related item… (any library)"
-                          />
-                        </div>
-                        <div className="field-group">
-                          <label>Recommendations</label>
-                          <RecommendationsEditor
-                            ids={recommendedItems}
-                            options={items.filter((i) => i.categoryId === 'videojuegos' && i.id !== editingId)}
-                            onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
-                            onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-                            pickerPlaceholder="Add recommended game…"
-                          />
-                        </div>
-                      </>
+                      <GameEditorSection
+                        title={title}
+                        editingId={editingId}
+                        items={items}
+                        activeCategory={activeCategory}
+                        relatedCrossLibraryOptions={relatedCrossLibraryOptions}
+                        devs={devs} setDevs={setDevs}
+                        publishers={publishers} setPublishers={setPublishers}
+                        achievementsUnlocked={achievementsUnlocked} setAchievementsUnlocked={setAchievementsUnlocked}
+                        achievementsTotal={achievementsTotal} setAchievementsTotal={setAchievementsTotal}
+                        releaseDate={releaseDate} setReleaseDate={setReleaseDate}
+                        description={description} setDescription={setDescription}
+                        platforms={platforms} setPlatforms={setPlatforms}
+                        ownership={ownership} setOwnership={setOwnership}
+                        gameStatus={gameStatus} setGameStatus={setGameStatus}
+                        playTime={playTime} handlePlayTimeChange={handlePlayTimeChange}
+                        hasDlc={hasDlc} setHasDlc={setHasDlc} dlcList={dlcList} setDlcList={setDlcList}
+                        hasAddons={hasAddons} setHasAddons={setHasAddons} addonsList={addonsList} setAddonsList={setAddonsList}
+                        isBundle={isBundle} setIsBundle={setIsBundle} bundleContents={bundleContents} setBundleContents={setBundleContents} setBundleSgdbFor={setBundleSgdbFor}
+                        pcgwPage={pcgwPage} setPcgwPage={setPcgwPage}
+                        saveFiles={saveFiles} setSaveFiles={setSaveFiles}
+                        achievementsList={achievementsList} setAchievementsList={setAchievementsList}
+                        screenshots={screenshots} setScreenshots={setScreenshots}
+                        rating={rating} setRating={setRating}
+                        finishedAt={finishedAt} setFinishedAt={setFinishedAt}
+                        alternativeTitles={alternativeTitles} setAlternativeTitles={setAlternativeTitles}
+                        genres={genres} setGenres={setGenres}
+                        gameSource={gameSource} setGameSource={setGameSource}
+                        ageRating={ageRating} setAgeRating={setAgeRating}
+                        originalWorkId={originalWorkId} setOriginalWorkId={setOriginalWorkId}
+                        franchise={franchise} setFranchise={setFranchise}
+                        gameReview={gameReview} setGameReview={setGameReview}
+                        hasSpoilers={hasSpoilers} setHasSpoilers={setHasSpoilers}
+                        rewatches={rewatches} setRewatches={setRewatches}
+                        relatedItems={relatedItems} setRelatedItems={setRelatedItems}
+                        recommendedItems={recommendedItems} setRecommendedItems={setRecommendedItems}
+                      />
                     )}
+
                     {activeCategory === 'peliculas' && (
                       <>
                         <div className="form-section-header" data-belongs-to="identity">
@@ -5990,257 +5777,38 @@ function App() {
                 )}
 
                     {activeCategory === 'musica' && (
-                  <>
-                    <div className="form-section-header" data-belongs-to="identity">
-                      <span className="form-section-title">Music details</span>
-                      <span className="form-section-hint">Artist, tracklist, editions, singles</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Artist</label>
-                      <input value={artist} onChange={(e) => setArtist(e.target.value)} />
-                    </div>
-                    <TagEditor
-                      label="Alternative titles"
-                      placeholder="Add title (romaji, English…)"
-                      tags={alternativeTitles}
-                      onAdd={(t) => setAlternativeTitles((prev) => prev.includes(t) ? prev : [...prev, t])}
-                      onRemove={(i) => setAlternativeTitles((prev) => prev.filter((_, idx) => idx !== i))}
-                    />
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Type</label>
-                        <select value={musicType} onChange={(e) => setMusicType(e.target.value as MusicType | '')}>
-                          <option value="">Unspecified</option>
-                          {MUSIC_TYPE_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>Source</label>
-                        <select value={musicSource} onChange={(e) => setMusicSource(e.target.value as MusicSource | '')}>
-                          <option value="">Unspecified</option>
-                          {MUSIC_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Vinyl condition <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>Goldmine grading scale — leave blank if you don't own a physical copy</span></label>
-                      <select value={vinylCondition} onChange={(e) => setVinylCondition(e.target.value as VinylCondition | '')}>
-                        <option value="">— not owned</option>
-                        {VINYL_CONDITION_OPTIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                      </select>
-                    </div>
-                    <TagEditor
-                      label="Producers"
-                      placeholder="Add producer"
-                      tags={producers}
-                      onAdd={(p) => setProducers((prev) => prev.includes(p) ? prev : [...prev, p])}
-                      onRemove={(i) => setProducers((prev) => prev.filter((_, idx) => idx !== i))}
-                    />
-
-                    {isAlbumLikeMusic(musicType || undefined) ? (
-                      <>
-                        <div className="field-group">
-                          <label>Released</label>
-                          <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
-                        </div>
-                        <TagEditor
-                          label="Genres"
-                          placeholder="Add genre"
-                          tags={genres}
-                          onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
-                          onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <div className="field-group">
-                          <label>Label</label>
-                          <input value={label} onChange={(e) => setLabel(e.target.value)} />
-                        </div>
-                        <div className="form-section-header" data-belongs-to="progress">
-                          <span className="form-section-title">Progress</span>
-                          <span className="form-section-hint">Listened toggle · tracklist · per-track rating</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Listened?</label>
-                          <div className="yesno">
-                            <button type="button" className={consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(true)}>Listened</button>
-                            <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>No</button>
-                          </div>
-                        </div>
-                        <div className="field-group">
-                          <label>Add tracks?</label>
-                          <div className="yesno">
-                            <button type="button" className={hasTracks ? 'pill active' : 'pill'} onClick={() => setHasTracks(true)}>Yes</button>
-                            <button type="button" className={!hasTracks ? 'pill active' : 'pill'} onClick={() => { setHasTracks(false); setTracks([]) }}>No</button>
-                          </div>
-                          {hasTracks && (
-                            <TrackListEditor
-                              tracks={tracks}
-                              mainArtist={artist}
-                              albumTitle={title}
-                              onAdd={(t) => setTracks((prev) => [...prev, { ...t, id: crypto.randomUUID() }])}
-                              onRemove={(id) => setTracks((prev) => prev.filter((t) => t.id !== id))}
-                              onToggleFavorite={(id) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, favorite: !t.favorite } : t)))}
-                              onRatingChange={(id, r) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, rating: r || undefined } : t)))}
-                              onArtistChange={(id, a) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, artist: a || undefined } : t)))}
-                              onFillAllArtist={() => setTracks((prev) => prev.map((t) => ({ ...t, artist })))}
-                              onToggleListened={(id) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, listened: !t.listened } : t)))}
-                              onLyricsChange={(id, lyrics) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, lyrics } : t)))}
-                              onNumberChange={(id, number) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, number } : t)))}
-                              onNameChange={(id, name) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, name } : t)))}
-                              onDurationChange={(id, duration) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, duration } : t)))}
-                            />
-                          )}
-                        </div>
-                        <div className="form-section-header" data-belongs-to="overview">
-                          <span className="form-section-title">Rating &amp; day listened</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Rating</label>
-                          <RatingPicker value={rating} onChange={setRating} />
-                        </div>
-                        <div className="field-group">
-                          <label>Day listened</label>
-                          <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
-                        </div>
-                        <div className="field-group">
-                          <label>Single covers</label>
-                          <p className="hint">Artwork for singles released with their own cover (often before the album).</p>
-                          <SingleCoverEditor
-                            singles={singleCovers}
-                            onAdd={(s) => setSingleCovers((prev) => [...prev, { ...s, id: crypto.randomUUID() }])}
-                            onRemove={(id) => setSingleCovers((prev) => prev.filter((s) => s.id !== id))}
-                          />
-                        </div>
-                        <div className="field-group">
-                          <label>Editions</label>
-                          <p className="hint">Deluxe, Japan, Anniversary… each with its own cover and extra tracks.</p>
-                          <EditionsEditor editions={editions} mainArtist={artist} onChange={setEditions} />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="field-row">
-                          <div className="field-group">
-                            <label>Release date</label>
-                            <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
-                          </div>
-                          <div className="field-group">
-                            <label>Release year</label>
-                            <input value={releaseYear} onChange={(e) => yearHandler(setReleaseYear)(e.target.value)} inputMode="numeric" maxLength={4} />
-                          </div>
-                        </div>
-                        <div className="field-row">
-                          <div className="field-group">
-                            <label>Part of album</label>
-                            <select
-                              value={partOfAlbumId}
-                              onChange={(e) => {
-                                const id = e.target.value
-                                setPartOfAlbumId(id)
-                                // Copy the picked album's title into the free-text
-                                // fallback so exports / imports / detail cards
-                                // without live resolution still show a label.
-                                if (id) {
-                                  const picked = items.find((i) => i.id === id)
-                                  if (picked) setPartOfAlbum(picked.title)
-                                }
-                              }}
-                            >
-                              <option value="">— none —</option>
-                              {items
-                                .filter((i) => i.categoryId === 'musica' && i.id !== editingId && isAlbumLikeMusic(i.musicType) && (!artist.trim() || (i.artist ?? '').toLowerCase() === artist.trim().toLowerCase()))
-                                .sort((a, b) => a.title.localeCompare(b.title))
-                                .map((i) => <option key={i.id} value={i.id}>{i.title}</option>)}
-                            </select>
-                            <p className="hint">Link this single / EP / OST to the album it was later collected into. Options are filtered to album-like Music entries by the same artist.</p>
-                          </div>
-                          <div className="field-group">
-                            <label>…or free-text</label>
-                            <input
-                              value={partOfAlbum}
-                              onChange={(e) => setPartOfAlbum(e.target.value)}
-                              placeholder="Album title (used when it isn't in your library)"
-                            />
-                          </div>
-                        </div>
-                        <div className="form-section-header" data-belongs-to="progress">
-                          <span className="form-section-title">Progress</span>
-                          <span className="form-section-hint">Listened toggle · tracklist · per-track rating</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Listened?</label>
-                          <div className="yesno">
-                            <button type="button" className={consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(true)}>Listened</button>
-                            <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>No</button>
-                          </div>
-                        </div>
-                        <div className="form-section-header" data-belongs-to="overview">
-                          <span className="form-section-title">Rating &amp; day listened</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Rating</label>
-                          <RatingPicker value={rating} onChange={setRating} />
-                        </div>
-                        <div className="field-group">
-                          <label>Completion date</label>
-                          <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
-                        </div>
-                      </>
+                      <MusicEditorSection
+                        title={title}
+                        editingId={editingId}
+                        items={items}
+                        relatedCrossLibraryOptions={relatedCrossLibraryOptions}
+                        artist={artist} setArtist={setArtist}
+                        alternativeTitles={alternativeTitles} setAlternativeTitles={setAlternativeTitles}
+                        musicType={musicType} setMusicType={setMusicType}
+                        musicSource={musicSource} setMusicSource={setMusicSource}
+                        vinylCondition={vinylCondition} setVinylCondition={setVinylCondition}
+                        producers={producers} setProducers={setProducers}
+                        releaseDate={releaseDate} setReleaseDate={setReleaseDate}
+                        releaseYear={releaseYear} setReleaseYear={setReleaseYear}
+                        genres={genres} setGenres={setGenres}
+                        label={label} setLabel={setLabel}
+                        consumed={consumed} setConsumed={setConsumed}
+                        hasTracks={hasTracks} setHasTracks={setHasTracks}
+                        tracks={tracks} setTracks={setTracks}
+                        rating={rating} setRating={setRating}
+                        finishedAt={finishedAt} setFinishedAt={setFinishedAt}
+                        singleCovers={singleCovers} setSingleCovers={setSingleCovers}
+                        editions={editions} setEditions={setEditions}
+                        partOfAlbumId={partOfAlbumId} setPartOfAlbumId={setPartOfAlbumId}
+                        partOfAlbum={partOfAlbum} setPartOfAlbum={setPartOfAlbum}
+                        musicReview={musicReview} setMusicReview={setMusicReview}
+                        hasSpoilers={hasSpoilers} setHasSpoilers={setHasSpoilers}
+                        rewatches={rewatches} setRewatches={setRewatches}
+                        relatedItems={relatedItems} setRelatedItems={setRelatedItems}
+                        recommendedItems={recommendedItems} setRecommendedItems={setRecommendedItems}
+                        yearHandler={yearHandler}
+                      />
                     )}
-                    <div className="form-section-header" data-belongs-to="notes">
-                      <span className="form-section-title">Review</span>
-                      <span className="form-section-hint">Your take · with optional spoiler toggle</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Review</label>
-                      <textarea value={musicReview} onChange={(e) => setMusicReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
-                      {musicReview.trim() && (
-                        <div className="yesno">
-                          <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>Contains spoilers</button>
-                          <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>No spoilers</button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="form-section-header" data-belongs-to="history">
-                      <span className="form-section-title">Listen history</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Listen history</label>
-                      <RewatchListEditor
-                        rewatches={rewatches}
-                        onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
-                        onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
-                        onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
-                        onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-                      />
-                    </div>
-                    <div className="form-section-header" data-belongs-to="related">
-                      <span className="form-section-title">Related &amp; recommendations</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Related albums</label>
-                      <RelatedListEditor
-                        related={relatedItems}
-                            crossLibrary
-                            allItems={relatedCrossLibraryOptions}
-                        options={items.filter((i) => i.categoryId === 'musica' && i.id !== editingId)}
-                        onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
-                        onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
-                        onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-                        pickerPlaceholder="Add related album…"
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label>Recommendations</label>
-                      <RecommendationsEditor
-                        ids={recommendedItems}
-                        options={items.filter((i) => i.categoryId === 'musica' && i.id !== editingId)}
-                        onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
-                        onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-                        pickerPlaceholder="Add recommended album…"
-                      />
-                    </div>
-                  </>
-                )}
 
                     <div className="form-section-header" data-belongs-to="notes">
                       <span className="form-section-title">Notes, tags & groups</span>
