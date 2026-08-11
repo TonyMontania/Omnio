@@ -343,7 +343,7 @@ function App() {
   const [seriesBoardStatus, setSeriesBoardStatus] = useState<SeriesStatus>('plan_to_watch')
   const [bookBoardStatus, setBookBoardStatus] = useState<BookStatus>('plan_to_read')
   const [viewingSeries, setViewingSeries] = useState<Item | null>(null)
-  const [settingsTab, setSettingsTab] = useState<'appearance' | 'behavior' | 'libraries' | 'cards' | 'data'>('appearance')
+  const [settingsTab, setSettingsTab] = useState<'appearance' | 'behavior' | 'libraries' | 'cards' | 'data' | 'integrations' | 'maintenance'>('appearance')
   const [welcomeStep, setWelcomeStep] = useState<'libraries' | 'keys' | 'tips'>('libraries')
   const [welcomePicks, setWelcomePicks] = useState<Record<string, boolean>>({})
   const [moviesBoardFilter, setMoviesBoardFilter] = useState<'watched' | 'unwatched'>('watched')
@@ -3497,11 +3497,16 @@ function App() {
             <>
               <div className="settings-layout">
               <aside className="settings-sidebar">
+                <div className="settings-nav-group-label">Look &amp; feel</div>
                 <button className={settingsTab === 'appearance' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('appearance')}><span className="settings-nav-icon">◐</span>Appearance</button>
                 <button className={settingsTab === 'behavior' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('behavior')}><span className="settings-nav-icon">⚙</span>Behavior</button>
-                <button className={settingsTab === 'libraries' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('libraries')}><span className="settings-nav-icon">☰</span>Libraries</button>
-                <button className={settingsTab === 'cards' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('cards')}><span className="settings-nav-icon">▦</span>Card Fields</button>
-                <button className={settingsTab === 'data' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('data')}><span className="settings-nav-icon">⌘</span>Data</button>
+                <div className="settings-nav-group-label">Libraries</div>
+                <button className={settingsTab === 'libraries' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('libraries')}><span className="settings-nav-icon">☰</span>Enabled libraries</button>
+                <button className={settingsTab === 'cards' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('cards')}><span className="settings-nav-icon">▦</span>Card fields</button>
+                <div className="settings-nav-group-label">Data</div>
+                <button className={settingsTab === 'data' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('data')}><span className="settings-nav-icon">⌘</span>Backup, import &amp; export</button>
+                <button className={settingsTab === 'integrations' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('integrations')}><span className="settings-nav-icon">↗</span>Integrations &amp; network</button>
+                <button className={settingsTab === 'maintenance' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('maintenance')}><span className="settings-nav-icon">⛭</span>Maintenance &amp; about</button>
               </aside>
               <div className="settings-main">
               <div className="settings-form">
@@ -3821,6 +3826,11 @@ function App() {
                       </div>
                       <p className="hint">Wrapped is a year-in-review view. HTML export builds a standalone <code>index.html</code> and copies your <code>assets/</code> folder — send the folder to a friend and it just opens. CSV export drops one file per category so spreadsheets/BI tools can round-trip your library. Scope defaults to the whole library; pick a single library to share just that one.</p>
                     </div>
+                  </>
+                )}
+
+                {settingsTab === 'integrations' && (
+                  <>
                     <div className="settings-section-title">Network</div>
                     <div className="field-group">
                       <label>HTTP proxy (optional)</label>
@@ -3929,7 +3939,11 @@ function App() {
                         <p className="hint">Omnio {updateInfo.latest} released. You're on {updateInfo.current}. Downloads work for portable, NSIS, DMG, AppImage — pick your build on the release page.</p>
                       )}
                     </div>
+                  </>
+                )}
 
+                {settingsTab === 'maintenance' && (
+                  <>
                     <div className="settings-section-title">Maintenance</div>
                     <div className="field-group">
                       <label>Find duplicates</label>

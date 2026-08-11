@@ -136,6 +136,19 @@
   font-size: 14px;
   justify-content: center;
 }
+/* Group labels ("Look & feel", "Libraries", "Data") that section the
+   sidebar rows into related clusters. Non-interactive; first label has
+   no top gap so the sidebar doesn't start with awkward whitespace. */
+.settings-sidebar .settings-nav-group-label {
+  margin: 14px 6px 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  user-select: none;
+}
+.settings-sidebar .settings-nav-group-label:first-child { margin-top: 0; }
 .settings-main {
   padding: 16px 32px 32px 28px;
   overflow-y: auto;
