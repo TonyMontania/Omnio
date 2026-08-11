@@ -29,11 +29,13 @@
 
 - **11 libraries** in one app: Games, Music, Movies, Series, Anime, Donghua, Manga, Manhwa, Manhua, Western Comics, Books.
 - **Home dashboard** — landing view with a portal card per library and a next-30-days upcoming releases panel. Optional startup screen.
+- **First-run wizard** — welcomes new users with three shortcuts: import from an existing tracker, set up metadata API keys, or pick a category and add the first item.
 - **Tabbed editor + fused top-nav** — every item edits inside Overview / Identity / Progress / Media / History / Related / Notes; the library header (title, count, status chips, view toggle, +Add) lives on a single top-nav row.
-- **One-click metadata + covers** from 14 sources across the 11 libraries — AniDB, AniList, ComicVine, IGDB, Kitsu, lrclib, MangaDex, MusicBrainz (with Cover Art Archive), MyAnimeList, OpenLibrary, PCGamingWiki, SteamGridDB, TMDb, VGMdb.
+- **One-click metadata + covers** from 14 sources across the 11 libraries — AniDB, AniList, ComicVine, IGDB, Kitsu, lrclib, MangaDex, MusicBrainz (with Cover Art Archive), MyAnimeList, OpenLibrary, PCGamingWiki, SteamGridDB, TMDb, VGMdb. Repeat searches are cached locally for 24 h so a re-query is instant and respects each source's rate limit.
 - **Import**: MyAnimeList / AniList XML, Steam profile, Letterboxd, **Backloggd** (Games), **Serializd** (Series), **Spotify library** (Music), Kindle highlights (`My Clippings.txt`), Last.fm scrobbles, Trakt.tv, Discogs collection, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads vocab presets.
 - **Export**: HTML site (search + light/dark toggle built in), MAL-compatible XML for anime + manga, iCal (.ics) for the release calendar, per-category CSV for spreadsheet round-trip.
 - **In-app updater** — silent check at boot, one-click download of the exact build for your platform.
+- **HTTP proxy support** — route every outbound request (metadata, covers, updater) through a proxy. Useful for NAS containers behind corporate firewalls or Pi-hole.
 - **Local-first**: everything lives in `data/` + `assets/` next to the executable. No accounts, no cloud, no telemetry.
 
 ## Install
@@ -59,7 +61,7 @@ Download the latest build for your platform from the [releases page](https://git
 - **AUR**: `yay -S omnio-bin`
 
 ### Docker (headless / server)
-The full Electron app runs inside a KasmVNC session in the container, and you reach it from any browser on your LAN. Meant for NAS setups (Unraid, TrueNAS Scale, Synology, Proxmox LXC) — on a normal desktop the native installer is still the better choice.
+The full Electron app runs inside a KasmVNC session in the container, and you reach it from any browser on your LAN. Meant for NAS setups (Unraid, TrueNAS Scale, Synology, Proxmox LXC) — on a normal desktop the native installer is still the better choice. Published as a multi-arch manifest (`linux/amd64` + `linux/arm64`), so Raspberry Pi 5, Asustor ARM NASes, Apple Silicon Docker Desktop and AWS Graviton pull the right slice automatically.
 
 ```bash
 docker run -d --name omnio \
@@ -91,6 +93,8 @@ A `docker-compose.yml`, an Unraid template and detailed NAS notes live in [`pack
 
 ## Highlights
 
+- **Click-to-zoom on every image** — covers, banners, logos, backdrops, artist photos, single covers, edition covers, bundle covers, volume covers, screenshots. Full-screen lightbox with arrow-key navigation between grouped images.
+- **Per-category cover placeholders** — items without artwork show a category-shaped SVG glyph (controller for Games, cassette for Music, clapperboard for Movies, TV for Series, play triangle for Anime / Donghua, stacked panels for the Manga family, open book for Books) instead of empty rectangles.
 - **Tabbed editor** — every item edits inside Overview / Identity / Progress / Media / History / Related / Notes tabs. Empty tabs auto-hide so a lightly-annotated item stays lean.
 - **Full-screen edit modal** with live preview on the left (card / detail) and a metadata-fetch panel at the top.
 - **Move items between libraries** (bulk or single) — reassign a manga to manhwa, an anime to donghua, without re-typing.
@@ -171,11 +175,20 @@ assets/
 
 ## Settings tabs
 
+Grouped by area in the sidebar so the right tab is one click away:
+
+**Look & feel**
 - **Appearance** — theme, accent, density, font size, card zoom, motion.
 - **Behavior** — confirm before deleting, startup screen (Home dashboard / last category / first category), remember sort per library.
-- **Libraries** — turn any of the 11 categories on/off.
-- **Card Fields** — pick which fields show on cards, per library.
-- **Data** — backup & restore (JSON + assets folder), snapshots (5 rotated), remote backup, import (MAL/AniList XML, Excel/CSV/Notion, Steam profile, **Letterboxd**, **Kindle highlights**, **Last.fm scrobbles**, **Trakt.tv**, **Discogs collection**), export (HTML, MAL XML for anime/manga, iCal for calendar), Yearly Wrapped with PNG export, API keys, updates, maintenance (find broken covers, rename all assets, clean orphans, **duplicate finder**, **genre normalizer**, **incomplete-items audit**), reset settings, delete all data.
+
+**Libraries**
+- **Enabled libraries** — turn any of the 11 categories on/off.
+- **Card fields** — pick which fields show on cards, per library.
+
+**Data**
+- **Backup, import & export** — backup & restore (JSON + assets folder), rolling snapshots (5 rotated), remote backup, import (MAL/AniList XML, Excel/CSV/Notion, Steam profile, **Letterboxd**, **Backloggd**, **Serializd**, **Spotify library**, **Kindle highlights**, **Last.fm scrobbles**, **Trakt.tv**, **Discogs collection**), export (HTML site, MAL XML for anime/manga, iCal for calendar, per-category **CSV**, Yearly Wrapped with PNG export).
+- **Integrations & network** — API keys (AniDB, ComicVine, IGDB, SteamGridDB, TMDb), **HTTP proxy**, in-app updater.
+- **Maintenance & about** — find broken covers, rename all assets, clean orphans, **duplicate finder**, **genre normalizer**, **incomplete-items audit**, clean migration leftovers, reset settings, delete all data, About + release notes link.
 
 ## Build from source
 
