@@ -173,12 +173,12 @@ export default function BandTimeline({ artist, releases }: Props) {
   // Without that cap, width: 100% on the SVG scales every dimension
   // (including text) with the container and the whole chart becomes
   // massive on wide screens.
-  const rowHeight = 14
-  const rowGap = 3
-  const leftLabelWidth = 110
-  const topPadding = 6
-  const bottomPadding = 26   // room for year axis
-  const chartWidth = 620
+  const rowHeight = 18
+  const rowGap = 4
+  const leftLabelWidth = 130
+  const topPadding = 8
+  const bottomPadding = 32   // room for year axis
+  const chartWidth = 720
   const totalHeight = topPadding + rows.length * (rowHeight + rowGap) + bottomPadding
   const yearSpan = maxYear - minYear || 1
   const yearToX = (y: number) => leftLabelWidth + ((y - minYear) / yearSpan) * chartWidth
@@ -197,7 +197,7 @@ export default function BandTimeline({ artist, releases }: Props) {
           const y = topPadding + i * (rowHeight + rowGap)
           return (
             <g key={row.member.id}>
-              <text x={leftLabelWidth - 6} y={y + rowHeight * 0.72} textAnchor="end" className="band-timeline-name" style={{ fontSize: 9 }}>
+              <text x={leftLabelWidth - 6} y={y + rowHeight * 0.72} textAnchor="end" className="band-timeline-name" style={{ fontSize: 11 }}>
                 {row.member.name}
                 {row.member.deceased ? ' †' : ''}
               </text>
@@ -252,7 +252,7 @@ export default function BandTimeline({ artist, releases }: Props) {
               {ticks.map((t) => (
                 <g key={t}>
                   <line x1={yearToX(t)} x2={yearToX(t)} y1={y} y2={y + 4} stroke="var(--text-faint)" />
-                  <text x={yearToX(t)} y={y + 14} textAnchor="middle" style={{ fontSize: 8 }} className="band-timeline-tick">{t}</text>
+                  <text x={yearToX(t)} y={y + 16} textAnchor="middle" style={{ fontSize: 10 }} className="band-timeline-tick">{t}</text>
                 </g>
               ))}
             </g>
