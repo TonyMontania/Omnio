@@ -4,6 +4,7 @@ import { StarRatingDisplay } from './StarRating'
 import type { Item, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import { exportItemAsJson } from './utils/files'
+import { formatIsoDate } from './utils/format'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
 import DetailHistoryTable from './components/detail/DetailHistoryTable'
@@ -80,7 +81,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
               <div className="field-group">
                 <label>Release</label>
                 <div className="pills">
-                  <span className="pill static">{item.releaseDate ? new Date(item.releaseDate).toLocaleDateString() : item.releaseYear}</span>
+                  <span className="pill static">{item.releaseDate ? formatIsoDate(item.releaseDate) : item.releaseYear}</span>
                 </div>
               </div>
             )}
@@ -186,7 +187,25 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
                   <td className="col-fav">{t.favorite ? <span className="track-fav-star">★</span> : null}</td>
                   <td className="col-num">{t.number}</td>
                   <td className="col-title">{t.name}</td>
-                  <td className="col-artist">{t.artist || ''}</td>
+                  <td className="col-artist">
+                    {(() => {
+                      // Split on the separators users actually type when a
+                      // track has more than one credited artist: comma, &,
+                      // "feat"/"ft" (with optional dot), and " x " (case-
+                      // insensitive, spaces around). Whitespace-only pieces
+                      // are dropped. Single-artist tracks render as one
+                      // pill; multi-artist tracks render one pill per name.
+                      const raw = t.artist?.trim()
+                      if (!raw) return null
+                      const parts = raw.split(/\s*(?:,|&|\/|\bfeat\.?|\bft\.?|\sx\s)\s*/i).map((p) => p.trim()).filter(Boolean)
+                      if (parts.length <= 1) return raw
+                      return (
+                        <span className="track-artist-pills">
+                          {parts.map((p, i) => <span key={i} className="track-artist-pill">{p}</span>)}
+                        </span>
+                      )
+                    })()}
+                  </td>
                   <td className="col-duration">{t.duration}</td>
                   <td className="col-rating">{t.rating ? <StarRatingDisplay value={t.rating} /> : null}</td>
                   <td className="col-listened">{t.listened ? '✓' : ''}</td>

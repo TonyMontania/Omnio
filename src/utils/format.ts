@@ -20,3 +20,20 @@ export function formatDate(iso: string): string {
   if (Number.isNaN(d.getTime())) return ''
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
 }
+
+// Format a `YYYY-MM-DD` string without letting the timezone shift the day.
+// `new Date("2009-04-28")` parses as UTC midnight, which in any TZ west of
+// UTC toLocaleDateString()s as the *previous* day (e.g. "4/27/2009" in
+// America/*). Parsing the components manually and passing (y, m-1, d) to
+// the Date constructor builds a local-midnight date instead, so what the
+// user typed in the picker is what the detail view shows.
+export function formatIsoDate(iso: string | undefined): string {
+  if (!iso) return ''
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
+  if (!m) {
+    const fallback = new Date(iso)
+    return Number.isNaN(fallback.getTime()) ? iso : fallback.toLocaleDateString()
+  }
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return d.toLocaleDateString()
+}

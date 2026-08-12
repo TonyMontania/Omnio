@@ -261,9 +261,9 @@
 .track-table td { padding: 5px 6px; font-size: 13px; color: var(--text-dim); border-bottom: 1px solid var(--border-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-table { min-width: 720px; }
 .col-fav { width: 22px; }
-.col-num { width: 34px; }
+.col-num { width: 48px; }
 .col-artist { width: 220px; }
-.col-duration { width: 64px; }
+.col-duration { width: 72px; }
 .col-rating { width: 100px; }
 .col-remove { width: 30px; }
 .col-spacer { width: auto; }
@@ -272,7 +272,11 @@
 .track-artist-cell,
 .track-num-cell,
 .track-name-cell,
-.track-dur-cell { width: 100%; padding: 4px 6px; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--text-dim); font-size: 12.5px; }
+.track-dur-cell { width: 100%; min-width: 0; padding: 4px 6px; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--text); font-size: 12.5px; }
+/* Number and duration are narrow columns — tighter horizontal padding
+   so a 2-digit value doesn't clip against the border. */
+.track-num-cell,
+.track-dur-cell { padding-left: 2px; padding-right: 2px; }
 .track-artist-cell:focus,
 .track-num-cell:focus,
 .track-name-cell:focus,
@@ -284,6 +288,19 @@
 .track-num-cell,
 .track-dur-cell { text-align: center; font-variant-numeric: tabular-nums; }
 .track-name-cell { color: var(--text); font-weight: 500; }
+
+/* Per-track artist pills — rendered only when a track credits more
+   than one artist (feat / ft / & / , / /). Single-artist tracks fall
+   back to plain text so short strings don't grow visual chrome. */
+.track-artist-pills { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.track-artist-pill {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  white-space: nowrap;
+}
 
 .fill-artist-btn {
   align-self: flex-start;
