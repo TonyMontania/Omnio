@@ -105,6 +105,7 @@ A `docker-compose.yml`, an Unraid template and detailed NAS notes live in [`pack
 - **Yearly heatmap + Wrapped** end-of-year recap.
 - **Related items & franchise timelines** — link sequels, remakes, spin-offs, and see everything in the same franchise as a scrollable row.
 - **Simulcast board** for airing anime + donghua — 7-column weekday grid, populated from the `Airs on` field.
+- **Band timeline** (Music → Artist) — Wikipedia-style SVG chart of every member colored by role, with overlaid stint bars and dashed markers for each studio album release.
 - **Data health audit** — Settings → Data → Maintenance scans every item and flags what's missing (cover, rating, status, authors, release year, …) per library.
 - **Genre normalizer** — merge duplicate genre labels ("Sci-Fi" / "Science Fiction" / "Ciencia ficción") into a canonical form across the whole library in one pass.
 - **Review with spoilers** toggle, separate from notes.
