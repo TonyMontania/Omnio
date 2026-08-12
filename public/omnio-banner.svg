@@ -148,16 +148,16 @@
   <g color="#c9a227" font-family="'Helvetica Neue', 'Arial', sans-serif" font-size="12" letter-spacing="0.5" text-anchor="middle" fill="#b09a5a">
     <!-- 11 cells × 96px = 1056px; left margin = (1280-1056)/2 = 112.
          Cell centers at 112 + 48 + i*96 = 160, 256, 352, 448, 544, 640, 736, 832, 928, 1024, 1120 -->
-    <g transform="translate(144, 520)"><use href="#i-controller" width="32" height="32"/><text x="16" y="52">Games</text></g>
-    <g transform="translate(240, 520)"><use href="#i-cassette"   width="32" height="32"/><text x="16" y="52">Music</text></g>
-    <g transform="translate(336, 520)"><use href="#i-clapper"    width="32" height="32"/><text x="16" y="52">Movies</text></g>
-    <g transform="translate(432, 520)"><use href="#i-tv"         width="32" height="32"/><text x="16" y="52">Series</text></g>
-    <g transform="translate(528, 520)"><use href="#i-play"       width="32" height="32"/><text x="16" y="52">Anime</text></g>
-    <g transform="translate(624, 520)"><use href="#i-play"       width="32" height="32"/><text x="16" y="52">Donghua</text></g>
-    <g transform="translate(720, 520)"><use href="#i-manga"      width="32" height="32"/><text x="16" y="52">Manga</text></g>
-    <g transform="translate(816, 520)"><use href="#i-manhwa"     width="32" height="32"/><text x="16" y="52">Manhwa</text></g>
-    <g transform="translate(912, 520)"><use href="#i-manhua"     width="32" height="32"/><text x="16" y="52">Manhua</text></g>
-    <g transform="translate(1008, 520)"><use href="#i-comics"    width="32" height="32"/><text x="16" y="52">Comics</text></g>
-    <g transform="translate(1104, 520)"><use href="#i-book"      width="32" height="32"/><text x="16" y="52">Books</text></g>
+    <g transform="translate(144, 500)"><use href="#i-controller" width="32" height="32"/><text x="16" y="52">Games</text></g>
+    <g transform="translate(240, 500)"><use href="#i-cassette"   width="32" height="32"/><text x="16" y="52">Music</text></g>
+    <g transform="translate(336, 500)"><use href="#i-clapper"    width="32" height="32"/><text x="16" y="52">Movies</text></g>
+    <g transform="translate(432, 500)"><use href="#i-tv"         width="32" height="32"/><text x="16" y="52">Series</text></g>
+    <g transform="translate(528, 500)"><use href="#i-play"       width="32" height="32"/><text x="16" y="52">Anime</text></g>
+    <g transform="translate(624, 500)"><use href="#i-play"       width="32" height="32"/><text x="16" y="52">Donghua</text></g>
+    <g transform="translate(720, 500)"><use href="#i-manga"      width="32" height="32"/><text x="16" y="52">Manga</text></g>
+    <g transform="translate(816, 500)"><use href="#i-manhwa"     width="32" height="32"/><text x="16" y="52">Manhwa</text></g>
+    <g transform="translate(912, 500)"><use href="#i-manhua"     width="32" height="32"/><text x="16" y="52">Manhua</text></g>
+    <g transform="translate(1008, 500)"><use href="#i-comics"    width="32" height="32"/><text x="16" y="52">Comics</text></g>
+    <g transform="translate(1104, 500)"><use href="#i-book"      width="32" height="32"/><text x="16" y="52">Books</text></g>
   </g>
 </svg>
