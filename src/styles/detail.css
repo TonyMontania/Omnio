@@ -643,8 +643,12 @@
    so the only styling here is around the SVG for the surrounding legend
    + name labels. Colors on the SVG rects come from JS palette lookup.
    ------------------------------------------------------------------------- */
-.band-timeline { width: 100%; overflow-x: auto; }
-.band-timeline svg { display: block; max-width: 100%; height: auto; min-width: 640px; }
+.band-timeline { width: 100%; }
+/* Cap the SVG's actual rendered width so it stays ~1 unit-per-pixel
+   against the internal viewBox (750 units wide, ~750px real). Any
+   wider and every dimension inside — bars, tick labels, member names
+   — scales up too because it's all inside the same viewBox. */
+.band-timeline svg { display: block; width: 100%; max-width: 750px; height: auto; }
 .band-timeline .band-timeline-name { fill: var(--text); font-family: var(--font-body); }
 .band-timeline .band-timeline-tick { fill: var(--text-dim); font-family: var(--font-mono); }
 

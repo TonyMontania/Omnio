@@ -113,7 +113,7 @@ export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, 
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>SteamGridDB · {KIND_LABEL[kind]}</h2>

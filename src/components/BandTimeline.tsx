@@ -167,14 +167,18 @@ export default function BandTimeline({ artist, releases }: Props) {
 
   if (!hasData) return null
 
-  // Layout constants — expressed in the SVG's internal viewBox units so
-  // the whole thing scales cleanly through CSS width: 100%.
-  const rowHeight = 20
-  const rowGap = 4
-  const leftLabelWidth = 130
-  const topPadding = 8
-  const bottomPadding = 40   // room for year axis
-  const chartWidth = 700
+  // Layout constants — expressed in the SVG's internal viewBox units.
+  // The container CSS caps max-width so the SVG renders roughly 1 unit
+  // per pixel: bars stay ~14px tall in real pixels, names stay ~10px.
+  // Without that cap, width: 100% on the SVG scales every dimension
+  // (including text) with the container and the whole chart becomes
+  // massive on wide screens.
+  const rowHeight = 14
+  const rowGap = 3
+  const leftLabelWidth = 110
+  const topPadding = 6
+  const bottomPadding = 26   // room for year axis
+  const chartWidth = 620
   const totalHeight = topPadding + rows.length * (rowHeight + rowGap) + bottomPadding
   const yearSpan = maxYear - minYear || 1
   const yearToX = (y: number) => leftLabelWidth + ((y - minYear) / yearSpan) * chartWidth
@@ -187,13 +191,13 @@ export default function BandTimeline({ artist, releases }: Props) {
 
   return (
     <div className="band-timeline">
-      <svg viewBox={`0 0 ${leftLabelWidth + chartWidth + 20} ${totalHeight}`} width="100%" role="img" aria-label={`Timeline for ${artist.name}`}>
+      <svg viewBox={`0 0 ${leftLabelWidth + chartWidth + 20} ${totalHeight}`} role="img" aria-label={`Timeline for ${artist.name}`}>
         {/* Member rows */}
         {rows.map((row, i) => {
           const y = topPadding + i * (rowHeight + rowGap)
           return (
             <g key={row.member.id}>
-              <text x={leftLabelWidth - 6} y={y + rowHeight * 0.72} textAnchor="end" className="band-timeline-name" style={{ fontSize: 11 }}>
+              <text x={leftLabelWidth - 6} y={y + rowHeight * 0.72} textAnchor="end" className="band-timeline-name" style={{ fontSize: 9 }}>
                 {row.member.name}
                 {row.member.deceased ? ' †' : ''}
               </text>
@@ -248,7 +252,7 @@ export default function BandTimeline({ artist, releases }: Props) {
               {ticks.map((t) => (
                 <g key={t}>
                   <line x1={yearToX(t)} x2={yearToX(t)} y1={y} y2={y + 4} stroke="var(--text-faint)" />
-                  <text x={yearToX(t)} y={y + 16} textAnchor="middle" style={{ fontSize: 10 }} className="band-timeline-tick">{t}</text>
+                  <text x={yearToX(t)} y={y + 14} textAnchor="middle" style={{ fontSize: 8 }} className="band-timeline-tick">{t}</text>
                 </g>
               ))}
             </g>

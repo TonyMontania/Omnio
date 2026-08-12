@@ -200,7 +200,7 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal-panel anidb-fetcher" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: '92vw', maxHeight: '85vh' }}>
         <div className="modal-header">
           <h2>AniDB deep fetch</h2>
