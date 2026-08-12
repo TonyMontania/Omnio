@@ -6070,7 +6070,11 @@ function App() {
       )}
 
       {artistPanelOpen && (
-        <div className="modal-overlay" onClick={closeArtistPanel}>
+        // No overlay-click dismiss — matches every other editor modal.
+        // Losing a form's worth of typed fields to a stray outside click
+        // is a worse default than an extra click on the close button.
+        // Esc still closes via the global-shortcut handler.
+        <div className="modal-overlay">
           <div className="modal-panel artist-editor-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: '94vw', maxHeight: '88vh' }}>
             <div className="modal-header">
               <h2>Edit Artist</h2>

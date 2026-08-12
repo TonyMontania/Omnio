@@ -637,3 +637,33 @@
 .volume-card { display: flex; flex-direction: column; gap: 8px; }
 .volume-label { font-size: 13px; font-weight: 600; color: var(--text); }
 .volume-card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; border-radius: var(--radius-sm); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+
+/* -------------------------------------------------------------------------
+   Wikipedia-style band timeline (see components/BandTimeline.tsx). SVG-only,
+   so the only styling here is around the SVG for the surrounding legend
+   + name labels. Colors on the SVG rects come from JS palette lookup.
+   ------------------------------------------------------------------------- */
+.band-timeline { width: 100%; overflow-x: auto; }
+.band-timeline svg { display: block; max-width: 100%; height: auto; min-width: 640px; }
+.band-timeline .band-timeline-name { fill: var(--text); font-family: var(--font-body); }
+.band-timeline .band-timeline-tick { fill: var(--text-dim); font-family: var(--font-mono); }
+
+.band-timeline-legend {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  margin-top: 8px;
+  font-size: 11.5px; color: var(--text-dim);
+}
+.band-timeline-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.band-timeline-swatch {
+  width: 22px; height: 12px;
+  border-radius: 2px;
+  background: var(--border);
+  display: inline-block;
+}
+.band-timeline-swatch.dashed {
+  background: transparent;
+  border-left: 2px dashed var(--text);
+  width: 0;
+  height: 14px;
+  margin: 0 8px 0 4px;
+}

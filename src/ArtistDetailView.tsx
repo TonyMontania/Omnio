@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Item, MusicArtist, MusicField } from './types'
 import { assetSrc, getBandStatusLabel } from './types'
 import ItemCard from './ItemCard'
+import BandTimeline from './components/BandTimeline'
 
 interface Props {
   artist: MusicArtist
@@ -145,6 +146,15 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {artist.members && artist.members.length > 0 && (
+        <div className="artist-info-grid">
+          <div className="artist-info-block" style={{ gridColumn: '1 / -1' }}>
+            <h4>Timeline</h4>
+            <BandTimeline artist={artist} releases={items} />
+          </div>
         </div>
       )}
 
