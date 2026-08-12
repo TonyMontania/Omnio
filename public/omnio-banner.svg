@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" role="img" aria-label="Omnio — local-first hobby tracker">
+  <defs>
+    <!-- Background: near-black with a subtle warm-gold radial glow behind the wordmark,
+         so the star reads as a light source rather than a floating sticker. -->
+    <radialGradient id="bg" cx="0.5" cy="0.5" r="0.6">
+      <stop offset="0" stop-color="#22201b"/>
+      <stop offset="0.5" stop-color="#17181c"/>
+      <stop offset="1" stop-color="#0e0f12"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8c04a"/>
+      <stop offset="1" stop-color="#a8791b"/>
+    </linearGradient>
+    <linearGradient id="star" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7d76a"/>
+      <stop offset="1" stop-color="#c9a227"/>
+    </linearGradient>
+    <linearGradient id="wordmark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7d76a"/>
+      <stop offset="1" stop-color="#c9a227"/>
+    </linearGradient>
+    <!-- Faint dot-grid overlay for texture — subtle enough to feel like paper -->
+    <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="0.6" fill="#ffffff" fill-opacity="0.025"/>
+    </pattern>
+  </defs>
+
+  <!-- Base -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect width="1280" height="640" fill="url(#dots)"/>
+
+  <!-- Logo mark: same geometry as the app icon, upscaled and unboxed so it
+       reads as a decorative element rather than a UI chip. Positioned above
+       the wordmark and vertically centered as a group with it. -->
+  <g transform="translate(640, 210)">
+    <circle cx="0" cy="0" r="86" fill="none" stroke="url(#ring)" stroke-width="10"/>
+    <path d="M0 -74 L14 -14 L74 0 L14 14 L0 74 L-14 14 L-74 0 L-14 -14 Z" fill="url(#star)"/>
+    <circle cx="0" cy="0" r="10" fill="#0e0f12"/>
+  </g>
+
+  <!-- Wordmark. Georgia is a safe display serif that renders consistently on
+       every OS's fontconfig — GitHub's social-preview renderer, browsers,
+       whatever converts the SVG later. font-weight bold matches the mass
+       of the star above it. -->
+  <text
+    x="640"
+    y="430"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="160"
+    font-weight="700"
+    letter-spacing="-2"
+    fill="url(#wordmark)"
+  >Omnio</text>
+
+  <!-- Tagline: small caps in mono to match the utility-font vibe of the app's
+       eyebrow labels ("ARTIST", "STATUS", …). -->
+  <text
+    x="640"
+    y="490"
+    text-anchor="middle"
+    font-family="'Consolas', 'Menlo', 'Courier New', monospace"
+    font-size="22"
+    letter-spacing="6"
+    fill="#c9a227"
+  >LOCAL-FIRST HOBBY TRACKER</text>
+
+  <!-- Category strip. Twelve libraries laid flat in dim body text —
+       communicates scope without a wall of chips. -->
+  <text
+    x="640"
+    y="560"
+    text-anchor="middle"
+    font-family="'Helvetica Neue', 'Arial', sans-serif"
+    font-size="20"
+    fill="#8a8a8a"
+  >Games  ·  Music  ·  Movies  ·  Series  ·  Anime  ·  Donghua  ·  Manga  ·  Manhwa  ·  Manhua  ·  Comics  ·  Books</text>
+</svg>
