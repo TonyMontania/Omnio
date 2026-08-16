@@ -109,11 +109,14 @@ export const BAND_STATUS_OPTIONS: { value: BandStatus; label: string }[] = [
 ]
 
 // Free-form, but these seed the autocomplete for band member roles.
+// Every word initial upper-cased so the picker leads with consistent
+// Wikipedia-style capitalization ("Lead Vocals" not "Lead vocals").
 export const BAND_ROLE_SUGGESTIONS: string[] = [
-  'Vocals', 'Lead vocals', 'Backing vocals', 'Rap',
-  'Guitar', 'Lead guitar', 'Rhythm guitar', 'Bass',
-  'Drums', 'Percussion', 'Keyboard', 'Piano', 'Synth',
-  'DJ', 'Producer', 'Songwriter', 'Dance',
+  'Vocals', 'Lead Vocals', 'Backing Vocals', 'Clean Vocals', 'Unclean Vocals', 'Rap',
+  'Guitar', 'Lead Guitar', 'Rhythm Guitar', 'Acoustic Guitar', 'Bass',
+  'Drums', 'Percussion', 'Keyboard', 'Piano', 'Organ', 'Synth',
+  'DJ', 'Turntables', 'Producer', 'Songwriter', 'Sample', 'Dance',
+  'Saxophone', 'Trumpet', 'Trombone', 'Violin', 'Cello', 'Flute',
 ]
 
 export const MUSIC_SOURCE_OPTIONS: { value: MusicSource; label: string }[] = [

@@ -579,3 +579,48 @@
 .first-run-cat-chip:hover { color: var(--accent); border-color: var(--accent); }
 
 .first-run-footer { text-align: center; margin-top: 8px; }
+
+/* ---------------------------------------------------------------
+   Image upload guide modal — reference table with recommended
+   dimensions per upload slot. Same modal-panel shell as the
+   normalizers; the table styling below keeps the four columns
+   aligned across the six sections without duplicating font work.
+   --------------------------------------------------------------- */
+.image-guide-modal .modal-body { padding: 16px 20px 20px; }
+.image-guide-section { margin-top: 18px; }
+.image-guide-section:first-of-type { margin-top: 6px; }
+.image-guide-section h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.image-guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  color: var(--text);
+}
+.image-guide-table th {
+  text-align: left;
+  padding: 6px 10px 6px 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: normal;
+  border-bottom: 1px solid var(--border-soft);
+}
+.image-guide-table td {
+  padding: 8px 10px 8px 0;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border-soft);
+}
+.image-guide-table tr:last-child td { border-bottom: none; }
+.image-guide-scope { font-weight: 500; color: var(--text); white-space: nowrap; }
+.image-guide-ratio { font-family: var(--font-mono); color: var(--text-dim); white-space: nowrap; }
+.image-guide-size  { font-family: var(--font-mono); color: var(--accent); white-space: nowrap; }
+.image-guide-note  { margin-top: 3px; font-size: 11.5px; color: var(--text-dim); }

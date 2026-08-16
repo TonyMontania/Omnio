@@ -77,29 +77,55 @@ interface Segment {
   color: string
 }
 
-// Build the [primary + stints] segment list for one member. Primary span
-// spans joinedIn → leftIn (or bandEndYear); each stint overlays the same
-// row with its own color so a bassist-turned-guitarist reads as two
-// stacked segments across the row.
-function segmentsFor(m: BandMember, bandStart: number, bandEnd: number, colorCache: Map<string, string>): Segment[] {
+interface RowData {
+  primary: Segment
+  // Stints that OVERLAP the primary span — render as a thinner centered
+  // strip inside the primary bar so a "clean vocals since 2019, also did
+  // unclean vocals 2019–2023" member reads as one long red bar with a
+  // blue strip through the middle for the overlap years, not as two
+  // sequential bars that visually cut the primary.
+  overlays: Segment[]
+  // Stints that fall OUTSIDE the primary span — render as normal
+  // full-height bars in their own year range. Covers pre-membership
+  // guest stints, or a role held after officially "leaving" for a
+  // farewell tour, etc.
+  sideBars: Segment[]
+}
+
+function segmentsFor(m: BandMember, bandStart: number, bandEnd: number, colorCache: Map<string, string>): RowData {
   const primaryStart = pickYear(m.joinedIn) ?? bandStart
   const primaryEnd = m.former ? (pickYear(m.leftIn) ?? bandEnd) : bandEnd
-  const segments: Segment[] = []
   const primaryRole = m.roles[0] ?? 'Member'
-  segments.push({
+  const primary: Segment = {
     fromYear: primaryStart,
     toYear: primaryEnd,
     role: primaryRole,
     color: colorFor(primaryRole, colorCache),
-  })
+  }
+  const overlays: Segment[] = []
+  const sideBars: Segment[] = []
   for (const s of m.stints ?? []) {
     const from = pickYear(s.from)
     const to = pickYear(s.to) ?? bandEnd
     if (from === undefined) continue
     const role = s.roles[0] ?? 'Member'
-    segments.push({ fromYear: from, toYear: to, role, color: colorFor(role, colorCache) })
+    const seg: Segment = { fromYear: from, toYear: to, role, color: colorFor(role, colorCache) }
+    // Overlap with primary = simultaneous second role → inner strip.
+    // Fully disjoint = side bar in its own space.
+    const overlaps = from < primaryEnd && to > primaryStart
+    if (overlaps) {
+      // Clip to the intersection with the primary span so the strip
+      // stays inside the base bar.
+      overlays.push({
+        ...seg,
+        fromYear: Math.max(from, primaryStart),
+        toYear: Math.min(to, primaryEnd),
+      })
+    } else {
+      sideBars.push(seg)
+    }
   }
-  return segments
+  return { primary, overlays, sideBars }
 }
 
 export default function BandTimeline({ artist, releases }: Props) {
@@ -135,24 +161,28 @@ export default function BandTimeline({ artist, releases }: Props) {
     }
     albumYears.sort((a, b) => a.year - b.year)
 
-    // Legend: every role that got a color, in first-seen order. Includes
-    // both the primary role of each member and every stint role. Dedupe
-    // via a Set keyed on the normalized role name.
+    // Legend: every role that got a color, in first-seen order. Walks
+    // primary + overlays + sideBars so a role that only appears as a
+    // simultaneous second gig still gets its swatch.
     const seenRoles = new Set<string>()
     const roleLegend: { role: string; color: string }[] = []
+    const pushRole = (seg: Segment) => {
+      const k = roleKey(seg.role)
+      if (seenRoles.has(k)) return
+      seenRoles.add(k)
+      roleLegend.push({ role: seg.role, color: seg.color })
+    }
     for (const row of rows) {
-      for (const seg of row.segments) {
-        const k = roleKey(seg.role)
-        if (seenRoles.has(k)) continue
-        seenRoles.add(k)
-        roleLegend.push({ role: seg.role, color: seg.color })
-      }
+      pushRole(row.segments.primary)
+      for (const seg of row.segments.overlays) pushRole(seg)
+      for (const seg of row.segments.sideBars) pushRole(seg)
     }
 
     // Global year range for the axis: min of all row/segment starts and
     // the earliest album, max of all ends and the latest album.
-    const allStarts: number[] = rows.flatMap((r) => r.segments.map((s) => s.fromYear))
-    const allEnds: number[] = rows.flatMap((r) => r.segments.map((s) => s.toYear))
+    const allSegments = (r: typeof rows[number]) => [r.segments.primary, ...r.segments.overlays, ...r.segments.sideBars]
+    const allStarts: number[] = rows.flatMap((r) => allSegments(r).map((s) => s.fromYear))
+    const allEnds: number[] = rows.flatMap((r) => allSegments(r).map((s) => s.toYear))
     if (albumYears.length > 0) {
       allStarts.push(albumYears[0].year)
       allEnds.push(albumYears[albumYears.length - 1].year)
@@ -192,29 +222,50 @@ export default function BandTimeline({ artist, releases }: Props) {
   return (
     <div className="band-timeline">
       <svg viewBox={`0 0 ${leftLabelWidth + chartWidth + 20} ${totalHeight}`} role="img" aria-label={`Timeline for ${artist.name}`}>
-        {/* Member rows */}
+        {/* Member rows: primary bar + optional inner overlay strip for
+            simultaneous secondary stints + side-bar segments for stints
+            that fall outside the primary tenure. Inner strip is ~45% of
+            row height and vertically centered so both colors remain
+            readable through it. */}
         {rows.map((row, i) => {
           const y = topPadding + i * (rowHeight + rowGap)
+          const overlayHeight = Math.max(6, Math.round(rowHeight * 0.45))
+          const overlayY = y + Math.round((rowHeight - overlayHeight) / 2)
+          const seg = row.segments
+          const rangeLabel = (s: Segment) => `${s.fromYear}${s.toYear !== s.fromYear ? `–${s.toYear}` : ''}`
           return (
             <g key={row.member.id}>
               <text x={leftLabelWidth - 6} y={y + rowHeight * 0.72} textAnchor="end" className="band-timeline-name" style={{ fontSize: 11 }}>
                 {row.member.name}
                 {row.member.deceased ? ' †' : ''}
               </text>
-              {row.segments.map((seg, si) => {
-                const x = yearToX(seg.fromYear)
-                const w = Math.max(1, yearToX(seg.toYear) - x)
+              {/* Primary bar */}
+              {(() => {
+                const x = yearToX(seg.primary.fromYear)
+                const w = Math.max(1, yearToX(seg.primary.toYear) - x)
                 return (
-                  <rect
-                    key={si}
-                    x={x}
-                    y={y}
-                    width={w}
-                    height={rowHeight}
-                    fill={seg.color}
-                    rx={2}
-                  >
-                    <title>{`${row.member.name} — ${seg.role} (${seg.fromYear}${seg.toYear !== seg.fromYear ? `–${seg.toYear}` : ''})`}</title>
+                  <rect x={x} y={y} width={w} height={rowHeight} fill={seg.primary.color} rx={2}>
+                    <title>{`${row.member.name} — ${seg.primary.role} (${rangeLabel(seg.primary)})`}</title>
+                  </rect>
+                )
+              })()}
+              {/* Disjoint side bars (stints outside the primary span) */}
+              {seg.sideBars.map((s, si) => {
+                const x = yearToX(s.fromYear)
+                const w = Math.max(1, yearToX(s.toYear) - x)
+                return (
+                  <rect key={`sb${si}`} x={x} y={y} width={w} height={rowHeight} fill={s.color} rx={2}>
+                    <title>{`${row.member.name} — ${s.role} (${rangeLabel(s)})`}</title>
+                  </rect>
+                )
+              })}
+              {/* Inner overlay strips (simultaneous second roles) */}
+              {seg.overlays.map((s, si) => {
+                const x = yearToX(s.fromYear)
+                const w = Math.max(1, yearToX(s.toYear) - x)
+                return (
+                  <rect key={`ov${si}`} x={x} y={overlayY} width={w} height={overlayHeight} fill={s.color}>
+                    <title>{`${row.member.name} — also ${s.role} (${rangeLabel(s)})`}</title>
                   </rect>
                 )
               })}

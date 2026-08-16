@@ -77,6 +77,8 @@ const AnimeDetailModal  = lazy(() => import('./AnimeDetailModal'))
 const SeriesDetailModal = lazy(() => import('./SeriesDetailModal'))
 const DuplicatesModal   = lazy(() => import('./DuplicatesModal'))
 const GenreNormalizerModal = lazy(() => import('./GenreNormalizerModal'))
+const RoleNormalizerModal  = lazy(() => import('./RoleNormalizerModal'))
+const ImageUploadGuide     = lazy(() => import('./ImageUploadGuide'))
 const DataHealthAuditModal = lazy(() => import('./DataHealthAuditModal'))
 const GlobalSearch      = lazy(() => import('./GlobalSearch'))
 const SteamGridDbPicker = lazy(() => import('./SteamGridDbPicker'))
@@ -419,6 +421,8 @@ function App() {
   const [dupOpen, setDupOpen] = useState(false)
   const [brokenAssetsOpen, setBrokenAssetsOpen] = useState(false)
   const [genreNormalizerOpen, setGenreNormalizerOpen] = useState(false)
+  const [roleNormalizerOpen, setRoleNormalizerOpen] = useState(false)
+  const [imageGuideOpen, setImageGuideOpen] = useState(false)
   const [auditOpen, setAuditOpen] = useState(false)
   const [brokenAssets, setBrokenAssets] = useState<{ itemId: string; itemTitle: string; category: string; field: string; rel: string }[]>([])
 
@@ -3956,6 +3960,16 @@ function App() {
                       <p className="hint">Groups genre labels that look like the same concept spelled differently ("Sci-Fi" / "Science Fiction" / "Ciencia ficción"). Pick a canonical label per group and rewrite every item in one go. Applies only to <code>genres[]</code> — your <code>tags[]</code> stay untouched.</p>
                     </div>
                     <div className="field-group">
+                      <label>Role normalizer</label>
+                      <button type="button" className="secondary-btn" onClick={() => setRoleNormalizerOpen(true)}>Merge duplicate roles</button>
+                      <p className="hint">Same idea as the genre normalizer but for band-member roles across every Music Artist ("Vocals" / "vocals" / "Voz", "Lead Guitar" / "lead guitar"). Picks a properly-capitalized canonical suggestion by default, applies across every member's roles + every stint's roles in one pass. Keeps the band-timeline color palette consistent.</p>
+                    </div>
+                    <div className="field-group">
+                      <label>Image upload guide</label>
+                      <button type="button" className="secondary-btn" onClick={() => setImageGuideOpen(true)}>Show recommended dimensions</button>
+                      <p className="hint">Reference sheet for every image slot in the app — cover / logo / banner / photo / gallery — with the aspect ratio and pixel size to aim for. Every slot accepts PNG, JPG, WebP, GIF, AVIF, BMP and SVG (nothing is re-encoded — you keep your original quality).</p>
+                    </div>
+                    <div className="field-group">
                       <label>Audit incomplete items</label>
                       <button type="button" className="secondary-btn" onClick={() => setAuditOpen(true)}>Scan for missing core fields</button>
                       <p className="hint">Diagnostic scan — walks every item and reports which core fields are missing for its library (cover, rating, status, authors / developers, release year, etc). Click a row to open the editor and fill in what's missing. Non-destructive: nothing is changed.</p>
@@ -6201,6 +6215,58 @@ function App() {
           onOpenItem={navigateToItem}
           onClose={() => setAuditOpen(false)}
         />
+      )}
+
+      {imageGuideOpen && (
+        <Suspense fallback={null}>
+          <ImageUploadGuide onClose={() => setImageGuideOpen(false)} />
+        </Suspense>
+      )}
+
+      {roleNormalizerOpen && (
+        <Suspense fallback={null}>
+          <RoleNormalizerModal
+            artists={musicArtists}
+            onClose={() => setRoleNormalizerOpen(false)}
+            onApply={(mapping) => {
+              // Rewrite roles + stint.roles across every artist. Dedupe
+              // the resulting arrays since two variants might collapse
+              // into a canonical the member already had.
+              let touchedArtists = 0
+              setMusicArtists((prev) => prev.map((a) => {
+                if (!a.members || a.members.length === 0) return a
+                let artistTouched = false
+                const nextMembers = a.members.map((m) => {
+                  let memberTouched = false
+                  const rewriteRoles = (roles?: string[]) => {
+                    if (!roles || roles.length === 0) return roles
+                    const seen = new Set<string>()
+                    const next: string[] = []
+                    for (const r of roles) {
+                      const canon = mapping[r] ?? r
+                      if (canon !== r) memberTouched = true
+                      if (!seen.has(canon)) { seen.add(canon); next.push(canon) }
+                    }
+                    return next
+                  }
+                  const newRoles = rewriteRoles(m.roles) ?? m.roles
+                  const newStints = m.stints?.map((s) => {
+                    const nr = rewriteRoles(s.roles)
+                    return nr === s.roles ? s : { ...s, roles: nr ?? [] }
+                  })
+                  if (!memberTouched) return m
+                  artistTouched = true
+                  return { ...m, roles: newRoles, stints: newStints }
+                })
+                if (!artistTouched) return a
+                touchedArtists++
+                return { ...a, members: nextMembers }
+              }))
+              const merged = Object.keys(mapping).length
+              setToast(`Merged ${merged} role variant${merged === 1 ? '' : 's'} across ${touchedArtists} artist${touchedArtists === 1 ? '' : 's'}`)
+            }}
+          />
+        </Suspense>
       )}
 
       {genreNormalizerOpen && (

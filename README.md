@@ -108,6 +108,8 @@ A `docker-compose.yml`, an Unraid template and detailed NAS notes live in [`pack
 - **Band timeline** (Music → Artist) — Wikipedia-style SVG chart of every member colored by role, with overlaid stint bars and dashed markers for each studio album release.
 - **Data health audit** — Settings → Data → Maintenance scans every item and flags what's missing (cover, rating, status, authors, release year, …) per library.
 - **Genre normalizer** — merge duplicate genre labels ("Sci-Fi" / "Science Fiction" / "Ciencia ficción") into a canonical form across the whole library in one pass.
+- **Role normalizer** — same idea for band-member roles across every Music Artist, so "Vocals" / "vocals" / "Voz" collapse to one canonical label and the band-timeline color palette stays consistent.
+- **Image upload guide** — reference sheet under Settings → Maintenance & about listing recommended aspect / dimensions for every image slot in the app (Steam-style). Every slot accepts PNG · JPG · WebP · GIF · AVIF · BMP · SVG.
 - **Review with spoilers** toggle, separate from notes.
 - **Play / watch / read / listen history** — full session log per item.
 - **11 themes** (Dark, Light, AMOLED, Nord, Tokyo Night, Solarized Dark, Dracula, Catppuccin, Rosé Pine, Gruvbox, Everforest) × **8 accents**, plus density and font-size controls.
@@ -189,7 +191,7 @@ Grouped by area in the sidebar so the right tab is one click away:
 **Data**
 - **Backup, import & export** — backup & restore (JSON + assets folder), rolling snapshots (5 rotated), remote backup, import (MAL/AniList XML, Excel/CSV/Notion, Steam profile, **Letterboxd**, **Backloggd**, **Serializd**, **Spotify library**, **Kindle highlights**, **Last.fm scrobbles**, **Trakt.tv**, **Discogs collection**), export (HTML site, MAL XML for anime/manga, iCal for calendar, per-category **CSV**, Yearly Wrapped with PNG export).
 - **Integrations & network** — API keys (AniDB, ComicVine, IGDB, SteamGridDB, TMDb), **HTTP proxy**, in-app updater.
-- **Maintenance & about** — find broken covers, rename all assets, clean orphans, **duplicate finder**, **genre normalizer**, **incomplete-items audit**, clean migration leftovers, reset settings, delete all data, About + release notes link.
+- **Maintenance & about** — find broken covers, rename all assets, clean orphans, **duplicate finder**, **genre normalizer**, **role normalizer**, **image upload guide**, **incomplete-items audit**, clean migration leftovers, reset settings, delete all data, About + release notes link.
 
 ## Build from source
 
