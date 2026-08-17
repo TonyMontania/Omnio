@@ -31,8 +31,8 @@ import {
   PUBLICATION_STATUS_OPTIONS,
   ANIME_STATUS_OPTIONS, ANIME_FORMAT_OPTIONS, ANIME_SEASON_OPTIONS, ANIME_SOURCE_OPTIONS,
   ANIME_FIELD_OPTIONS, DEFAULT_ANIME_FIELDS, AIRING_STATUS_OPTIONS, DEMOGRAPHIC_OPTIONS, WEEKDAY_OPTIONS,
-  SERIES_STATUS_OPTIONS, SERIES_FORMAT_OPTIONS, SERIES_FIELD_OPTIONS, DEFAULT_SERIES_FIELDS,
-  MOVIE_SOURCE_OPTIONS, MOVIE_FIELD_OPTIONS, DEFAULT_MOVIE_FIELDS, WATCH_LOCATION_OPTIONS,
+  SERIES_STATUS_OPTIONS, SERIES_FIELD_OPTIONS, DEFAULT_SERIES_FIELDS,
+  MOVIE_FIELD_OPTIONS, DEFAULT_MOVIE_FIELDS,
   BOOK_STATUS_OPTIONS, BOOK_FORMAT_OPTIONS, BOOK_SOURCE_OPTIONS, BOOK_FIELD_OPTIONS, DEFAULT_BOOK_FIELDS,
   AGE_RATING_OPTIONS, BAND_STATUS_OPTIONS,
 } from './types'
@@ -123,10 +123,11 @@ import ChapterNotesEditor from './components/editors/ChapterNotesEditor'
 import VolumeCoverEditor from './components/editors/VolumeCoverEditor'
 import MusicEditorSection from './components/editors/MusicEditorSection'
 import GameEditorSection from './components/editors/GameEditorSection'
+import MovieEditorSection from './components/editors/MovieEditorSection'
+import SeriesEditorSection from './components/editors/SeriesEditorSection'
 import RelatedListEditor from './components/editors/RelatedListEditor'
 import RecommendationsEditor from './components/editors/RecommendationsEditor'
 import RewatchListEditor from './components/editors/RewatchListEditor'
-import SeasonListEditor from './components/editors/SeasonListEditor'
 import ChapterListEditor from './components/editors/ChapterListEditor'
 import EpisodeListEditor from './components/editors/EpisodeListEditor'
 import TagEditor from './components/editors/TagEditor'
@@ -4874,388 +4875,80 @@ function App() {
                     )}
 
                     {activeCategory === 'peliculas' && (
-                      <>
-                        <div className="form-section-header" data-belongs-to="identity">
-                          <span className="form-section-title">Movie details</span>
-                          <span className="form-section-hint">Cast, crew, franchise</span>
-                        </div>
-                        <TagEditor
-                          label="Directors"
-                          placeholder="Add director"
-                          tags={directors}
-                          onAdd={(d) => setDirectors((prev) => prev.includes(d) ? prev : [...prev, d])}
-                          onRemove={(i) => setDirectors((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <TagEditor
-                          label="Writers"
-                          placeholder="Add writer"
-                          tags={writers}
-                          onAdd={(w) => setWriters((prev) => prev.includes(w) ? prev : [...prev, w])}
-                          onRemove={(i) => setWriters((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <TagEditor
-                          label="Cast"
-                          placeholder="Add actor/actress"
-                          tags={cast}
-                          onAdd={(c) => setCast((prev) => prev.includes(c) ? prev : [...prev, c])}
-                          onRemove={(i) => setCast((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <TagEditor
-                          label="Production companies"
-                          placeholder="Add production company"
-                          tags={productionCompanies}
-                          onAdd={(c) => setProductionCompanies((prev) => prev.includes(c) ? prev : [...prev, c])}
-                          onRemove={(i) => setProductionCompanies((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <TagEditor
-                          label="Distributed by"
-                          placeholder="Add distributor"
-                          tags={distributors}
-                          onAdd={(d) => setDistributors((prev) => prev.includes(d) ? prev : [...prev, d])}
-                          onRemove={(i) => setDistributors((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <div className="field-group">
-                          <label>Description</label>
-                          <textarea value={movieDescription} onChange={(e) => setMovieDescription(e.target.value)} rows={3} />
-                        </div>
-                        <TagEditor
-                          label="Genres"
-                          placeholder="Add genre"
-                          tags={genres}
-                          onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
-                          onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <div className="field-row">
-                          <div className="field-group">
-                            <label>Release date</label>
-                            <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
-                          </div>
-                          <div className="field-group">
-                            <label>Release year</label>
-                            <input value={releaseYear} onChange={(e) => yearHandler(setReleaseYear)(e.target.value)} inputMode="numeric" maxLength={4} placeholder="e.g. 2023" />
-                          </div>
-                          <div className="field-group">
-                            <label>Duration (minutes)</label>
-                            <input value={duration} onChange={(e) => intHandler(setDuration)(e.target.value)} inputMode="numeric" placeholder="e.g. 120" />
-                          </div>
-                        </div>
-                        <div className="field-group">
-                          <label>Franchise / Saga (optional)</label>
-                          <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Fast & Furious" />
-                        </div>
-                        <div className="form-section-header" data-belongs-to="progress">
-                          <span className="form-section-title">Progress</span>
-                          <span className="form-section-hint">Watched status · rewatch count</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Watched?</label>
-                          <div className="yesno">
-                            <button type="button" className={consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(true)}>Watched</button>
-                            <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>No</button>
-                          </div>
-                        </div>
-                        <div className="field-row">
-                          <div className="field-group">
-                            <label>Times watched (rewatches)</label>
-                            <input value={timesWatched} onChange={(e) => intHandler(setTimesWatched)(e.target.value)} inputMode="numeric" placeholder="e.g. 2" />
-                          </div>
-                          <div className="field-group">
-                            <label>Where watched</label>
-                            <select value={watchedWhere} onChange={(e) => setWatchedWhere(e.target.value as WatchLocation | '')}>
-                              <option value="">Unspecified</option>
-                              {WATCH_LOCATION_OPTIONS.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                        <div className="form-section-header" data-belongs-to="overview">
-                          <span className="form-section-title">Rating &amp; completion</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Rating</label>
-                          <RatingPicker value={rating} onChange={setRating} />
-                        </div>
-                        <div className="field-group">
-                          <label>Watched on</label>
-                          <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
-                        </div>
-                        <div className="form-section-header" data-belongs-to="identity">
-                          <span className="form-section-title">Extended identity</span>
-                          <span className="form-section-hint">Alt titles · source · content rating</span>
-                        </div>
-                        <TagEditor
-                          label="Alternative titles"
-                          placeholder="Add title (original, translated…)"
-                          tags={alternativeTitles}
-                          onAdd={(t) => setAlternativeTitles((prev) => prev.includes(t) ? prev : [...prev, t])}
-                          onRemove={(i) => setAlternativeTitles((prev) => prev.filter((_, idx) => idx !== i))}
-                        />
-                        <div className="field-row">
-                          <div className="field-group">
-                            <label>Source</label>
-                            <select value={movieSource} onChange={(e) => setMovieSource(e.target.value as MovieSource | '')}>
-                              <option value="">Unspecified</option>
-                              {MOVIE_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                            </select>
-                          </div>
-                          <div className="field-group">
-                            <label>Content rating</label>
-                            <input value={contentRating} onChange={(e) => setContentRating(e.target.value)} placeholder="e.g. PG-13, R" />
-                          </div>
-                        </div>
-                        <div className="form-section-header" data-belongs-to="notes">
-                          <span className="form-section-title">Review</span>
-                          <span className="form-section-hint">Your take on this movie · with optional spoiler toggle</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Review</label>
-                          <textarea value={movieReview} onChange={(e) => setMovieReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
-                          {movieReview.trim() && (
-                            <div className="yesno">
-                              <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>Contains spoilers</button>
-                              <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>No spoilers</button>
-                            </div>
-                          )}
-                        </div>
-                        <div className="form-section-header" data-belongs-to="history">
-                          <span className="form-section-title">Watch history</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Rewatch history</label>
-                          <RewatchListEditor
-                            rewatches={rewatches}
-                            onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
-                            onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
-                            onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
-                            onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-                          />
-                        </div>
-                        <div className="form-section-header" data-belongs-to="related">
-                          <span className="form-section-title">Related &amp; recommendations</span>
-                        </div>
-                        <div className="field-group">
-                          <label>Related movies</label>
-                          <RelatedListEditor
-                            related={relatedItems}
-                            crossLibrary
-                            allItems={relatedCrossLibraryOptions}
-                            options={items.filter((i) => i.categoryId === 'peliculas' && i.id !== editingId)}
-                            onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
-                            onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
-                            onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-                            pickerPlaceholder="Add related movie…"
-                          />
-                        </div>
-                        <div className="field-group">
-                          <label>Recommendations</label>
-                          <RecommendationsEditor
-                            ids={recommendedItems}
-                            options={items.filter((i) => i.categoryId === 'peliculas' && i.id !== editingId)}
-                            onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
-                            onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-                            pickerPlaceholder="Add recommended movie…"
-                          />
-                        </div>
-                      </>
+                      <MovieEditorSection
+                        editingId={editingId}
+                        items={items}
+                        relatedCrossLibraryOptions={relatedCrossLibraryOptions}
+                        directors={directors} setDirectors={setDirectors}
+                        writers={writers} setWriters={setWriters}
+                        cast={cast} setCast={setCast}
+                        productionCompanies={productionCompanies} setProductionCompanies={setProductionCompanies}
+                        distributors={distributors} setDistributors={setDistributors}
+                        movieDescription={movieDescription} setMovieDescription={setMovieDescription}
+                        genres={genres} setGenres={setGenres}
+                        releaseDate={releaseDate} setReleaseDate={setReleaseDate}
+                        releaseYear={releaseYear} setReleaseYear={setReleaseYear}
+                        duration={duration} setDuration={setDuration}
+                        franchise={franchise} setFranchise={setFranchise}
+                        consumed={consumed} setConsumed={setConsumed}
+                        timesWatched={timesWatched} setTimesWatched={setTimesWatched}
+                        watchedWhere={watchedWhere} setWatchedWhere={setWatchedWhere}
+                        rating={rating} setRating={setRating}
+                        finishedAt={finishedAt} setFinishedAt={setFinishedAt}
+                        alternativeTitles={alternativeTitles} setAlternativeTitles={setAlternativeTitles}
+                        movieSource={movieSource} setMovieSource={setMovieSource}
+                        contentRating={contentRating} setContentRating={setContentRating}
+                        movieReview={movieReview} setMovieReview={setMovieReview}
+                        hasSpoilers={hasSpoilers} setHasSpoilers={setHasSpoilers}
+                        rewatches={rewatches} setRewatches={setRewatches}
+                        relatedItems={relatedItems} setRelatedItems={setRelatedItems}
+                        recommendedItems={recommendedItems} setRecommendedItems={setRecommendedItems}
+                        yearHandler={yearHandler}
+                        intHandler={intHandler}
+                      />
                     )}
 
                     {isSeriesLike && (
-                  <>
-                    <div className="form-section-header" data-belongs-to="identity">
-                      <span className="form-section-title">Series details</span>
-                      <span className="form-section-hint">Cast, crew, network, seasons</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Description</label>
-                      <textarea value={seriesDescription} onChange={(e) => setSeriesDescription(e.target.value)} rows={3} />
-                    </div>
-                    <TagEditor label="Directors" placeholder="Add director" tags={directors} onAdd={(d) => setDirectors((prev) => prev.includes(d) ? prev : [...prev, d])} onRemove={(i) => setDirectors((prev) => prev.filter((_, idx) => idx !== i))} />
-                    <TagEditor label="Showrunners" placeholder="Add showrunner" tags={showrunners} onAdd={(s) => setShowrunners((prev) => prev.includes(s) ? prev : [...prev, s])} onRemove={(i) => setShowrunners((prev) => prev.filter((_, idx) => idx !== i))} />
-                    <TagEditor label="Writers" placeholder="Add writer" tags={writers} onAdd={(w) => setWriters((prev) => prev.includes(w) ? prev : [...prev, w])} onRemove={(i) => setWriters((prev) => prev.filter((_, idx) => idx !== i))} />
-                    <TagEditor label="Cast" placeholder="Add actor" tags={cast} onAdd={(c) => setCast((prev) => prev.includes(c) ? prev : [...prev, c])} onRemove={(i) => setCast((prev) => prev.filter((_, idx) => idx !== i))} />
-                    <TagEditor label="Genres" placeholder="Add genre" tags={genres} onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])} onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))} />
-                    <div className="form-section-header" data-belongs-to="progress">
-                      <span className="form-section-title">Progress</span>
-                      <span className="form-section-hint">Watch status · seasons watched · per-episode tracking</span>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Watch status</label>
-                        <select value={seriesStatus} onChange={(e) => setSeriesStatus(e.target.value as SeriesStatus)}>
-                          {SERIES_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>Format</label>
-                        <select value={seriesFormat} onChange={(e) => setSeriesFormat(e.target.value as SeriesFormat | '')}>
-                          <option value="">Unspecified</option>
-                          {SERIES_FORMAT_OPTIONS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Network</label>
-                        <input value={network} onChange={(e) => setNetwork(e.target.value)} placeholder="e.g. HBO, Netflix" />
-                      </div>
-                      <div className="field-group">
-                        <label>Watched where</label>
-                        <select value={watchedWhere} onChange={(e) => setWatchedWhere(e.target.value as WatchLocation | '')}>
-                          <option value="">Unspecified</option>
-                          {WATCH_LOCATION_OPTIONS.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Country</label>
-                        <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. USA" />
-                      </div>
-                      <div className="field-group">
-                        <label>Language</label>
-                        <input value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="e.g. English" />
-                      </div>
-                      <div className="field-group">
-                        <label>Content rating</label>
-                        <input value={contentRating} onChange={(e) => setContentRating(e.target.value)} placeholder="e.g. TV-MA" />
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Number of seasons</label>
-                        <input value={unitCount} onChange={(e) => handleUnitCountChange(e.target.value)} inputMode="numeric" placeholder="e.g. 5" />
-                      </div>
-                      <div className="field-group">
-                        <label>Total episodes</label>
-                        <input value={totalEpisodes} onChange={(e) => intHandler(setTotalEpisodes)(e.target.value)} inputMode="numeric" placeholder="e.g. 62" />
-                      </div>
-                      <div className="field-group">
-                        <label>Episodes watched</label>
-                        <input value={episodesWatched} onChange={(e) => intHandler(setEpisodesWatched)(e.target.value)} inputMode="numeric" placeholder="e.g. 40" />
-                      </div>
-                      <div className="field-group">
-                        <label>Ep. duration (min)</label>
-                        <input value={episodeDuration} onChange={(e) => intHandler(setEpisodeDuration)(e.target.value)} inputMode="numeric" placeholder="e.g. 45" />
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>First season year</label>
-                        <input value={startYear} onChange={(e) => yearHandler(setStartYear)(e.target.value)} inputMode="numeric" maxLength={4} />
-                      </div>
-                      <div className="field-group">
-                        <label>Last season year</label>
-                        <input value={endYear} onChange={(e) => yearHandler(setEndYear)(e.target.value)} inputMode="numeric" maxLength={4} />
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Aired from</label>
-                        <input type="date" value={airedFrom} onChange={(e) => setAiredFrom(e.target.value)} />
-                      </div>
-                      <div className="field-group">
-                        <label>Aired to</label>
-                        <input type="date" value={airedTo} onChange={(e) => setAiredTo(e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Start date</label>
-                        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                      </div>
-                      <div className="field-group">
-                        <label>Completion date</label>
-                        <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Franchise</label>
-                      <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Star Trek" />
-                    </div>
-                    <div className="form-section-header" data-belongs-to="related">
-                      <span className="form-section-title">Related &amp; recommendations</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Related series</label>
-                      <RelatedListEditor
-                        related={relatedItems}
-                            crossLibrary
-                            allItems={relatedCrossLibraryOptions}
-                        options={items.filter((i) => i.categoryId === 'series' && i.id !== editingId)}
-                        onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
-                        onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
-                        onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-                        pickerPlaceholder="Add related series…"
+                      <SeriesEditorSection
+                        editingId={editingId}
+                        items={items}
+                        relatedCrossLibraryOptions={relatedCrossLibraryOptions}
+                        seriesDescription={seriesDescription} setSeriesDescription={setSeriesDescription}
+                        directors={directors} setDirectors={setDirectors}
+                        showrunners={showrunners} setShowrunners={setShowrunners}
+                        writers={writers} setWriters={setWriters}
+                        cast={cast} setCast={setCast}
+                        genres={genres} setGenres={setGenres}
+                        seriesStatus={seriesStatus} setSeriesStatus={setSeriesStatus}
+                        seriesFormat={seriesFormat} setSeriesFormat={setSeriesFormat}
+                        network={network} setNetwork={setNetwork}
+                        watchedWhere={watchedWhere} setWatchedWhere={setWatchedWhere}
+                        country={country} setCountry={setCountry}
+                        language={language} setLanguage={setLanguage}
+                        contentRating={contentRating} setContentRating={setContentRating}
+                        unitCount={unitCount} handleUnitCountChange={handleUnitCountChange}
+                        totalEpisodes={totalEpisodes} setTotalEpisodes={setTotalEpisodes}
+                        episodesWatched={episodesWatched} setEpisodesWatched={setEpisodesWatched}
+                        episodeDuration={episodeDuration} setEpisodeDuration={setEpisodeDuration}
+                        startYear={startYear} setStartYear={setStartYear}
+                        endYear={endYear} setEndYear={setEndYear}
+                        airedFrom={airedFrom} setAiredFrom={setAiredFrom}
+                        airedTo={airedTo} setAiredTo={setAiredTo}
+                        startDate={startDate} setStartDate={setStartDate}
+                        finishedAt={finishedAt} setFinishedAt={setFinishedAt}
+                        franchise={franchise} setFranchise={setFranchise}
+                        rating={rating} setRating={setRating}
+                        seriesReview={seriesReview} setSeriesReview={setSeriesReview}
+                        hasSpoilers={hasSpoilers} setHasSpoilers={setHasSpoilers}
+                        rewatches={rewatches} setRewatches={setRewatches}
+                        relatedItems={relatedItems} setRelatedItems={setRelatedItems}
+                        recommendedItems={recommendedItems} setRecommendedItems={setRecommendedItems}
+                        hasSeasons={hasSeasons} setHasSeasons={setHasSeasons}
+                        seasons={seasons} setSeasons={setSeasons}
+                        yearHandler={yearHandler}
+                        intHandler={intHandler}
                       />
-                    </div>
-                    <div className="field-group">
-                      <label>Recommendations</label>
-                      <RecommendationsEditor
-                        ids={recommendedItems}
-                        options={items.filter((i) => i.categoryId === 'series' && i.id !== editingId)}
-                        onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
-                        onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-                        pickerPlaceholder="Add recommended series…"
-                      />
-                    </div>
-                    <div className="form-section-header" data-belongs-to="overview">
-                      <span className="form-section-title">Rating</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Rating</label>
-                      <RatingPicker value={rating} onChange={setRating} />
-                    </div>
-                    <div className="form-section-header" data-belongs-to="notes">
-                      <span className="form-section-title">Review</span>
-                      <span className="form-section-hint">Your take on this series · with optional spoiler toggle</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Review</label>
-                      <textarea value={seriesReview} onChange={(e) => setSeriesReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
-                      {seriesReview.trim() && (
-                        <div className="yesno">
-                          <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>Contains spoilers</button>
-                          <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>No spoilers</button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="form-section-header" data-belongs-to="history">
-                      <span className="form-section-title">Watch history</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Rewatch history</label>
-                      <RewatchListEditor
-                        rewatches={rewatches}
-                        onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
-                        onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
-                        onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
-                        onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label>Season list?</label>
-                      <div className="yesno">
-                        <button type="button" className={hasSeasons ? 'pill active' : 'pill'} onClick={() => setHasSeasons(true)}>Yes</button>
-                        <button type="button" className={!hasSeasons ? 'pill active' : 'pill'} onClick={() => { setHasSeasons(false); setSeasons([]) }}>No</button>
-                      </div>
-                      {hasSeasons && (
-                        <SeasonListEditor
-                          seasons={seasons}
-                          onAdd={(s) => setSeasons((prev) => [...prev, { ...s, id: crypto.randomUUID() }])}
-                          onRemove={(id) => setSeasons((prev) => prev.filter((s) => s.id !== id))}
-                          onUpdate={(id, patch) => setSeasons((prev) => prev.map((s) => s.id === id ? { ...s, ...patch } : s))}
-                          onToggleWatched={(id) => setSeasons((prev) => prev.map((s) => s.id === id ? { ...s, watched: !s.watched, watchedDate: !s.watched ? new Date().toISOString().slice(0, 10) : s.watchedDate } : s))}
-                          onRatingChange={(id, r) => setSeasons((prev) => prev.map((s) => s.id === id ? { ...s, rating: r || undefined } : s))}
-                          onBulkAdd={(count) => setSeasons((prev) => {
-                            const start = prev.length + 1
-                            const additions: Season[] = Array.from({ length: count }, (_, i) => ({ id: crypto.randomUUID(), number: String(start + i) }))
-                            return [...prev, ...additions]
-                          })}
-                          onEpisodesChange={(seasonId, eps) => setSeasons((prev) => prev.map((s) => s.id === seasonId ? { ...s, episodes: eps } : s))}
-                        />
-                      )}
-                    </div>
-                  </>
-                )}
+                    )}
 
                 {isAnime && (
                   <>

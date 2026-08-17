@@ -78,14 +78,17 @@ export function imageDropHandlers(onData: (dataUrl: string) => void) {
       const hasFile = Array.from(e.dataTransfer.items ?? []).some((it) => it.kind === 'file')
       if (!hasFile) return
       e.preventDefault()
-      ;(e.currentTarget as HTMLElement).setAttribute('data-dropzone-active', '1')
+      const el = e.currentTarget as HTMLElement
+      el.setAttribute('data-dropzone-active', '1')
     },
     onDragLeave: (e: React.DragEvent) => {
-      ;(e.currentTarget as HTMLElement).removeAttribute('data-dropzone-active')
+      const el = e.currentTarget as HTMLElement
+      el.removeAttribute('data-dropzone-active')
     },
     onDrop: async (e: React.DragEvent) => {
       e.preventDefault()
-      ;(e.currentTarget as HTMLElement).removeAttribute('data-dropzone-active')
+      const el = e.currentTarget as HTMLElement
+      el.removeAttribute('data-dropzone-active')
       const file = Array.from(e.dataTransfer.files ?? []).find((f) => f.type.startsWith('image/'))
       if (!file) return
       try { onData(await fileToDataUrl(file)) } catch { /* silent */ }
