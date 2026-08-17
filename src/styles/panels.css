@@ -624,3 +624,13 @@
 .image-guide-ratio { font-family: var(--font-mono); color: var(--text-dim); white-space: nowrap; }
 .image-guide-size  { font-family: var(--font-mono); color: var(--accent); white-space: nowrap; }
 .image-guide-note  { margin-top: 3px; font-size: 11.5px; color: var(--text-dim); }
+
+/* Drag-and-drop image upload zones. Any .field-group.image-drop with a
+   dragged file over it lights up an accent outline to show it's a
+   valid target. The imageDropHandlers util sets data-dropzone-active
+   on the container while a file is hovering. */
+.image-drop { transition: outline-color 0.12s, background 0.12s; outline: 1px dashed transparent; outline-offset: 2px; border-radius: var(--radius-sm); }
+.image-drop[data-dropzone-active="1"] {
+  outline-color: var(--accent);
+  background: var(--accent-soft);
+}

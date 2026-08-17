@@ -21,6 +21,7 @@ interface Props {
   onOpenStats: () => void
   onOpenSettings: () => void
   onOpenSearch: () => void
+  onOpenRandomizer?: () => void
 }
 
 // Rank an item's recency by whichever of finishedAt / createdAt is
@@ -29,6 +30,19 @@ function recencyScore(it: Item): number {
   const f = it.finishedAt ? new Date(it.finishedAt).getTime() : 0
   const c = it.createdAt ?? 0
   return Math.max(f, c)
+}
+
+// "In progress" status per category — the status label each library
+// uses to mean "actively engaged right now". Games / Music / Movies
+// use different fields; this returns the free-text label to show
+// under the cover.
+function inProgressLabel(it: Item): string | null {
+  if (it.gameStatus === 'playing') return 'Playing'
+  if (it.watchStatus === 'watching') return 'Watching'
+  if (it.seriesStatus === 'watching') return 'Watching'
+  if (it.mangaStatus === 'reading') return 'Reading'
+  if (it.bookStatus === 'reading') return 'Reading'
+  return null
 }
 
 // Same date-parse helpers as ReleaseCalendar so upcoming stays consistent.
@@ -82,7 +96,7 @@ function summarizeCategory(catId: string, list: Item[]): string {
   }
 }
 
-export default function Home({ items, enabledCategories, onOpenCategory, onOpenItem, onOpenCalendar, onOpenStats, onOpenSettings, onOpenSearch }: Props) {
+export default function Home({ items, enabledCategories, onOpenCategory, onOpenItem, onOpenCalendar, onOpenStats, onOpenSettings, onOpenSearch, onOpenRandomizer }: Props) {
   const today = useMemo(() => new Date(), [])
   const greeting = useMemo(() => {
     const h = today.getHours()
@@ -103,6 +117,19 @@ export default function Home({ items, enabledCategories, onOpenCategory, onOpenI
     }
     return out.sort((a, b) => a.date.getTime() - b.date.getTime()).slice(0, 6)
   }, [items, today])
+
+  // Everything the user is actively engaged with right now, across every
+  // library — playing / watching / reading. Sorted by recency so the item
+  // last touched surfaces first. Capped at 8 so the strip stays scannable.
+  const inProgress = useMemo(() => {
+    const out: { item: Item; label: string }[] = []
+    for (const it of items) {
+      const label = inProgressLabel(it)
+      if (label) out.push({ item: it, label })
+    }
+    out.sort((a, b) => recencyScore(b.item) - recencyScore(a.item))
+    return out.slice(0, 8)
+  }, [items])
 
   return (
     <div className="home">
@@ -126,6 +153,11 @@ export default function Home({ items, enabledCategories, onOpenCategory, onOpenI
           <button type="button" className="home-util" onClick={onOpenCalendar} title="Release calendar">
             <CalendarIcon /><span>Calendar</span>
           </button>
+          {onOpenRandomizer && (
+            <button type="button" className="home-util" onClick={onOpenRandomizer} title="Pick a random item from your backlog">
+              <span aria-hidden style={{ fontSize: 15 }}>🎲</span><span>Random</span>
+            </button>
+          )}
           <button type="button" className="home-util" onClick={onOpenStats} title="Statistics">
             <InsightsIcon /><span>Stats</span>
           </button>
@@ -187,6 +219,34 @@ export default function Home({ items, enabledCategories, onOpenCategory, onOpenI
             )
           })}
         </div>
+
+        {inProgress.length > 0 && (
+          <section className="home-section">
+            <div className="home-section-header">
+              <h2>Currently</h2>
+              <span className="home-section-sub">{inProgress.length} in progress</span>
+            </div>
+            <div className="home-current-list">
+              {inProgress.map(({ item, label }) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="home-current-card"
+                  onClick={() => onOpenItem(item)}
+                  title={`${item.title} — ${label}`}
+                >
+                  <div className="home-current-cover">
+                    {item.cover
+                      ? <img src={assetSrc(item.cover)} alt="" loading="lazy" />
+                      : <span>{item.title.charAt(0).toUpperCase()}</span>}
+                    <span className="home-current-badge">{label}</span>
+                  </div>
+                  <div className="home-current-title">{item.title}</div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         {upcoming.length > 0 && (
           <section className="home-section">

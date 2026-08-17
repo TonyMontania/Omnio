@@ -68,6 +68,31 @@ export function pickImageToDataUrl(onData: (dataUrl: string) => void) {
   }
 }
 
+// Drag-and-drop image upload handlers. Returned object spreads onto any
+// container div — the visual "dragover" styling lives in CSS via
+// data-dropzone-active. Only fires the callback for image mimes so a
+// user dragging a text file over the cover slot doesn't corrupt state.
+export function imageDropHandlers(onData: (dataUrl: string) => void) {
+  return {
+    onDragOver: (e: React.DragEvent) => {
+      const hasFile = Array.from(e.dataTransfer.items ?? []).some((it) => it.kind === 'file')
+      if (!hasFile) return
+      e.preventDefault()
+      ;(e.currentTarget as HTMLElement).setAttribute('data-dropzone-active', '1')
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      ;(e.currentTarget as HTMLElement).removeAttribute('data-dropzone-active')
+    },
+    onDrop: async (e: React.DragEvent) => {
+      e.preventDefault()
+      ;(e.currentTarget as HTMLElement).removeAttribute('data-dropzone-active')
+      const file = Array.from(e.dataTransfer.files ?? []).find((f) => f.type.startsWith('image/'))
+      if (!file) return
+      try { onData(await fileToDataUrl(file)) } catch { /* silent */ }
+    },
+  }
+}
+
 // Export one item as JSON. Renderer sends the whole item + a suggested
 // filename; main opens a Save dialog, writes pretty-printed JSON, returns
 // { ok, path } | { ok: false, error | canceled }. On success we dispatch

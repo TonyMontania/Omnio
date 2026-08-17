@@ -79,6 +79,7 @@ const DuplicatesModal   = lazy(() => import('./DuplicatesModal'))
 const GenreNormalizerModal = lazy(() => import('./GenreNormalizerModal'))
 const RoleNormalizerModal  = lazy(() => import('./RoleNormalizerModal'))
 const ImageUploadGuide     = lazy(() => import('./ImageUploadGuide'))
+const RandomizerModal      = lazy(() => import('./RandomizerModal'))
 const DataHealthAuditModal = lazy(() => import('./DataHealthAuditModal'))
 const GlobalSearch      = lazy(() => import('./GlobalSearch'))
 const SteamGridDbPicker = lazy(() => import('./SteamGridDbPicker'))
@@ -116,7 +117,7 @@ import {
 import DistChart from './insights/DistChart'
 import Heatmap from './insights/Heatmap'
 import RatingPicker from './components/editors/RatingPicker'
-import { pickImageToDataUrl, assetBasename, exportItemAsJson } from './utils/files'
+import { pickImageToDataUrl, imageDropHandlers, assetBasename, exportItemAsJson } from './utils/files'
 import ConcertLogEditor from './components/editors/ConcertLogEditor'
 import ChapterNotesEditor from './components/editors/ChapterNotesEditor'
 import VolumeCoverEditor from './components/editors/VolumeCoverEditor'
@@ -221,6 +222,14 @@ interface Settings {
   // main process. Useful for NAS containers behind corporate firewalls
   // or Pi-hole-style DNS filters. Format: `http://user:pass@host:port`.
   httpProxy?: string
+  // Automatic backup to an external folder. Interval is the minimum time
+  // between snapshots; the app checks hourly while running and fires the
+  // same storage:copy-data-to routine as the manual button. Empty target
+  // = feature disabled even if interval is set. lastAt is the unix ms
+  // of the most recent successful auto-backup, used to gate the check.
+  autoBackupInterval?: 'off' | 'daily' | 'weekly'
+  autoBackupTarget?: string
+  autoBackupLastAt?: number
 }
 
 interface AppData {
@@ -423,6 +432,7 @@ function App() {
   const [genreNormalizerOpen, setGenreNormalizerOpen] = useState(false)
   const [roleNormalizerOpen, setRoleNormalizerOpen] = useState(false)
   const [imageGuideOpen, setImageGuideOpen] = useState(false)
+  const [randomizerOpen, setRandomizerOpen] = useState(false)
   const [auditOpen, setAuditOpen] = useState(false)
   const [brokenAssets, setBrokenAssets] = useState<{ itemId: string; itemTitle: string; category: string; field: string; rel: string }[]>([])
 
@@ -1086,6 +1096,34 @@ function App() {
     window.addEventListener('omnio-image-download-error', h)
     return () => window.removeEventListener('omnio-image-download-error', h)
   }, [])
+
+  // Scheduled auto-backup driver. Checks every hour while the app is
+  // running and fires storage:copy-data-to if:
+  //   * the interval is not 'off'
+  //   * a destination folder is configured
+  //   * enough time has passed since the last auto-backup for the picked
+  //     cadence (daily = 24h, weekly = 7*24h)
+  // Silent on success (writes autoBackupLastAt back to settings), toasts
+  // on failure. The hourly cadence means users don't wait > 1h to see
+  // the first backup after setting up.
+  useEffect(() => {
+    const interval = settings.autoBackupInterval ?? 'off'
+    const target = settings.autoBackupTarget
+    if (interval === 'off' || !target) return
+    const gapMs = interval === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000
+    const check = async () => {
+      const last = settings.autoBackupLastAt ?? 0
+      if (Date.now() - last < gapMs) return
+      const r = await window.ipcRenderer.invoke('storage:copy-data-to', target) as { ok: boolean; error?: string; files?: number; path?: string }
+      if (r?.ok) setSettings((s) => ({ ...s, autoBackupLastAt: Date.now() }))
+      else setToast(`Auto-backup failed: ${r?.error ?? 'unknown'}`)
+    }
+    // Fire once on mount (short delay to let the initial data:load finish)
+    // and then hourly.
+    const first = setTimeout(check, 20_000)
+    const hourly = setInterval(check, 60 * 60 * 1000)
+    return () => { clearTimeout(first); clearInterval(hourly) }
+  }, [settings.autoBackupInterval, settings.autoBackupTarget, settings.autoBackupLastAt])
 
   // Generic toast bus — any component (detail modals, editors) can dispatch
   // `omnio-toast` with a string in event.detail and it shows in the toast bar.
@@ -3493,6 +3531,7 @@ function App() {
                 onOpenStats={() => { setSpecialView('stats'); closePanel(); closeAllDetailViews() }}
                 onOpenSettings={() => { setSpecialView('settings'); closePanel(); closeAllDetailViews() }}
                 onOpenSearch={() => setSearchOpen(true)}
+                onOpenRandomizer={() => setRandomizerOpen(true)}
               />
             </Suspense>
           )}
@@ -3736,6 +3775,38 @@ function App() {
                         <input type="file" accept="application/json" ref={importInputRef} style={{ display: 'none' }} onChange={handleImportFile} />
                       </div>
                       <p className="hint">Save your library as a single JSON file, or restore one you exported earlier. When migrating between installs (portable ↔ NSIS, dev ↔ portable) also use <strong>Import assets folder</strong> to copy the images so covers keep resolving.</p>
+                    </div>
+                    <div className="field-group">
+                      <label>Scheduled auto-backup</label>
+                      <div className="field-row">
+                        <div className="field-group compact">
+                          <label>Interval</label>
+                          <select
+                            value={settings.autoBackupInterval ?? 'off'}
+                            onChange={(e) => setSettings((s) => ({ ...s, autoBackupInterval: e.target.value as 'off' | 'daily' | 'weekly' }))}
+                          >
+                            <option value="off">Off</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                          </select>
+                        </div>
+                        <div className="field-group compact" style={{ flex: 1 }}>
+                          <label>Destination folder</label>
+                          <div className="settings-actions">
+                            <button type="button" className="secondary-btn" onClick={async () => {
+                              const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Pick a folder for automatic backups')
+                              if (dir) setSettings((s) => ({ ...s, autoBackupTarget: dir }))
+                            }}>{settings.autoBackupTarget ? 'Change folder…' : 'Pick folder…'}</button>
+                            {settings.autoBackupTarget && (
+                              <button type="button" className="secondary-btn" onClick={() => setSettings((s) => ({ ...s, autoBackupTarget: undefined }))}>Clear</button>
+                            )}
+                          </div>
+                          {settings.autoBackupTarget && <p className="hint" style={{ marginTop: 4 }}><code>{settings.autoBackupTarget}</code></p>}
+                        </div>
+                      </div>
+                      <p className="hint">
+                        Copies the whole <code>data/</code> + <code>assets/</code> tree to the destination on the chosen cadence — same routine as the Remote backup button, but automatic. The app checks hourly while running and fires the copy when enough time has passed since the last one. Great for pointing at a Dropbox / OneDrive / Syncthing folder that already syncs to another machine. Last auto-backup: {settings.autoBackupLastAt ? new Date(settings.autoBackupLastAt).toLocaleString() : 'never'}.
+                      </p>
                     </div>
                     <div className="field-group">
                       <label>Automatic snapshots</label>
@@ -4682,10 +4753,10 @@ function App() {
                           : 'Cover'}
                       </span>
                     </div>
-                    <div className="field-group">
+                    <div className="field-group image-drop" {...imageDropHandlers(setCover)}>
                       <label>Cover</label>
                       <input
-                        placeholder={cover.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                        placeholder={cover.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL · drop here to upload'}
                         value={cover.startsWith('data:') ? '' : cover}
                         onChange={(e) => setCover(e.target.value)}
                       />
@@ -4698,7 +4769,7 @@ function App() {
                     </div>
 
                     {(activeCategory === 'peliculas' || isSeriesLike) && (
-                      <div className="field-group">
+                      <div className="field-group image-drop" {...imageDropHandlers(setMovieBanner)}>
                         <label>Backdrop image</label>
                         <input
                           placeholder={movieBanner.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
@@ -4714,7 +4785,7 @@ function App() {
                     )}
 
                     {(isAnime || isMangaLike(activeCategory)) && (
-                      <div className="field-group">
+                      <div className="field-group image-drop" {...imageDropHandlers(setBannerImage)}>
                         <label>Banner image</label>
                         <input
                           placeholder={bannerImage.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
@@ -4731,7 +4802,7 @@ function App() {
 
                     {isVideojuegos && (
                       <>
-                        <div className="field-group">
+                        <div className="field-group image-drop" {...imageDropHandlers(setBannerImage)}>
                           <label>Banner image</label>
                           <input
                             placeholder={bannerImage.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
@@ -4745,7 +4816,7 @@ function App() {
                           </div>
                           <input type="file" accept="image/*" ref={bannerFileInputRef} style={{ display: 'none' }} onChange={handleBannerFile} />
                         </div>
-                        <div className="field-group">
+                        <div className="field-group image-drop" {...imageDropHandlers(setLogoImage)}>
                           <label>Logo image</label>
                           <input
                             placeholder={logoImage.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
@@ -6142,10 +6213,10 @@ function App() {
                       <label>Name</label>
                       <input value={artistNameField} onChange={(e) => setArtistNameField(e.target.value)} />
                     </div>
-                    <div className="field-group">
+                    <div className="field-group image-drop" {...imageDropHandlers(setArtistPhotoField)}>
                       <label>Photo</label>
                       <input
-                        placeholder={artistPhotoField.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                        placeholder={artistPhotoField.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL · drop here to upload'}
                         value={artistPhotoField.startsWith('data:') ? '' : artistPhotoField}
                         onChange={(e) => setArtistPhotoField(e.target.value)}
                       />
@@ -6155,10 +6226,10 @@ function App() {
                       </div>
                       <input type="file" accept="image/*" ref={artistPhotoFileInputRef} style={{ display: 'none' }} onChange={handleArtistPhotoFile} />
                     </div>
-                    <div className="field-group">
+                    <div className="field-group image-drop" {...imageDropHandlers(setArtistBannerField)}>
                       <label>Banner image</label>
                       <input
-                        placeholder={artistBannerField.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                        placeholder={artistBannerField.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL · drop here to upload'}
                         value={artistBannerField.startsWith('data:') ? '' : artistBannerField}
                         onChange={(e) => setArtistBannerField(e.target.value)}
                       />
@@ -6256,6 +6327,17 @@ function App() {
       {imageGuideOpen && (
         <Suspense fallback={null}>
           <ImageUploadGuide onClose={() => setImageGuideOpen(false)} />
+        </Suspense>
+      )}
+
+      {randomizerOpen && (
+        <Suspense fallback={null}>
+          <RandomizerModal
+            items={items}
+            enabledCategories={settings.enabledCategories}
+            onOpenItem={navigateToItem}
+            onClose={() => setRandomizerOpen(false)}
+          />
         </Suspense>
       )}
 
