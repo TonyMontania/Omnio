@@ -24,8 +24,91 @@ interface Hit {
   matched: string
 }
 
-// Score by presence: title exact word > title contains > artist/tag contains.
-function scoreItem(item: Item, q: string): { score: number; matched: string } | null {
+// Parse operator tokens ("status:completed", "year:2024", "rating:>4",
+// "tag:jrpg", "category:games", "favorite:true") out of the raw query
+// and return the remaining free text separately. Order-independent;
+// unknown operators are treated as free text.
+interface ParsedQuery {
+  text: string
+  status?: string
+  year?: number
+  yearOp?: '=' | '>' | '<' | '>=' | '<='
+  rating?: number
+  ratingOp?: '=' | '>' | '<' | '>=' | '<='
+  tag?: string
+  category?: string
+  favorite?: boolean
+}
+function parseQuery(raw: string): ParsedQuery {
+  const parsed: ParsedQuery = { text: '' }
+  const remaining: string[] = []
+  for (const tok of raw.trim().split(/\s+/)) {
+    const m = /^([a-z]+):(.+)$/i.exec(tok)
+    if (!m) { remaining.push(tok); continue }
+    const key = m[1].toLowerCase()
+    const val = m[2]
+    if (key === 'status') parsed.status = val.toLowerCase()
+    else if (key === 'tag') parsed.tag = val.toLowerCase()
+    else if (key === 'category' || key === 'cat') parsed.category = val.toLowerCase()
+    else if (key === 'favorite' || key === 'fav') parsed.favorite = /^(1|true|yes|y|on)$/i.test(val)
+    else if (key === 'year' || key === 'rating') {
+      const num = /^([<>]=?)?(\d+(?:\.\d+)?)$/.exec(val)
+      if (!num) { remaining.push(tok); continue }
+      const op = (num[1] ?? '=') as '=' | '>' | '<' | '>=' | '<='
+      if (key === 'year') { parsed.year = Number(num[2]); parsed.yearOp = op }
+      else { parsed.rating = Number(num[2]); parsed.ratingOp = op }
+    }
+    else remaining.push(tok)
+  }
+  parsed.text = remaining.join(' ')
+  return parsed
+}
+
+// Test a numeric field against a query operator. Missing values fail
+// any numeric constraint by default (a rating filter never matches
+// unrated items).
+function numOk(v: number | undefined, op: '=' | '>' | '<' | '>=' | '<=' | undefined, target: number | undefined): boolean {
+  if (target === undefined || op === undefined) return true
+  if (v === undefined) return false
+  switch (op) {
+    case '=':  return v === target
+    case '>':  return v > target
+    case '<':  return v < target
+    case '>=': return v >= target
+    case '<=': return v <= target
+  }
+}
+
+// Best-effort status string across category-specific fields.
+function itemStatus(item: Item): string | undefined {
+  return (item.gameStatus || item.mangaStatus || item.watchStatus || item.seriesStatus || item.bookStatus || undefined)?.toLowerCase()
+}
+
+function itemYear(item: Item): number | undefined {
+  if (item.releaseDate) {
+    const m = /^(\d{4})/.exec(item.releaseDate)
+    if (m) return Number(m[1])
+  }
+  if (item.releaseYear) {
+    const n = Number(item.releaseYear)
+    if (Number.isFinite(n)) return n
+  }
+  return undefined
+}
+
+// Return null when any operator filter excludes this item; otherwise
+// return the free-text score (with fallback score = 60 when there's
+// no free text but every operator matched).
+function scoreItem(item: Item, parsed: ParsedQuery): { score: number; matched: string } | null {
+  if (parsed.status && itemStatus(item) !== parsed.status) return null
+  if (parsed.tag && !(item.tags?.some((t) => t.toLowerCase() === parsed.tag))) return null
+  if (parsed.category && item.categoryId.toLowerCase() !== parsed.category) return null
+  if (parsed.favorite !== undefined && Boolean(item.favorite) !== parsed.favorite) return null
+  if (!numOk(itemYear(item), parsed.yearOp, parsed.year)) return null
+  if (!numOk(item.rating, parsed.ratingOp, parsed.rating)) return null
+
+  const q = parsed.text.trim()
+  if (!q) return { score: 60, matched: 'filter' }   // pure-operator query
   const nq = q.toLowerCase()
   const t = item.title.toLowerCase()
   if (t === nq) return { score: 100, matched: 'title' }
@@ -66,14 +149,24 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
 
   const hits: Hit[] = useMemo(() => {
     if (!q.trim()) return []
+    const parsed = parseQuery(q)
+    // If nothing was typed at all (empty free-text AND no operators),
+    // don't flood the list with everything.
+    if (!parsed.text.trim() && parsed.status === undefined && parsed.year === undefined && parsed.rating === undefined && parsed.tag === undefined && parsed.category === undefined && parsed.favorite === undefined) {
+      return []
+    }
     const results: Hit[] = []
     for (const it of items) {
-      const s = scoreItem(it, q.trim())
+      const s = scoreItem(it, parsed)
       if (s) results.push({ kind: 'item', item: it, score: s.score, matched: s.matched })
     }
-    for (const a of artists) {
-      const s = scoreArtist(a, q.trim())
-      if (s) results.push({ kind: 'artist', artist: a, score: s.score, matched: s.matched })
+    // Artists don't match operator filters (no status/rating on an
+    // artist), so only surface them when the query has free-text.
+    if (parsed.text.trim()) {
+      for (const a of artists) {
+        const s = scoreArtist(a, parsed.text.trim())
+        if (s) results.push({ kind: 'artist', artist: a, score: s.score, matched: s.matched })
+      }
     }
     results.sort((a, b) => b.score - a.score || (a.item?.title || a.artist?.name || '').localeCompare(b.item?.title || b.artist?.name || ''))
     return results.slice(0, 40)
@@ -127,7 +220,14 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
         </div>
         <div className="cmdk-results" ref={listRef}>
           {!q.trim() && (
-            <p className="cmdk-hint">Search across every library — titles, artists, alt titles, tags.</p>
+            <div className="cmdk-hint">
+              <p style={{ margin: '0 0 8px' }}>Search across every library — titles, artists, alt titles, tags.</p>
+              <p style={{ margin: 0, fontSize: 11.5 }}>
+                Operators: <code>status:completed</code>, <code>year:2024</code>, <code>year:&gt;2020</code>,
+                &nbsp;<code>rating:&gt;=4</code>, <code>tag:jrpg</code>, <code>category:musica</code>,
+                &nbsp;<code>favorite:true</code>. Combine freely with free-text.
+              </p>
+            </div>
           )}
           {q.trim() && hits.length === 0 && (
             <p className="cmdk-hint">No matches.</p>

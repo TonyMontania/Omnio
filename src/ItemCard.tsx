@@ -8,6 +8,7 @@ interface Props {
   layout: 'list' | 'grid' | 'compact'
   onOpen: (item: Item) => void
   onDelete: (item: Item) => void
+  onToggleFavorite?: (item: Item) => void
   onContextMenu?: (item: Item, x: number, y: number) => void
   onToggleSelect?: (id: string) => void
   selected?: boolean
@@ -24,7 +25,7 @@ interface Props {
   bookFields?: Record<BookField, boolean>
 }
 
-export default function ItemCard({ item, layout, onOpen, onDelete, onContextMenu, onToggleSelect, selected, selectionActive, draggableEnabled, onDragStartItem, onDropItem, gameFields, musicFields, mangaFields, movieFields, animeFields, seriesFields, bookFields }: Props) {
+export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavorite, onContextMenu, onToggleSelect, selected, selectionActive, draggableEnabled, onDragStartItem, onDropItem, gameFields, musicFields, mangaFields, movieFields, animeFields, seriesFields, bookFields }: Props) {
   const handleContextMenu = (e: React.MouseEvent) => {
     if (!onContextMenu) return
     e.preventDefault()
@@ -100,6 +101,28 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onContextMenu
         ) : (
           <div className="cover-placeholder">{item.title.charAt(0).toUpperCase()}</div>
         )}
+        {(() => {
+          // Compute a 0-1 progress ratio from whichever pair of "read /
+          // total" fields is populated for this item's category. Only
+          // renders the bar when both sides parse to positive numbers,
+          // so unread items stay clean.
+          const pair = (a?: string, b?: string): [number, number] | null => {
+            const cur = a ? parseInt(a, 10) : NaN
+            const tot = b ? parseInt(b, 10) : NaN
+            if (!Number.isFinite(cur) || !Number.isFinite(tot) || tot <= 0) return null
+            return [cur, tot]
+          }
+          const p = pair(item.chaptersRead, item.totalChapters)
+            ?? pair(item.episodesWatched, item.totalEpisodes)
+            ?? pair(item.pagesRead, item.totalPages)
+          if (!p) return null
+          const pct = Math.min(100, Math.max(0, (p[0] / p[1]) * 100))
+          return (
+            <div className="card-progress" title={`${p[0]} / ${p[1]}`}>
+              <div className="card-progress-fill" style={{ width: `${pct}%` }} />
+            </div>
+          )
+        })()}
       </div>
       <div className="item-info">
         {showTitle && <h3>{item.title}</h3>}
@@ -136,6 +159,14 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onContextMenu
           </div>
         )}
       </div>
+      {onToggleFavorite && (
+        <button
+          type="button"
+          className={item.favorite ? 'card-fav on' : 'card-fav'}
+          title={item.favorite ? 'Favorited (click to remove)' : 'Mark as favorite'}
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(item) }}
+        >★</button>
+      )}
       <button className="delete" onClick={(e) => { e.stopPropagation(); onDelete(item) }}>✕</button>
     </div>
   )

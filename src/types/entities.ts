@@ -306,6 +306,10 @@ export interface Item {
   id: string
   categoryId: string
   title: string
+  // Item-level favorite ⭐. Toggled from the card and the detail view.
+  // Fuels the Home "Favorites" strip and the `favorite:true` operator
+  // in Ctrl+K search. Distinct from Track.favorite (per-song).
+  favorite?: boolean
   cover?: string
   bannerImage?: string
   logoImage?: string

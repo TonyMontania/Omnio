@@ -2252,6 +2252,12 @@ function App() {
     else performDelete(item)
   }
 
+  // Toggle item-level favorite ⭐. Called from every card + the detail
+  // views. Undo-tracked because it's an observable data change.
+  const toggleItemFavorite = (item: Item) => {
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, favorite: !i.favorite } : i)))
+  }
+
   const handleDeleteFromPanel = () => { if (editingItem) handleDelete(editingItem) }
 
   // Builds the right-click menu for a card. Actions are common to every
@@ -2815,7 +2821,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {filterAndSort(gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus), search, [], [], [], [], sortBy).length === 0 && <p className="empty">No games here.</p>}
                 {filterAndSort(gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus), search, [], [], [], [], sortBy).map((g) => (
-                  <ItemCard key={g.id} item={g} layout={layout} onOpen={openEditPanel} onDelete={handleDelete}
+                  <ItemCard key={g.id} item={g} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite}
                         gameFields={settings.gameFields}
                         musicFields={settings.musicFields}
                         mangaFields={settings.mangaFields} />
@@ -2844,7 +2850,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((m) => (
-                  <ItemCard key={m.id} item={m} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} musicFields={settings.musicFields} />
+                  <ItemCard key={m.id} item={m} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} musicFields={settings.musicFields} />
                 ))}
               </div>
               </div>
@@ -2870,7 +2876,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} mangaFields={settings.mangaFields} />
+                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} mangaFields={settings.mangaFields} />
                 ))}
               </div>
               </div>
@@ -2895,7 +2901,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} movieFields={settings.movieFields} />
+                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} movieFields={settings.movieFields} />
                 ))}
               </div>
               </div>
@@ -2922,7 +2928,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} animeFields={settings.animeFields} />
+                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} animeFields={settings.animeFields} />
                 ))}
               </div>
               </div>
@@ -2948,7 +2954,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} seriesFields={settings.seriesFields} />
+                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} seriesFields={settings.seriesFields} />
                 ))}
               </div>
               </div>
@@ -2972,7 +2978,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} bookFields={settings.bookFields} />
+                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} bookFields={settings.bookFields} />
                 ))}
               </div>
               </div>
@@ -3024,7 +3030,7 @@ function App() {
                                 item={i}
                                 layout="grid"
                                 onOpen={openEditPanel}
-                                onDelete={handleDelete}
+                                onDelete={handleDelete} onToggleFavorite={toggleItemFavorite}
                                 animeFields={settings.animeFields}
                               />
                             ))}
@@ -3949,47 +3955,67 @@ function App() {
                 {settingsTab === 'maintenance' && (
                   <>
                     <div className="settings-section-title">Maintenance</div>
-                    <div className="field-group">
-                      <label>Find duplicates</label>
-                      <button type="button" className="secondary-btn" onClick={() => setDupOpen(true)}>Find similar titles</button>
-                      <p className="hint">Fuzzy-matches titles across every library and lets you merge or delete the duplicates.</p>
+                    {/* Grouped as three sub-sections so 9 buttons + hints
+                        don't read as a wall. Each row is a compact card:
+                        title + one-line description on the left, action
+                        on the right, so the whole tab fits without a
+                        second scroll for most users. */}
+                    <div className="maintenance-group">
+                      <div className="maintenance-group-title">Cleanup &amp; organization</div>
+                      <div className="maintenance-row">
+                        <div className="maintenance-row-info">
+                          <h4>Find duplicates</h4>
+                          <p>Fuzzy-matches titles across every library and lets you merge or delete duplicates.</p>
+                        </div>
+                        <button type="button" className="secondary-btn" onClick={() => setDupOpen(true)}>Find similar titles</button>
+                      </div>
+                      <div className="maintenance-row">
+                        <div className="maintenance-row-info">
+                          <h4>Genre normalizer</h4>
+                          <p>Merge variants that spell the same concept differently ("Sci-Fi" / "Science Fiction" / "Ciencia ficción"). Applies only to <code>genres[]</code>; <code>tags[]</code> untouched.</p>
+                        </div>
+                        <button type="button" className="secondary-btn" onClick={() => setGenreNormalizerOpen(true)}>Merge genres</button>
+                      </div>
+                      <div className="maintenance-row">
+                        <div className="maintenance-row-info">
+                          <h4>Role normalizer</h4>
+                          <p>Same idea for band-member roles across every Music Artist — keeps the band-timeline color palette consistent.</p>
+                        </div>
+                        <button type="button" className="secondary-btn" onClick={() => setRoleNormalizerOpen(true)}>Merge roles</button>
+                      </div>
                     </div>
-                    <div className="field-group">
-                      <label>Genre normalizer</label>
-                      <button type="button" className="secondary-btn" onClick={() => setGenreNormalizerOpen(true)}>Merge duplicate genres</button>
-                      <p className="hint">Groups genre labels that look like the same concept spelled differently ("Sci-Fi" / "Science Fiction" / "Ciencia ficción"). Pick a canonical label per group and rewrite every item in one go. Applies only to <code>genres[]</code> — your <code>tags[]</code> stay untouched.</p>
-                    </div>
-                    <div className="field-group">
-                      <label>Role normalizer</label>
-                      <button type="button" className="secondary-btn" onClick={() => setRoleNormalizerOpen(true)}>Merge duplicate roles</button>
-                      <p className="hint">Same idea as the genre normalizer but for band-member roles across every Music Artist ("Vocals" / "vocals" / "Voz", "Lead Guitar" / "lead guitar"). Picks a properly-capitalized canonical suggestion by default, applies across every member's roles + every stint's roles in one pass. Keeps the band-timeline color palette consistent.</p>
-                    </div>
-                    <div className="field-group">
-                      <label>Image upload guide</label>
-                      <button type="button" className="secondary-btn" onClick={() => setImageGuideOpen(true)}>Show recommended dimensions</button>
-                      <p className="hint">Reference sheet for every image slot in the app — cover / logo / banner / photo / gallery — with the aspect ratio and pixel size to aim for. Every slot accepts PNG, JPG, WebP, GIF, AVIF, BMP and SVG (nothing is re-encoded — you keep your original quality).</p>
-                    </div>
-                    <div className="field-group">
-                      <label>Audit incomplete items</label>
-                      <button type="button" className="secondary-btn" onClick={() => setAuditOpen(true)}>Scan for missing core fields</button>
-                      <p className="hint">Diagnostic scan — walks every item and reports which core fields are missing for its library (cover, rating, status, authors / developers, release year, etc). Click a row to open the editor and fill in what's missing. Non-destructive: nothing is changed.</p>
-                    </div>
-                    <div className="field-group">
-                      <label>Find broken covers</label>
-                      <div className="settings-actions">
+
+                    <div className="maintenance-group">
+                      <div className="maintenance-group-title">Data integrity</div>
+                      <div className="maintenance-row">
+                        <div className="maintenance-row-info">
+                          <h4>Audit incomplete items</h4>
+                          <p>Diagnostic scan — reports which core fields are missing per library (cover, rating, status, authors / developers, release year…). Non-destructive.</p>
+                        </div>
+                        <button type="button" className="secondary-btn" onClick={() => setAuditOpen(true)}>Scan items</button>
+                      </div>
+                      <div className="maintenance-row">
+                        <div className="maintenance-row-info">
+                          <h4>Find broken covers</h4>
+                          <p>Lists every <code>cover</code> / <code>banner</code> / <code>logo</code> / <code>volume</code> / <code>photo</code> whose file is missing on disk. Pick and clear the reference to re-fetch cleanly.</p>
+                        </div>
                         <button type="button" className="secondary-btn" onClick={async () => {
                           const r = await window.ipcRenderer.invoke('storage:audit-broken-assets') as { ok: boolean; broken?: { itemId: string; itemTitle: string; category: string; field: string; rel: string }[]; error?: string }
                           if (!r?.ok) { setToast(`Audit failed: ${r?.error ?? 'unknown'}`); return }
                           const broken = r.broken ?? []
                           setBrokenAssets(broken)
                           setBrokenAssetsOpen(true)
-                        }}>Scan for missing files</button>
+                        }}>Scan files</button>
                       </div>
-                      <p className="hint">Walks every <code>cover</code>, <code>banner</code>, <code>logo</code>, <code>volume</code>, <code>single</code>, <code>edition</code>, <code>bundle</code>, <code>photo</code> path in your library and lists the ones whose file is missing on disk (usually because a fetch failed silently). Pick items and click "Clear reference" — the field goes empty and you can re-fetch cleanly.</p>
                     </div>
-                    <div className="field-group">
-                      <label>Rename all assets to titles</label>
-                      <div className="settings-actions">
+
+                    <div className="maintenance-group">
+                      <div className="maintenance-group-title">Asset maintenance</div>
+                      <div className="maintenance-row">
+                        <div className="maintenance-row-info">
+                          <h4>Rename all assets to titles</h4>
+                          <p>Sweeps <code>assets/</code> and renames every file to <code>[title] [kind].ext</code>. Handy after upgrading from an old UUID-named build.</p>
+                        </div>
                         <button type="button" className="secondary-btn" onClick={async () => {
                           const r = await window.ipcRenderer.invoke('storage:rename-all-assets') as { ok: boolean; renamed?: number; rewrites?: { from: string; to: string }[]; error?: string }
                           if (!r?.ok) { setToast(`Rename failed: ${r?.error ?? 'unknown'}`); return }
@@ -4012,13 +4038,13 @@ function App() {
                           setMusicArtists((list) => list.map((a) => ({ ...a, photo: swap(a.photo), bannerImage: swap(a.bannerImage) })))
                           setCollections((list) => list.map((g) => ({ ...g, cover: swap(g.cover) ?? g.cover })))
                           setToast(`Renamed ${rewrites.length} asset${rewrites.length === 1 ? '' : 's'}`)
-                        }}>Rename all assets now</button>
+                        }}>Rename now</button>
                       </div>
-                      <p className="hint">Sweeps every referenced file under <code>assets/</code> and renames it to <code>[title] [kind].ext</code> in one pass — the same rename that runs on save, but forced across the whole library. Handy right after upgrading from an older build where files were UUID-named.</p>
-                    </div>
-                    <div className="field-group">
-                      <label>Clean orphan assets</label>
-                      <div className="settings-actions">
+                      <div className="maintenance-row">
+                        <div className="maintenance-row-info">
+                          <h4>Clean orphan assets</h4>
+                          <p>Deletes files no item, group cover, or artist photo references anymore. Reclaims disk from fetched-and-discarded covers.</p>
+                        </div>
                         <button type="button" className="secondary-btn" onClick={() => askConfirm(
                           'Scan the assets/ folder and delete every file no item references anymore? Reclaims disk used by covers you fetched from an API and then discarded before saving.',
                           async () => {
@@ -4027,20 +4053,30 @@ function App() {
                             if (r.removed > 0) setToast(`Removed ${r.removed} orphan${r.removed === 1 ? '' : 's'} · freed ${(r.bytes / 1024 / 1024).toFixed(2)} MB (${r.referenced} references / ${r.scanned} files scanned)`)
                             else setToast(`Nothing to clean · ${r.referenced} references / ${r.scanned} files on disk`)
                           },
-                        )}>Scan and delete orphan assets</button>
+                        )}>Scan &amp; delete</button>
                       </div>
-                      <p className="hint">Walks every subfolder under <code>assets/</code> and unlinks any file no item, group cover, or artist photo points at. Also useful after the title-based rename to sweep any leftover UUID copies.</p>
-                    </div>
-                    <div className="field-group">
-                      <label>Clean migration leftovers</label>
-                      <div className="settings-actions">
+                      <div className="maintenance-row">
+                        <div className="maintenance-row-info">
+                          <h4>Clean migration leftovers</h4>
+                          <p>Deletes one-shot safety nets from upgrades / restores (<code>data.pre-split.json</code>, <code>data.pre-restore/</code>). Rotating snapshots stay put.</p>
+                        </div>
                         <button type="button" className="secondary-btn" onClick={async () => {
                           const r = await window.ipcRenderer.invoke('storage:cleanup-migration-artifacts')
                           if (r?.removed > 0) setToast(`Freed ${(r.bytes / 1024).toFixed(1)} KB`)
                           else setToast('Nothing to clean')
-                        }}>Delete pre-split / pre-restore backups</button>
+                        }}>Delete backups</button>
                       </div>
-                      <p className="hint">One-shot safety nets from previous upgrades and restore operations (<code>data.pre-split.json</code>, <code>data.pre-restore/</code>). Rotating snapshots above are untouched.</p>
+                    </div>
+
+                    <div className="maintenance-group">
+                      <div className="maintenance-group-title">Reference</div>
+                      <div className="maintenance-row">
+                        <div className="maintenance-row-info">
+                          <h4>Image upload guide</h4>
+                          <p>Recommended aspect + dimensions for every image slot in the app. Every slot accepts PNG · JPG · WebP · GIF · AVIF · BMP · SVG.</p>
+                        </div>
+                        <button type="button" className="secondary-btn" onClick={() => setImageGuideOpen(true)}>Show guide</button>
+                      </div>
                     </div>
 
                     <div className="settings-section-title">Danger zone</div>
@@ -4256,7 +4292,7 @@ function App() {
                         item={item}
                         layout={layout}
                         onOpen={openEditPanel}
-                        onDelete={handleDelete}
+                        onDelete={handleDelete} onToggleFavorite={toggleItemFavorite}
                         onToggleSelect={toggleSelect}
                         selected={selectedIds.has(item.id)}
                         selectionActive={selectedIds.size > 0}

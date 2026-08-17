@@ -155,6 +155,51 @@
 .list.grid .delete { top: 6px; left: 6px; right: auto; }
 .delete:hover { color: var(--danger); }
 
+/* Item-level favorite star. Visible-when-favorited (always shows the
+   ⭐), otherwise revealed on card hover in the same "chrome slot" as
+   the delete X but on the opposite corner. Toggling doesn't change
+   size so a filled card doesn't jump layout. */
+.card-fav {
+  position: absolute;
+  top: 8px;
+  right: 34px;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+  padding: 0;
+  z-index: 1;
+}
+.card-fav.on { opacity: 1; color: var(--accent); }
+.item-card:hover .card-fav { opacity: 0.85; }
+.card-fav:hover { color: var(--accent); }
+.list.grid .card-fav { top: 6px; right: auto; left: 32px; }
+
+/* Progress bar overlaid on the cover for items tracking chapters /
+   episodes / pages consumed vs total. Full-width, bottom-aligned,
+   thin so it doesn't fight the cover art. */
+.card-progress {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.card-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
 /* Reveal delete X on card hover OR whenever the list is in delete mode.
    Default hidden keeps the grid clean; delete mode makes every X pop with
    the danger color so it's obvious the click means removal. */

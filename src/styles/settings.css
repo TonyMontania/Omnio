@@ -217,3 +217,59 @@
   text-align: left;
 }
 .spoiler-reveal-btn:hover { border-color: var(--accent); color: var(--text); }
+
+/* ---------------------------------------------------------------
+   Maintenance tab — grouped rows. Each row is a compact card:
+   title + one-line description on the left, action button on the
+   right. Groups get a small mono header to break up the density
+   without adding a second sidebar level.
+   --------------------------------------------------------------- */
+.maintenance-group { margin-bottom: 22px; }
+.maintenance-group:last-of-type { margin-bottom: 0; }
+.maintenance-group-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.maintenance-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+}
+.maintenance-row:last-child { margin-bottom: 0; }
+.maintenance-row:hover { border-color: var(--border); }
+.maintenance-row-info { flex: 1; min-width: 0; }
+.maintenance-row-info h4 {
+  margin: 0 0 3px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.maintenance-row-info p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+.maintenance-row-info p code {
+  font-size: 11px;
+  padding: 1px 4px;
+  background: var(--surface);
+  border-radius: 3px;
+  color: var(--accent);
+}
+.maintenance-row > button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
