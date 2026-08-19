@@ -24,8 +24,8 @@ interface ReleaseGroupHit {
   'artist-credit'?: ArtistCredit[]
   score?: number
 }
-interface Recording { id: string; title: string; length?: number }
-interface MediaTrack { id: string; number: string; title: string; length?: number; recording?: Recording }
+interface Recording { id: string; title: string; length?: number; 'artist-credit'?: ArtistCredit[] }
+interface MediaTrack { id: string; number: string; title: string; length?: number; 'artist-credit'?: ArtistCredit[]; recording?: Recording }
 interface Media { format?: string; 'track-count'?: number; tracks?: MediaTrack[] }
 interface MbTagLike { name: string; count?: number }
 interface MbRelation {
@@ -186,13 +186,20 @@ export default function MusicBrainzFetcher({ initialQuery, onApply, onClose }: P
     // carry a per-medium `number` string like "1", "A1" for vinyl, etc.
     const tracks: Track[] = []
     let running = 0
+    // The release-level artist becomes the fallback so a track only carries
+    // its own `artist` when it actually differs (feature, guest vocal,
+    // various-artists comp) — otherwise the "Track artist" column stays
+    // empty and inherits the album artist visually.
+    const releaseArtist = joinArtists(rel['artist-credit'] ?? rg['artist-credit'])
     for (const media of rel.media ?? []) {
       for (const t of media.tracks ?? []) {
         running += 1
+        const trackArtist = joinArtists(t['artist-credit'] ?? t.recording?.['artist-credit'])
         tracks.push({
           id: crypto.randomUUID(),
           number: t.number || String(running),
           name: t.title,
+          artist: trackArtist && trackArtist !== releaseArtist ? trackArtist : undefined,
           duration: msToMmSs(t.length),
         })
       }

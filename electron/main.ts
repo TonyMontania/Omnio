@@ -167,7 +167,7 @@ const fileForCategory = (cat: string) => `${CATEGORY_FILENAME[cat] ?? cat}.json`
 const CATEGORY_ASSET_FOLDER: Record<string, string> = CATEGORY_FILENAME
 const assetFolderForCategory = (cat: string) => CATEGORY_ASSET_FOLDER[cat] ?? cat
 
-const TOP_SLICES = ['collections', 'artists', 'settings', 'customOrders'] as const
+const TOP_SLICES = ['collections', 'artists', 'settings', 'customOrders', 'arcadeGames'] as const
 
 // Slice → last-written SHA1. Used to skip writes for unchanged files so a
 // save that only edits, say, a game only rewrites videojuegos.json.

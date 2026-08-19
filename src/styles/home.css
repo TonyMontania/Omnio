@@ -249,3 +249,204 @@
   color: var(--text-dim);
   margin-top: 2px;
 }
+
+/* -----------------------------------------------------------------
+   Widget-board home (HomeBoard.tsx). 4-column grid; each widget
+   spans 1 (small), 2 (medium) or 4 (large / full-width) columns.
+   Legacy `.home-lib-grid`, `.home-current-list`, `.home-upcoming-list`
+   still apply inside individual widgets so covers/rows keep their
+   established look — the board only adds framing.
+   ----------------------------------------------------------------- */
+.home-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  padding: 12px 0 24px;
+}
+.home-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+}
+.home-widget.editing {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+.home-widget-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 26px;
+}
+.home-widget-header h2 {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+.home-widget-controls {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.home-widget-controls button {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.home-widget-controls button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.home-widget-controls button:disabled { opacity: 0.35; cursor: not-allowed; }
+.home-widget-controls button.danger:hover { border-color: #b04a4a; color: #b04a4a; }
+.home-widget-controls select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+.home-widget-body { min-height: 40px; }
+
+.home-edit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 14px;
+  margin: 4px 0 0;
+  background: var(--accent-soft);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-md);
+}
+
+/* Compact KPI-tile row inside `library-totals`. */
+.home-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.home-kpi-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+}
+.home-kpi-tile:hover { border-color: var(--accent); }
+.home-kpi-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.home-kpi-value { font-family: var(--font-display); font-size: 24px; font-weight: 600; }
+.home-kpi-sub  { font-size: 11.5px; color: var(--text-faint); }
+
+/* Placeholder widget (1cc coming-soon tile). */
+.home-placeholder-widget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+  color: var(--text-dim);
+  text-align: center;
+}
+.home-placeholder-icon { color: var(--accent); }
+.home-placeholder-title { font-family: var(--font-display); font-size: 15px; color: var(--text); }
+.home-placeholder-sub { font-size: 12px; max-width: 360px; }
+
+.home-empty-hint {
+  padding: 28px;
+  text-align: center;
+  color: var(--text-dim);
+}
+.home-empty-hint h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  color: var(--text);
+  font-size: 17px;
+}
+.home-empty-hint p { margin: 0; font-size: 13px; }
+
+/* Add-widget picker list. */
+.home-widget-picker {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.home-widget-picker button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.home-widget-picker button:hover { border-color: var(--accent); }
+.home-widget-picker .picker-title { font-weight: 600; font-size: 13.5px; }
+.home-widget-picker .picker-desc  { font-size: 12px; color: var(--text-dim); }
+
+/* Below 768px: collapse to single-column layout regardless of size. */
+@media (max-width: 768px) {
+  .home-board { grid-template-columns: 1fr; }
+  .home-widget { grid-column: 1 / -1 !important; }
+}
+
+/* Compact library chips — used by the default `libraries-compact`
+   widget. One row of icon + name + count buttons, wraps to as many
+   lines as needed. Meant to sit on top of the board without stealing
+   space from the content widgets below. */
+.home-lib-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.home-lib-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.home-lib-chip:hover { border-color: var(--accent); color: var(--accent); }
+.home-lib-chip-icon { display: inline-flex; color: currentColor; }
+.home-lib-chip-name { font-weight: 500; }
+.home-lib-chip-count {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+}
+.home-lib-chip:hover .home-lib-chip-count { color: var(--accent); border-left-color: var(--accent-soft); }

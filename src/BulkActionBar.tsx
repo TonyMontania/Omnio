@@ -21,12 +21,13 @@ interface Props {
   onAddToGroup: (collectionId: string) => void
   onMoveToLibrary: (targetCategoryId: string) => void
   onDelete: () => void
+  onExportHtml: () => void
   collections: Collection[]
 }
 
 export default function BulkActionBar({
   items, selectedIds, onClear,
-  onApplyStatus, onApplyTag, onApplyRating, onApplyGenre, onAddToGroup, onMoveToLibrary, onDelete, collections,
+  onApplyStatus, onApplyTag, onApplyRating, onApplyGenre, onAddToGroup, onMoveToLibrary, onDelete, onExportHtml, collections,
 }: Props) {
   const [menu, setMenu] = useState<null | 'status' | 'rating' | 'tag-add' | 'tag-remove' | 'genre-add' | 'genre-remove' | 'group' | 'move'>(null)
   const [draft, setDraft] = useState('')
@@ -175,6 +176,7 @@ export default function BulkActionBar({
               </div>
             )}
           </div>
+          <button type="button" className="secondary-btn" onClick={onExportHtml}>Export as HTML…</button>
           <button type="button" className="danger-btn" onClick={onDelete}>Delete</button>
         </div>
         <button type="button" className="bulk-clear" onClick={onClear} title="Clear selection (Esc)">✕</button>

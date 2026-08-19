@@ -149,8 +149,19 @@ function detailsToPatch(kind: Kind, d: Details): Partial<Item> {
     patch.releaseDate = d.first_air_date || undefined
     // first_air_date + last_air_date go into the aired-range too so the
     // detail modal shows "2015 → 2019" alongside the release date.
-    if (d.first_air_date) patch.airedFrom = d.first_air_date
-    if (d.last_air_date) patch.airedTo = d.last_air_date
+    if (d.first_air_date) {
+      patch.airedFrom = d.first_air_date
+      // Series editor exposes "First season year" separately from the aired
+      // range — populate both so the year fields don't stay empty when the
+      // user only fetches metadata without opening the aired-range field.
+      const y = d.first_air_date.slice(0, 4)
+      if (/^\d{4}$/.test(y)) patch.startYear = y
+    }
+    if (d.last_air_date) {
+      patch.airedTo = d.last_air_date
+      const y = d.last_air_date.slice(0, 4)
+      if (/^\d{4}$/.test(y)) patch.endYear = y
+    }
     // TV series don't have belongs_to_collection, but number_of_episodes
     // gives us the series-level total that number_of_seasons doesn't.
     if (d.number_of_episodes) patch.totalEpisodes = String(d.number_of_episodes)

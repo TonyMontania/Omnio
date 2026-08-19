@@ -1,0 +1,164 @@
+/* Persistent left sidebar. Brand + Home + one row per enabled library
+   + a utility footer. Collapses to an icon-only rail; the `data-sidebar`
+   attribute on `.app` is set from the persisted setting. */
+
+.sidebar {
+  width: 220px;
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 8px 12px;
+  background: var(--surface);
+  border-right: 1px solid var(--border-soft);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar.sidebar-icons {
+  width: 56px;
+  flex: 0 0 56px;
+  padding: 10px 6px 12px;
+  align-items: stretch;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px 12px 8px;
+  color: var(--accent);
+}
+.sidebar-brand .brand-logo { width: 26px; height: 26px; flex: 0 0 26px; }
+.sidebar-brand-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  flex: 1;
+}
+.sidebar-toggle {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.sidebar-toggle:hover {
+  background: var(--surface-2);
+  border-color: var(--border-soft);
+  color: var(--text);
+}
+/* Collapsed: brand row stacks (toggle on top by itself, logo below
+   centered) so the two never overlap. */
+.sidebar.sidebar-icons .sidebar-brand {
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 12px;
+}
+.sidebar.sidebar-icons .sidebar-toggle { order: -1; }
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 12px;
+}
+.sidebar-section-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  padding: 6px 10px 4px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  background: transparent;
+  border: 0;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 6px;
+  text-align: left;
+  transition: background 120ms ease, color 120ms ease;
+}
+.sidebar-item:hover { background: var(--surface-2); color: var(--text); }
+.sidebar-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.sidebar-icon {
+  display: inline-flex;
+  color: currentColor;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+}
+.sidebar-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  padding: 1px 6px;
+  background: var(--surface-2);
+  border-radius: 999px;
+}
+.sidebar-item.active .sidebar-count { background: var(--surface); color: var(--accent); }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Collapsed rail: hide labels + counts, center-align icons. */
+.sidebar.sidebar-icons .sidebar-label,
+.sidebar.sidebar-icons .sidebar-count,
+.sidebar.sidebar-icons .sidebar-brand-name,
+.sidebar.sidebar-icons .sidebar-section-title { display: none; }
+.sidebar.sidebar-icons .sidebar-item {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+/* On mobile: sidebar becomes an off-canvas drawer. Kept simple for the
+   prototype — could gain a hamburger toggle later. */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    z-index: 50;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    transition: transform 200ms ease;
+  }
+  .app[data-sidebar="expanded"] .sidebar { transform: translateX(0); }
+}
+
+/* Right side of the shell: topbar (when present) stacked over main content.
+   Sidebar is a flex row sibling; this column takes the remaining width. */
+.main-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}

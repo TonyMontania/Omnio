@@ -1,5 +1,6 @@
 import type { DragEvent } from 'react'
 import { getGameStatus, getCategoryLine, getMusicTypeLabel, getMangaStatus, isMangaLike, getAnimeStatus, getSeriesStatus, getBookStatus, renderMiniMarkdown, assetSrc, DEFAULT_GAME_FIELDS, DEFAULT_MUSIC_FIELDS, DEFAULT_MANGA_FIELDS, DEFAULT_MOVIE_FIELDS, DEFAULT_ANIME_FIELDS, DEFAULT_SERIES_FIELDS, DEFAULT_BOOK_FIELDS } from './types'
+import { useLongPress } from './utils/useLongPress'
 import { GameStatusIcon, MangaStatusIcon, AnimeStatusIcon } from './icons'
 import type { Item, GameField, MusicField, MangaField, MovieField, AnimeField, SeriesField, BookField, MangaStatus } from './types'
 
@@ -31,6 +32,11 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
     e.preventDefault()
     onContextMenu(item, e.clientX, e.clientY)
   }
+  // Touch users get the same menu via long-press (~500ms hold). The hook
+  // no-ops for mouse pointers so desktop behavior stays exactly as-is.
+  const longPressProps = useLongPress((x, y) => {
+    if (onContextMenu) onContextMenu(item, x, y)
+  })
   // Shift+click always toggles selection. Once any card is selected,
   // plain clicks also toggle so the user can keep going without holding
   // shift each time (macOS Finder pattern).
@@ -78,7 +84,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
 
   if (layout === 'compact') {
     return (
-      <div className={`item-card compact${selected ? ' selected' : ''}`} onClick={handleClick} onContextMenu={handleContextMenu} {...dragProps}>
+      <div className={`item-card compact${selected ? ' selected' : ''}`} onClick={handleClick} onContextMenu={handleContextMenu} {...longPressProps} {...dragProps}>
         {selected && <span className="card-check" aria-hidden>✓</span>}
         <div className="compact-cover">
           {item.cover ? <img src={assetSrc(item.cover)} alt={item.title} loading="lazy" decoding="async" /> : <div className="cover-placeholder small">{item.title.charAt(0).toUpperCase()}</div>}
@@ -93,7 +99,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
   }
 
   return (
-    <div className={`item-card${selected ? ' selected' : ''}`} onClick={handleClick} onContextMenu={handleContextMenu} {...dragProps}>
+    <div className={`item-card${selected ? ' selected' : ''}`} onClick={handleClick} onContextMenu={handleContextMenu} {...longPressProps} {...dragProps}>
       {selected && <span className="card-check" aria-hidden>✓</span>}
       <div className={isMusic ? 'cover-wrap square' : 'cover-wrap'}>
         {item.cover ? (

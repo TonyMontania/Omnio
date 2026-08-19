@@ -28,14 +28,19 @@
 ## What it does
 
 - **11 libraries** in one app: Games, Music, Movies, Series, Anime, Donghua, Manga, Manhwa, Manhua, Western Comics, Books.
-- **Home dashboard** — landing view with a portal card per library and a next-30-days upcoming releases panel. Optional startup screen.
+- **Persistent left sidebar** — brand + Home + every enabled library (with live counts) + Search / Calendar / Random / Stats / Settings / Arcade. Collapses to a 56px icon rail; state remembered across launches.
+- **Home widget board** — customizable board with widgets for Currently in progress, Upcoming (next 30 days), Recently rated ★4+, plus opt-in Libraries (rich portals) and a 1cc placeholder. Users add / reorder / resize / remove widgets from Edit mode; layout persists per user.
+- **Arcade section** — score / 1cc tracker for shmups, arcade classics and any game where performance per attempt matters. Two modes per game: **Grid** (doopu-style character × difficulty chart with per-cell flags for 1cc / no-miss / no-bomb / pacifist / all-clear / extra-clear) or **Score log** (simple high-score list with flag tags). You define your own axes and legend.
 - **First-run wizard** — welcomes new users with three shortcuts: import from an existing tracker, set up metadata API keys, or pick a category and add the first item.
-- **Tabbed editor + fused top-nav** — every item edits inside Overview / Identity / Progress / Media / History / Related / Notes; the library header (title, count, status chips, view toggle, +Add) lives on a single top-nav row.
-- **One-click metadata + covers** from 14 sources across the 11 libraries — AniDB, AniList, ComicVine, IGDB, Kitsu, lrclib, MangaDex, MusicBrainz (with Cover Art Archive), MyAnimeList, OpenLibrary, PCGamingWiki, SteamGridDB, TMDb, VGMdb. Repeat searches are cached locally for 24 h so a re-query is instant and respects each source's rate limit.
+- **Tabbed editor** — every item edits inside Overview / Identity / Progress / Media / History / Related / Notes tabs.
+- **Tag hierarchy** — nest tags under a parent (`jrpg → turn-based`, `jrpg → action`). Filters dropdown renders the tree indented, and picking a parent matches every descendant.
+- **Item timeline** — the rewatch / reread / replay / listen log on every detail modal renders as a vertical timeline (guide line + dot per entry + click-to-expand notes), newest first.
+- **One-click metadata + covers** from 13 sources across the 11 libraries — AniDB, AniList, ComicVine, IGDB, Kitsu, lrclib, MangaDex, MusicBrainz (with Cover Art Archive), OpenLibrary, PCGamingWiki, SteamGridDB, TMDb, VGMdb. Field mapping is documented in [`docs/FETCHER_FIELDS.md`](docs/FETCHER_FIELDS.md). Repeat searches are cached locally for 24 h.
 - **Import**: MyAnimeList / AniList XML, Steam profile, Letterboxd, **Backloggd** (Games), **Serializd** (Series), **Spotify library** (Music), Kindle highlights (`My Clippings.txt`), Last.fm scrobbles, Trakt.tv, Discogs collection, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads vocab presets.
-- **Export**: HTML site (search + light/dark toggle built in), MAL-compatible XML for anime + manga, iCal (.ics) for the release calendar, per-category CSV for spreadsheet round-trip.
+- **Export**: HTML site (search + light/dark toggle built in) — bulk, per-category, per-selection or per-item; MAL-compatible XML for anime + manga; iCal (.ics) for the release calendar; per-category CSV for spreadsheet round-trip.
 - **In-app updater** — silent check at boot, one-click download of the exact build for your platform.
 - **HTTP proxy support** — route every outbound request (metadata, covers, updater) through a proxy. Useful for NAS containers behind corporate firewalls or Pi-hole.
+- **Mobile-ready CSS** — 768 / 640 breakpoints reflow the editor, home and settings into one column; Ctrl+K becomes a bottom-sheet; card long-press stands in for right-click on touchscreens.
 - **Local-first**: everything lives in `data/` + `assets/` next to the executable. No accounts, no cloud, no telemetry.
 
 ## Install
@@ -101,6 +106,10 @@ A `docker-compose.yml`, an Unraid template and detailed NAS notes live in [`pack
 - **Bulk actions**: select many cards, then change status, rating, add/remove tags or genres, add to group, move library, or delete in one click.
 - **Cross-library "similar to"** — link a manga to its anime adaptation, a game to the book it's based on. Each result carries a category badge.
 - **Per-item JSON export** — right-click any card or use the Export button in a detail modal to share one entry's full spec as JSON.
+- **Per-item + per-selection HTML export** — right-click → *Export as HTML…* on a card, or the same in the bulk-action bar with any number of items shift-selected. Reuses the site exporter so the assets/ folder still ships with the page.
+- **Tag hierarchy** — nest tags (`jrpg → turn-based`, `jrpg → action`) under **Settings → Maintenance → Tag hierarchy**. Filters dropdown renders the tree indented; selecting a parent matches every descendant.
+- **Per-item timeline** — rewatches / rereads / replays / listen history render as a vertical timeline (guide line + dots + click-to-expand notes), sorted newest-first, on every detail modal.
+- **Arcade scoring** — separate section for shmups / arcade / bullet-hell games. Build your own character × difficulty grid with per-cell 1cc / no-miss / no-bomb / pacifist / all-clear / extra-clear markers, or fall back to a simple score log with flag tags.
 - **Rolling snapshots**: 5 automatic backups taken on each save; restore any of them from Settings.
 - **Yearly heatmap + Wrapped** end-of-year recap.
 - **Related items & franchise timelines** — link sequels, remakes, spin-offs, and see everything in the same franchise as a scrollable row.
@@ -130,24 +139,25 @@ For a full field-by-field reference (English + Spanish labels), see [`docs/FIELD
 
 ## Metadata sources
 
-14 sources wired directly into the editors — click the **↗** button on the "Fetch metadata" panel to search, pick and auto-fill. Keys go in **Settings → Data → Integrations**. Sorted alphabetically.
+13 sources wired directly into the editors — click the **↗** button on the "Fetch metadata" panel to search, pick and auto-fill. Keys go in **Settings → Data → Integrations**. Sorted alphabetically. Full field-coverage matrix (which fields each source populates and why others stay empty) at [`docs/FETCHER_FIELDS.md`](docs/FETCHER_FIELDS.md).
 
 | Source | Library | Auth |
 | --- | --- | --- |
 | [AniDB](https://anidb.net/) | Anime · Donghua — weighted tags, tighter cross-refs (paste AID) | Registered client name |
-| [AniList](https://anilist.co/) | Anime · Donghua · Manga · Manhwa · Manhua | No key |
+| [AniList](https://anilist.co/) | Anime · Donghua · Manga · Manhwa · Manhua — demographic inferred from genres | No key |
 | [ComicVine](https://comicvine.gamespot.com/) | Western Comics | Free API key |
-| [IGDB](https://www.igdb.com/) | Games — full metadata | Twitch Client ID + Secret (free) |
-| [Kitsu](https://kitsu.app/) | Anime · Manga fallback | No key |
+| [IGDB](https://www.igdb.com/) | Games — full metadata + source inference (Remake/Remaster/Port/…) from IGDB category | Twitch Client ID + Secret (free) |
+| [Kitsu](https://kitsu.app/) | Anime · Manga fallback — supplies age rating that AniList lacks | No key |
 | [lrclib](https://lrclib.net/) | Music — per-track lyrics (synced when available) | No key |
-| [MangaDex](https://mangadex.org/) | Manga · Manhwa · Manhua | No key |
-| [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Music — title, artist, alt titles, full release date, type/source, label, producers (from artist-relations), genres (prefers curated genres over tags), tracklist, cover | No key |
-| [MyAnimeList](https://myanimelist.net/) (via Jikan) | Anime · Manga | No key |
-| [OpenLibrary](https://openlibrary.org/) | Books | No key |
+| [MangaDex](https://mangadex.org/) | Manga · Manhwa · Manhua — also fills MangaDex ID for the "new chapters" deep link | No key |
+| [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Music — title, artist, alt titles, full release date, type/source, label, producers (from artist-relations), genres, tracklist (with per-track artist when it differs from the release artist), cover | No key |
+| [OpenLibrary](https://openlibrary.org/) | Books — title, authors, description, genres, publisher, ISBN, total pages, first-publish year, cover | No key |
 | [PCGamingWiki](https://www.pcgamingwiki.com/) | Games — save + config paths per OS | No key |
 | [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes | Free API key |
-| [TMDb](https://www.themoviedb.org/) | Movies + Series | Free API key |
+| [TMDb](https://www.themoviedb.org/) | Movies + Series — Series also fills first / last season year from the aired range | Free API key |
 | [VGMdb](https://vgmdb.net/) | Music — game/anime OSTs. Title, artist, alt titles, full release date, label, distributor, genres, producers (falling back to composers), tracklist, cover | No key |
+
+*MyAnimeList (via the Jikan proxy) was removed in v0.4.0 — the free proxy is chronically flaky. The `JikanFetcher` component is still on disk if you want to re-register it locally.*
 
 ## Storage & portability
 
@@ -160,6 +170,7 @@ data/
   manga.json  manhwa.json  manhua.json  comics_west.json
   collections.json   ← groups
   artists.json       ← music artist profiles
+  arcadeGames.json   ← Arcade section (score / 1cc grids + run history)
   settings.json      customOrders.json
   backups/1..5/      ← 5 rotating snapshots
 assets/

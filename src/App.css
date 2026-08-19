@@ -16,4 +16,7 @@
 @import './styles/settings.css';      /* theme/accent swatches, welcome, about, danger-btn, spoiler */
 @import './styles/utilities.css';     /* Ctrl+K search, backups, duplicates, bulk actions, selection state */
 @import './styles/topnav.css';        /* prototype: top-nav layout (Option A) */
+@import './styles/sidebar.css';       /* persistent left sidebar (restored) */
+@import './styles/arcade.css';        /* arcade score / 1cc tracker */
 @import './styles/home.css';          /* home dashboard landing view */
+@import './styles/mobile.css';        /* narrow-viewport reflow (≤768px / ≤640px) */

@@ -2,7 +2,7 @@
 // show a picker of matches, and hand back a shaped Partial<Item> the
 // caller can merge into its editor state.
 
-import type { Item, AnimeFormat, AnimeSource, AiringStatus, PublicationStatus } from './types'
+import type { Item, AnimeFormat, AnimeSource, AiringStatus, PublicationStatus, Demographic } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
 
@@ -99,6 +99,23 @@ const PUB_STATUS_MAP: Record<string, PublicationStatus> = {
   HIATUS: 'hiatus',
 }
 
+// AniList doesn't carry a dedicated demographic field, but Shounen /
+// Seinen / Shoujo / Josei show up in the free-text `genres` list. Pull
+// the first hit — the remaining genres stay in the tag pool.
+const DEMOGRAPHIC_FROM_GENRE: Record<string, Demographic> = {
+  shounen: 'shonen', shonen: 'shonen',
+  shoujo: 'shojo', shojo: 'shojo',
+  seinen: 'seinen', josei: 'josei',
+}
+function inferDemographic(genres?: string[]): Demographic | undefined {
+  if (!genres) return undefined
+  for (const g of genres) {
+    const d = DEMOGRAPHIC_FROM_GENRE[g.toLowerCase()]
+    if (d) return d
+  }
+  return undefined
+}
+
 function stripHtml(s?: string): string | undefined {
   if (!s) return undefined
   return s.replace(/<br\s*\/?>(?=\s|$)/gi, '\n').replace(/<[^>]+>/g, '').trim()
@@ -128,6 +145,7 @@ export default function AniListFetcher({ initialQuery, kind, categoryId, onApply
       ...(kind === 'ANIME' ? { animeDescription: desc } : { mangaDescription: desc }),
       alternativeTitles: Array.from(new Set([m.title.romaji, m.title.english, m.title.native, ...(m.synonyms ?? [])].filter(Boolean).filter((t) => t !== title))) as string[],
       genres: m.genres,
+      demographic: inferDemographic(m.genres),
       releaseDate: formatDate(m.startDate),
       seasonYear: m.seasonYear ? String(m.seasonYear) : undefined,
       season: (m.season?.toLowerCase() as Item['season']),

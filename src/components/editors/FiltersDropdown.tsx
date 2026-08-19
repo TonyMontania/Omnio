@@ -2,14 +2,16 @@
 // relevant to the current category (status/platform/genre) are gated with
 // show* flags from the parent.
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import type { GameStatus, Platform } from '../../types'
 import { GAME_STATUS_OPTIONS } from '../../types'
 import { GameStatusIcon } from '../../icons'
+import { flattenTagTree, type TagTree } from '../../utils/tags'
 
 export default function FiltersDropdown({
   availableTags, filterTags, onToggleTag, showStatus, filterStatus, onToggleStatus, showPlatform, availablePlatforms, filterPlatforms, onTogglePlatform,
   showGenre, availableGenres, filterGenres, onToggleGenre, minRating, onSetMinRating, onClear,
+  tagTree,
 }: {
   availableTags: string[]; filterTags: string[]; onToggleTag: (t: string) => void
   showStatus: boolean; filterStatus: GameStatus[]; onToggleStatus: (s: GameStatus) => void
@@ -17,7 +19,9 @@ export default function FiltersDropdown({
   showGenre: boolean; availableGenres: string[]; filterGenres: string[]; onToggleGenre: (g: string) => void
   minRating: number; onSetMinRating: (n: number) => void
   onClear: () => void
+  tagTree?: TagTree
 }) {
+  const tagRows = useMemo(() => flattenTagTree(availableTags, tagTree), [availableTags, tagTree])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -40,10 +44,19 @@ export default function FiltersDropdown({
         <div className="filters-menu">
           <div className="filters-section">
             <span className="filters-label">Tags</span>
-            <div className="dropdown-pills">
-              {availableTags.length === 0 && <span className="hint">No tags yet</span>}
-              {availableTags.map((tag) => (
-                <button key={tag} type="button" className={filterTags.includes(tag) ? 'pill active' : 'pill'} onClick={() => onToggleTag(tag)}>{tag}</button>
+            <div className="dropdown-pills tag-tree">
+              {tagRows.length === 0 && <span className="hint">No tags yet</span>}
+              {tagRows.map(({ tag, depth }) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className={filterTags.includes(tag) ? 'pill active' : 'pill'}
+                  style={depth > 0 ? { marginLeft: depth * 14 } : undefined}
+                  onClick={() => onToggleTag(tag)}
+                  title={depth > 0 ? 'Child of a parent tag — selecting the parent also matches this one.' : undefined}
+                >
+                  {depth > 0 ? '↳ ' : ''}{tag}
+                </button>
               ))}
             </div>
           </div>

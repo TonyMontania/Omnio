@@ -671,3 +671,71 @@
   height: 14px;
   margin: 0 8px 0 4px;
 }
+
+/* Per-item vertical timeline used by DetailHistoryTable. Rewatches /
+   rereads / replays / listens stack on a single guide line, one row
+   per entry, notes are click-to-expand so a long list stays scannable. */
+.detail-timeline {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0 0 0 14px;
+  position: relative;
+}
+.detail-timeline::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 5px;
+  width: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+.detail-timeline-row {
+  position: relative;
+  padding: 4px 0 4px 16px;
+  display: block;
+}
+.detail-timeline-row + .detail-timeline-row { margin-top: 4px; }
+.detail-timeline-dot {
+  position: absolute;
+  left: -3px;
+  top: 12px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.detail-timeline-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.detail-timeline-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+}
+.detail-timeline-date { font-weight: 600; }
+.detail-timeline-rating { color: var(--accent); font-size: 12px; }
+.detail-timeline-toggle {
+  margin-left: auto;
+  background: transparent;
+  border: 0;
+  color: var(--text-dim);
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 0;
+}
+.detail-timeline-toggle:hover { color: var(--accent); }
+.detail-timeline-notes {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  line-height: 1.4;
+}

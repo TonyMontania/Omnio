@@ -21,20 +21,19 @@ import type {
   BandStatus, BandMember, SingleCover, AlbumEdition,
   CustomField, SaveFile, Achievement, Screenshot, ChapterNote,
 } from './types'
+import type { ArcadeGame } from './types/arcade'
 
 // Runtime constants (option lists, default field visibility)
 import {
   GAME_STATUS_OPTIONS, GAME_FIELD_OPTIONS, DEFAULT_GAME_FIELDS,
   MUSIC_FIELD_OPTIONS, DEFAULT_MUSIC_FIELDS,
-  MANGA_STATUS_OPTIONS, MANGA_SOURCE_OPTIONS, MANGA_FIELD_OPTIONS, DEFAULT_MANGA_FIELDS,
-  MEDIA_OWNERSHIP_OPTIONS,
-  PUBLICATION_STATUS_OPTIONS,
-  ANIME_STATUS_OPTIONS, ANIME_FORMAT_OPTIONS, ANIME_SEASON_OPTIONS, ANIME_SOURCE_OPTIONS,
-  ANIME_FIELD_OPTIONS, DEFAULT_ANIME_FIELDS, AIRING_STATUS_OPTIONS, DEMOGRAPHIC_OPTIONS, WEEKDAY_OPTIONS,
+  MANGA_STATUS_OPTIONS, MANGA_FIELD_OPTIONS, DEFAULT_MANGA_FIELDS,
+  ANIME_STATUS_OPTIONS,
+  ANIME_FIELD_OPTIONS, DEFAULT_ANIME_FIELDS, WEEKDAY_OPTIONS,
   SERIES_STATUS_OPTIONS, SERIES_FIELD_OPTIONS, DEFAULT_SERIES_FIELDS,
   MOVIE_FIELD_OPTIONS, DEFAULT_MOVIE_FIELDS,
-  BOOK_STATUS_OPTIONS, BOOK_FORMAT_OPTIONS, BOOK_SOURCE_OPTIONS, BOOK_FIELD_OPTIONS, DEFAULT_BOOK_FIELDS,
-  AGE_RATING_OPTIONS, BAND_STATUS_OPTIONS,
+  BOOK_STATUS_OPTIONS, BOOK_FIELD_OPTIONS, DEFAULT_BOOK_FIELDS,
+  BAND_STATUS_OPTIONS,
 } from './types'
 
 // Helpers (label lookups, derived counts, formatters, mini markdown)
@@ -64,35 +63,29 @@ import FirstRunWizard from './FirstRunWizard'
 import Toast from './Toast'
 import BackupList from './BackupList'
 import BulkActionBar from './BulkActionBar'
+import Sidebar from './Sidebar'
 const ReleaseCalendar    = lazy(() => import('./ReleaseCalendar'))
-const Home              = lazy(() => import('./Home'))
+const Home              = lazy(() => import('./home/HomeBoard'))
+const ArcadeView        = lazy(() => import('./arcade/ArcadeView'))
 const GameDetailModal   = lazy(() => import('./GameDetailModal'))
 const MusicDetailModal  = lazy(() => import('./MusicDetailModal'))
 const ArtistDetailView  = lazy(() => import('./ArtistDetailView'))
 const MangaDetailModal  = lazy(() => import('./MangaDetailModal'))
 const BookDetailModal   = lazy(() => import('./BookDetailModal'))
-const OpenLibraryFetcher = lazy(() => import('./OpenLibraryFetcher'))
 const MovieDetailModal  = lazy(() => import('./MovieDetailModal'))
 const AnimeDetailModal  = lazy(() => import('./AnimeDetailModal'))
 const SeriesDetailModal = lazy(() => import('./SeriesDetailModal'))
 const DuplicatesModal   = lazy(() => import('./DuplicatesModal'))
 const GenreNormalizerModal = lazy(() => import('./GenreNormalizerModal'))
 const RoleNormalizerModal  = lazy(() => import('./RoleNormalizerModal'))
+const TagHierarchyModal    = lazy(() => import('./TagHierarchyModal'))
 const ImageUploadGuide     = lazy(() => import('./ImageUploadGuide'))
 const RandomizerModal      = lazy(() => import('./RandomizerModal'))
 const DataHealthAuditModal = lazy(() => import('./DataHealthAuditModal'))
 const GlobalSearch      = lazy(() => import('./GlobalSearch'))
 const SteamGridDbPicker = lazy(() => import('./SteamGridDbPicker'))
-const AniListFetcher    = lazy(() => import('./AniListFetcher'))
-const AniDBFetcher      = lazy(() => import('./AniDBFetcher'))
-const JikanFetcher      = lazy(() => import('./JikanFetcher'))
-const TmdbFetcher       = lazy(() => import('./TmdbFetcher'))
-const IgdbFetcher       = lazy(() => import('./IgdbFetcher'))
-const MusicBrainzFetcher = lazy(() => import('./MusicBrainzFetcher'))
-const VgmdbFetcher      = lazy(() => import('./VgmdbFetcher'))
-const ComicVineFetcher  = lazy(() => import('./ComicVineFetcher'))
-const MangaDexFetcher   = lazy(() => import('./MangaDexFetcher'))
-const KitsuFetcher      = lazy(() => import('./KitsuFetcher'))
+// Metadata fetchers (AniList, TMDb, IGDB, …) are lazy-loaded from
+// `fetchers/registrations.tsx`, not here — the registry owns them now.
 const MalImporter       = lazy(() => import('./MalImporter'))
 const GenericImporter   = lazy(() => import('./GenericImporter'))
 const SteamImporter     = lazy(() => import('./SteamImporter'))
@@ -110,26 +103,28 @@ import { buildCsvExports } from './CsvExporter'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
   // ChevronIcon removed — no more collapsible library groups.
-  InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon, HomeIcon,
+  InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon,
 } from './icons'
 
 // Editors and pickers used inside detail modals and the toolbar
 import DistChart from './insights/DistChart'
 import Heatmap from './insights/Heatmap'
-import RatingPicker from './components/editors/RatingPicker'
 import { pickImageToDataUrl, imageDropHandlers, assetBasename, exportItemAsJson } from './utils/files'
+import { expandTagSelection } from './utils/tags'
+// Fetcher registry — panel iterates `getFetchersFor(activeCategory)`
+// and a single `activeFetcher: string | null` state drives which modal
+// is on screen. All 11 built-in sources declare themselves in
+// `fetchers/registrations.tsx`; that side-effect import seeds the map.
+import './fetchers'
+import { getFetchersFor, resolveHint, type FetcherRegistration } from './fetchers/registry'
 import ConcertLogEditor from './components/editors/ConcertLogEditor'
-import ChapterNotesEditor from './components/editors/ChapterNotesEditor'
-import VolumeCoverEditor from './components/editors/VolumeCoverEditor'
 import MusicEditorSection from './components/editors/MusicEditorSection'
 import GameEditorSection from './components/editors/GameEditorSection'
 import MovieEditorSection from './components/editors/MovieEditorSection'
 import SeriesEditorSection from './components/editors/SeriesEditorSection'
-import RelatedListEditor from './components/editors/RelatedListEditor'
-import RecommendationsEditor from './components/editors/RecommendationsEditor'
-import RewatchListEditor from './components/editors/RewatchListEditor'
-import ChapterListEditor from './components/editors/ChapterListEditor'
-import EpisodeListEditor from './components/editors/EpisodeListEditor'
+import AnimeEditorSection from './components/editors/AnimeEditorSection'
+import MangaEditorSection from './components/editors/MangaEditorSection'
+import BookEditorSection from './components/editors/BookEditorSection'
 import TagEditor from './components/editors/TagEditor'
 import BandMembersEditor from './components/editors/BandMembersEditor'
 import FiltersDropdown from './components/editors/FiltersDropdown'
@@ -231,6 +226,18 @@ interface Settings {
   autoBackupInterval?: 'off' | 'daily' | 'weekly'
   autoBackupTarget?: string
   autoBackupLastAt?: number
+  // Optional parent-tag map for the Tag hierarchy feature. Keys are child
+  // tag strings, values are the parent tag string. Missing keys = the tag
+  // is top-level. Cycles are ignored by the expand helper.
+  tagTree?: Record<string, string>
+  // Home board layout — user-arranged list of widgets (id + size). Missing
+  // = the default layout kicks in (libraries + currently + upcoming).
+  // Empty array [] = user explicitly cleared everything; the board shows
+  // the "empty" hint instead of silently reverting to defaults.
+  homeWidgets?: { id: string; size: 'small' | 'medium' | 'large' }[]
+  // Persistent sidebar collapsed → icon-rail only. Users can toggle
+  // from the sidebar itself. Omitted = expanded (default).
+  sidebarCollapsed?: boolean
 }
 
 interface AppData {
@@ -239,6 +246,7 @@ interface AppData {
   artists?: MusicArtist[]
   settings?: Settings
   customOrders?: Record<string, string[]>
+  arcadeGames?: ArcadeGame[]
 }
 
 // Displayed in Settings → Data → About. Sourced from package.json so the
@@ -293,7 +301,8 @@ function statusRank<T extends string>(value: T | undefined, fallback: T, options
   return idx < 0 ? options.length : idx
 }
 
-function filterAndSort(list: Item[], search: string, filterTags: string[], filterStatus: GameStatus[], filterPlatforms: Platform[], filterGenres: string[], sortBy: SortBy | null, customOrder: string[] = [], minRating = 0): Item[] {
+function filterAndSort(list: Item[], search: string, filterTags: string[], filterStatus: GameStatus[], filterPlatforms: Platform[], filterGenres: string[], sortBy: SortBy | null, customOrder: string[] = [], minRating = 0, tagTree?: Record<string, string>): Item[] {
+  filterTags = expandTagSelection(filterTags, tagTree)
   let result = list
   if (search.trim()) {
     const q = search.trim().toLowerCase()
@@ -350,7 +359,10 @@ function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [loaded, setLoaded] = useState(false)
   const [layout, setLayout] = useState<Layout>('grid')
-  const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'simulcastBoard' | 'stats' | 'calendar' | 'settings'>('none')
+  const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'simulcastBoard' | 'stats' | 'calendar' | 'settings' | 'arcade'>('none')
+  // Arcade section state (score log + 1cc grid). Loaded from and
+  // persisted to the same JSON blob as `items` — see save/load below.
+  const [arcadeGames, setArcadeGames] = useState<ArcadeGame[]>([])
   const [animeBoardStatus, setAnimeBoardStatus] = useState<AnimeStatus>('plan_to_watch')
   const [seriesBoardStatus, setSeriesBoardStatus] = useState<SeriesStatus>('plan_to_watch')
   const [bookBoardStatus, setBookBoardStatus] = useState<BookStatus>('plan_to_read')
@@ -432,6 +444,7 @@ function App() {
   const [brokenAssetsOpen, setBrokenAssetsOpen] = useState(false)
   const [genreNormalizerOpen, setGenreNormalizerOpen] = useState(false)
   const [roleNormalizerOpen, setRoleNormalizerOpen] = useState(false)
+  const [tagHierarchyOpen, setTagHierarchyOpen] = useState(false)
   const [imageGuideOpen, setImageGuideOpen] = useState(false)
   const [randomizerOpen, setRandomizerOpen] = useState(false)
   const [auditOpen, setAuditOpen] = useState(false)
@@ -572,16 +585,9 @@ function App() {
       setUpdateModalOpen(false)
     }
   }
-  const [anilistOpen, setAnilistOpen] = useState<null | 'ANIME' | 'MANGA'>(null)
-  const [jikanOpen, setJikanOpen] = useState<null | 'anime' | 'manga'>(null)
-  const [tmdbOpen, setTmdbOpen] = useState<null | 'movie' | 'tv'>(null)
-  const [igdbOpen, setIgdbOpen] = useState(false)
-  const [mbOpen, setMbOpen] = useState(false)
-  const [vgmdbOpen, setVgmdbOpen] = useState(false)
-  const [comicvineOpen, setComicvineOpen] = useState(false)
-  const [mangadexOpen, setMangadexOpen] = useState(false)
-  const [kitsuOpen, setKitsuOpen] = useState<null | 'anime' | 'manga'>(null)
-  const [anidbOpen, setAnidbOpen] = useState(false)
+  // Single open-state for every metadata fetcher. Holds the registration
+  // id (`'tmdb'` / `'igdb'` / …) of the modal currently on screen.
+  const [activeFetcher, setActiveFetcher] = useState<string | null>(null)
   const [malOpen, setMalOpen] = useState(false)
   const [genericImportOpen, setGenericImportOpen] = useState(false)
   const [steamOpen, setSteamOpen] = useState(false)
@@ -730,7 +736,6 @@ function App() {
   const [isbn, setIsbn] = useState('')
   const [translator, setTranslator] = useState('')
   const [bookReview, setBookReview] = useState('')
-  const [openLibraryOpen, setOpenLibraryOpen] = useState(false)
   const [movieSource, setMovieSource] = useState<MovieSource | ''>('')
   const [movieReview, setMovieReview] = useState('')
   const [gameSource, setGameSource] = useState<GameSource | ''>('')
@@ -857,6 +862,7 @@ function App() {
     setItems(items)
     setCollections(data?.collections ?? [])
     setMusicArtists(artists)
+    setArcadeGames(data?.arcadeGames ?? [])
     if (applySettings && data?.settings) {
       const merged = {
         ...DEFAULT_SETTINGS,
@@ -897,7 +903,7 @@ function App() {
   useEffect(() => {
     if (!loaded) return
     void (async () => {
-      const res = await window.ipcRenderer.invoke('data:save', { items, collections, settings, artists: musicArtists }) as { ok?: boolean; rewrites?: { from: string; to: string }[] } | boolean
+      const res = await window.ipcRenderer.invoke('data:save', { items, collections, settings, artists: musicArtists, arcadeGames }) as { ok?: boolean; rewrites?: { from: string; to: string }[] } | boolean
       // Main-process rename step may have renamed some asset files to match
       // titles. Reflect those rewrites in local state so <img src> resolves
       // to the new filename without a full reload.
@@ -934,7 +940,7 @@ function App() {
       setEditions((list) => list.map((e) => ({ ...e, cover: swap(e.cover) ?? e.cover })))
       setBundleContents((list) => list.map((b) => ({ ...b, cover: swap(b.cover) ?? b.cover })))
     })()
-  }, [items, collections, settings, musicArtists, loaded])
+  }, [items, collections, settings, musicArtists, arcadeGames, loaded])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1226,8 +1232,8 @@ function App() {
     [activeCollection, customOrders, activeCategory],
   )
   const visibleItems = useMemo(
-    () => filterAndSort(scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating),
-    [scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating],
+    () => filterAndSort(scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree),
+    [scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree],
   )
   const editingItem = items.find((i) => i.id === editingId) || null
 
@@ -1681,12 +1687,15 @@ function App() {
     if (patch.writers) setWriters(patch.writers)
     if (patch.showrunners) setShowrunners(patch.showrunners)
     if (patch.productionCompanies) setProductionCompanies(patch.productionCompanies)
+    if (patch.distributors) setDistributors(patch.distributors)
     if (patch.network !== undefined) setNetwork(patch.network ?? '')
     if (patch.country !== undefined) setCountry(patch.country ?? '')
     if (patch.language !== undefined) setLanguage(patch.language ?? '')
     if (patch.contentRating !== undefined) setContentRating(patch.contentRating ?? '')
     if (patch.seriesFormat) setSeriesFormat(patch.seriesFormat)
     if (patch.duration) setDuration(patch.duration)
+    if (patch.startYear !== undefined) setStartYear(patch.startYear ?? '')
+    if (patch.endYear !== undefined) setEndYear(patch.endYear ?? '')
     if (patch.hasSeasons !== undefined) setHasSeasons(patch.hasSeasons)
     if (patch.seasons) setSeasons(patch.seasons)
 
@@ -1725,7 +1734,7 @@ function App() {
     }
 
     // Comics / Manga family (ComicVine, later MangaDex)
-    if (patch.authors) setMangaAuthors(patch.authors)
+    if (patch.authors && activeCategory !== 'libros') setMangaAuthors(patch.authors)
     if (patch.mangaArtists) setMangaArtists(patch.mangaArtists)
     if (patch.mangaDescription) setMangaDescription(patch.mangaDescription)
     if (patch.totalChapters) setTotalChapters(patch.totalChapters)
@@ -1733,6 +1742,20 @@ function App() {
     if (patch.magazine !== undefined) setMagazine(patch.magazine ?? '')
     if (patch.pubStatus) setPubStatus(patch.pubStatus)
     if (patch.mangaSource) setMangaSource(patch.mangaSource)
+    if (patch.mangadexId !== undefined) setMangadexId(patch.mangadexId ?? '')
+
+    // Books (OpenLibrary + future). `authors` doubles as the book-authors
+    // list when the active library is `libros`; the manga family reuses
+    // the same setter under `setMangaAuthors` above, gated to non-books.
+    if (patch.authors && activeCategory === 'libros') setMangaAuthors(patch.authors)
+    if (patch.publisher !== undefined) setPublisher(patch.publisher ?? '')
+    if (patch.isbn !== undefined) setIsbn(patch.isbn ?? '')
+    if (patch.totalPages !== undefined) setTotalPages(patch.totalPages ?? '')
+    if (patch.saga !== undefined) setSaga(patch.saga ?? '')
+    if (patch.sagaIndex !== undefined) setSagaIndex(patch.sagaIndex ?? '')
+    if (patch.bookFormat) setBookFormat(patch.bookFormat)
+    if (patch.bookSource) setBookSource(patch.bookSource)
+    if (patch.translator !== undefined) setTranslator(patch.translator ?? '')
 
     // Explicit description fields (Kitsu passes them typed rather than
     // routing through the generic description key).
@@ -1744,6 +1767,8 @@ function App() {
     if (patch.description) {
       if (activeCategory === 'anime' || activeCategory === 'donghua') setAnimeDescription(patch.description)
       else if (isMangaLike(activeCategory)) setMangaDescription(patch.description)
+      else if (activeCategory === 'peliculas') setMovieDescription(patch.description)
+      else if (activeCategory === 'series') setSeriesDescription(patch.description)
       else setDescription(patch.description)
     }
     if (coverPath) {
@@ -1768,10 +1793,6 @@ function App() {
       : ''
     setToast(`${sourceLabel} data applied${franchiseNote}`)
   }
-
-  // Keep the old name as a thin wrapper so existing callers don't move.
-  const applyAniListPatch = (patch: Partial<Item>, coverPath?: string, bannerPath?: string) =>
-    applyFetchedPatch(patch, coverPath, bannerPath, 'AniList')
 
   const openEditFromModal = () => {
     if (!viewingGame) return
@@ -2315,6 +2336,15 @@ function App() {
       { label: 'Edit', onClick: () => { openEditPanel(item); setTimeout(() => loadItemIntoForm(item), 0); setPanelOpen(true) } },
       { label: 'Duplicate', onClick: dup },
       { label: 'Export as JSON…', onClick: () => exportItemAsJson(item as unknown as Record<string, unknown>, item.title) },
+      { label: 'Export as HTML…', onClick: async () => {
+        const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Choose where to export the item')
+        if (!dir) return
+        const artistsForItem = item.categoryId === 'musica' ? musicArtists : []
+        const html = buildStaticSiteHtml([item], artistsForItem, item.title)
+        const r = await window.ipcRenderer.invoke('export:site', dir, html)
+        if (r?.ok) setToast(`Exported to ${r.path}`)
+        else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
+      } },
       { divider: true, label: '', onClick: () => {} },
       // Move-to-library submenu flattened: each destination is its own row.
       // The categoryId change re-slots the item into another JSON on next save.
@@ -2655,7 +2685,8 @@ function App() {
       data-density={settings.density}
       data-font-size={settings.fontSize}
       data-motion={settings.motion}
-      data-layout="topnav"
+      data-layout="sidebar"
+      data-sidebar={settings.sidebarCollapsed ? 'collapsed' : 'expanded'}
       data-card-zoom={settings.cardZoom ?? 'md'}
     >
       {updateInfo && !updateBannerDismissed && (
@@ -2677,76 +2708,66 @@ function App() {
           </div>
         </div>
       )}
-      {specialView !== 'home' && (
+      <div className="body">
+        <Sidebar
+          items={items}
+          collections={collections}
+          enabledCategories={settings.enabledCategories}
+          active={
+            specialView === 'home' ? { kind: 'home' } :
+            specialView === 'calendar' ? { kind: 'special', id: 'calendar' } :
+            specialView === 'stats' ? { kind: 'special', id: 'stats' } :
+            specialView === 'settings' ? { kind: 'special', id: 'settings' } :
+            specialView === 'arcade' ? { kind: 'arcade' } :
+            { kind: 'library', categoryId: activeCategory }
+          }
+          collapsed={!!settings.sidebarCollapsed}
+          onToggleCollapsed={() => setSettings((s) => ({ ...s, sidebarCollapsed: !s.sidebarCollapsed }))}
+          onOpenHome={() => { setSpecialView('home'); closePanel(); closeAllDetailViews() }}
+          onOpenLibrary={(id) => { switchCategory(id); closePanel(); closeAllDetailViews() }}
+          onOpenCalendar={() => { setSpecialView('calendar'); closePanel(); closeAllDetailViews() }}
+          onOpenStats={() => { setSpecialView('stats'); closePanel(); closeAllDetailViews() }}
+          onOpenSettings={() => { setSpecialView('settings'); closePanel(); closeAllDetailViews() }}
+          onOpenSearch={() => setSearchOpen(true)}
+          onOpenRandomizer={() => setRandomizerOpen(true)}
+          onOpenArcade={() => { setSpecialView('arcade'); closePanel(); closeAllDetailViews() }}
+        />
+
+        <div className="main-column">
+      {specialView === 'none' && pageMeta && (
         <nav className="topnav">
-          <div className="topnav-brand">
-            <svg className="brand-logo" viewBox="0 0 128 128" aria-hidden="true">
-              <circle cx="64" cy="64" r="46" fill="none" stroke="currentColor" strokeWidth="6" />
-              <path d="M64 26 L71.5 56.5 L102 64 L71.5 71.5 L64 102 L56.5 71.5 L26 64 L56.5 56.5 Z" fill="currentColor" />
-              <circle cx="64" cy="64" r="6" fill="none" stroke="currentColor" strokeWidth="4" />
-            </svg>
-            <span>Omnio</span>
+          <div className="topnav-page">
+            {pageMeta.onBack && (
+              <button className="topnav-back" onClick={pageMeta.onBack} title="Back">←</button>
+            )}
+            <span className="topnav-page-icon">{pageMeta.icon}</span>
+            <span className="topnav-page-title">{pageMeta.title}</span>
+            {pageMeta.count && (
+              <span className="topnav-page-count">
+                <span className="count-n">{pageMeta.count.n}</span>
+                <span className="count-unit">{pageMeta.count.unit}</span>
+              </span>
+            )}
+            {pageMeta.chips && (
+              <div className="topnav-chips">
+                {pageMeta.chips.map((c) => (
+                  <button
+                    key={c.key}
+                    className={c.active ? 'topnav-chip active' : 'topnav-chip'}
+                    onClick={c.onClick}
+                  >
+                    <span>{c.label}</span>
+                    <span className="topnav-chip-count">{c.count}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <button
-            className="topnav-home"
-            onClick={() => { setSpecialView('home'); closePanel(); closeAllDetailViews() }}
-            title="Home"
-          >
-            <span className="nav-icon"><HomeIcon /></span>
-            <span>Home</span>
-          </button>
-          {pageMeta && (
-            <div className="topnav-page">
-              {pageMeta.onBack && (
-                <button className="topnav-back" onClick={pageMeta.onBack} title="Back">←</button>
-              )}
-              <span className="topnav-page-icon">{pageMeta.icon}</span>
-              <span className="topnav-page-title">{pageMeta.title}</span>
-              {pageMeta.count && (
-                <span className="topnav-page-count">
-                  <span className="count-n">{pageMeta.count.n}</span>
-                  <span className="count-unit">{pageMeta.count.unit}</span>
-                </span>
-              )}
-              {pageMeta.chips && (
-                <div className="topnav-chips">
-                  {pageMeta.chips.map((c) => (
-                    <button
-                      key={c.key}
-                      className={c.active ? 'topnav-chip active' : 'topnav-chip'}
-                      onClick={c.onClick}
-                    >
-                      <span>{c.label}</span>
-                      <span className="topnav-chip-count">{c.count}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {pageMeta?.actions && (
+          {pageMeta.actions && (
             <div className="topnav-page-actions">{pageMeta.actions}</div>
           )}
-          <div className="topnav-utils">
-            <button
-              className={specialView === 'calendar' ? 'topnav-util active' : 'topnav-util'}
-              onClick={() => { setSpecialView('calendar'); closePanel(); closeAllDetailViews() }}
-              title="Release calendar"
-            ><CalendarIcon /></button>
-            <button
-              className={specialView === 'stats' ? 'topnav-util active' : 'topnav-util'}
-              onClick={() => { setSpecialView('stats'); closePanel(); closeAllDetailViews() }}
-              title="Statistics"
-            ><InsightsIcon /></button>
-            <button
-              className={specialView === 'settings' ? 'topnav-util active' : 'topnav-util'}
-              onClick={() => { setSpecialView('settings'); closePanel(); closeAllDetailViews() }}
-              title="Settings"
-            ><SettingsIcon /></button>
-          </div>
         </nav>
       )}
-      <div className="body">
         <main className="content">
           {viewingGame ? (
             <GameDetailModal
@@ -3526,6 +3547,8 @@ function App() {
               <Home
                 items={items}
                 enabledCategories={settings.enabledCategories}
+                layout={settings.homeWidgets}
+                onSaveLayout={(next) => setSettings((s) => ({ ...s, homeWidgets: next }))}
                 onOpenCategory={(id) => switchCategory(id)}
                 onOpenItem={navigateToItem}
                 onOpenCalendar={() => { setSpecialView('calendar'); closePanel(); closeAllDetailViews() }}
@@ -3540,6 +3563,20 @@ function App() {
           {specialView === 'calendar' && (
             <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
               <ReleaseCalendar items={items} onNavigate={navigateToItem} />
+            </Suspense>
+          )}
+
+          {specialView === 'arcade' && (
+            <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
+              <ArcadeView
+                games={arcadeGames}
+                onCreate={(g) => setArcadeGames((prev) => [...prev, g])}
+                onUpdate={(gid, patch) => setArcadeGames((prev) => prev.map((g) => g.id === gid ? { ...g, ...patch } : g))}
+                onDelete={(gid) => setArcadeGames((prev) => prev.filter((g) => g.id !== gid))}
+                onAddRun={(gid, run) => setArcadeGames((prev) => prev.map((g) => g.id === gid ? { ...g, runs: [...g.runs, { ...run, id: crypto.randomUUID() }] } : g))}
+                onRemoveRun={(gid, rid) => setArcadeGames((prev) => prev.map((g) => g.id === gid ? { ...g, runs: g.runs.filter((r) => r.id !== rid) } : g))}
+                onUpdateRun={(gid, rid, patch) => setArcadeGames((prev) => prev.map((g) => g.id === gid ? { ...g, runs: g.runs.map((r) => r.id === rid ? { ...r, ...patch } : r) } : g))}
+              />
             </Suspense>
           )}
 
@@ -4055,6 +4092,13 @@ function App() {
                         </div>
                         <button type="button" className="secondary-btn" onClick={() => setRoleNormalizerOpen(true)}>Merge roles</button>
                       </div>
+                      <div className="maintenance-row">
+                        <div className="maintenance-row-info">
+                          <h4>Tag hierarchy</h4>
+                          <p>Nest tags under a parent (e.g. <code>jrpg → turn-based</code>). Selecting the parent in Filters matches every descendant; item cards still show the leaf tag.</p>
+                        </div>
+                        <button type="button" className="secondary-btn" onClick={() => setTagHierarchyOpen(true)}>Edit hierarchy</button>
+                      </div>
                     </div>
 
                     <div className="maintenance-group">
@@ -4168,12 +4212,19 @@ function App() {
                         <p className="about-line">Local-only. No accounts, no telemetry, no cloud. Your data lives in this machine.</p>
                         <p className="about-section-title">New in this release</p>
                         <ul className="about-changelog">
-                          <li><b>Wikipedia-style band timeline</b> — new SVG chart on the artist detail page. One row per member colored by role (vocals red, lead guitar dark green, rhythm guitar light green, bass blue, drums orange, keys purple…), overlaid stint bars for members whose role changed over time, and dashed vertical markers for every studio album release. Legend below picks up whichever roles are actually present.</li>
-                          <li><b>No more accidental modal-close on outside click</b> — the artist editor and every metadata fetcher modal (MusicBrainz, IGDB, TMDb, MangaDex, AniList, AniDB, SteamGridDB and the six others) used to dismiss on any background click, which killed mid-typed searches and half-filled forms. Now only ✕ and Esc close them.</li>
-                          <li><b>Music: release date timezone fix</b> — the album detail view was rendering the day before the picked date on any timezone west of UTC (classic <code>new Date("2009-04-28")</code> parsed as UTC midnight bug). New <code>formatIsoDate</code> helper parses YYYY-MM-DD components manually and builds a local-midnight date.</li>
-                          <li><b>Music: inline-editable track columns now legible</b> — the number cell was clipping its value inside a 34px column; widened to 48px with tightened padding and switched from dim to normal text color so tabular numerals read cleanly. Duration column got the same treatment.</li>
-                          <li><b>Music: per-track multi-artist pills</b> — a track credited to "Artist A &amp; Artist B" or "X feat Y" now renders one gold pill per name in the album detail. Split on comma, ampersand, slash, "feat" / "ft" (with or without a period), and " x ". Single-artist tracks stay plain text so short strings don't grow chrome.</li>
-                          <li><b>Repo social-preview banner</b> — 1280×640 card in the app's gold-on-dark palette committed under <code>public/omnio-banner.png</code> (SVG source alongside for editing). Twelve library icons on the strip beneath the wordmark, with distinct glyphs per manga-family library (2×2 grid for Manga, vertical webtoon column for Manhwa, 3-column strip for Manhua, panel + speech bubble for Comics).</li>
+                          <li><b>Arcade — score / 1cc tracker</b> — new top-level section for shmups, arcade classics and any game where performance per attempt matters more than "did I finish it once". Two modes when you create a game: <b>Grid</b> (doopu-style character × difficulty chart with per-cell flags for 1cc / no-miss / no-bomb / pacifist / all-clear / extra-clear) or <b>Score log</b> (simple high-score list). Grids are compact mini-charts with a big logo header; you define the axes yourself. Persists to <code>data/arcadeGames.json</code>.</li>
+                          <li><b>Persistent left sidebar</b> — brought back after being retired for the top-nav-only run. Brand + Home + every enabled library (with live item counts) + Search / Calendar / Random / Stats / Settings / Arcade. Collapses to a 56px icon rail with a chevron toggle; the state is remembered across launches.</li>
+                          <li><b>Home widget board</b> — Home is now a drag-and-drop-able set of widgets rather than a fixed dashboard. Built-in widgets: Currently in progress, Upcoming (next 30 days), Recently rated ★4+, plus opt-in Libraries (rich portals) and a 1cc placeholder. Layout persists per user; adding a widget removes it from the picker so you can't stack duplicates.</li>
+                          <li><b>Tag hierarchy</b> — nest tags under a parent (<code>jrpg → turn-based</code>, <code>jrpg → action</code>). The Filters dropdown renders the tree indented, and picking a parent matches every descendant. Cycle-guarded editor lives in <b>Settings → Maintenance → Tag hierarchy</b>.</li>
+                          <li><b>Item timeline</b> — the rewatch / reread / replay / listen history on every detail modal is now a proper vertical timeline (guide line + dot per entry + click-to-expand notes), newest first. Drop-in replacement — no per-modal changes needed.</li>
+                          <li><b>Export as HTML — single item + selection</b> — the card right-click menu now has an <b>Export as HTML…</b> action; the bulk-action bar exposes the same for a hand-picked list. Reuses the site exporter so the assets/ folder still travels with the page.</li>
+                          <li><b>Editor extraction complete</b> — Anime / Donghua, the Manga family (four categories share <code>MangaEditorSection</code>) and Books have joined Music / Games / Movies / Series in <code>src/components/editors/*EditorSection.tsx</code>. App.tsx shrank by ~550 lines in the process.</li>
+                          <li><b>Fetcher plugin registry</b> — the 14 metadata sources are now discovered through a registry (<code>src/fetchers/registry.ts</code>) instead of hand-listed JSX in App.tsx. The "Fetch metadata" panel iterates <code>getFetchersFor(activeCategory)</code>, a single <code>activeFetcher</code> state replaced 11 per-source booleans, and hints now vary per category (TMDb shows "Cast, crew, backdrop…" on Movies but "Cast, seasons, network…" on Series). MyAnimeList / Jikan is intentionally not registered — the community proxy is too flaky.</li>
+                          <li><b>Fetcher field-mapping audit</b> — many patched fields the fetchers were producing weren't wired into the editor state. Fixed: <b>OpenLibrary</b> (publisher, ISBN, total pages, description now fill in), <b>TMDb Series</b> (first / last season year derived from air dates), <b>TMDb Movies</b> (distributors), <b>MusicBrainz</b> (per-track artist), <b>AniList Anime</b> (demographic inferred from genres), <b>MangaDex</b> (mangadexId). A new <code>docs/FETCHER_FIELDS.md</code> documents which fields each source actually supplies vs why others stay empty.</li>
+                          <li><b>Long-press context menu on touch</b> — cards accept a 500ms hold-to-open gesture on touchscreens, mirroring the desktop right-click menu. Uses a new <code>useLongPress</code> hook with a 10px move tolerance so scrolling still works.</li>
+                          <li><b>Mobile CSS pass</b> — breakpoints at 768px and 640px reflow the full-screen editor (preview stacks above the form), collapse two-column field rows, hug filter/bulk dropdowns to the right edge, and turn the Ctrl+K search into a bottom-sheet that slides up from the bottom. Long tables scroll horizontally inside their own wrapper.</li>
+                          <li><b>Themed inputs everywhere</b> — every text input, textarea and select in the app now matches the button visual language (surface-2 fill, border, accent on focus, themed autofill). Applied globally via <code>:where()</code> so per-component overrides still win.</li>
+                          <li><b>Randomizer polish</b> — cover preview now uses the right aspect ratio per library (square for Music, 2:3 for Movies, 3:4 for the rest). Emoji dice icon swapped for a proper SVG.</li>
                         </ul>
                         <p className="about-line">
                           <a
@@ -4327,6 +4378,7 @@ function App() {
                       minRating={minRating}
                       onSetMinRating={setMinRating}
                       onClear={() => { setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]); setMinRating(0) }}
+                      tagTree={settings.tagTree}
                     />
                     <button
                       type="button"
@@ -4390,6 +4442,7 @@ function App() {
             </>
           )}
         </main>
+        </div>
 
         {panelOpen && (
           <>
@@ -4652,88 +4705,24 @@ function App() {
                         <span className="metadata-sources-hint">Auto-fills title, cover, and category-specific fields</span>
                       </div>
                       <div className="metadata-sources-grid">
-                        {isVideojuegos && (
-                          <button type="button" className="metadata-source-btn" onClick={() => setIgdbOpen(true)}>
-                            <span className="ms-name">↗ IGDB</span>
-                            <span className="ms-desc">Full metadata — devs, publishers, platforms, genres</span>
-                          </button>
-                        )}
-                        {(activeCategory === 'anime' || activeCategory === 'donghua') && <>
-                          {/* Sorted alphabetically. */}
-                          <button type="button" className="metadata-source-btn" onClick={() => setAnidbOpen(true)}>
-                            <span className="ms-name">↗ AniDB</span>
-                            <span className="ms-desc">Weighted tags + tighter refs · paste AID</span>
-                          </button>
-                          <button type="button" className="metadata-source-btn" onClick={() => setAnilistOpen('ANIME')}>
-                            <span className="ms-name">↗ AniList</span>
-                            <span className="ms-desc">Metadata + cover + banner</span>
-                          </button>
-                          <button type="button" className="metadata-source-btn" onClick={() => setKitsuOpen('anime')}>
-                            <span className="ms-name">↗ Kitsu</span>
-                            <span className="ms-desc">Fallback when other sources miss it</span>
-                          </button>
-                          <button type="button" className="metadata-source-btn" onClick={() => setJikanOpen('anime')}>
-                            <span className="ms-name">↗ MyAnimeList</span>
-                            <span className="ms-desc">Via Jikan — metadata + cover</span>
-                          </button>
-                        </>}
-                        {isMangaLike(activeCategory) && <>
-                          {/* Sorted alphabetically. */}
-                          <button type="button" className="metadata-source-btn" onClick={() => setAnilistOpen('MANGA')}>
-                            <span className="ms-name">↗ AniList</span>
-                            <span className="ms-desc">Metadata + cover</span>
-                          </button>
-                          {activeCategory === 'comics_west' && (
-                            <button type="button" className="metadata-source-btn" onClick={() => setComicvineOpen(true)}>
-                              <span className="ms-name">↗ ComicVine</span>
-                              <span className="ms-desc">Marvel, DC, Image, indies + creator credits</span>
+                        {/* Iterated from the fetcher registry — see
+                            src/fetchers/registrations.tsx. Alphabetical by
+                            label so ordering stays stable regardless of
+                            registration order. */}
+                        {getFetchersFor(activeCategory)
+                          .slice()
+                          .sort((a: FetcherRegistration, b: FetcherRegistration) => a.label.localeCompare(b.label))
+                          .map((reg) => (
+                            <button
+                              key={reg.id}
+                              type="button"
+                              className="metadata-source-btn"
+                              onClick={() => setActiveFetcher(reg.id)}
+                            >
+                              <span className="ms-name">↗ {reg.label}</span>
+                              <span className="ms-desc">{resolveHint(reg, activeCategory)}</span>
                             </button>
-                          )}
-                          {activeCategory !== 'comics_west' && (
-                            <button type="button" className="metadata-source-btn" onClick={() => setKitsuOpen('manga')}>
-                              <span className="ms-name">↗ Kitsu</span>
-                              <span className="ms-desc">Fallback when other sources miss it</span>
-                            </button>
-                          )}
-                          {activeCategory !== 'comics_west' && (
-                            <button type="button" className="metadata-source-btn" onClick={() => setMangadexOpen(true)}>
-                              <span className="ms-name">↗ MangaDex</span>
-                              <span className="ms-desc">Deep catalog incl. obscure titles</span>
-                            </button>
-                          )}
-                          <button type="button" className="metadata-source-btn" onClick={() => setJikanOpen('manga')}>
-                            <span className="ms-name">↗ MyAnimeList</span>
-                            <span className="ms-desc">Via Jikan — authors + magazine</span>
-                          </button>
-                        </>}
-                        {activeCategory === 'libros' && (
-                          <button type="button" className="metadata-source-btn" onClick={() => setOpenLibraryOpen(true)}>
-                            <span className="ms-name">↗ OpenLibrary</span>
-                            <span className="ms-desc">Authors, publisher, page count, ISBN + cover</span>
-                          </button>
-                        )}
-                        {activeCategory === 'peliculas' && (
-                          <button type="button" className="metadata-source-btn" onClick={() => setTmdbOpen('movie')}>
-                            <span className="ms-name">↗ TMDb</span>
-                            <span className="ms-desc">Cast, crew, backdrop, dates, genres</span>
-                          </button>
-                        )}
-                        {activeCategory === 'series' && (
-                          <button type="button" className="metadata-source-btn" onClick={() => setTmdbOpen('tv')}>
-                            <span className="ms-name">↗ TMDb</span>
-                            <span className="ms-desc">Cast, seasons, network, dates, genres</span>
-                          </button>
-                        )}
-                        {activeCategory === 'musica' && <>
-                          <button type="button" className="metadata-source-btn" onClick={() => setMbOpen(true)}>
-                            <span className="ms-name">↗ MusicBrainz</span>
-                            <span className="ms-desc">Releases, tracklist, artists + Cover Art</span>
-                          </button>
-                          <button type="button" className="metadata-source-btn" onClick={() => setVgmdbOpen(true)}>
-                            <span className="ms-name">↗ VGMdb</span>
-                            <span className="ms-desc">Game & anime soundtracks, JP releases</span>
-                          </button>
-                        </>}
+                          ))}
                       </div>
                     </div>
 
@@ -4951,655 +4940,116 @@ function App() {
                     )}
 
                 {isAnime && (
-                  <>
-                    <div className="form-section-header" data-belongs-to="identity">
-                      <span className="form-section-title">{activeCategory === 'donghua' ? 'Donghua' : 'Anime'} details</span>
-                      <span className="form-section-hint">Studios, format, airing, episodes</span>
-                    </div>
-                    <TagEditor
-                      label="Studios"
-                      placeholder="Add studio"
-                      tags={studios}
-                      onAdd={(s) => setStudios((prev) => prev.includes(s) ? prev : [...prev, s])}
-                      onRemove={(i) => setStudios((prev) => prev.filter((_, idx) => idx !== i))}
-                    />
-                    <div className="field-group">
-                      <label>Description</label>
-                      <textarea value={animeDescription} onChange={(e) => setAnimeDescription(e.target.value)} rows={3} />
-                    </div>
-                    <TagEditor
-                      label="Genres"
-                      placeholder="Add genre"
-                      tags={genres}
-                      onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
-                      onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))}
-                    />
-                    <div className="field-group">
-                      <label>Format</label>
-                      <select value={animeFormat} onChange={(e) => setAnimeFormat(e.target.value as AnimeFormat | '')}>
-                        <option value="">Unspecified</option>
-                        {ANIME_FORMAT_OPTIONS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-                      </select>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Season aired</label>
-                        <select value={season} onChange={(e) => setSeason(e.target.value as AnimeSeason | '')}>
-                          <option value="">Unspecified</option>
-                          {ANIME_SEASON_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>Season year</label>
-                        <input value={seasonYear} onChange={(e) => yearHandler(setSeasonYear)(e.target.value)} inputMode="numeric" maxLength={4} placeholder="e.g. 2006" />
-                      </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Demographic</label>
-                      <select value={demographic} onChange={(e) => setDemographic(e.target.value as Demographic | '')}>
-                        <option value="">Unspecified</option>
-                        {DEMOGRAPHIC_OPTIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-section-header" data-belongs-to="progress">
-                      <span className="form-section-title">Progress</span>
-                      <span className="form-section-hint">Watch status · airing · episodes watched · episode list</span>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Watch status</label>
-                        <select value={watchStatus} onChange={(e) => setWatchStatus(e.target.value as AnimeStatus)}>
-                          {ANIME_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>Airing status</label>
-                        <select value={airingStatus} onChange={(e) => setAiringStatus(e.target.value as AiringStatus | '')}>
-                          <option value="">Unknown</option>
-                          {AIRING_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    {airingStatus === 'airing' && (
-                      <div className="field-group">
-                        <label>Airs on <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>Simulcast board slots the show into this weekday column</span></label>
-                        <select value={airingDay} onChange={(e) => setAiringDay(e.target.value as Weekday | '')}>
-                          <option value="">Unknown</option>
-                          {WEEKDAY_OPTIONS.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
-                        </select>
-                      </div>
-                    )}
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Episodes watched</label>
-                        <input value={episodesWatched} onChange={(e) => intHandler(setEpisodesWatched)(e.target.value)} inputMode="numeric" placeholder="e.g. 12" />
-                      </div>
-                      <div className="field-group">
-                        <label>Total episodes (if known)</label>
-                        <input value={totalEpisodes} onChange={(e) => intHandler(setTotalEpisodes)(e.target.value)} inputMode="numeric" placeholder="e.g. 24" />
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Start date</label>
-                        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                      </div>
-                      <div className="field-group">
-                        <label>Finished on</label>
-                        <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="form-section-header" data-belongs-to="overview">
-                      <span className="form-section-title">Rating</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Rating</label>
-                      <RatingPicker value={rating} onChange={setRating} />
-                    </div>
-                    <div className="form-section-header" data-belongs-to="identity">
-                      <span className="form-section-title">Extended identity</span>
-                      <span className="form-section-hint">Alt titles · source · age rating · duration</span>
-                    </div>
-                    <TagEditor
-                      label="Alternative titles"
-                      placeholder="Add title (English, Japanese, synonym…)"
-                      tags={alternativeTitles}
-                      onAdd={(t) => setAlternativeTitles((prev) => prev.includes(t) ? prev : [...prev, t])}
-                      onRemove={(i) => setAlternativeTitles((prev) => prev.filter((_, idx) => idx !== i))}
-                    />
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Source</label>
-                        <select value={animeSource} onChange={(e) => setAnimeSource(e.target.value as AnimeSource | '')}>
-                          <option value="">Unspecified</option>
-                          {ANIME_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>Age rating</label>
-                        <select value={ageRating} onChange={(e) => setAgeRating(e.target.value as AgeRating | '')}>
-                          <option value="">Unspecified</option>
-                          {AGE_RATING_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Ep. duration (min)</label>
-                        <input value={episodeDuration} onChange={(e) => intHandler(setEpisodeDuration)(e.target.value)} inputMode="numeric" placeholder="e.g. 24" />
-                      </div>
-                      <div className="field-group">
-                        <label>Aired from</label>
-                        <input type="date" value={airedFrom} onChange={(e) => setAiredFrom(e.target.value)} />
-                      </div>
-                      <div className="field-group">
-                        <label>Aired to</label>
-                        <input type="date" value={airedTo} onChange={(e) => setAiredTo(e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Favorite episode</label>
-                        <input value={favoriteEpisode} onChange={(e) => intHandler(setFavoriteEpisode)(e.target.value)} inputMode="numeric" placeholder="e.g. 8" />
-                      </div>
-                      <div className="field-group">
-                        <label>Favorite ep. note</label>
-                        <input value={favoriteEpisodeNote} onChange={(e) => setFavoriteEpisodeNote(e.target.value)} placeholder="Why is it your favorite?" />
-                      </div>
-                    </div>
-                    {watchStatus === 'dropped' && (
-                      <div className="field-row">
-                        <div className="field-group">
-                          <label>Dropped at ep.</label>
-                          <input value={droppedAtEpisode} onChange={(e) => intHandler(setDroppedAtEpisode)(e.target.value)} inputMode="numeric" placeholder="e.g. 5" />
-                        </div>
-                        <div className="field-group">
-                          <label>Reason</label>
-                          <input value={droppedReason} onChange={(e) => setDroppedReason(e.target.value)} placeholder="Why did you drop it?" />
-                        </div>
-                      </div>
-                    )}
-                    <div className="form-section-header" data-belongs-to="notes">
-                      <span className="form-section-title">Review</span>
-                      <span className="form-section-hint">Your take · with optional spoiler toggle</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Review</label>
-                      <textarea value={animeReview} onChange={(e) => setAnimeReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
-                      {animeReview.trim() && (
-                        <div className="yesno">
-                          <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>Contains spoilers</button>
-                          <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>No spoilers</button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="field-group">
-                      <label>Franchise</label>
-                      <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Fullmetal Alchemist" />
-                    </div>
-                    <div className="form-section-header" data-belongs-to="related">
-                      <span className="form-section-title">Related &amp; recommendations</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Related anime</label>
-                      <RelatedListEditor
-                        related={relatedItems}
-                            crossLibrary
-                            allItems={relatedCrossLibraryOptions}
-                        options={items.filter((i) => isAnimeLikeCategory(i.categoryId) && i.id !== editingId)}
-                        onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
-                        onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
-                        onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-                        pickerPlaceholder="Add related anime…"
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label>Recommendations</label>
-                      <RecommendationsEditor
-                        ids={recommendedItems}
-                        options={items.filter((i) => isAnimeLikeCategory(i.categoryId) && i.id !== editingId)}
-                        onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
-                        onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-                        pickerPlaceholder="Add recommended anime…"
-                      />
-                    </div>
-                    <div className="form-section-header" data-belongs-to="history">
-                      <span className="form-section-title">Watch history</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Rewatch history</label>
-                      <RewatchListEditor
-                        rewatches={rewatches}
-                        onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
-                        onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
-                        onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
-                        onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label>Episode list?</label>
-                      <div className="yesno">
-                        <button type="button" className={hasEpisodes ? 'pill active' : 'pill'} onClick={() => setHasEpisodes(true)}>Yes</button>
-                        <button type="button" className={!hasEpisodes ? 'pill active' : 'pill'} onClick={() => { setHasEpisodes(false); setEpisodes([]) }}>No</button>
-                      </div>
-                      {hasEpisodes && (
-                        <EpisodeListEditor
-                          episodes={episodes}
-                          onAdd={(e) => setEpisodes((prev) => [...prev, { ...e, id: crypto.randomUUID() }])}
-                          onRemove={(id) => setEpisodes((prev) => prev.filter((e) => e.id !== id))}
-                          onUpdate={(id, patch) => setEpisodes((prev) => prev.map((e) => e.id === id ? { ...e, ...patch } : e))}
-                          onToggleWatched={(id) => setEpisodes((prev) => prev.map((e) => e.id === id ? { ...e, watched: !e.watched, watchedDate: !e.watched ? new Date().toISOString().slice(0, 10) : e.watchedDate } : e))}
-                          onToggleFiller={(id) => setEpisodes((prev) => prev.map((e) => e.id === id ? { ...e, filler: !e.filler } : e))}
-                          onRatingChange={(id, r) => setEpisodes((prev) => prev.map((e) => e.id === id ? { ...e, rating: r || undefined } : e))}
-                          onBulkAdd={(count) => setEpisodes((prev) => {
-                            const start = prev.length + 1
-                            const additions: Episode[] = Array.from({ length: count }, (_, i) => ({ id: crypto.randomUUID(), number: String(start + i) }))
-                            return [...prev, ...additions]
-                          })}
-                        />
-                      )}
-                    </div>
-                  </>
+                  <AnimeEditorSection
+                    editingId={editingId}
+                    activeCategory={activeCategory}
+                    items={items}
+                    relatedCrossLibraryOptions={relatedCrossLibraryOptions}
+                    studios={studios} setStudios={setStudios}
+                    animeDescription={animeDescription} setAnimeDescription={setAnimeDescription}
+                    genres={genres} setGenres={setGenres}
+                    animeFormat={animeFormat} setAnimeFormat={setAnimeFormat}
+                    season={season} setSeason={setSeason}
+                    seasonYear={seasonYear} setSeasonYear={setSeasonYear}
+                    demographic={demographic} setDemographic={setDemographic}
+                    watchStatus={watchStatus} setWatchStatus={setWatchStatus}
+                    airingStatus={airingStatus} setAiringStatus={setAiringStatus}
+                    airingDay={airingDay} setAiringDay={setAiringDay}
+                    episodesWatched={episodesWatched} setEpisodesWatched={setEpisodesWatched}
+                    totalEpisodes={totalEpisodes} setTotalEpisodes={setTotalEpisodes}
+                    startDate={startDate} setStartDate={setStartDate}
+                    finishedAt={finishedAt} setFinishedAt={setFinishedAt}
+                    rating={rating} setRating={setRating}
+                    alternativeTitles={alternativeTitles} setAlternativeTitles={setAlternativeTitles}
+                    animeSource={animeSource} setAnimeSource={setAnimeSource}
+                    ageRating={ageRating} setAgeRating={setAgeRating}
+                    episodeDuration={episodeDuration} setEpisodeDuration={setEpisodeDuration}
+                    airedFrom={airedFrom} setAiredFrom={setAiredFrom}
+                    airedTo={airedTo} setAiredTo={setAiredTo}
+                    favoriteEpisode={favoriteEpisode} setFavoriteEpisode={setFavoriteEpisode}
+                    favoriteEpisodeNote={favoriteEpisodeNote} setFavoriteEpisodeNote={setFavoriteEpisodeNote}
+                    droppedAtEpisode={droppedAtEpisode} setDroppedAtEpisode={setDroppedAtEpisode}
+                    droppedReason={droppedReason} setDroppedReason={setDroppedReason}
+                    animeReview={animeReview} setAnimeReview={setAnimeReview}
+                    hasSpoilers={hasSpoilers} setHasSpoilers={setHasSpoilers}
+                    franchise={franchise} setFranchise={setFranchise}
+                    rewatches={rewatches} setRewatches={setRewatches}
+                    relatedItems={relatedItems} setRelatedItems={setRelatedItems}
+                    recommendedItems={recommendedItems} setRecommendedItems={setRecommendedItems}
+                    hasEpisodes={hasEpisodes} setHasEpisodes={setHasEpisodes}
+                    episodes={episodes} setEpisodes={setEpisodes}
+                    yearHandler={yearHandler}
+                    intHandler={intHandler}
+                  />
                 )}
 
                 {isManga && (
-                  <>
-                    <div className="form-section-header" data-belongs-to="identity">
-                      <span className="form-section-title">Publication details</span>
-                      <span className="form-section-hint">Authors, artists, chapters, magazine</span>
-                    </div>
-                    <TagEditor
-                      label="Authors"
-                      placeholder="Add author"
-                      tags={mangaAuthors}
-                      onAdd={(a) => setMangaAuthors((prev) => prev.includes(a) ? prev : [...prev, a])}
-                      onRemove={(i) => setMangaAuthors((prev) => prev.filter((_, idx) => idx !== i))}
-                    />
-                    <TagEditor
-                      label="Artists"
-                      placeholder="Add artist"
-                      tags={mangaArtists}
-                      onAdd={(a) => setMangaArtists((prev) => prev.includes(a) ? prev : [...prev, a])}
-                      onRemove={(i) => setMangaArtists((prev) => prev.filter((_, idx) => idx !== i))}
-                    />
-                    <div className="field-group">
-                      <label>Description</label>
-                      <textarea value={mangaDescription} onChange={(e) => setMangaDescription(e.target.value)} rows={3} />
-                    </div>
-                    <TagEditor
-                      label="Genres"
-                      placeholder="Add genre"
-                      tags={genres}
-                      onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
-                      onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))}
-                    />
-                    <div className="form-section-header" data-belongs-to="progress">
-                      <span className="form-section-title">Progress</span>
-                      <span className="form-section-hint">Reading status · chapters / volumes read · chapter list</span>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Publication status</label>
-                        <select value={pubStatus} onChange={(e) => setPubStatus(e.target.value as PublicationStatus | '')}>
-                          <option value="">Unknown</option>
-                          {PUBLICATION_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>Reading status</label>
-                        <select value={readingStatus} onChange={(e) => setReadingStatus(e.target.value as MangaStatus)}>
-                          {MANGA_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Chapters read</label>
-                        <input value={chaptersRead} onChange={(e) => intHandler(setChaptersRead)(e.target.value)} inputMode="numeric" placeholder="e.g. 45" />
-                      </div>
-                      <div className="field-group">
-                        <label>Total chapters (if known)</label>
-                        <input value={totalChapters} onChange={(e) => intHandler(setTotalChapters)(e.target.value)} inputMode="numeric" placeholder="e.g. 120" />
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Volumes read</label>
-                        <input value={volumesRead} onChange={(e) => intHandler(setVolumesRead)(e.target.value)} inputMode="numeric" placeholder="e.g. 5" />
-                      </div>
-                      <div className="field-group">
-                        <label>Total volumes (if known)</label>
-                        <input value={totalVolumesM} onChange={(e) => intHandler(setTotalVolumesM)(e.target.value)} inputMode="numeric" placeholder="e.g. 14" />
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Publication date</label>
-                        <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
-                      </div>
-                      <div className="field-group">
-                        <label>Start date (personal)</label>
-                        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                      </div>
-                      <div className="field-group">
-                        <label>Finished on</label>
-                        <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="form-section-header" data-belongs-to="overview">
-                      <span className="form-section-title">Rating</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Rating</label>
-                      <RatingPicker value={rating} onChange={setRating} />
-                    </div>
-                    <div className="form-section-header" data-belongs-to="identity">
-                      <span className="form-section-title">Extended identity</span>
-                      <span className="form-section-hint">Alt titles · source · age rating · magazine</span>
-                    </div>
-                    <TagEditor
-                      label="Alternative titles"
-                      placeholder="Add title (romaji, English, synonym…)"
-                      tags={alternativeTitles}
-                      onAdd={(t) => setAlternativeTitles((prev) => prev.includes(t) ? prev : [...prev, t])}
-                      onRemove={(i) => setAlternativeTitles((prev) => prev.filter((_, idx) => idx !== i))}
-                    />
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Source</label>
-                        <select value={mangaSource} onChange={(e) => setMangaSource(e.target.value as MangaSource | '')}>
-                          <option value="">Unspecified</option>
-                          {MANGA_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>Age rating</label>
-                        <select value={ageRating} onChange={(e) => setAgeRating(e.target.value as AgeRating | '')}>
-                          <option value="">Unspecified</option>
-                          {AGE_RATING_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>Magazine / serialization</label>
-                        <input value={magazine} onChange={(e) => setMagazine(e.target.value)} placeholder="e.g. Weekly Shonen Jump" />
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field-group">
-                        <label>Ownership</label>
-                        <select value={mediaOwnership} onChange={(e) => setMediaOwnership(e.target.value as MediaOwnership | '')}>
-                          <option value="">— unspecified</option>
-                          {MEDIA_OWNERSHIP_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>MangaDex ID <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>Enables the "New chapters" link in the detail view</span></label>
-                        <input value={mangadexId} onChange={(e) => setMangadexId(e.target.value)} placeholder="e.g. a1c7c817-4e59-43b7-9365-09675a149a6f" />
-                      </div>
-                    </div>
-                    <div className="form-section-header" data-belongs-to="notes">
-                      <span className="form-section-title">Review</span>
-                      <span className="form-section-hint">Your take · with optional spoiler toggle</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Review</label>
-                      <textarea value={mangaReview} onChange={(e) => setMangaReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
-                      {mangaReview.trim() && (
-                        <div className="yesno">
-                          <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>Contains spoilers</button>
-                          <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>No spoilers</button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="form-section-header" data-belongs-to="history">
-                      <span className="form-section-title">Read history</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Reread history</label>
-                      <RewatchListEditor
-                        rewatches={rewatches}
-                        onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
-                        onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
-                        onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
-                        onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label>Franchise</label>
-                      <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Naruto saga" />
-                    </div>
-                    <div className="form-section-header" data-belongs-to="related">
-                      <span className="form-section-title">Related &amp; recommendations</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Related manga</label>
-                      <RelatedListEditor
-                        related={relatedItems}
-                            crossLibrary
-                            allItems={relatedCrossLibraryOptions}
-                        options={items.filter((i) => isMangaLike(i.categoryId) && i.id !== editingId)}
-                        onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
-                        onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
-                        onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-                        pickerPlaceholder="Add related manga…"
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label>Recommendations</label>
-                      <RecommendationsEditor
-                        ids={recommendedItems}
-                        options={items.filter((i) => isMangaLike(i.categoryId) && i.id !== editingId)}
-                        onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
-                        onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-                        pickerPlaceholder="Add recommended manga…"
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label>Chapter list?</label>
-                      <div className="yesno">
-                        <button type="button" className={hasChapters ? 'pill active' : 'pill'} onClick={() => setHasChapters(true)}>Yes</button>
-                        <button type="button" className={!hasChapters ? 'pill active' : 'pill'} onClick={() => { setHasChapters(false); setChapters([]) }}>No</button>
-                      </div>
-                      {hasChapters && (
-                        <ChapterListEditor
-                          chapters={chapters}
-                          onAdd={(c) => setChapters((prev) => [...prev, { ...c, id: crypto.randomUUID() }])}
-                          onRemove={(id) => setChapters((prev) => prev.filter((c) => c.id !== id))}
-                          onUpdate={(id, patch) => setChapters((prev) => prev.map((c) => c.id === id ? { ...c, ...patch } : c))}
-                          onToggleRead={(id) => setChapters((prev) => prev.map((c) => c.id === id ? { ...c, read: !c.read, readDate: !c.read ? new Date().toISOString().slice(0, 10) : c.readDate } : c))}
-                          onRatingChange={(id, r) => setChapters((prev) => prev.map((c) => c.id === id ? { ...c, rating: r || undefined } : c))}
-                          onBulkAdd={(count) => setChapters((prev) => {
-                            const start = prev.length + 1
-                            const additions: Chapter[] = Array.from({ length: count }, (_, i) => ({ id: crypto.randomUUID(), number: String(start + i) }))
-                            return [...prev, ...additions]
-                          })}
-                        />
-                      )}
-                    </div>
-                    <div className="form-section-header" data-belongs-to="media">
-                      <span className="form-section-title">Volume covers</span>
-                      <span className="form-section-hint">One cover per volume — gallery</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Volume covers</label>
-                      <VolumeCoverEditor
-                        volumes={volumeCovers}
-                        onAdd={(v) => setVolumeCovers((prev) => [...prev, { ...v, id: crypto.randomUUID() }])}
-                        onRemove={(id) => setVolumeCovers((prev) => prev.filter((v) => v.id !== id))}
-                      />
-                    </div>
-                  </>
+                  <MangaEditorSection
+                    editingId={editingId}
+                    items={items}
+                    relatedCrossLibraryOptions={relatedCrossLibraryOptions}
+                    mangaAuthors={mangaAuthors} setMangaAuthors={setMangaAuthors}
+                    mangaArtists={mangaArtists} setMangaArtists={setMangaArtists}
+                    mangaDescription={mangaDescription} setMangaDescription={setMangaDescription}
+                    genres={genres} setGenres={setGenres}
+                    pubStatus={pubStatus} setPubStatus={setPubStatus}
+                    readingStatus={readingStatus} setReadingStatus={setReadingStatus}
+                    chaptersRead={chaptersRead} setChaptersRead={setChaptersRead}
+                    totalChapters={totalChapters} setTotalChapters={setTotalChapters}
+                    volumesRead={volumesRead} setVolumesRead={setVolumesRead}
+                    totalVolumesM={totalVolumesM} setTotalVolumesM={setTotalVolumesM}
+                    releaseDate={releaseDate} setReleaseDate={setReleaseDate}
+                    startDate={startDate} setStartDate={setStartDate}
+                    finishedAt={finishedAt} setFinishedAt={setFinishedAt}
+                    rating={rating} setRating={setRating}
+                    alternativeTitles={alternativeTitles} setAlternativeTitles={setAlternativeTitles}
+                    mangaSource={mangaSource} setMangaSource={setMangaSource}
+                    ageRating={ageRating} setAgeRating={setAgeRating}
+                    magazine={magazine} setMagazine={setMagazine}
+                    mediaOwnership={mediaOwnership} setMediaOwnership={setMediaOwnership}
+                    mangadexId={mangadexId} setMangadexId={setMangadexId}
+                    mangaReview={mangaReview} setMangaReview={setMangaReview}
+                    hasSpoilers={hasSpoilers} setHasSpoilers={setHasSpoilers}
+                    rewatches={rewatches} setRewatches={setRewatches}
+                    franchise={franchise} setFranchise={setFranchise}
+                    relatedItems={relatedItems} setRelatedItems={setRelatedItems}
+                    recommendedItems={recommendedItems} setRecommendedItems={setRecommendedItems}
+                    hasChapters={hasChapters} setHasChapters={setHasChapters}
+                    chapters={chapters} setChapters={setChapters}
+                    volumeCovers={volumeCovers} setVolumeCovers={setVolumeCovers}
+                    intHandler={intHandler}
+                  />
                 )}
 
-                    {activeCategory === 'libros' && (
-                  <>
-                    <div className="form-section-header" data-belongs-to="overview">
-                      <span className="form-section-title">Reading status</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Status</label>
-                      <select value={bookStatus} onChange={(e) => setBookStatus(e.target.value as BookStatus)}>
-                        {BOOK_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                      </select>
-                    </div>
-
-                    <div className="form-section-header" data-belongs-to="identity">
-                      <span className="form-section-title">Book details</span>
-                      <span className="form-section-hint">Authors, publisher, series, ISBN, format, source</span>
-                    </div>
-                    <TagEditor
-                      label="Authors"
-                      tags={mangaAuthors}
-                      onAdd={(a) => setMangaAuthors((prev) => prev.includes(a) ? prev : [...prev, a])}
-                      onRemove={(i) => setMangaAuthors((prev) => prev.filter((_, idx) => idx !== i))}
-                      placeholder="Add author"
-                    />
-                    <div className="field-grid two">
-                      <div className="field-group">
-                        <label>Format</label>
-                        <select value={bookFormat} onChange={(e) => setBookFormat(e.target.value as BookFormat | '')}>
-                          <option value="">—</option>
-                          {BOOK_FORMAT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>Publication status</label>
-                        <select value={pubStatus} onChange={(e) => setPubStatus(e.target.value as PublicationStatus | '')}>
-                          <option value="">—</option>
-                          {PUBLICATION_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="field-grid two">
-                      <div className="field-group">
-                        <label>Publisher</label>
-                        <input value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder="e.g. Tor Books" />
-                      </div>
-                      <div className="field-group">
-                        <label>ISBN</label>
-                        <input value={isbn} onChange={(e) => setIsbn(e.target.value)} placeholder="e.g. 978-0-7653-1178-8" />
-                      </div>
-                    </div>
-                    <div className="field-grid two">
-                      <div className="field-group">
-                        <label>Series / saga</label>
-                        <input value={saga} onChange={(e) => setSaga(e.target.value)} placeholder="e.g. The Stormlight Archive" />
-                      </div>
-                      <div className="field-group">
-                        <label>Book # in series</label>
-                        <input value={sagaIndex} onChange={(e) => setSagaIndex(e.target.value)} placeholder="e.g. Book 1" />
-                      </div>
-                    </div>
-                    <div className="field-grid two">
-                      <div className="field-group">
-                        <label>Source</label>
-                        <select value={bookSource} onChange={(e) => setBookSource(e.target.value as BookSource | '')}>
-                          <option value="">—</option>
-                          {BOOK_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="field-group">
-                        <label>Translator</label>
-                        <input value={translator} onChange={(e) => setTranslator(e.target.value)} placeholder="Optional" />
-                      </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Description</label>
-                      <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Book synopsis" />
-                    </div>
-
-                    <div className="form-section-header" data-belongs-to="progress">
-                      <span className="form-section-title">Progress</span>
-                      <span className="form-section-hint">Pages read / total · start date</span>
-                    </div>
-                    <div className="field-grid two">
-                      <div className="field-group">
-                        <label>Pages read</label>
-                        <input value={pagesRead} onChange={(e) => setPagesRead(e.target.value.replace(/[^\d]/g, ''))} placeholder="e.g. 120" />
-                      </div>
-                      <div className="field-group">
-                        <label>Total pages</label>
-                        <input value={totalPages} onChange={(e) => setTotalPages(e.target.value.replace(/[^\d]/g, ''))} placeholder="e.g. 350" />
-                      </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Started reading</label>
-                      <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                    </div>
-
-                    <div className="form-section-header" data-belongs-to="overview">
-                      <span className="form-section-title">Rating &amp; completion</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Rating</label>
-                      <RatingPicker value={rating} onChange={setRating} />
-                    </div>
-                    <div className="field-group">
-                      <label>Completion date</label>
-                      <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
-                    </div>
-
-                    <div className="form-section-header" data-belongs-to="notes">
-                      <span className="form-section-title">Review</span>
-                      <span className="form-section-hint">Your take · with optional spoiler toggle</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Review</label>
-                      <textarea value={bookReview} onChange={(e) => setBookReview(e.target.value)} rows={4} placeholder="Your review" />
-                      {bookReview.trim() && (
-                        <div className="field-inline">
-                          <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(!hasSpoilers)}>Contains spoilers</button>
-                        </div>
-                      )}
-                    </div>
-                    <ChapterNotesEditor entries={chapterNotes} onChange={setChapterNotes} />
-
-                    <div className="form-section-header" data-belongs-to="history">
-                      <span className="form-section-title">Reread history</span>
-                      <span className="form-section-hint">Log each reread with date + optional rating and notes</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Rereads</label>
-                      <RewatchListEditor
-                        rewatches={rewatches}
-                        onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
-                        onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
-                        onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
-                        onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-                      />
-                    </div>
-
-                    <div className="form-section-header" data-belongs-to="related">
-                      <span className="form-section-title">Related &amp; recommendations</span>
-                    </div>
-                    <div className="field-group">
-                      <label>Franchise</label>
-                      <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Cosmere, Middle-earth…" />
-                    </div>
-                    <div className="field-group">
-                      <label>Related books</label>
-                      <RelatedListEditor
-                        related={relatedItems}
-                        options={items.filter((i) => i.categoryId === 'libros' && i.id !== editingId)}
-                        crossLibrary
-                        allItems={relatedCrossLibraryOptions}
-                        onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
-                        onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
-                        onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-                        pickerPlaceholder="Add related item… (any library)"
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label>Recommendations</label>
-                      <RecommendationsEditor
-                        ids={recommendedItems}
-                        options={items.filter((i) => i.categoryId === 'libros' && i.id !== editingId)}
-                        onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
-                        onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-                        pickerPlaceholder="Add recommended book…"
-                      />
-                    </div>
-                  </>
+                {activeCategory === 'libros' && (
+                  <BookEditorSection
+                    editingId={editingId}
+                    items={items}
+                    relatedCrossLibraryOptions={relatedCrossLibraryOptions}
+                    bookStatus={bookStatus} setBookStatus={setBookStatus}
+                    mangaAuthors={mangaAuthors} setMangaAuthors={setMangaAuthors}
+                    bookFormat={bookFormat} setBookFormat={setBookFormat}
+                    pubStatus={pubStatus} setPubStatus={setPubStatus}
+                    publisher={publisher} setPublisher={setPublisher}
+                    isbn={isbn} setIsbn={setIsbn}
+                    saga={saga} setSaga={setSaga}
+                    sagaIndex={sagaIndex} setSagaIndex={setSagaIndex}
+                    bookSource={bookSource} setBookSource={setBookSource}
+                    translator={translator} setTranslator={setTranslator}
+                    description={description} setDescription={setDescription}
+                    pagesRead={pagesRead} setPagesRead={setPagesRead}
+                    totalPages={totalPages} setTotalPages={setTotalPages}
+                    startDate={startDate} setStartDate={setStartDate}
+                    rating={rating} setRating={setRating}
+                    finishedAt={finishedAt} setFinishedAt={setFinishedAt}
+                    bookReview={bookReview} setBookReview={setBookReview}
+                    hasSpoilers={hasSpoilers} setHasSpoilers={setHasSpoilers}
+                    chapterNotes={chapterNotes} setChapterNotes={setChapterNotes}
+                    rewatches={rewatches} setRewatches={setRewatches}
+                    franchise={franchise} setFranchise={setFranchise}
+                    relatedItems={relatedItems} setRelatedItems={setRelatedItems}
+                    recommendedItems={recommendedItems} setRecommendedItems={setRecommendedItems}
+                  />
                 )}
 
                     {activeCategory === 'musica' && (
@@ -6080,6 +5530,21 @@ function App() {
         </Suspense>
       )}
 
+      {tagHierarchyOpen && (
+        <Suspense fallback={null}>
+          <TagHierarchyModal
+            items={items}
+            tagTree={settings.tagTree}
+            onClose={() => setTagHierarchyOpen(false)}
+            onSave={(next) => {
+              setSettings((s) => ({ ...s, tagTree: next }))
+              const count = Object.keys(next).length
+              setToast(count === 0 ? 'Tag hierarchy cleared' : `Tag hierarchy saved (${count} nested tag${count === 1 ? '' : 's'})`)
+            }}
+          />
+        </Suspense>
+      )}
+
       {genreNormalizerOpen && (
         <GenreNormalizerModal
           items={items}
@@ -6247,6 +5712,18 @@ function App() {
         onAddToGroup={bulkAddToGroup}
         onMoveToLibrary={bulkMoveToLibrary}
         onDelete={bulkDelete}
+        onExportHtml={async () => {
+          const picked = items.filter((i) => selectedIds.has(i.id))
+          if (picked.length === 0) return
+          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Choose where to export the selection')
+          if (!dir) return
+          const includesMusic = picked.some((i) => i.categoryId === 'musica')
+          const scopedArtists = includesMusic ? musicArtists : []
+          const html = buildStaticSiteHtml(picked, scopedArtists, `Omnio selection (${picked.length} items)`)
+          const r = await window.ipcRenderer.invoke('export:site', dir, html)
+          if (r?.ok) setToast(`Exported ${picked.length} items to ${r.path}`)
+          else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
+        }}
       />
 
       {sgdbOpen && (
@@ -6297,109 +5774,21 @@ function App() {
         />
       )}
 
-      {anilistOpen && (
-        <AniListFetcher
-          initialQuery={title}
-          kind={anilistOpen}
-          categoryId={activeCategory}
-          onApply={applyAniListPatch}
-          onClose={() => setAnilistOpen(null)}
-        />
-      )}
-
-      {jikanOpen && (
-        <JikanFetcher
-          initialQuery={title}
-          kind={jikanOpen}
-          categoryId={activeCategory}
-          onApply={applyAniListPatch}
-          onClose={() => setJikanOpen(null)}
-        />
-      )}
-
-      {tmdbOpen && (
-        <TmdbFetcher
-          apiKey={settings.tmdbApiKey}
-          initialQuery={title}
-          kind={tmdbOpen}
-          categoryId={activeCategory}
-          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'TMDb')}
-          onClose={() => setTmdbOpen(null)}
-        />
-      )}
-
-      {igdbOpen && (
-        <IgdbFetcher
-          clientId={settings.igdbClientId}
-          clientSecret={settings.igdbClientSecret}
-          initialQuery={title}
-          onApply={(p, c, b, h) => applyFetchedPatch(p, c, b, 'IGDB', h)}
-          onClose={() => setIgdbOpen(false)}
-        />
-      )}
-
-      {mbOpen && (
-        <MusicBrainzFetcher
-          initialQuery={title}
-          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'MusicBrainz')}
-          onClose={() => setMbOpen(false)}
-        />
-      )}
-
-      {vgmdbOpen && (
-        <VgmdbFetcher
-          initialQuery={title}
-          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'VGMdb')}
-          onClose={() => setVgmdbOpen(false)}
-        />
-      )}
-
-      {comicvineOpen && (
-        <ComicVineFetcher
-          apiKey={settings.comicvineApiKey}
-          initialQuery={title}
-          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'ComicVine')}
-          onClose={() => setComicvineOpen(false)}
-        />
-      )}
-
-      {openLibraryOpen && (
-        <Suspense fallback={null}>
-          <OpenLibraryFetcher
-            initialQuery={title}
-            onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'OpenLibrary')}
-            onClose={() => setOpenLibraryOpen(false)}
-          />
-        </Suspense>
-      )}
-
-      {mangadexOpen && (
-        <MangaDexFetcher
-          initialQuery={title}
-          categoryId={activeCategory}
-          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'MangaDex')}
-          onClose={() => setMangadexOpen(false)}
-        />
-      )}
-
-      {kitsuOpen && (
-        <KitsuFetcher
-          initialQuery={title}
-          kind={kitsuOpen}
-          categoryId={activeCategory}
-          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'Kitsu')}
-          onClose={() => setKitsuOpen(null)}
-        />
-      )}
-
-      {anidbOpen && (
-        <AniDBFetcher
-          anidbClient={settings.anidbClient}
-          categoryId={activeCategory}
-          onApply={(p, c, b) => applyFetchedPatch(p, c, b, 'AniDB')}
-          onClose={() => setAnidbOpen(false)}
-        />
-      )}
+      {/* Single registry-driven fetcher slot. `activeFetcher` holds the
+          registration id; the render function binds every per-source
+          detail (apiKey, kind, initialUrl, hints). Toast label follows
+          the registration's own `label`. */}
+      {activeFetcher && (() => {
+        const reg = getFetchersFor(activeCategory).find((r) => r.id === activeFetcher)
+        if (!reg) return null
+        return reg.render({
+          initialQuery: title,
+          categoryId: activeCategory,
+          settings,
+          onApply: (p, c, b, h) => applyFetchedPatch(p, c, b, reg.label, h),
+          onClose: () => setActiveFetcher(null),
+        })
+      })()}
 
       {malOpen && (
         <MalImporter

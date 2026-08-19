@@ -634,3 +634,78 @@
   outline-color: var(--accent);
   background: var(--accent-soft);
 }
+
+/* Tag hierarchy editor rows — flat list with per-row parent picker. */
+.tag-hierarchy-list {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 8px;
+}
+.tag-hierarchy-row {
+  display: grid;
+  grid-template-columns: 1fr auto minmax(160px, 220px);
+  gap: 10px;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+}
+.tag-hierarchy-child { font-weight: 600; font-size: 13px; }
+.tag-hierarchy-arrow { font-size: 11.5px; color: var(--text-dim); }
+.tag-hierarchy-row select {
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 4px 6px; font-size: 12.5px;
+}
+
+/* Randomizer pick preview: cover keeps its category-native aspect ratio
+   (set inline per-item), never overflows the modal, and falls back to a
+   letter tile when there's no cover on file. */
+.randomizer-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.randomizer-pick-cover {
+  display: block;
+  width: min(280px, 70%);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+}
+.randomizer-pick-cover:hover { border-color: var(--accent); }
+.randomizer-pick-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.randomizer-pick-cover span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-display);
+  font-size: 42px;
+  color: var(--text-dim);
+}
+.randomizer-pick-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+}
+.randomizer-pick-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

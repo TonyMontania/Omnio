@@ -1,18 +1,92 @@
 .form { display: flex; flex-wrap: wrap; gap: 16px; }
 
-.form input, .form textarea, .form select {
-  width: 100%;
-  padding: 9px 11px;
+/* Global text-input theming — mirrors the `.secondary-btn` look so
+   every text field feels part of the same visual language as the
+   buttons around it (surface-2 fill, border, dim text, subtle
+   accent on focus). Wrapped in :where() so the specificity stays
+   at 0 — any class-specific input styles (`.arcade-detail-title`,
+   `.track-name-cell`, etc.) still override these defaults. */
+:where(
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="url"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"],
+  input[type="month"],
+  input:not([type]),
+  textarea,
+  select
+) {
+  padding: 8px 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-size: 13.5px;
+  font-size: 13px;
   font-family: var(--font-body);
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  outline: none;
+}
+:where(
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="url"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"],
+  input[type="month"],
+  input:not([type]),
+  textarea,
+  select
+):hover {
+  border-color: var(--text-faint);
+}
+:where(
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="url"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"],
+  input[type="month"],
+  input:not([type]),
+  textarea,
+  select
+):focus {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+:where(input, textarea)::placeholder { color: var(--text-faint); }
+
+/* Autofilled inputs — Chromium paints the yellow autofill background
+   over our theme. Force the theme tokens back with the shadow trick. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 0 30px var(--surface-2) inset;
+  caret-color: var(--text);
 }
 
-.form input:focus, .form textarea:focus, .form select:focus { border-color: var(--accent); }
+/* Legacy `.form` scoping — kept for anything that relied on the
+   width: 100% behaviour, but the visual look now flows from the
+   global rule above. */
+.form input, .form textarea, .form select { width: 100%; }
 
 .field-group { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 
@@ -758,4 +832,20 @@
   background: var(--surface);
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* Native <input type="date"> — Chromium's calendar picker icon is a
+   dark glyph that vanishes on our dark themes. Invert + tint it so the
+   button stays visible in every theme. On light themes the invert
+   would flip it white on white, so the light rule turns it back to a
+   neutral gray. */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(1) hue-rotate(20deg) saturate(3);
+  cursor: pointer;
+  opacity: 0.85;
+  padding: 2px;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+.app[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.4);
 }

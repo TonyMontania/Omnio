@@ -8,6 +8,16 @@ import { useMemo, useState } from 'react'
 import type { Item } from './types'
 import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
+import { DiceIcon } from './icons'
+
+// Each library has a canonical cover ratio so the pick preview doesn't
+// distort or scroll. Music covers are square; movies use the theatrical
+// 2:3 poster; series/anime/manga/books/comics all follow book-style 3:4.
+function coverAspect(categoryId: string): string {
+  if (categoryId === 'musica') return '1 / 1'
+  if (categoryId === 'peliculas') return '2 / 3'
+  return '3 / 4'
+}
 
 interface Props {
   items: Item[]
@@ -75,7 +85,12 @@ export default function RandomizerModal({ items, enabledCategories, onOpenItem, 
 
           {pick ? (
             <div className="randomizer-pick">
-              <button type="button" className="randomizer-pick-cover" onClick={() => { onOpenItem(pick); onClose() }}>
+              <button
+                type="button"
+                className="randomizer-pick-cover"
+                onClick={() => { onOpenItem(pick); onClose() }}
+                style={{ aspectRatio: coverAspect(pick.categoryId) }}
+              >
                 {pick.cover
                   ? <img src={assetSrc(pick.cover)} alt="" />
                   : <span>{pick.title.charAt(0).toUpperCase()}</span>}
@@ -94,7 +109,11 @@ export default function RandomizerModal({ items, enabledCategories, onOpenItem, 
         </div>
         <div className="modal-footer">
           <button type="button" className="ghost-btn" onClick={onClose}>Close</button>
-          <button type="button" className="secondary-btn" disabled={pool.length < 2} onClick={() => setRollNonce((n) => n + 1)}>🎲 Re-roll</button>
+          <button type="button" className="secondary-btn" disabled={pool.length < 2} onClick={() => setRollNonce((n) => n + 1)}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <DiceIcon /> Re-roll
+            </span>
+          </button>
           <button type="button" className="primary-btn" disabled={!pick} onClick={() => { if (pick) { onOpenItem(pick); onClose() } }}>Open</button>
         </div>
       </div>

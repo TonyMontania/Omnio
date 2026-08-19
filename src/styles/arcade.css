@@ -1,0 +1,497 @@
+/* Arcade section — score / 1cc tracker for shmups. Layout is
+   deliberately dense and compact, mirroring doopu's Touhou 1CC
+   Tracker: every game becomes a small header + mini-grid that flows
+   in a wrap layout. Cells are tiny plain squares. */
+
+.arcade-view {
+  padding: 12px 24px 32px;
+  overflow-y: auto;
+}
+
+.arcade-chart-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.arcade-chart-header h1,
+.arcade-chart-header h2 {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0;
+  color: var(--text);
+}
+.arcade-chart-subhead { margin-top: 30px; }
+.arcade-chart-subhead h2 { font-size: 13px; }
+
+.arcade-empty {
+  padding: 28px;
+  text-align: center;
+  color: var(--text-dim);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+.arcade-chart-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 22px 26px;
+}
+
+/* ---- Mini-grid card ---- */
+
+.arcade-mini-card {
+  /* flex-start on both axes keeps the table at its natural content
+     width — otherwise the default `stretch` would expand a 3-column
+     grid to match the width of a wider logo above it, spacing the
+     cells out. */
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.arcade-mini-table { width: auto; }
+/* Header: game logo displayed BIG at its natural aspect ratio (like a
+   Steam library logo), sized to roughly match the width of the grid
+   below. The header itself is a FIXED-HEIGHT box so every card's grid
+   starts at exactly the same Y-position on the row, regardless of the
+   logo's aspect ratio. The logo sits at the bottom of the header box
+   (justify-content: flex-end), abbreviation right below it. */
+.arcade-mini-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 4px;
+  background: transparent;
+  border: 0;
+  padding: 0 0 8px;
+  color: var(--text);
+  cursor: pointer;
+  width: 220px;
+  height: 160px;
+}
+.arcade-mini-header:hover .arcade-mini-abbr,
+.arcade-mini-header:hover .arcade-mini-abbr-only { color: var(--accent); }
+.arcade-mini-header:hover .arcade-mini-logo { opacity: 0.85; }
+
+.arcade-mini-logo {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  max-height: 130px;
+  object-fit: contain;
+  transition: opacity 120ms ease;
+}
+.arcade-mini-abbr {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  padding-left: 2px;
+}
+/* When there's no logo, the compact one-line label is the whole
+   header — no wasted vertical space. */
+.arcade-mini-abbr-only {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  padding-left: 2px;
+}
+.arcade-mini-empty {
+  padding: 8px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.arcade-mini-table {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+}
+.arcade-mini-diff {
+  padding: 0 8px 0 0;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-align: right;
+  min-width: 14px;
+}
+.arcade-mini-td { padding: 0; }
+.arcade-mini-cell {
+  display: block;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+  transition: background 100ms;
+}
+.arcade-mini-cell:hover {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+/* Flag states — a cleared cell fills with accent-soft, then extra
+   flags layer visual markers on top. */
+.arcade-mini-cell.cleared { background: var(--accent-soft); }
+.arcade-mini-cell.is-1cc  { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.arcade-mini-cell.is-nm {
+  background: linear-gradient(135deg, var(--accent-soft) 50%, var(--accent) 50%);
+}
+.arcade-mini-cell.is-nb {
+  background: linear-gradient(45deg, var(--accent-soft) 50%, var(--accent) 50%);
+}
+.arcade-mini-cell.is-ex { border-style: dashed; border-color: var(--accent); }
+.arcade-mini-cell.is-paci { background: var(--accent); }
+
+.arcade-mini-codes td {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 4px 1px 0;
+  letter-spacing: 0.02em;
+  min-width: 26px;
+  vertical-align: top;
+}
+
+/* ---- Legend ---- */
+
+.arcade-legend {
+  margin-top: 28px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.arcade-legend-title {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.arcade-legend-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.arcade-legend-row .arcade-mini-cell {
+  cursor: default;
+  width: 12px;
+  height: 12px;
+}
+
+/* ---- Template picker ---- */
+
+.arcade-template-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.arcade-template-list button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.arcade-template-list button:hover { border-color: var(--accent); }
+.arcade-template-list .picker-title { font-weight: 600; font-size: 13.5px; font-family: var(--font-mono); }
+.arcade-template-list .picker-desc  { font-size: 12px; color: var(--text-dim); }
+
+/* ---- Detail view (unchanged from previous iteration) ---- */
+
+.arcade-detail { padding: 4px 32px 32px; overflow-y: auto; }
+.arcade-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.arcade-detail-title {
+  flex: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.arcade-detail-title:focus { border-color: var(--border); background: var(--surface-2); outline: none; }
+.arcade-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.arcade-stat {
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.arcade-stat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+.arcade-stat-value { font-family: var(--font-display); font-size: 22px; font-weight: 600; }
+.arcade-stat-sub { font-size: 11px; color: var(--text-dim); }
+
+.arcade-section { margin-top: 20px; }
+.arcade-section h3 {
+  font-family: var(--font-display);
+  font-size: 15px;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+
+/* ---- Run editor (unchanged) ---- */
+
+.arcade-run-editor { display: flex; flex-direction: column; gap: 12px; }
+.arcade-run-form {
+  padding: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.arcade-flag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.arcade-run-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.arcade-run-table th, .arcade-run-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-soft);
+}
+.arcade-run-table th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  border-bottom: 1px solid var(--border);
+}
+.arcade-flag-tag {
+  display: inline-block;
+  padding: 1px 5px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  border-radius: 3px;
+  margin-right: 3px;
+}
+
+/* Detail-view grid now reuses the compact mini-grid component — same
+   dense look as the arcade chart page. Wrapper just anchors the
+   embedded mini-grid to the left. */
+.arcade-detail-grid-wrap {
+  display: inline-block;
+  padding: 4px 0;
+}
+
+/* ---- New-game modal + section head + type picker ---- */
+
+.arcade-new-form { display: flex; flex-direction: column; gap: 14px; }
+.arcade-cover-drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  overflow: hidden;
+  cursor: pointer;
+}
+.arcade-cover-drop input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+}
+.arcade-cover-drop img { max-height: 100%; max-width: 100%; object-fit: contain; }
+.arcade-cover-drop[data-dropzone-active="1"] { border-color: var(--accent); background: var(--accent-soft); }
+
+.arcade-type-picker { display: flex; gap: 10px; }
+.arcade-type-tile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text);
+  text-align: left;
+}
+.arcade-type-tile:hover { border-color: var(--accent); }
+.arcade-type-tile.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft); }
+.arcade-type-title { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; }
+.arcade-type-desc { font-size: 12px; color: var(--text-dim); }
+
+.arcade-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ---- Grid axes editor ---- */
+
+.grid-editor { display: flex; flex-direction: column; gap: 16px; margin-bottom: 10px; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text);
+}
+.tag-chip button {
+  background: transparent; border: 0; color: var(--text-dim); cursor: pointer;
+  padding: 0; font-size: 11px;
+}
+.tag-chip button:hover { color: var(--accent); }
+.field-inline-add {
+  display: flex;
+  gap: 6px;
+}
+.field-inline-add input { flex: 1; }
+.field-inline-add button {
+  padding: 4px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.field-inline-add button:hover { border-color: var(--accent); color: var(--accent); }
+.grid-editor-chars { display: flex; flex-direction: column; gap: 4px; }
+.grid-editor-char {
+  display: grid;
+  grid-template-columns: 1fr 80px 24px;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+}
+.grid-editor-char-name { font-size: 13px; }
+.grid-editor-code {
+  max-width: 80px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+.grid-editor-char > button {
+  background: transparent; border: 0; color: var(--text-dim); cursor: pointer;
+  padding: 0; font-size: 14px;
+}
+.grid-editor-char > button:hover { color: #b04a4a; }
+
+/* ---- Score-log card grid (type='score' games on the main page) ---- */
+
+.arcade-score-flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.arcade-score-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+.arcade-score-card:hover { border-color: var(--accent); }
+.arcade-score-cover {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex: 0 0 40px;
+}
+.arcade-score-body { flex: 1; min-width: 0; }
+.arcade-score-title { font-weight: 600; font-size: 13.5px; }
+.arcade-score-pb {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.arcade-badge {
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* ---- Detail logo ---- */
+.arcade-detail-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 6px;
+  flex: 0 0 56px;
+  background: var(--surface-2);
+  padding: 4px;
+}
+
+/* Score-log card logo (main chart page) */
+.arcade-score-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 6px;
+  flex: 0 0 72px;
+  background: var(--surface);
+  padding: 6px;
+}

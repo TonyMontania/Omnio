@@ -7,7 +7,7 @@
   color: var(--text-faint);
   padding-left: 2px;
 }
-.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
 .theme-swatch { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-md); cursor: pointer; color: var(--text); text-align: left; transition: border-color 0.15s, transform 0.15s; }
 .theme-swatch:hover { border-color: var(--accent); transform: translateY(-1px); }
 .theme-swatch.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
@@ -87,27 +87,36 @@
 .library-toggle-icon { display: inline-flex; width: 20px; color: var(--text-dim); }
 .library-toggle-icon svg { width: 18px; height: 18px; }
 
+/* Settings has its own inner sidebar (Look & feel / Libraries / Data /
+   Maintenance) — those live inside the .content column of the app
+   shell, so no negative margins are needed. The old rules used
+   calc(100% + 64px) + margin: 0 -32px to butt against the window edge
+   back when there was no persistent left sidebar; that trick left a
+   visible gap once the sidebar was reinstated. */
 .settings-layout {
   display: grid;
   grid-template-columns: 220px 1fr;
   gap: 0;
-  width: calc(100% + 64px);
+  width: 100%;
   flex: 1;
   min-height: 0;
-  margin: 0 -32px;
 }
-.app[data-density="compact"] .settings-layout {
-  width: calc(100% + 40px);
-  margin: 0 -20px;
-}
+/* Pinned styles — the settings nav is intentionally density-agnostic so
+   users get the same look in both comfortable and compact mode. All the
+   values below are hard-coded and shouldn't respond to the global
+   density attribute. */
 .settings-sidebar {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 16px 12px 20px 32px;
+  padding: 16px 12px 20px 20px;
   border-right: 1px solid var(--border-soft);
   overflow-y: auto;
   background: var(--surface);
+}
+.app[data-density="compact"] .settings-sidebar,
+.app[data-density="comfortable"] .settings-sidebar {
+  padding: 16px 12px 20px 20px;
 }
 .settings-sidebar .settings-nav-btn {
   display: flex;
@@ -123,6 +132,11 @@
   font-family: var(--font-body);
   border-radius: var(--radius-sm);
   transition: background 0.12s, color 0.12s;
+}
+.app[data-density="compact"] .settings-sidebar .settings-nav-btn,
+.app[data-density="comfortable"] .settings-sidebar .settings-nav-btn {
+  padding: 9px 14px;
+  font-size: 13.5px;
 }
 .settings-sidebar .settings-nav-btn:hover { background: var(--surface-2); color: var(--text); }
 .settings-sidebar .settings-nav-btn.active {
@@ -151,7 +165,7 @@
 .settings-sidebar .settings-nav-group-label:first-child { margin-top: 0; }
 .settings-main {
   padding: 16px 32px 32px 28px;
-  overflow-y: auto;
+  overflow: auto;             /* both axes — content is content-sized */
   min-width: 0;
 }
 .settings-form {
