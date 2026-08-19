@@ -20,7 +20,7 @@
 # Stage 1 — Build the Vite + Electron bundles.
 # Produces dist/ (renderer) and dist-electron/ (main + preload).
 # ---------------------------------------------------------------------------
-FROM node:20-bookworm-slim AS build
+FROM node:22-bookworm-slim AS build
 
 WORKDIR /src
 
