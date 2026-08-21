@@ -719,6 +719,7 @@ function App() {
   const [musicReview, setMusicReview] = useState('')
   const [mangaSource, setMangaSource] = useState<MangaSource | ''>('')
   const [mediaOwnership, setMediaOwnership] = useState<MediaOwnership | ''>('')
+  const [discCount, setDiscCount] = useState('')
   const [mangadexId, setMangadexId] = useState('')
   const [magazine, setMagazine] = useState('')
   const [mangaReview, setMangaReview] = useState('')
@@ -1255,7 +1256,7 @@ function App() {
     setMusicSource(''); setProducers([]); setMusicReview(''); setVinylCondition('')
     setUnitCount(''); setStartYear(''); setEndYear(''); setUnits([])
     setMangaAuthors([]); setMangaArtists([]); setVolumeCovers([]); setMangaDescription(''); setPubStatus(''); setReadingStatus('plan_to_read')
-    setMangaSource(''); setMagazine(''); setMangaReview(''); setHasChapters(false); setChapters([]); setMediaOwnership(''); setMangadexId('')
+    setMangaSource(''); setMagazine(''); setMangaReview(''); setHasChapters(false); setChapters([]); setMediaOwnership(''); setMangadexId(''); setDiscCount('')
     setBookStatus('plan_to_read'); setBookFormat(''); setBookSource(''); setPagesRead(''); setTotalPages(''); setPublisher(''); setSaga(''); setSagaIndex(''); setIsbn(''); setTranslator(''); setBookReview('')
     setMovieSource(''); setMovieReview('')
     setGameSource(''); setOriginalWorkId(''); setGameReview('')
@@ -1438,6 +1439,7 @@ function App() {
     setMangaSource(item.mangaSource ?? '')
     setMagazine(item.magazine ?? '')
     setMediaOwnership(item.mediaOwnership ?? '')
+    setDiscCount(item.discCount ?? '')
     setMangadexId(item.mangadexId ?? '')
     setMangaReview(item.mangaReview ?? '')
     setHasChapters(item.hasChapters ?? false)
@@ -2104,6 +2106,7 @@ function App() {
         mangaSource: mangaSource || undefined,
         magazine: magazine.trim() || undefined,
         mediaOwnership: mediaOwnership || undefined,
+        discCount: discCount.trim() || undefined,
         mangadexId: mangadexId.trim() || undefined,
         ageRating: ageRating || undefined,
         mangaReview: mangaReview.trim() || undefined,
@@ -2175,6 +2178,13 @@ function App() {
         musicReview: musicReview.trim() || undefined,
         hasSpoilers: musicReview.trim() ? hasSpoilers : undefined,
         vinylCondition: vinylCondition || undefined,
+        // Music now also uses mediaOwnership (physical / digital / both /
+        // neither) and discCount for multi-disc CDs / vinyl sets. Both
+        // were previously only saved on manga items, which meant the
+        // Format dropdown in the music editor silently threw its value
+        // away on save.
+        mediaOwnership: mediaOwnership || undefined,
+        discCount: (mediaOwnership === 'physical' || mediaOwnership === 'both') ? (discCount.trim() || undefined) : undefined,
         rewatches: rewatches.length > 0 ? rewatches : undefined,
         relatedItems: relatedItems.length > 0 ? relatedItems : undefined,
         recommendedItems: recommendedItems.length > 0 ? recommendedItems : undefined,
@@ -2607,7 +2617,10 @@ function App() {
   }
   type PageCount = { n: number; unit: string }
   const pageMeta: { icon: React.ReactNode; title: string; count?: PageCount; onBack?: () => void; actions?: React.ReactNode; chips?: PageChip[] } | null = (() => {
+    // Home and Arcade own their whole viewport (hero header + widgets
+    // or grid), so the shell doesn't add a topbar on top.
     if (specialView === 'home') return null
+    if (specialView === 'arcade') return null
     if (specialView === 'calendar') return { icon: <CalendarIcon />, title: 'Release calendar' }
     if (specialView === 'stats') return { icon: <InsightsIcon />, title: 'Statistics' }
     if (specialView === 'settings') return { icon: <SettingsIcon />, title: 'Settings' }
@@ -2734,7 +2747,7 @@ function App() {
         />
 
         <div className="main-column">
-      {specialView === 'none' && pageMeta && (
+      {pageMeta && (
         <nav className="topnav">
           <div className="topnav-page">
             {pageMeta.onBack && (
@@ -4212,6 +4225,13 @@ function App() {
                         <p className="about-line">Local-only. No accounts, no telemetry, no cloud. Your data lives in this machine.</p>
                         <p className="about-section-title">New in this release</p>
                         <ul className="about-changelog">
+                          <li><b>Music — multi-disc tracklist</b> — new <b>Format</b> field (digital / physical / both) on the album editor; when physical is picked, a <b>Discs</b> input appears and the tracklist grows a Disc column + a "Disc 1 · N tracks" divider before each disc's block. The music detail view mirrors the split. Track order and per-track fields stay untouched for single-disc albums.</li>
+                          <li><b>Artist members — 4 tiers</b> — the old Current/Former toggle expanded to <b>Current</b> / <b>Current touring</b> / <b>Former</b> / <b>Former touring</b>. Additional per-role stints get a new <b>Touring</b> toggle for players who were only on stage for a specific run (e.g. Adam Christianson's touring rhythm guitar in 2012 / 2014–2015). The artist detail groups members into four sections and the band timeline reads the new membership tier through a helper that migrates the legacy <code>former: boolean</code> on the fly.</li>
+                          <li><b>Album Listened → cascade to tracks</b> — flipping the album's Listened pill to Yes marks every track as listened in one action. Flipping back to No leaves individual track listens intact.</li>
+                          <li><b>Fill-all-artists button, visible</b> — the shortcut existed in the tracklist editor as a text link the same colour as the accent, easy to miss. Restyled as a proper pill button between the header and the first row.</li>
+                          <li><b>Collections views regained the back button</b> — clicking a status chip (Backlog / Completed / Watched / Listened / …) drilled into a filtered view without any way back except the sidebar. The topbar now renders in every non-hero view again, restoring the ← Back button + count + chip row + Add button across all seven libraries.</li>
+                          <li><b>VGMdb removed from the Fetch metadata panel</b> — the community proxy at <code>vgmdb.info</code> has been unreachable (connect timeout to :443). The <code>VgmdbFetcher</code> component remains on disk so re-registering it is a one-line change the day the proxy comes back. Music now shows MusicBrainz as the only registered source.</li>
+                          <li><b>Better error messages on fetch failures</b> — <code>proxyJson</code> in the Electron main process now attaches <code>error.cause</code> to the toast and logs the URL + cause to the dev terminal. A generic "fetch failed" now reads as "fetch failed (Connect Timeout Error … vgmdb.info:443)" so debugging a flaky third-party doesn't require patching code.</li>
                           <li><b>Arcade — score / 1cc tracker</b> — new top-level section for shmups, arcade classics and any game where performance per attempt matters more than "did I finish it once". Two modes when you create a game: <b>Grid</b> (doopu-style character × difficulty chart with per-cell flags for 1cc / no-miss / no-bomb / pacifist / all-clear / extra-clear) or <b>Score log</b> (simple high-score list). Grids are compact mini-charts with a big logo header; you define the axes yourself. Persists to <code>data/arcadeGames.json</code>.</li>
                           <li><b>Persistent left sidebar</b> — brought back after being retired for the top-nav-only run. Brand + Home + every enabled library (with live item counts) + Search / Calendar / Random / Stats / Settings / Arcade. Collapses to a 56px icon rail with a chevron toggle; the state is remembered across launches.</li>
                           <li><b>Home widget board</b> — Home is now a drag-and-drop-able set of widgets rather than a fixed dashboard. Built-in widgets: Currently in progress, Upcoming (next 30 days), Recently rated ★4+, plus opt-in Libraries (rich portals) and a 1cc placeholder. Layout persists per user; adding a widget removes it from the picker so you can't stack duplicates.</li>
@@ -5063,6 +5083,8 @@ function App() {
                         musicType={musicType} setMusicType={setMusicType}
                         musicSource={musicSource} setMusicSource={setMusicSource}
                         vinylCondition={vinylCondition} setVinylCondition={setVinylCondition}
+                        mediaOwnership={mediaOwnership} setMediaOwnership={setMediaOwnership}
+                        discCount={discCount} setDiscCount={setDiscCount}
                         producers={producers} setProducers={setProducers}
                         releaseDate={releaseDate} setReleaseDate={setReleaseDate}
                         releaseYear={releaseYear} setReleaseYear={setReleaseYear}

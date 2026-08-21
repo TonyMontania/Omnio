@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Item, MusicArtist, MusicField } from './types'
-import { assetSrc, getBandStatusLabel } from './types'
+import { assetSrc, getBandStatusLabel, getMemberStatus } from './types'
 import ItemCard from './ItemCard'
 import BandTimeline from './components/BandTimeline'
 
@@ -47,8 +47,11 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
     ? `${artist.activeFrom || '?'} – ${artist.activeTo || 'present'}`
     : null
 
-  const currentMembers = (artist.members ?? []).filter((m) => !m.former)
-  const formerMembers = (artist.members ?? []).filter((m) => m.former)
+  const allMembers = artist.members ?? []
+  const currentMembers = allMembers.filter((m) => getMemberStatus(m) === 'current')
+  const currentTouringMembers = allMembers.filter((m) => getMemberStatus(m) === 'current-touring')
+  const formerMembers = allMembers.filter((m) => getMemberStatus(m) === 'former')
+  const formerTouringMembers = allMembers.filter((m) => getMemberStatus(m) === 'former-touring')
   const hasInfo = artist.origin || artist.bandStatus || (artist.genres && artist.genres.length > 0)
     || activePeriod || (artist.labels && artist.labels.length > 0) || (artist.members && artist.members.length > 0)
 
@@ -99,51 +102,38 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
           {artist.members && artist.members.length > 0 && (
             <div className="artist-info-block" style={{ gridColumn: '1 / -1' }}>
               <h4>Members</h4>
-              {currentMembers.length > 0 && (
-                <div className="artist-members">
-                  {currentMembers.map((m) => (
-                    <div key={m.id} className="artist-member-row">
-                      <span className="m-name">
-                        {m.name}
-                        {m.deceased && <span className="m-deceased" title="Deceased"> †</span>}
-                      </span>
-                      {m.roles.length > 0 && <span className="m-roles">— {m.roles.join(', ')}</span>}
-                      {m.joinedIn && <span className="m-period">· {m.joinedIn} – present</span>}
-                      {m.stints && m.stints.length > 0 && m.stints.map((s) => (
-                        <span key={s.id} className="m-stint">
-                          · also {s.roles.length > 0 ? s.roles.join(', ') : '—'}
-                          {(s.from || s.to) && ` (${s.from || '?'} – ${s.to || 'present'})`}
-                        </span>
+              {([
+                { list: currentMembers,        label: null,               formerish: false },
+                { list: currentTouringMembers, label: 'Touring members',  formerish: false },
+                { list: formerMembers,         label: 'Former members',   formerish: true  },
+                { list: formerTouringMembers,  label: 'Former touring',   formerish: true  },
+              ] as const).map((section, idx) => (
+                section.list.length === 0 ? null : (
+                  <div key={idx}>
+                    {section.label && <div className="artist-members-label">{section.label}</div>}
+                    <div className="artist-members">
+                      {section.list.map((m) => (
+                        <div key={m.id} className={section.formerish ? 'artist-member-row former' : 'artist-member-row'}>
+                          <span className="m-name">
+                            {m.name}
+                            {m.deceased && <span className="m-deceased" title="Deceased"> †</span>}
+                          </span>
+                          {m.roles.length > 0 && <span className="m-roles">— {m.roles.join(', ')}</span>}
+                          {(m.joinedIn || (section.formerish && m.leftIn)) && (
+                            <span className="m-period">· {m.joinedIn || '?'} – {section.formerish ? (m.leftIn || '?') : 'present'}</span>
+                          )}
+                          {m.stints && m.stints.length > 0 && m.stints.map((s) => (
+                            <span key={s.id} className="m-stint">
+                              · {s.touring ? 'touring' : 'also'} {s.roles.length > 0 ? s.roles.join(', ') : '—'}
+                              {(s.from || s.to) && ` (${s.from || '?'} – ${s.to || (section.formerish ? '?' : 'present')})`}
+                            </span>
+                          ))}
+                        </div>
                       ))}
                     </div>
-                  ))}
-                </div>
-              )}
-              {formerMembers.length > 0 && (
-                <>
-                  <div className="artist-members-label">Former members</div>
-                  <div className="artist-members">
-                    {formerMembers.map((m) => (
-                      <div key={m.id} className="artist-member-row former">
-                        <span className="m-name">
-                          {m.name}
-                          {m.deceased && <span className="m-deceased" title="Deceased"> †</span>}
-                        </span>
-                        {m.roles.length > 0 && <span className="m-roles">— {m.roles.join(', ')}</span>}
-                        {(m.joinedIn || m.leftIn) && (
-                          <span className="m-period">· {m.joinedIn || '?'} – {m.leftIn || '?'}</span>
-                        )}
-                        {m.stints && m.stints.length > 0 && m.stints.map((s) => (
-                          <span key={s.id} className="m-stint">
-                            · also {s.roles.length > 0 ? s.roles.join(', ') : '—'}
-                            {(s.from || s.to) && ` (${s.from || '?'} – ${s.to || '?'})`}
-                          </span>
-                        ))}
-                      </div>
-                    ))}
                   </div>
-                </>
-              )}
+                )
+              ))}
             </div>
           )}
         </div>

@@ -1290,7 +1290,17 @@ async function proxyJson<T = unknown>(
     const picked = opts?.pick ? opts.pick(json) : (json as T)
     return { ok: true, data: (picked ?? [] as unknown) as T }
   } catch (e) {
-    return { ok: false, error: (e as Error).message }
+    // Node's undici wraps every network failure (DNS, connection reset,
+    // TLS handshake, socket hang up, …) as a generic "fetch failed" —
+    // the actual detail lives on `error.cause`. Log both to the dev
+    // terminal so debugging a flaky third-party (e.g. vgmdb.info)
+    // doesn't require code changes just to see what happened.
+    const err = e as Error & { cause?: unknown }
+    const causeMsg = err.cause
+      ? (err.cause instanceof Error ? `${err.cause.message}` : String(err.cause))
+      : ''
+    console.error(`[proxyJson] ${url} — ${err.message}${causeMsg ? ` · cause: ${causeMsg}` : ''}`)
+    return { ok: false, error: causeMsg ? `${err.message} (${causeMsg})` : err.message }
   }
 }
 

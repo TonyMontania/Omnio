@@ -17,7 +17,6 @@ const MangaDexFetcher    = lazy(() => import('../MangaDexFetcher'))
 const MusicBrainzFetcher = lazy(() => import('../MusicBrainzFetcher'))
 const OpenLibraryFetcher = lazy(() => import('../OpenLibraryFetcher'))
 const TmdbFetcher        = lazy(() => import('../TmdbFetcher'))
-const VgmdbFetcher       = lazy(() => import('../VgmdbFetcher'))
 
 // AniList/Kitsu/Jikan/TMDb split their behavior by "kind". Anything
 // registered on both anime and manga (or peliculas and series) reads
@@ -179,20 +178,11 @@ const registrations: FetcherRegistration[] = [
       }),
     ),
   },
-  {
-    id: 'vgmdb',
-    label: 'VGMdb',
-    categories: ['musica'],
-    auth: 'none',
-    hint: 'Game & anime soundtracks, JP releases',
-    render: (ctx: FetcherContext) => suspense(
-      createElement(VgmdbFetcher, {
-        initialQuery: ctx.initialQuery,
-        onApply: ctx.onApply,
-        onClose: ctx.onClose,
-      }),
-    ),
-  },
+  // VGMdb intentionally NOT registered — its only public API is the
+  // community proxy vgmdb.info, which has been unreachable (connect
+  // timeout to :443) as of the 0.4.1 window. The fetcher component
+  // remains on disk so re-registering is a one-line change the day
+  // the proxy comes back.
   {
     id: 'openlibrary',
     label: 'OpenLibrary',

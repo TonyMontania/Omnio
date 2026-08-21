@@ -10,7 +10,7 @@ import type {
   SeriesStatus, SeriesFormat, SeriesField,
   MovieSource, MovieField, WatchLocation,
   BookStatus, BookFormat, BookSource, BookField,
-  AgeRating, RelationKind, Platform, BandStatus,
+  AgeRating, RelationKind, Platform, BandStatus, MemberStatus,
 } from './entities'
 
 // ---- Shared ----
@@ -106,6 +106,13 @@ export const BAND_STATUS_OPTIONS: { value: BandStatus; label: string }[] = [
   { value: 'hiatus', label: 'On hiatus' },
   { value: 'disbanded', label: 'Disbanded' },
   { value: 'unknown', label: 'Unknown' },
+]
+
+export const MEMBER_STATUS_OPTIONS: { value: MemberStatus; label: string; short: string }[] = [
+  { value: 'current',         label: 'Current',         short: 'Current'  },
+  { value: 'current-touring', label: 'Current touring', short: 'Touring'  },
+  { value: 'former',          label: 'Former',          short: 'Former'   },
+  { value: 'former-touring',  label: 'Former touring',  short: 'Ex-tour'  },
 ]
 
 // Free-form, but these seed the autocomplete for band member roles.

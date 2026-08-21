@@ -11,8 +11,8 @@
 // component becomes trivial to migrate: swap the prop bag for
 // `state.music` + `dispatch` and drop the individual setters.
 
-import type { AlbumEdition, Item, RelatedItem, MusicSource, MusicType, RewatchEntry, SingleCover, Track, VinylCondition } from '../../types'
-import { isAlbumLikeMusic, MUSIC_TYPE_OPTIONS, MUSIC_SOURCE_OPTIONS, VINYL_CONDITION_OPTIONS } from '../../types'
+import type { AlbumEdition, Item, RelatedItem, MediaOwnership, MusicSource, MusicType, RewatchEntry, SingleCover, Track, VinylCondition } from '../../types'
+import { isAlbumLikeMusic, MUSIC_TYPE_OPTIONS, MUSIC_SOURCE_OPTIONS, VINYL_CONDITION_OPTIONS, MEDIA_OWNERSHIP_OPTIONS } from '../../types'
 import TagEditor from './TagEditor'
 import TrackListEditor from './TrackListEditor'
 import RatingPicker from './RatingPicker'
@@ -36,6 +36,8 @@ export interface MusicEditorSectionProps {
   musicType: MusicType | '';            setMusicType: (v: MusicType | '') => void
   musicSource: MusicSource | '';        setMusicSource: (v: MusicSource | '') => void
   vinylCondition: VinylCondition | ''; setVinylCondition: (v: VinylCondition | '') => void
+  mediaOwnership: MediaOwnership | ''; setMediaOwnership: (v: MediaOwnership | '') => void
+  discCount: string;                    setDiscCount: (v: string) => void
   producers: string[];                  setProducers: Setter<string[]>
   releaseDate: string;                  setReleaseDate: (v: string) => void
   releaseYear: string;                  setReleaseYear: (v: string) => void
@@ -67,6 +69,8 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
     musicType, setMusicType,
     musicSource, setMusicSource,
     vinylCondition, setVinylCondition,
+    mediaOwnership, setMediaOwnership,
+    discCount, setDiscCount,
     producers, setProducers,
     releaseDate, setReleaseDate,
     releaseYear, setReleaseYear,
@@ -122,6 +126,31 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
           </select>
         </div>
       </div>
+      <div className="field-row">
+        <div className="field-group">
+          <label>Format</label>
+          <select value={mediaOwnership} onChange={(e) => {
+            const next = e.target.value as MediaOwnership | ''
+            setMediaOwnership(next)
+            // Purely digital or unset — no discs to count.
+            if (next === 'digital' || next === 'neither' || next === '') setDiscCount('')
+          }}>
+            <option value="">— unspecified</option>
+            {MEDIA_OWNERSHIP_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        {(mediaOwnership === 'physical' || mediaOwnership === 'both') && (
+          <div className="field-group">
+            <label>Discs</label>
+            <input
+              value={discCount}
+              onChange={(e) => setDiscCount(e.target.value)}
+              placeholder="e.g. 1 or 2"
+              inputMode="numeric"
+            />
+          </div>
+        )}
+      </div>
       <div className="field-group">
         <label>Vinyl condition <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>Goldmine grading scale — leave blank if you don't own a physical copy</span></label>
         <select value={vinylCondition} onChange={(e) => setVinylCondition(e.target.value as VinylCondition | '')}>
@@ -161,7 +190,14 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
           <div className="field-group">
             <label>Listened?</label>
             <div className="yesno">
-              <button type="button" className={consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(true)}>Listened</button>
+              <button type="button" className={consumed ? 'pill active' : 'pill'} onClick={() => {
+                setConsumed(true)
+                // Album flipped to Listened → cascade the flag onto every
+                // track so the tracklist reflects the same state without
+                // per-row clicks. Flipping back to "No" leaves the tracks
+                // alone (user might want to log individual listens later).
+                setTracks((prev) => prev.map((t) => (t.listened ? t : { ...t, listened: true })))
+              }}>Listened</button>
               <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>No</button>
             </div>
           </div>
@@ -176,6 +212,7 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
                 tracks={tracks}
                 mainArtist={artist}
                 albumTitle={title}
+                discCount={discCount}
                 onAdd={(t) => setTracks((prev) => [...prev, { ...t, id: crypto.randomUUID() }])}
                 onRemove={(id) => setTracks((prev) => prev.filter((t) => t.id !== id))}
                 onToggleFavorite={(id) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, favorite: !t.favorite } : t)))}
@@ -187,6 +224,7 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
                 onNumberChange={(id, number) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, number } : t)))}
                 onNameChange={(id, name) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, name } : t)))}
                 onDurationChange={(id, duration) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, duration } : t)))}
+                onDiscChange={(id, disc) => setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, disc: disc || undefined } : t)))}
               />
             )}
           </div>
@@ -269,7 +307,14 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
           <div className="field-group">
             <label>Listened?</label>
             <div className="yesno">
-              <button type="button" className={consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(true)}>Listened</button>
+              <button type="button" className={consumed ? 'pill active' : 'pill'} onClick={() => {
+                setConsumed(true)
+                // Album flipped to Listened → cascade the flag onto every
+                // track so the tracklist reflects the same state without
+                // per-row clicks. Flipping back to "No" leaves the tracks
+                // alone (user might want to log individual listens later).
+                setTracks((prev) => prev.map((t) => (t.listened ? t : { ...t, listened: true })))
+              }}>Listened</button>
               <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>No</button>
             </div>
           </div>

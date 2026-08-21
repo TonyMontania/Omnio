@@ -7,8 +7,8 @@
 // only shows when explicitly added.
 
 import { useState } from 'react'
-import type { BandMember, MemberStint } from '../../types'
-import { BAND_ROLE_SUGGESTIONS } from '../../types'
+import type { BandMember, MemberStint, MemberStatus } from '../../types'
+import { BAND_ROLE_SUGGESTIONS, MEMBER_STATUS_OPTIONS, getMemberStatus, isFormerMember } from '../../types'
 
 export default function BandMembersEditor({ members, onChange }: {
   members: BandMember[]
@@ -82,12 +82,25 @@ export default function BandMembersEditor({ members, onChange }: {
                 value={m.name}
                 onChange={(e) => patchMember(m.id, { name: e.target.value })}
               />
-              <button
-                type="button"
-                className={m.former ? 'pill active' : 'pill'}
-                onClick={() => patchMember(m.id, { former: !m.former })}
-                title="Toggle former member"
-              >{m.former ? 'Former' : 'Current'}</button>
+              <select
+                className="band-member-status"
+                value={getMemberStatus(m)}
+                onChange={(e) => {
+                  const next = e.target.value as MemberStatus
+                  // Also mirror the legacy `former` flag so any external
+                  // consumer that still reads it stays in sync. It's the
+                  // deprecated path; membership is the source of truth.
+                  patchMember(m.id, {
+                    membership: next,
+                    former: next === 'former' || next === 'former-touring',
+                  })
+                }}
+                title="Member status"
+              >
+                {MEMBER_STATUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
               <button
                 type="button"
                 className={m.deceased ? 'pill active band-member-deceased' : 'pill band-member-deceased'}
@@ -103,7 +116,7 @@ export default function BandMembersEditor({ members, onChange }: {
                 value={m.joinedIn ?? ''}
                 onChange={(e) => patchMember(m.id, { joinedIn: e.target.value })}
               />
-              {m.former && (
+              {isFormerMember(m) && (
                 <input
                   className="band-member-year"
                   placeholder="Left (e.g. 2004)"
@@ -148,7 +161,7 @@ export default function BandMembersEditor({ members, onChange }: {
               return (
                 <div key={s.id} className="band-stint">
                   <div className="band-stint-head">
-                    <span className="band-stint-label">Also</span>
+                    <span className="band-stint-label">{s.touring ? 'Touring' : 'Also'}</span>
                     <input
                       className="band-member-year"
                       placeholder="From"
@@ -161,6 +174,12 @@ export default function BandMembersEditor({ members, onChange }: {
                       value={s.to ?? ''}
                       onChange={(e) => patchStint(m.id, s.id, { to: e.target.value })}
                     />
+                    <button
+                      type="button"
+                      className={s.touring ? 'pill active' : 'pill'}
+                      onClick={() => patchStint(m.id, s.id, { touring: !s.touring })}
+                      title="Toggle: this stint was touring-only"
+                    >Touring</button>
                     <button type="button" className="track-remove" onClick={() => removeStint(m.id, s.id)}>✕</button>
                   </div>
                   {s.roles.length > 0 && (

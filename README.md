@@ -35,7 +35,7 @@
 - **Tabbed editor** — every item edits inside Overview / Identity / Progress / Media / History / Related / Notes tabs.
 - **Tag hierarchy** — nest tags under a parent (`jrpg → turn-based`, `jrpg → action`). Filters dropdown renders the tree indented, and picking a parent matches every descendant.
 - **Item timeline** — the rewatch / reread / replay / listen log on every detail modal renders as a vertical timeline (guide line + dot per entry + click-to-expand notes), newest first.
-- **One-click metadata + covers** from 13 sources across the 11 libraries — AniDB, AniList, ComicVine, IGDB, Kitsu, lrclib, MangaDex, MusicBrainz (with Cover Art Archive), OpenLibrary, PCGamingWiki, SteamGridDB, TMDb, VGMdb. Field mapping is documented in [`docs/FETCHER_FIELDS.md`](docs/FETCHER_FIELDS.md). Repeat searches are cached locally for 24 h.
+- **One-click metadata + covers** from 12 sources across the 11 libraries — AniDB, AniList, ComicVine, IGDB, Kitsu, lrclib, MangaDex, MusicBrainz (with Cover Art Archive), OpenLibrary, PCGamingWiki, SteamGridDB, TMDb. Field mapping is documented in [`docs/FETCHER_FIELDS.md`](docs/FETCHER_FIELDS.md). Repeat searches are cached locally for 24 h.
 - **Import**: MyAnimeList / AniList XML, Steam profile, Letterboxd, **Backloggd** (Games), **Serializd** (Series), **Spotify library** (Music), Kindle highlights (`My Clippings.txt`), Last.fm scrobbles, Trakt.tv, Discogs collection, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads vocab presets.
 - **Export**: HTML site (search + light/dark toggle built in) — bulk, per-category, per-selection or per-item; MAL-compatible XML for anime + manga; iCal (.ics) for the release calendar; per-category CSV for spreadsheet round-trip.
 - **In-app updater** — silent check at boot, one-click download of the exact build for your platform.
@@ -110,6 +110,9 @@ A `docker-compose.yml`, an Unraid template and detailed NAS notes live in [`pack
 - **Tag hierarchy** — nest tags (`jrpg → turn-based`, `jrpg → action`) under **Settings → Maintenance → Tag hierarchy**. Filters dropdown renders the tree indented; selecting a parent matches every descendant.
 - **Per-item timeline** — rewatches / rereads / replays / listen history render as a vertical timeline (guide line + dots + click-to-expand notes), sorted newest-first, on every detail modal.
 - **Arcade scoring** — separate section for shmups / arcade / bullet-hell games. Build your own character × difficulty grid with per-cell 1cc / no-miss / no-bomb / pacifist / all-clear / extra-clear markers, or fall back to a simple score log with flag tags.
+- **Music multi-disc tracklist** — new **Format** field (digital / physical / both) on the album editor; when physical is picked, a **Discs** input appears and the tracklist splits into "Disc 1 · N tracks" blocks. Single-disc albums render exactly as before.
+- **Band members with touring tiers** — Current / Current touring / Former / Former touring, with an optional **Touring** flag per role stint so members who only played specific tours (rhythm guitar 2015–present *plus touring* 2012, 2014–2015) render correctly on the band timeline.
+- **Album Listened → cascade to tracks** — flipping the album Listened pill to Yes marks every track as listened in one action.
 - **Rolling snapshots**: 5 automatic backups taken on each save; restore any of them from Settings.
 - **Yearly heatmap + Wrapped** end-of-year recap.
 - **Related items & franchise timelines** — link sequels, remakes, spin-offs, and see everything in the same franchise as a scrollable row.
@@ -139,7 +142,7 @@ For a full field-by-field reference (English + Spanish labels), see [`docs/FIELD
 
 ## Metadata sources
 
-13 sources wired directly into the editors — click the **↗** button on the "Fetch metadata" panel to search, pick and auto-fill. Keys go in **Settings → Data → Integrations**. Sorted alphabetically. Full field-coverage matrix (which fields each source populates and why others stay empty) at [`docs/FETCHER_FIELDS.md`](docs/FETCHER_FIELDS.md).
+12 sources wired directly into the editors — click the **↗** button on the "Fetch metadata" panel to search, pick and auto-fill. Keys go in **Settings → Data → Integrations**. Sorted alphabetically. Full field-coverage matrix (which fields each source populates and why others stay empty) at [`docs/FETCHER_FIELDS.md`](docs/FETCHER_FIELDS.md).
 
 | Source | Library | Auth |
 | --- | --- | --- |
@@ -155,9 +158,8 @@ For a full field-by-field reference (English + Spanish labels), see [`docs/FIELD
 | [PCGamingWiki](https://www.pcgamingwiki.com/) | Games — save + config paths per OS | No key |
 | [SteamGridDB](https://www.steamgriddb.com/) | Games — covers, banners, logos, heroes | Free API key |
 | [TMDb](https://www.themoviedb.org/) | Movies + Series — Series also fills first / last season year from the aired range | Free API key |
-| [VGMdb](https://vgmdb.net/) | Music — game/anime OSTs. Title, artist, alt titles, full release date, label, distributor, genres, producers (falling back to composers), tracklist, cover | No key |
 
-*MyAnimeList (via the Jikan proxy) was removed in v0.4.0 — the free proxy is chronically flaky. The `JikanFetcher` component is still on disk if you want to re-register it locally.*
+*MyAnimeList (via the Jikan proxy) was removed in v0.4.0, and **VGMdb** was removed in v0.4.1 — both of their community proxies (respectively `jikan.moe` and `vgmdb.info`) are chronically flaky or offline. The `JikanFetcher` and `VgmdbFetcher` components are still on disk if you want to re-register either locally when their upstream comes back.*
 
 ## Storage & portability
 

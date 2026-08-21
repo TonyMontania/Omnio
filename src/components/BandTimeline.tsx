@@ -13,6 +13,7 @@
 
 import { useMemo } from 'react'
 import type { BandMember, Item, MusicArtist } from '../types'
+import { isFormerMember } from '../types'
 
 interface Props {
   artist: MusicArtist
@@ -94,7 +95,7 @@ interface RowData {
 
 function segmentsFor(m: BandMember, bandStart: number, bandEnd: number, colorCache: Map<string, string>): RowData {
   const primaryStart = pickYear(m.joinedIn) ?? bandStart
-  const primaryEnd = m.former ? (pickYear(m.leftIn) ?? bandEnd) : bandEnd
+  const primaryEnd = isFormerMember(m) ? (pickYear(m.leftIn) ?? bandEnd) : bandEnd
   const primaryRole = m.roles[0] ?? 'Member'
   const primary: Segment = {
     fromYear: primaryStart,

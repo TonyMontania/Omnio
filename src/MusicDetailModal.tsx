@@ -161,66 +161,87 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
           <CustomFieldsView fields={item.customFields} />
       </div>
 
-      {albumLike && item.tracks && item.tracks.length > 0 && (
-        <div className="field-group music-tracklist">
-          <div className="tracklist-header-row">
-            <label>Tracklist</label>
-            {totalDuration && <span className="tracklist-total">Total: {totalDuration}</span>}
+      {albumLike && item.tracks && item.tracks.length > 0 && (() => {
+        // Group tracks by disc when the album is multi-disc. Parse
+        // discCount the same way the editor does — first digit wins.
+        const parsedDiscs = (() => {
+          const raw = (item.discCount ?? '').trim()
+          if (!raw) return 1
+          const m = /(\d+)/.exec(raw)
+          return m ? Math.max(1, Math.min(20, parseInt(m[1], 10))) : 1
+        })()
+        const isMultiDisc = parsedDiscs > 1
+        const groups: { disc: string; list: typeof item.tracks }[] = (() => {
+          if (!isMultiDisc) return [{ disc: '', list: item.tracks! }]
+          const map = new Map<string, typeof item.tracks>()
+          for (let d = 1; d <= parsedDiscs; d++) map.set(String(d), [])
+          for (const t of item.tracks!) {
+            const key = t.disc && map.has(t.disc) ? t.disc : '1'
+            map.get(key)!.push(t)
+          }
+          return Array.from(map.entries()).map(([disc, list]) => ({ disc, list: list! }))
+        })()
+
+        const renderRow = (t: typeof item.tracks[0]) => (
+          <tr key={t.id}>
+            <td className="col-fav">{t.favorite ? <span className="track-fav-star">★</span> : null}</td>
+            <td className="col-num">{t.number}</td>
+            <td className="col-title">{t.name}</td>
+            <td className="col-artist">
+              {(() => {
+                const raw = t.artist?.trim()
+                if (!raw) return null
+                const parts = raw.split(/\s*(?:,|&|\/|\bfeat\.?|\bft\.?|\sx\s)\s*/i).map((p) => p.trim()).filter(Boolean)
+                if (parts.length <= 1) return raw
+                return (
+                  <span className="track-artist-pills">
+                    {parts.map((p, i) => <span key={i} className="track-artist-pill">{p}</span>)}
+                  </span>
+                )
+              })()}
+            </td>
+            <td className="col-duration">{t.duration}</td>
+            <td className="col-rating">{t.rating ? <StarRatingDisplay value={t.rating} /> : null}</td>
+            <td className="col-listened">{t.listened ? '✓' : ''}</td>
+            <td className="col-lyrics">
+              <button type="button" className={t.lyrics ? 'lyrics-btn has-lyrics' : 'lyrics-btn'} onClick={() => openLyrics(t)}>
+                {t.lyrics ? 'View' : '+ Add'}
+              </button>
+            </td>
+            <td className="col-spacer"></td>
+          </tr>
+        )
+
+        return (
+          <div className="field-group music-tracklist">
+            <div className="tracklist-header-row">
+              <label>Tracklist</label>
+              {totalDuration && <span className="tracklist-total">Total: {totalDuration}</span>}
+            </div>
+            {groups.map(({ disc, list }) => (
+              <div key={disc || 'single'} className="track-disc-group">
+                {isMultiDisc && <div className="track-disc-divider">Disc {disc} <span className="track-disc-count">· {list.length} {list.length === 1 ? 'track' : 'tracks'}</span></div>}
+                <table className="track-table">
+                  <thead>
+                    <tr>
+                      <th className="col-fav"></th>
+                      <th className="col-num">#</th>
+                      <th className="col-title">Title</th>
+                      <th className="col-artist">Artist</th>
+                      <th className="col-duration">Duration</th>
+                      <th className="col-rating">Rating</th>
+                      <th className="col-listened">Listened</th>
+                      <th className="col-lyrics">Lyrics</th>
+                      <th className="col-spacer"></th>
+                    </tr>
+                  </thead>
+                  <tbody>{list.map(renderRow)}</tbody>
+                </table>
+              </div>
+            ))}
           </div>
-          <table className="track-table">
-            <thead>
-              <tr>
-                <th className="col-fav"></th>
-                <th className="col-num">#</th>
-                <th className="col-title">Title</th>
-                <th className="col-artist">Artist</th>
-                <th className="col-duration">Duration</th>
-                <th className="col-rating">Rating</th>
-                <th className="col-listened">Listened</th>
-                <th className="col-lyrics">Lyrics</th>
-                <th className="col-spacer"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {item.tracks.map((t) => (
-                <tr key={t.id}>
-                  <td className="col-fav">{t.favorite ? <span className="track-fav-star">★</span> : null}</td>
-                  <td className="col-num">{t.number}</td>
-                  <td className="col-title">{t.name}</td>
-                  <td className="col-artist">
-                    {(() => {
-                      // Split on the separators users actually type when a
-                      // track has more than one credited artist: comma, &,
-                      // "feat"/"ft" (with optional dot), and " x " (case-
-                      // insensitive, spaces around). Whitespace-only pieces
-                      // are dropped. Single-artist tracks render as one
-                      // pill; multi-artist tracks render one pill per name.
-                      const raw = t.artist?.trim()
-                      if (!raw) return null
-                      const parts = raw.split(/\s*(?:,|&|\/|\bfeat\.?|\bft\.?|\sx\s)\s*/i).map((p) => p.trim()).filter(Boolean)
-                      if (parts.length <= 1) return raw
-                      return (
-                        <span className="track-artist-pills">
-                          {parts.map((p, i) => <span key={i} className="track-artist-pill">{p}</span>)}
-                        </span>
-                      )
-                    })()}
-                  </td>
-                  <td className="col-duration">{t.duration}</td>
-                  <td className="col-rating">{t.rating ? <StarRatingDisplay value={t.rating} /> : null}</td>
-                  <td className="col-listened">{t.listened ? '✓' : ''}</td>
-                  <td className="col-lyrics">
-                    <button type="button" className={t.lyrics ? 'lyrics-btn has-lyrics' : 'lyrics-btn'} onClick={() => openLyrics(t)}>
-                      {t.lyrics ? 'View' : '+ Add'}
-                    </button>
-                  </td>
-                  <td className="col-spacer"></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        )
+      })()}
 
       {albumLike && item.singleCovers && item.singleCovers.length > 0 && (
         <div className="field-group single-covers-gallery">

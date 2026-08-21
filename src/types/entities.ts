@@ -219,6 +219,10 @@ export interface Track {
   rating?: number
   listened?: boolean
   lyrics?: string
+  // Disc number for multi-disc albums (physical releases). "1" for the
+  // first disc, "2" for the second, etc. Undefined = single-disc album
+  // or unassigned — the tracklist treats those as one flat list.
+  disc?: string
 }
 
 // A distinct release edition of an album (Deluxe, Japan, 10th Anniversary…),
@@ -257,18 +261,54 @@ export interface MemberStint {
   roles: string[]
   from?: string           // free-text year: "1998", "March 2003", "?"
   to?: string             // empty = still doing this role in this stint
+  // Marks this stint as a touring-only period — the member was on
+  // stage for the tour(s) but never joined the studio line-up (or
+  // switched instruments only for the road). Rendered with a dashed
+  // border on the band timeline.
+  touring?: boolean
+}
+
+// Membership tier — expands the old `former: boolean` toggle into four
+// buckets so touring musicians get their own visual group without
+// getting mixed into the studio line-up.
+//   - 'current'          — active studio member
+//   - 'current-touring'  — currently touring only (no studio credit)
+//   - 'former'           — past studio member
+//   - 'former-touring'   — past touring member (no studio credit)
+export type MemberStatus = 'current' | 'current-touring' | 'former' | 'former-touring'
+
+// Resolve the effective membership tier from a member, migrating the
+// legacy `former: boolean` field on the fly. Keeps callers in the UI
+// simple: `getMemberStatus(m) === 'former-touring'` regardless of what
+// era the JSON was written in.
+export function getMemberStatus(m: { membership?: MemberStatus; former?: boolean }): MemberStatus {
+  if (m.membership) return m.membership
+  return m.former ? 'former' : 'current'
+}
+
+export function isFormerMember(m: { membership?: MemberStatus; former?: boolean }): boolean {
+  const s = getMemberStatus(m)
+  return s === 'former' || s === 'former-touring'
+}
+
+export function isTouringMember(m: { membership?: MemberStatus; former?: boolean }): boolean {
+  const s = getMemberStatus(m)
+  return s === 'current-touring' || s === 'former-touring'
 }
 
 // A band member with one or more roles (Vocals, Guitar, Bass, Drums…).
-// `former` marks ex-members so the UI can split current vs. past line-ups.
+// `membership` groups the line-up on the artist detail page and the
+// band timeline. `former` is kept for back-compat with pre-0.4.1 data
+// — the load path migrates `former: true` → `membership: 'former'`.
 // `deceased` renders a † next to the name.
 export interface BandMember {
   id: string
   name: string
   roles: string[]
-  former?: boolean
+  membership?: MemberStatus
+  former?: boolean         // deprecated: read-only, kept so old JSON still loads
   joinedIn?: string        // free-text year: "1998", "March 2003", "?"
-  leftIn?: string          // only meaningful when former=true
+  leftIn?: string          // only meaningful when the membership is a 'former*' tier
   deceased?: boolean
   stints?: MemberStint[]   // optional extra periods with different role sets
 }
@@ -406,6 +446,11 @@ export interface Item {
   editions?: AlbumEdition[]
   vinylCondition?: VinylCondition
   concerts?: ConcertEntry[]
+  // Music multi-disc: number of physical discs when the release is a
+  // multi-disc CD / vinyl set. Ignored when `mediaOwnership !== 'physical'`
+  // (a digital release doesn't need this). Free-text so "1", "2 CD",
+  // "3 (2 CD + 1 DVD)" all work.
+  discCount?: string
   mangaSource?: MangaSource
   magazine?: string
   mangaReview?: string
