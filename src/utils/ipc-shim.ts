@@ -67,7 +67,6 @@ type Listener = (event: unknown, ...args: unknown[]) => void
 function positionalToNamed(channel: string, args: unknown[]): Record<string, unknown> {
   const names = CHANNEL_ARG_NAMES[channel]
   if (!names) {
-    // eslint-disable-next-line no-console
     console.warn(`[ipc-shim] no arg-name map for channel "${channel}" — sending empty payload`)
     return {}
   }
@@ -108,7 +107,6 @@ export async function installIpcShim(): Promise<void> {
       tauriAssetsRoot = `${storageRoot}${sep}assets`
     }
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn('[ipc-shim] could not resolve Tauri storage root — asset URLs will fall back to omnio-asset://', e)
   }
 
