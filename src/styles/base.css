@@ -10,7 +10,7 @@
 .app[data-font-size="small"] { zoom: 0.9; height: calc(100vh / 0.9); }
 .app[data-font-size="large"] { zoom: 1.12; height: calc(100vh / 1.12); }
 
-.app[data-density="compact"] .content { padding: 18px 20px; }
+.app[data-density="compact"] .content { padding: 18px 20px 0; }
 .app[data-density="compact"] .content-header { margin-bottom: 14px; }
 .app[data-density="compact"] .sidebar { padding: 14px 8px; }
 .app[data-density="compact"] .nav-item { padding: 6px 10px; font-size: 12.5px; }

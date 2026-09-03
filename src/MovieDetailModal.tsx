@@ -1,5 +1,5 @@
 import { formatDurationMinutes, getWatchLocationLabel, getMovieSourceLabel, assetSrc } from './types'
-import type { Item, Collection } from './types'
+import type { Item, AnyItem, MovieItem, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import CoverPlaceholder from './components/CoverPlaceholder'
 import { exportItemAsJson } from './utils/files'
@@ -11,9 +11,9 @@ import DetailReview from './components/detail/DetailReview'
 import DetailNotes from './components/detail/DetailNotes'
 
 interface Props {
-  item: Item
+  item: MovieItem
   groups: Collection[]
-  allMovies: Item[]
+  allMovies: AnyItem[]
   onClose: () => void
   onEdit: () => void
   onDuplicate: () => void

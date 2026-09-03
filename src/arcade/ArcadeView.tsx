@@ -148,6 +148,14 @@ export default function ArcadeView(props: Props) {
         <div className="arcade-legend-row"><span className="arcade-mini-cell cleared is-ex" /> extra-clear</div>
       </div>
 
+      <div className="arcade-credit">
+        Grid layout adapted from{' '}
+        <a
+          href="https://github.com/doopu/1ccTracker"
+          onClick={(e) => { e.preventDefault(); window.ipcRenderer.invoke('updates:open-url', 'https://github.com/doopu/1ccTracker') }}
+        >doopu/1ccTracker</a>
+      </div>
+
       {newOpen && (
         <NewGameModal
           onCreate={onCreate}

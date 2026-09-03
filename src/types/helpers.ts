@@ -10,7 +10,8 @@ import type {
   MusicSource, MangaSource, MovieSource, GameSource, WatchLocation, VinylCondition,
   BookStatus, BookFormat, BookSource,
   AgeRating, RelationKind, BandStatus,
-  Chapter, Episode, Season, Track, Item,
+  Chapter, Episode, Season, Track,
+  AnyItem as Item,
 } from './entities'
 
 import {
@@ -25,19 +26,36 @@ import {
   BOOK_STATUS_OPTIONS, BOOK_FORMAT_OPTIONS, BOOK_SOURCE_OPTIONS,
   RELATION_OPTIONS, AGE_RATING_OPTIONS, BAND_STATUS_OPTIONS,
 } from './options'
+import { getTauriAssetsRoot, convertFileSrc } from '../utils/ipc-shim'
 
 // ---- Asset resolution ----
 
 // Turns a stored asset path into something the renderer can load.
-// Data URLs / absolute URLs pass through unchanged; relative paths get the
-// omnio-asset:// prefix so Electron's custom protocol handler picks them up.
+// Data URLs / absolute URLs pass through unchanged; relative paths
+// resolve through Tauri's built-in asset protocol (`convertFileSrc`)
+// against the absolute assets root cached by the IPC shim at boot.
+//
+// If the shim hasn't populated the assets root yet (very early paint,
+// or the renderer is being served standalone via `npm run renderer:dev`
+// for isolated UI work), we return the raw relative path — the img
+// will 404 but the render tree stays coherent.
 export function assetSrc(value?: string | null): string | undefined {
   if (!value) return undefined
   if (/^(data:|https?:|file:|blob:|omnio-asset:)/i.test(value)) return value
-  // Percent-encode each path segment so filenames with spaces, apostrophes
-  // or unicode ("Mirror's Edge Catalyst cover.jpg") survive the WHATWG URL
-  // parser. The main process decodes with decodeURIComponent on the way in.
-  return `omnio-asset://${value.split('/').map(encodeURIComponent).join('/')}`
+
+  const assetsRoot = getTauriAssetsRoot()
+  const convert = convertFileSrc
+  if (assetsRoot && convert) {
+    // Build the absolute filesystem path, hand to Tauri's asset-
+    // protocol converter. `convertFileSrc` percent-encodes so we send
+    // the raw string.
+    const sep = assetsRoot.includes('\\') ? '\\' : '/'
+    const abs = `${assetsRoot}${sep}${value.split('/').join(sep)}`
+    const url = convert(abs)
+    if (url) return url
+  }
+  // No backend attached — return the raw path for debugging.
+  return value
 }
 
 // ---- Relation ----
@@ -266,6 +284,10 @@ export function getCategoryLine(item: Item): string | null {
     case 'libros': {
       if (!item.pagesRead) return null
       return `p. ${item.pagesRead}${item.totalPages ? `/${item.totalPages}` : ''}`
+    }
+    case 'visual_novels': {
+      const parts = [item.releaseYear, item.playTime, item.vnLengthHours ? `~${item.vnLengthHours}h avg` : null].filter(Boolean)
+      return parts.length ? parts.join(' · ') : null
     }
     default:
       return null

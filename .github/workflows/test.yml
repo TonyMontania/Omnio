@@ -1,7 +1,7 @@
 # Unit tests — runs Vitest on every push to main and every PR. Fast:
 # only tests pure-logic utilities (parseCsv, formatIsoDate, buildCsv,
-# etc), no DOM, no Electron. Kept separate from smoke.yml so this can
-# fail-fast on a broken util without waiting for the Playwright boot.
+# etc), no DOM, no backend. Fast fail-fast layer for broken pure logic
+# ahead of the full release build.
 
 name: Test
 

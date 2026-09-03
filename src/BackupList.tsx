@@ -2,7 +2,7 @@
 // data/backups/. Each snapshot is a full directory copy of the library
 // files at that save point; restoring one puts the whole set back in
 // place and shifts the current state to data.pre-restore/ first.
-// See electron/main.ts: data:list-backups / data:restore-backup.
+// See src-tauri/src/handlers/data.rs: data:list-backups / data:restore-backup.
 
 import { useEffect, useState } from 'react'
 

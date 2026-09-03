@@ -1,6 +1,10 @@
 // Pure type declarations. No runtime values, no functions, no side effects.
 // Everything a component might need to type its props or state lives here.
 
+// type-only import — items.ts imports back from here, TS handles the
+// circular type dep cleanly since neither side pulls runtime values.
+import type { CategoryId } from './items'
+
 export type Platform = string
 export type Ownership = 'owned' | 'shared' | 'subscription' | 'unlicensed'
 export type GameStatus = 'backlog' | 'playing' | 'played' | 'completed' | 'dropped'
@@ -67,6 +71,93 @@ export type BookStatus = 'plan_to_read' | 'reading' | 'completed' | 'paused' | '
 export type BookFormat = 'paperback' | 'hardcover' | 'ebook' | 'audiobook' | 'other'
 export type BookSource = 'original' | 'translation' | 'adaptation' | 'other'
 export type BookField = 'title' | 'authors' | 'status' | 'pages' | 'rating' | 'tags'
+
+// Visual Novels — modeled after VNDB (vndb.org). Status vocab mirrors games
+// so a user can move a VN through the same mental buckets they use for
+// backlog / playing / completed. VNDB itself uses "length" as an enum of
+// five buckets — the community-averaged hours land in `vnLengthHours`.
+export type VisualNovelStatus = 'plan_to_play' | 'playing' | 'paused' | 'completed' | 'dropped'
+export type VnLength = 'very_short' | 'short' | 'medium' | 'long' | 'very_long'
+export type VnField = 'title' | 'status' | 'length' | 'rating' | 'tags'
+
+// A character in a VN. Role mirrors VNDB's own vocabulary: protagonist
+// (Main Character), main, side, appears. `seiyuu` is the voice actor when
+// the release ships with voiced dialogue.
+export type VnCharacterRole = 'protagonist' | 'main' | 'side' | 'appears'
+export interface VnCharacter {
+  id: string
+  name: string
+  original?: string        // native-script name
+  role: VnCharacterRole
+  description?: string
+  seiyuu?: string
+  seiyuuNote?: string      // "young / adult", "route Amane only", etc.
+  image?: string           // relative asset path or URL
+  vndbId?: string          // "c1234" — lets the detail modal deep-link back to VNDB
+}
+
+// One person credited on a VN, grouped by role. VNDB splits staff into
+// dozens of roles — collapsed here to the ones a hobby tracker actually
+// cares about; users add anything else as a custom field.
+export type VnStaffRole = 'writer' | 'artist' | 'composer' | 'director' | 'translator' | 'other'
+export interface VnStaffMember {
+  id: string
+  name: string
+  original?: string       // native-script name (e.g. Japanese kanji) when different from `name`
+  role: VnStaffRole
+  note?: string           // e.g. "Common route", "Route: Yuki", "Chapter 3-5"
+}
+
+// A publisher who released the VN in a specific language / region. VNDB
+// exposes publishers per release, not per VN — this shape collapses that
+// out to one row per (publisher, language) pair so the editor can show
+// "Frontwing 🇯🇵 · Sekai Project 🇺🇸".
+export interface VnPublisher {
+  id: string
+  name: string
+  original?: string       // native-script name
+  lang: string            // ISO-ish code from VNDB: "ja", "en", "zh-Hans", …
+  role?: 'publisher' | 'developer' | 'both'
+}
+
+// One release edition of a VN. VNDB tracks these as `editions` on the VN
+// itself (Original / Limited / Fan-translated / …). Kept read-only in the
+// editor for now — the fetcher fills them and the user rarely edits.
+export interface VnEdition {
+  id: string
+  eid?: number            // VNDB's own edition id
+  lang?: string
+  name: string
+  official?: boolean
+}
+
+// One cover artwork for a VN. VNs typically ship multiple covers — one per
+// release, plus fan editions and re-releases. The user picks which one is
+// the main cover (used on the card) and can flag any as "exhibited" in the
+// detail view's covers gallery.
+export interface VnCover {
+  id: string
+  path: string            // relative asset path or URL
+  lang?: string           // language of the release the cover comes from
+  releaseTitle?: string   // e.g. "Original edition", "Steam release"
+  main?: boolean          // exactly one cover should carry this flag
+  exhibited?: boolean     // shown in the "Covers" gallery section
+}
+
+// VNDB dev status. 0 = Finished, 1 = In development, 2 = Cancelled.
+export type VnDevStatus = 'finished' | 'in_development' | 'cancelled'
+
+// One screenshot attached to a VN. Same shape as Game Screenshot but with
+// a per-screenshot NSFW flag — VNDB annotates each screenshot individually,
+// and the detail modal blurs sensitive ones behind a click-to-reveal.
+export interface VnScreenshot {
+  id: string
+  filename: string
+  path: string             // relative to assets/
+  addedAt: string          // ISO
+  caption?: string
+  nsfw?: boolean
+}
 
 export type AgeRating = 'e' | 'e10' | 't' | 'm' | 'ao' | 'rp'
 export type RelationKind =
@@ -342,9 +433,23 @@ export interface Collection {
   cover?: string
 }
 
-export interface Item {
+// Bag view of an item — every field of every variant, all optional,
+// `categoryId` widened to plain string. This is the top-level `Item`
+// type most of the codebase still uses. Components that opted into the
+// discriminated union (`GameItem`, `MusicItem`, … from `./items`)
+// declare the strict variant they accept and narrow via the
+// `isGameItem` / `isMusicItem` type guards. Fase 2 will split App.tsx
+// state per-category and let us swap `Item` from this bag to
+// `TypedItem` (the strict union) — until then this is the shared
+// vocabulary.
+//
+// `AnyItem` and `Item` refer to the same shape; the alias makes the
+// intent clear when a signature specifically wants the "cross-category
+// bag view" (sort/filter helpers, stat aggregators, importers).
+// Note: also re-exported under the name `Item` from `./items`.
+export interface AnyItem {
   id: string
-  categoryId: string
+  categoryId: CategoryId
   title: string
   // Item-level favorite ⭐. Toggled from the card and the detail view.
   // Fuels the Home "Favorites" strip and the `favorite:true` operator
@@ -499,6 +604,29 @@ export interface Item {
   bookReview?: string
   highlights?: Highlight[]
   chapterNotes?: ChapterNote[]
+  // Visual Novels — VNDB-shaped metadata. Shares a lot with Games (devs,
+  // publishers, platforms, releaseDate) but adds VN-specific fields: staff
+  // by role, characters, engine, length enum + community hours, per-work
+  // NSFW flag, and VNDB id for future re-syncs.
+  visualNovelStatus?: VisualNovelStatus
+  vnLength?: VnLength
+  vnLengthHours?: string      // community-averaged hours from VNDB, free-form
+  vnEngine?: string           // "Ren'Py" / "Kirikiri" / "TyranoBuilder" / etc.
+  vnOriginalLanguage?: string // ISO-ish code from VNDB: "ja", "en", "zh", "ko", …
+  vnLanguages?: string[]      // every language the release ships in
+  vnAliases?: string[]        // alternate titles (romaji, english, other)
+  vnCharacters?: VnCharacter[]
+  vnStaff?: VnStaffMember[]
+  vnScreenshots?: VnScreenshot[]
+  vnCovers?: VnCover[]        // multi-cover gallery; one carries `main: true`
+  vnEditions?: VnEdition[]    // release editions (Original / Steam / fan tr.)
+  vnPublishers?: VnPublisher[] // per-language publishers with country tags
+  vnCommunityRating?: string  // VNDB score /10, free-form so "8.45" fits
+  vnDevStatus?: VnDevStatus
+  vnDescription?: string
+  vnReview?: string
+  vndbId?: string             // "v12345" — page slug on vndb.org
+  nsfw?: boolean              // work-level flag; screenshots carry their own too
   // User-defined free-form fields, Notion-style. Displayed at the bottom of
   // every detail view; each item can carry its own list independently of the
   // built-in category schema.

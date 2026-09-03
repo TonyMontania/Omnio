@@ -1,6 +1,6 @@
 import { getAnimeStatus, getAiringStatusLabel, getAnimeFormatLabel, getAnimeSeasonLabel, getDemographicLabel, getAnimeSourceLabel, getAgeRatingLabel, getTotalRuntimeMinutes, formatDurationMinutes, getNextUnwatchedEpisode, assetSrc } from './types'
 import { AnimeStatusIcon } from './icons'
-import type { Item, Collection } from './types'
+import type { Item, AnyItem, AnimeItem, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import CoverPlaceholder from './components/CoverPlaceholder'
 import { exportItemAsJson } from './utils/files'
@@ -12,9 +12,9 @@ import DetailReview from './components/detail/DetailReview'
 import DetailNotes from './components/detail/DetailNotes'
 
 interface Props {
-  item: Item
+  item: AnimeItem
   groups: Collection[]
-  allAnime: Item[]
+  allAnime: AnyItem[]
   onClose: () => void
   onEdit: () => void
   onDuplicate: () => void

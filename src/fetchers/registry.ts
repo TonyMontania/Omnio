@@ -35,6 +35,10 @@ export interface FetcherSettings {
 // ignores hints entirely.
 export interface FetcherApplyHints {
   parentGameTitle?: string
+  // VNDB relations arrive as VNDB slugs (v17, v42, …). applyFetchedPatch
+  // walks the user's library and turns any slug that matches an existing
+  // item's `vndbId` into a proper RelatedItem entry.
+  vnRelations?: { vndbId: string; relation: string; title: string }[]
 }
 
 export interface FetcherContext {

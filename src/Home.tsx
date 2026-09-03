@@ -8,6 +8,7 @@
 
 import { useMemo } from 'react'
 import type { Item } from './types'
+import type { CategoryId } from './types/items'
 import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
 import { CategoryIcon, CalendarIcon, InsightsIcon, SettingsIcon } from './icons'
@@ -15,7 +16,7 @@ import { CategoryIcon, CalendarIcon, InsightsIcon, SettingsIcon } from './icons'
 interface Props {
   items: Item[]
   enabledCategories?: string[]
-  onOpenCategory: (id: string) => void
+  onOpenCategory: (id: CategoryId) => void
   onOpenItem: (item: Item) => void
   onOpenCalendar: () => void
   onOpenStats: () => void

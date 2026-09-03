@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { getSeriesStatus, getSeriesFormatLabel, getWatchLocationLabel, getSeasonWatchedCount, getSeasonTotalEpisodes, assetSrc } from './types'
+import { getSeriesStatus, getSeriesFormatLabel, getSeasonWatchedCount, getSeasonTotalEpisodes, assetSrc } from './types'
 import { AnimeStatusIcon } from './icons'
-import type { Item, Collection } from './types'
+import type { Item, AnyItem, SeriesItem, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import CoverPlaceholder from './components/CoverPlaceholder'
 import { exportItemAsJson } from './utils/files'
@@ -16,9 +16,9 @@ const timelineSortKey = (i: Item) => i.airedFrom || i.startYear || i.releaseYear
 const yearOf = (i: Item) => timelineSortKey(i).slice(0, 4)
 
 interface Props {
-  item: Item
+  item: SeriesItem
   groups: Collection[]
-  allSeries: Item[]
+  allSeries: AnyItem[]
   onClose: () => void
   onEdit: () => void
   onDuplicate: () => void
@@ -39,9 +39,6 @@ export default function SeriesDetailModal({ item, groups, allSeries, onClose, on
     .map((id) => allSeries.find((a) => a.id === id))
     .filter((x): x is Item => !!x)
     .map((it) => ({ item: it }))
-  const airedRange = item.airedFrom || item.airedTo
-    ? [item.airedFrom, item.airedTo].filter(Boolean).join(' → ')
-    : null
   const yearsRange = item.startYear || item.endYear
     ? [item.startYear, item.endYear].filter(Boolean).join(' – ')
     : null
@@ -69,7 +66,6 @@ export default function SeriesDetailModal({ item, groups, allSeries, onClose, on
                   {item.seriesFormat && <span className="pill static">{getSeriesFormatLabel(item.seriesFormat)}</span>}
                   {yearsRange && <span className="pill static">{yearsRange}</span>}
                   {item.contentRating && <span className="pill static">{item.contentRating}</span>}
-                  {item.watchedWhere && <span className="pill static">{getWatchLocationLabel(item.watchedWhere)}</span>}
                 </div>
               </div>
               {groups.length > 0 && (
@@ -140,12 +136,6 @@ export default function SeriesDetailModal({ item, groups, allSeries, onClose, on
                 <div className="pills"><span className="pill static">★ {item.rating}</span></div>
               </div>
             ) : null}
-            {airedRange && (
-              <div className="field-group">
-                <label>Aired</label>
-                <div className="pills"><span className="pill static">{airedRange}</span></div>
-              </div>
-            )}
             {item.country && (
               <div className="field-group">
                 <label>Country</label>

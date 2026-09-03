@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { getOwnershipLabel, getGameStatus, getGameSourceLabel, getAgeRatingLabel, assetSrc } from './types'
 import { GameStatusIcon } from './icons'
-import type { Item, Collection } from './types'
+import type { Item, AnyItem, GameItem, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import ImageLightbox from './components/ImageLightbox'
 import CoverPlaceholder from './components/CoverPlaceholder'
@@ -15,9 +15,9 @@ import DetailReview from './components/detail/DetailReview'
 import DetailNotes from './components/detail/DetailNotes'
 
 interface Props {
-  item: Item
+  item: GameItem
   groups: Collection[]
-  allGames: Item[]
+  allGames: AnyItem[]
   onClose: () => void
   onEdit: () => void
   onDuplicate: () => void

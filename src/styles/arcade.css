@@ -185,6 +185,21 @@
   color: var(--text);
   margin-bottom: 4px;
 }
+
+/* Attribution line below the legend — subtle, one line, monospace so it
+   reads as metadata rather than body copy. */
+.arcade-credit {
+  margin-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+}
+.arcade-credit a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.arcade-credit a:hover { text-decoration: underline; }
 .arcade-legend-row {
   display: inline-flex;
   align-items: center;

@@ -30,12 +30,14 @@ build or patch, even better.
 
 ## Scope
 
-Omnio is a local-first Electron app. Realistic threat surfaces:
+Omnio is a local-first Tauri app (Rust backend + React renderer).
+Realistic threat surfaces:
 
 - Path traversal / file writes via imported files (backups, MAL XML,
   Letterboxd CSV, Kindle My Clippings, Trakt JSON, Discogs API responses, …).
 - XSS in the exported HTML site or in remote metadata rendered inside the app.
-- IPC channel abuse from a compromised renderer process.
+- IPC channel abuse from a compromised renderer process — the Rust
+  backend enforces `safe_relative` on every renderer-supplied path.
 - Insecure handling of API tokens stored in `settings.json`.
 
 Out of scope:

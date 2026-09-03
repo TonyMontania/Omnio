@@ -231,7 +231,7 @@ async function drawWrapped(snap: WrappedSnapshot): Promise<string> {
 }
 
 // Rounded-rect path (Canvas 2D still doesn't have this natively across
-// all engines Electron might ship with).
+// every WebView2 / WebKitGTK version Tauri ships with).
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath()
   ctx.moveTo(x + r, y)

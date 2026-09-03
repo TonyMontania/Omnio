@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { getMangaStatus, getPublicationStatusLabel, getMangaSourceLabel, getAgeRatingLabel, getNextUnreadChapter, assetSrc } from './types'
 import { MangaStatusIcon } from './icons'
-import type { Item, Collection } from './types'
+import type { Item, AnyItem, MangaItem, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import CoverPlaceholder from './components/CoverPlaceholder'
 import ImageLightbox from './components/ImageLightbox'
@@ -17,9 +17,9 @@ const timelineSortKey = (i: Item) => i.startDate || i.releaseYear || ''
 const yearOf = (i: Item) => timelineSortKey(i).slice(0, 4)
 
 interface Props {
-  item: Item
+  item: MangaItem
   groups: Collection[]
-  allManga: Item[]
+  allManga: AnyItem[]
   onClose: () => void
   onEdit: () => void
   onDuplicate: () => void

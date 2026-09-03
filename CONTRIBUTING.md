@@ -20,77 +20,122 @@ library category, add a per-item editor field).
 
 ## Running locally
 
-Requires **Node 18+** and **npm 9+**.
+Requires **Node 22+**, **npm 10+**, **Rust stable** (via rustup) and
+Visual Studio Build Tools (Windows) / Xcode CLT (macOS) / build-essential
+(Linux) for the Tauri native compile.
 
 ```bash
 git clone https://github.com/TonyMontania/Omnio.git
 cd Omnio
 npm install
-npm run dev       # Vite + Electron with hot-reload for the renderer
+npm run dev       # tauri dev — starts vite for the renderer + cargo run for the backend
 ```
 
-The first launch creates `data/` and `assets/` next to the executable
-(or under `%APPDATA%\Omnio` / `~/Library/Application Support/Omnio` for
-installed builds).
+The first launch creates `data/` and `assets/` under
+`%APPDATA%\com.omnio.app\` (Windows), `~/Library/Application Support/com.omnio.app/`
+(macOS) or `~/.config/com.omnio.app/` (Linux). If a previous Electron
+install exists, its library is imported once on first boot (see
+`src-tauri/src/migrate_from_electron.rs`).
 
 ## Before you push
 
 ```bash
-npm run lint       # ESLint, --max-warnings 0
-npm test           # Vitest unit tests
-npx tsc --noEmit   # Type-check without emitting
+npm run lint                        # ESLint on src/, --max-warnings 0
+npm test                            # Vitest unit tests
+npx tsc --noEmit                    # Type-check without emitting
+(cd src-tauri && cargo check)       # Rust type-check
+(cd src-tauri && cargo test)        # Rust unit tests
 ```
 
-CI runs these plus a Playwright smoke test that boots Electron and
-checks the window mounts. All four must pass for a PR to merge.
+CI runs the JS layers on every push. All must pass for a PR to merge.
 
 ## Project layout
 
 ```
-electron/
-  main.ts               Electron main process — every IPC handler, every
-                        disk operation, every metadata fetcher backend.
-                        The renderer never touches disk directly.
-  preload.ts            Bridge that exposes ipcRenderer to the window.
-
-src/
-  App.tsx               Top-level React component. Hoists every state
-                        atom for the item editor + wraps every modal.
-                        Category-specific editor JSX is being extracted
-                        into src/components/editors/*EditorSection.tsx —
-                        Music, Games, Movies, Series done as of 0.3.9;
-                        Anime, Donghua, Manga family, Books still inline.
-  Home.tsx              Landing dashboard.
-  GlobalSearch.tsx      Ctrl+K palette. Operator parser lives here.
-  {Category}DetailModal Read-only detail views per library.
-  {Source}Fetcher.tsx   One file per metadata source (14 today).
-  {Source}Importer.tsx  One file per data importer (Steam, Letterboxd,
-                        Backloggd, Serializd, Spotify, MAL/AniList XML,
-                        Kindle highlights, Last.fm, Trakt, Discogs).
+src/                              Renderer (React + TypeScript).
+  App.tsx                         Top-level React component. Hoists every state
+                                  atom for the item editor + wraps every modal.
+                                  Category-specific editor JSX is extracted
+                                  into src/components/editors/*EditorSection.tsx.
+  Home.tsx                        Landing dashboard.
+  GlobalSearch.tsx                Ctrl+K palette. Operator parser lives here.
+  {Category}DetailModal           Read-only detail views per library.
+  {Source}Fetcher.tsx             One file per metadata source.
+  {Source}Importer.tsx            One file per data importer (Steam, Letterboxd,
+                                  Backloggd, Serializd, Spotify, MAL/AniList XML,
+                                  Kindle highlights, Last.fm, Trakt, Discogs).
   components/
-    editors/            Small editor building blocks + the extracted
-                        per-category *EditorSection components.
-    detail/             Small building blocks for the DetailModals.
-    FetcherModal.tsx    Base modal for search-then-pick fetchers.
-    ImageLightbox.tsx   Global full-screen image viewer.
-    CoverPlaceholder    Category-shaped SVG for items without a cover.
+    editors/                      Small editor building blocks + per-category
+                                  *EditorSection components.
+    detail/                       Building blocks for the DetailModals.
+    FetcherModal.tsx              Base modal for search-then-pick fetchers.
+    ImageLightbox.tsx             Global full-screen image viewer.
+    CoverPlaceholder              Category-shaped SVG for items without a cover.
   types/
-    entities.ts         Pure TypeScript types. No runtime code.
-    options.ts          OPTIONS lists, defaults, palette-like constants.
-    helpers.ts          Pure functions (label lookups, formatters).
-    index.ts            Barrel; import everything from './types'.
+    entities.ts                   Pure TypeScript types. No runtime code.
+    options.ts                    OPTIONS lists, defaults, palette constants.
+    helpers.ts                    Pure functions (label lookups, formatters,
+                                  assetSrc — branches on Tauri vs Electron).
+    ipc-contract.ts               Typed IPC channel contract; `src/utils/ipc.ts`
+                                  and the Tauri shim reference it.
+    index.ts                      Barrel; import everything from './types'.
   utils/
-    csv.ts              parseCsv, colIndex, buildCsv.
-    format.ts           formatBytes, formatDate, formatIsoDate (TZ-safe).
-    files.ts            File-picker + drag-and-drop upload helpers.
+    csv.ts                        parseCsv, colIndex, buildCsv.
+    format.ts                     formatBytes, formatDate, formatIsoDate.
+    files.ts                      File-picker + drag-and-drop upload helpers.
+    ipc.ts                        Typed `invoke()` wrapper around
+                                  `window.ipcRenderer.invoke`.
+    ipc-shim.ts                   Installed at boot when running under Tauri;
+                                  populates `window.ipcRenderer` with a router
+                                  that translates Electron-style channel calls
+                                  to Tauri commands + events.
+    ipc-tauri-map.ts              Channel → Rust arg-name table for the shim.
 
-packaging/docker/       Dockerfile + compose + Unraid template. Publishes
-                        multi-arch amd64/arm64 to ghcr.io.
+src-tauri/                        Backend (Rust). 66 commands, 8 handler modules.
+  Cargo.toml                      Deps: tauri, tokio, serde, reqwest, sha1, …
+  tauri.conf.json                 Bundle config: NSIS installer, MSI, DMG,
+                                  AppImage. Publisher metadata, asset protocol.
+  capabilities/default.json       Tauri v2 permission set for the main window.
+  src/
+    main.rs                       Entry — registers commands + URI schemes,
+                                  runs first-boot migration.
+    paths.rs                      Storage root resolution (portable / packaged
+                                  / dev), CATEGORY_IDS, TOP_SLICES.
+    util.rs                       sanitize_asset_name, sha1_hex, safe_relative,
+                                  write_if_changed, asset filename builders.
+    net.rs                        Shared reqwest Client (proxy-aware),
+                                  proxy_json JSON fetch skeleton, search cache,
+                                  MB/AniDB throttlers.
+    schemas.rs                    Loose serde validators for on-disk JSON —
+                                  drop-invalid-row-and-log strategy.
+    state.rs                      Shared `AppState` — http_client, search_cache,
+                                  last_hashes.
+    asset_protocol.rs             `omnio-asset://` URI scheme handler
+                                  (used indirectly via convertFileSrc under
+                                  Tauri's built-in asset:// protocol).
+    migrate_from_electron.rs      First-boot: copy old Electron library into
+                                  the Tauri storage root, drop marker.
+    handlers/
+      system.rs                   proxy_apply, cache clear, export site/csv,
+                                  item export json, dialog directory pick.
+      storage.rs                  storage_root, copy-data-to, clean orphans,
+                                  import-assets-from, rename-all-assets.
+      data.rs                     data:save / data:load / snapshot rotation /
+                                  legacy monolithic-file migrator.
+      images.rs                   image save/delete/download, blob save/delete/
+                                  reveal, broken-asset audit + clear-ref.
+      updates.rs                  GitHub Releases poll, install-kind detect,
+                                  streaming download with progress events.
+      fetchers.rs                 28 commands / 17 sources: SGDB, Jikan, Kitsu,
+                                  MangaDex, ComicVine, MusicBrainz, VGMdb, IGDB,
+                                  TMDb, AniList, Steam, OpenLibrary, VNDB,
+                                  Discogs, lrclib, AniDB, PCGamingWiki.
 
 docs/
-  FIELDS.md             Every field on every category, EN + ES labels.
-  REDESIGN.md           Historical design doc for the 0.3 UX pass.
-  PWA_REFACTOR.md       Plan for the future web / mobile shell.
+  FIELDS.md                       Every field on every category, EN + ES labels.
+  FETCHER_FIELDS.md               Which fields each source populates.
+  FETCHER_REGISTRY.md             Renderer-side fetcher registration.
+  REDESIGN.md                     Historical design doc for the 0.3 UX pass.
 ```
 
 ## The design contract
@@ -106,11 +151,11 @@ Non-negotiables — a PR that breaks these gets bounced.
    diff should be mechanical (swap prop bag for `dispatch`).
 3. **`data/` and `assets/` are the source of truth.** No sidecar
    databases. Every read/write goes through `data:load` / `data:save`.
-4. **All 11 libraries share one Item type.** New fields go on the
+4. **All libraries share one Item type.** New fields go on the
    `Item` interface; runtime code gates them by `categoryId`. Don't
    fork parallel types per category.
-5. **Zero ESLint warnings.** The `--max-warnings 0` gate is deliberate
-   and CI-enforced. Fix the warning, don't `// eslint-disable-*`.
+5. **Zero ESLint warnings + zero cargo warnings.** The `--max-warnings 0`
+   gate is deliberate and CI-enforced on both sides.
 6. **No emojis in code / commits unless the user asks.** Product copy
    in the UI is fine; commit messages, comments and doc prose stay
    plain text.
@@ -119,18 +164,23 @@ Non-negotiables — a PR that breaks these gets bounced.
 
 ### Add a metadata source
 
-1. Add an IPC handler under `electron/main.ts` (e.g. `foo:search`,
-   `foo:details`). Follow the `proxyJson` pattern; wrap search in
-   `cachedSearch('foo', term, fn)` so it hits the 24h cache.
-2. Create `src/FooFetcher.tsx` — modeled on `MusicBrainzFetcher.tsx` if
+1. Add a Rust command under `src-tauri/src/handlers/fetchers.rs` (e.g.
+   `foo_search`, `foo_details`). Follow the `proxy_json` pattern; wrap
+   search in `cached_search(&state, "foo", term, || async { ... })` so
+   it hits the 24h cache.
+2. Register the new command in `src-tauri/src/main.rs` under
+   `.invoke_handler(tauri::generate_handler![...])`.
+3. Add the channel → arg-name mapping in
+   `src/utils/ipc-tauri-map.ts` so the renderer's positional
+   `invoke('foo:search', term)` translates to the Tauri call.
+4. Add typed args + return to `src/types/ipc-contract.ts`.
+5. Create `src/FooFetcher.tsx` — modeled on `MusicBrainzFetcher.tsx` if
    the API is search-then-details, or on `AniDBFetcher.tsx` if it's
    paste-an-ID.
-3. In App.tsx, lazy-import + open state + render the fetcher inside a
-   `<Suspense>` in the modal region. Wire `onApply` to
-   `applyFetchedPatch(...)` — that function already handles every
-   category's field mapping.
-4. Add the source's row to the README table (Metadata sources
-   section) + the About panel changelog if it's a full release.
+6. In App.tsx, lazy-import + open state + render the fetcher inside a
+   `<Suspense>`. Wire `onApply` to `applyFetchedPatch(...)` — that
+   function already handles every category's field mapping.
+7. Add the source's row to the README table + About panel changelog.
 
 ### Add an importer
 
@@ -148,12 +198,12 @@ Non-negotiables — a PR that breaks these gets bounced.
 2. Add the category-specific fields (status enum, format enum, etc.)
    to `src/types/entities.ts` and their OPTIONS lists to
    `src/types/options.ts`.
-3. Add the category to `CATEGORIES` in `electron/main.ts` so the
-   split-file storage works.
+3. Add the category id to `CATEGORY_IDS` in
+   `src-tauri/src/paths.rs` so the split-file storage picks it up.
 4. Add a `{Category}DetailModal.tsx` — model on `MusicDetailModal.tsx`
    for square covers or `GameDetailModal.tsx` for 2:3 posters.
 5. Add the category-specific editor JSX to App.tsx (or ideally a new
-   `{Category}EditorSection.tsx` matching Movies/Series/Music/Games).
+   `{Category}EditorSection.tsx`).
 6. Add a glyph to `src/components/CoverPlaceholder.tsx`.
 7. Add an entry to the Image upload guide + README.
 
@@ -181,13 +231,6 @@ Non-negotiables — a PR that breaks these gets bounced.
   the code, that's fine — the commit still lands under your name.
 - Group commits by theme, not by file. A refactor spanning 10 files
   is one commit; three unrelated fixes are three.
-
-## Docker deployment PRs
-
-Anything under `packaging/docker/` needs to keep the multi-arch
-manifest healthy — smoke-test with `docker build --platform=linux/arm64`
-locally if you're touching the Dockerfile or the KasmVNC autostart.
-See `packaging/docker/README.md` for the full deployment doc.
 
 ## Getting help
 

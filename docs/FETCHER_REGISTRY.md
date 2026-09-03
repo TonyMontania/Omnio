@@ -83,10 +83,11 @@ jump. Special case: `'igdb'` requires both `igdbClientId` and
 
 ## Third-party plugins
 
-Deferred. The runtime is Electron, so a plugin would be a JS bundle
-dropped into `data/plugins/` and `require()`d at startup — that's a
-sizeable security surface (network access, IPC access) for a niche
-feature. Not worth the audit cost until at least one user asks.
+Deferred. The runtime is Tauri (Rust backend), so a plugin would be
+a WASM module or a signed JS bundle loaded at startup — either way a
+sizeable security surface (network + filesystem access via the IPC
+bridge) for a niche feature. Not worth the audit cost until at least
+one user asks.
 
 ## Related files
 

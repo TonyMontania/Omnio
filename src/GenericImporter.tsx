@@ -16,6 +16,7 @@
 import { useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
 import type { Item } from './types'
+import type { CategoryId } from './types/items'
 import { CATEGORIES } from './categories'
 import { parseCsv } from './utils/csv'
 import {
@@ -162,7 +163,7 @@ function mapStatus(raw: string, categoryId: string): string | undefined {
   return hit?.value
 }
 
-function toItem(row: string[], mapping: FieldTarget[], categoryId: string): Item | null {
+function toItem(row: string[], mapping: FieldTarget[], categoryId: CategoryId): Item | null {
   const get = (target: FieldTarget) => {
     const idx = mapping.indexOf(target)
     return idx >= 0 ? (row[idx] ?? '').trim() : ''
@@ -248,7 +249,7 @@ export default function GenericImporter({ existingItems, onImport, onClose }: Pr
   const [filename, setFilename] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [mapping, setMapping] = useState<FieldTarget[]>([])
-  const [targetCategory, setTargetCategory] = useState(CATEGORIES[0].id)
+  const [targetCategory, setTargetCategory] = useState<CategoryId>(CATEGORIES[0].id)
   const [skipExisting, setSkipExisting] = useState(true)
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -304,7 +305,7 @@ export default function GenericImporter({ existingItems, onImport, onClose }: Pr
             <>
               <div className="field-group">
                 <label>Target library</label>
-                <select value={targetCategory} onChange={(e) => setTargetCategory(e.target.value)}>
+                <select value={targetCategory} onChange={(e) => setTargetCategory(e.target.value as CategoryId)}>
                   {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                 </select>
               </div>

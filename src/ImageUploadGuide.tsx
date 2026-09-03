@@ -2,7 +2,7 @@
 // recommended aspect ratio, target dimensions and accepted file formats.
 // Reachable from Settings → Maintenance & about → Image upload guide.
 // Formats: the whole pipeline accepts PNG, JPG/JPEG, WebP, GIF, AVIF,
-// BMP and SVG (see EXT_FROM_MIME in electron/main.ts) — the docs are the
+// BMP and SVG (see ext_from_mime in src-tauri/src/util.rs) — the docs are the
 // only place users learn what's on offer without opening the source.
 
 interface Props { onClose: () => void }

@@ -85,6 +85,15 @@ function WesternComicIcon() {
   )
 }
 
+function VisualNovelIcon() {
+  return (
+    <Icon>
+      <path d="M4 4.5h11a2 2 0 012 2v9a2 2 0 01-2 2H9l-4 3v-3H4a2 2 0 01-2-2v-9a2 2 0 012-2z" />
+      <path d="M6.5 8.5h7M6.5 11.5h7M6.5 14.5h4" />
+    </Icon>
+  )
+}
+
 export function DiceIcon() {
   return (
     <Icon>
@@ -117,6 +126,7 @@ export function CategoryIcon({ id }: { id: string }) {
     case 'musica': return <MusicIcon />
     case 'series': return <SeriesIcon />
     case 'libros': return <BooksIcon />
+    case 'visual_novels': return <VisualNovelIcon />
     default: return null
   }
 }

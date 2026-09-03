@@ -1,0 +1,73 @@
+[package]
+name = "omnio"
+version = "0.5.0"
+edition = "2021"
+description = "Local-first hobby tracker — Rust POC of the Tauri backend"
+authors = ["Tony <eze.bigplanet@gmail.com>"]
+license = "MIT"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri v2 core + plugins matching the Electron capabilities we port
+# (dialog for file pickers, shell for external-link opens).
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
+
+# JSON serialization mirrors the on-disk shape produced by the
+# Electron main-process today. Any AnyItem field ported here will use
+# the same serde tags so `data/*.json` stays byte-compatible across
+# both backends during the Fase B migration.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async runtime. Every handler that touches disk or network uses
+# tokio::fs — matches the async ergonomics of the current
+# `typedHandle('name', async () => ...)` shape.
+tokio = { version = "1", features = ["fs", "sync", "rt-multi-thread", "macros"] }
+
+# Structured errors that convert to `Result<T, String>` at the IPC
+# boundary. Keeps handler bodies short.
+thiserror = "1"
+
+# Regex for sanitizeAssetName. std::regex isn't a thing.
+regex = "1"
+
+# Content-hashing for writeIfChanged. Matches the SHA-1 digest the
+# Electron `sha1()` helper produces so the "same content, skip write"
+# dedup stays consistent across a mixed-backend migration.
+sha1 = "0.10"
+
+# UUID generation for asset-filename collision fallbacks — mirrors
+# `crypto.randomUUID()` in electron/util.ts.
+uuid = { version = "1", features = ["v4"] }
+
+# Base64 decoder for data-URL image saves. Same encoding the renderer
+# emits from the file picker (image:save).
+base64 = "0.22"
+
+# HTTP client for image:download + updates:download + fetchers. Uses
+# schannel on Windows (default-tls feature) so we don't drag an OpenSSL
+# build dep in. `stream` enables Response::bytes_stream for progress-
+# reporting downloads.
+reqwest = { version = "0.12", default-features = false, features = ["default-tls", "json", "stream"] }
+
+# `StreamExt::next` for iterating reqwest's bytes_stream during
+# progress-reporting downloads. Small; only pulled by updates.rs today.
+futures-util = { version = "0.3", default-features = false }
+
+# Content-Type detection for the `omnio-asset://` protocol handler —
+# turns a filename into `image/jpeg` / `image/png` / etc. so the
+# webview renders covers correctly.
+mime_guess = "2"
+
+# Percent-decoding for asset paths that contain spaces / accents —
+# `omnio-asset://games/cover/Metro%202033.jpg` → `games/cover/Metro 2033.jpg`.
+urlencoding = "2"
+
+[features]
+# Only enabled by the release bundle build to lock down webview
+# security; matches Tauri's default template.
+custom-protocol = ["tauri/custom-protocol"]

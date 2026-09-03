@@ -1,0 +1,5 @@
+# Cargo build artifacts — Rust equivalent of node_modules.
+target/
+
+# Generated Tauri artifacts.
+gen/

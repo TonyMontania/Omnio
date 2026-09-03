@@ -17,6 +17,7 @@ const MangaDexFetcher    = lazy(() => import('../MangaDexFetcher'))
 const MusicBrainzFetcher = lazy(() => import('../MusicBrainzFetcher'))
 const OpenLibraryFetcher = lazy(() => import('../OpenLibraryFetcher'))
 const TmdbFetcher        = lazy(() => import('../TmdbFetcher'))
+const VndbFetcher        = lazy(() => import('../VndbFetcher'))
 
 // AniList/Kitsu/Jikan/TMDb split their behavior by "kind". Anything
 // registered on both anime and manga (or peliculas and series) reads
@@ -183,6 +184,20 @@ const registrations: FetcherRegistration[] = [
   // timeout to :443) as of the 0.4.1 window. The fetcher component
   // remains on disk so re-registering is a one-line change the day
   // the proxy comes back.
+  {
+    id: 'vndb',
+    label: 'VNDB',
+    categories: ['visual_novels'],
+    auth: 'none',
+    hint: 'Metadata + tags + staff + characters + cover',
+    render: (ctx: FetcherContext) => suspense(
+      createElement(VndbFetcher, {
+        initialQuery: ctx.initialQuery,
+        onApply: ctx.onApply,
+        onClose: ctx.onClose,
+      }),
+    ),
+  },
   {
     id: 'openlibrary',
     label: 'OpenLibrary',

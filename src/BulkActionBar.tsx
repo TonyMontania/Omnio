@@ -9,6 +9,7 @@ import {
   isMangaLike,
 } from './types'
 import { CATEGORIES, isAnimeLikeCategory } from './categories'
+import type { CategoryId } from './types/items'
 
 interface Props {
   items: Item[]                       // full library
@@ -19,7 +20,7 @@ interface Props {
   onApplyRating: (rating: number) => void
   onApplyGenre: (op: 'add' | 'remove', genre: string) => void
   onAddToGroup: (collectionId: string) => void
-  onMoveToLibrary: (targetCategoryId: string) => void
+  onMoveToLibrary: (targetCategoryId: CategoryId) => void
   onDelete: () => void
   onExportHtml: () => void
   collections: Collection[]

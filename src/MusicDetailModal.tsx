@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { getMusicTypeLabel, isAlbumLikeMusic, getTotalDuration, getMusicSourceLabel, getVinylConditionLabel, assetSrc } from './types'
 import { StarRatingDisplay } from './StarRating'
-import type { Item, Collection } from './types'
+import type { Item, AnyItem, MusicItem, Collection } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import { exportItemAsJson } from './utils/files'
 import { formatIsoDate } from './utils/format'
@@ -14,9 +14,9 @@ import CoverPlaceholder from './components/CoverPlaceholder'
 
 
 interface Props {
-  item: Item
+  item: MusicItem
   groups: Collection[]
-  allMusic: Item[]
+  allMusic: AnyItem[]
   onClose: () => void
   onEdit: () => void
   onDuplicate: () => void

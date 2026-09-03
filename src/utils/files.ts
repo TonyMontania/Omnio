@@ -5,9 +5,10 @@
 // an event and turn it into a data URL".
 
 import type { ChangeEvent } from 'react'
+import { invoke } from './ipc'
 
 // Filename-safe version of `raw` — strips filesystem-reserved chars, collapses
-// whitespace, trims. Mirrors sanitizeAssetName in electron/main.ts so both
+// whitespace, trims. Mirrors sanitize_asset_name in src-tauri/src/util.rs so both
 // sides pick the same on-disk name for the same title.
 export function sanitizeForFilename(raw: string): string {
   if (!raw) return ''
@@ -27,11 +28,7 @@ export function sanitizeForFilename(raw: string): string {
 // dispatches a window event with the reason so App.tsx can show a toast,
 // while presenting the old string-or-null shape to callers.
 export async function downloadImageAsset(url: string, categoryId: string, kind: string, basename?: string): Promise<string | null> {
-  const r = await window.ipcRenderer.invoke('image:download', url, categoryId, kind, basename) as { ok: true; path: string } | { ok: false; error: string } | string | null
-  // Backwards-compatibility branch: older builds still return a bare string
-  // (or null) from cached preload — treat those as "just the path".
-  if (typeof r === 'string') return r
-  if (r === null) return null
+  const r = await invoke('image:download', url, categoryId, kind, basename)
   if (r.ok) return r.path
   window.dispatchEvent(new CustomEvent('omnio-image-download-error', { detail: { url, kind, error: r.error } }))
   return null
@@ -102,9 +99,7 @@ export function imageDropHandlers(onData: (dataUrl: string) => void) {
 // an `omnio-toast` event so App's toast bar picks it up without every
 // detail modal needing its own toast plumbing.
 export async function exportItemAsJson(item: Record<string, unknown>, suggestedName: string): Promise<void> {
-  const r = await window.ipcRenderer.invoke('item:export-json', item, suggestedName) as
-    | { ok: true; path: string }
-    | { ok: false; canceled?: boolean; error?: string }
+  const r = await invoke('item:export-json', item, suggestedName)
   if (r.ok) {
     window.dispatchEvent(new CustomEvent('omnio-toast', { detail: `Exported to ${r.path}` }))
   } else if (!r.canceled) {

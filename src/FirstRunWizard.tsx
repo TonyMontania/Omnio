@@ -10,10 +10,11 @@
 // actions, or via the "skip" button.
 
 import { CATEGORIES } from './categories'
+import type { CategoryId } from './types/items'
 
 interface Props {
   onImport: () => void
-  onAddFirst: (categoryId: string) => void
+  onAddFirst: (categoryId: CategoryId) => void
   onOpenIntegrations: () => void
   onDismiss: () => void
 }

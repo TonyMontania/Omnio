@@ -3,12 +3,13 @@ import { useState, useEffect, useMemo, useRef, ChangeEvent, Suspense, lazy } fro
 // Category metadata (Games / Music / Movies / Series / Anime & Donghua / Comics & Manga family)
 import {
   CATEGORIES,
-  isAnimeLikeCategory,
+  isAnimeLikeCategory, isCategoryId,
 } from './categories'
+import type { CategoryId } from './types/items'
 
 // Types
 import type {
-  Item, Collection, Unit, MusicArtist,
+  Item, AnyItem, Collection, Unit, MusicArtist,
   Platform, Ownership, GameStatus, GameField, GameSource,
   MusicType, MusicField, MusicSource, Track, DlcEntry, BundleGame,
   VinylCondition, ConcertEntry,
@@ -17,6 +18,8 @@ import type {
   SeriesStatus, SeriesField, SeriesFormat, Season,
   MovieField, MovieSource, WatchLocation,
   BookField, BookStatus, BookFormat, BookSource,
+  VnField, VisualNovelStatus, VnLength, VnCharacter, VnStaffMember, VnScreenshot,
+  VnCover, VnEdition, VnPublisher, VnDevStatus,
   AgeRating, RelatedItem, RewatchEntry,
   BandStatus, BandMember, SingleCover, AlbumEdition,
   CustomField, SaveFile, Achievement, Screenshot, ChapterNote,
@@ -33,13 +36,14 @@ import {
   SERIES_STATUS_OPTIONS, SERIES_FIELD_OPTIONS, DEFAULT_SERIES_FIELDS,
   MOVIE_FIELD_OPTIONS, DEFAULT_MOVIE_FIELDS,
   BOOK_STATUS_OPTIONS, BOOK_FIELD_OPTIONS, DEFAULT_BOOK_FIELDS,
+  VN_STATUS_OPTIONS, VN_FIELD_OPTIONS, DEFAULT_VN_FIELDS,
   BAND_STATUS_OPTIONS,
 } from './types'
 
 // Helpers (label lookups, derived counts, formatters, mini markdown)
 import {
   getGameStatusRank, getMangaStatus, getAnimeStatus, getSeriesStatus, getBookStatus,
-  seasonsDerivedCounts, isAlbumLikeMusic, isMangaLike,
+  isMangaLike,
   assetSrc, renderMiniMarkdown, parseDurationToSeconds,
 } from './types'
 
@@ -67,14 +71,10 @@ import Sidebar from './Sidebar'
 const ReleaseCalendar    = lazy(() => import('./ReleaseCalendar'))
 const Home              = lazy(() => import('./home/HomeBoard'))
 const ArcadeView        = lazy(() => import('./arcade/ArcadeView'))
-const GameDetailModal   = lazy(() => import('./GameDetailModal'))
-const MusicDetailModal  = lazy(() => import('./MusicDetailModal'))
 const ArtistDetailView  = lazy(() => import('./ArtistDetailView'))
-const MangaDetailModal  = lazy(() => import('./MangaDetailModal'))
-const BookDetailModal   = lazy(() => import('./BookDetailModal'))
-const MovieDetailModal  = lazy(() => import('./MovieDetailModal'))
-const AnimeDetailModal  = lazy(() => import('./AnimeDetailModal'))
-const SeriesDetailModal = lazy(() => import('./SeriesDetailModal'))
+// The eight per-category detail modals were pulled out of this
+// module and now live inside `components/DetailModalRouter.tsx`.
+const DetailModalRouter = lazy(() => import('./components/DetailModalRouter'))
 const DuplicatesModal   = lazy(() => import('./DuplicatesModal'))
 const GenreNormalizerModal = lazy(() => import('./GenreNormalizerModal'))
 const RoleNormalizerModal  = lazy(() => import('./RoleNormalizerModal'))
@@ -125,9 +125,14 @@ import SeriesEditorSection from './components/editors/SeriesEditorSection'
 import AnimeEditorSection from './components/editors/AnimeEditorSection'
 import MangaEditorSection from './components/editors/MangaEditorSection'
 import BookEditorSection from './components/editors/BookEditorSection'
+import VisualNovelEditorSection from './components/editors/VisualNovelEditorSection'
 import TagEditor from './components/editors/TagEditor'
 import BandMembersEditor from './components/editors/BandMembersEditor'
 import FiltersDropdown from './components/editors/FiltersDropdown'
+import { invoke } from './utils/ipc'
+import { buildItemFromForm as buildItemFromFormImpl } from './editor/buildItemFromForm'
+import { resetForm as resetFormImpl, loadItemIntoForm as loadItemIntoFormImpl, type FormSetters } from './editor/formActions'
+import { applyPatchFieldsToForm } from './editor/applyPatch'
 
 import './App.css'
 
@@ -197,6 +202,7 @@ interface Settings {
   animeFields: Record<AnimeField, boolean>
   seriesFields: Record<SeriesField, boolean>
   bookFields: Record<BookField, boolean>
+  vnFields: Record<VnField, boolean>
   // Last sort mode the user picked per category. Restored on switch so
   // "Rating" stays as your preference in Games without leaking into Music.
   categorySortModes?: Record<string, string>
@@ -238,10 +244,13 @@ interface Settings {
   // Persistent sidebar collapsed → icon-rail only. Users can toggle
   // from the sidebar itself. Omitted = expanded (default).
   sidebarCollapsed?: boolean
+  // Extras section in the sidebar can be toggled per item from
+  // Settings → Enabled libraries. Omitted = enabled (default).
+  arcadeEnabled?: boolean
 }
 
 interface AppData {
-  items: Item[]
+  items: AnyItem[]
   collections: Collection[]
   artists?: MusicArtist[]
   settings?: Settings
@@ -253,9 +262,9 @@ interface AppData {
 // About string can't drift from the packaged version number.
 const APP_VERSION = __APP_VERSION__
 
-const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', startupCategory: 'last', gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, rememberCategorySort: true, categorySortModes: {}, cardZoom: 'md' }
+const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', startupCategory: 'last', gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, vnFields: DEFAULT_VN_FIELDS, rememberCategorySort: true, categorySortModes: {}, cardZoom: 'md' }
 
-function getUniqueTags(list: Item[]): string[] {
+function getUniqueTags(list: AnyItem[]): string[] {
   const set = new Set<string>()
   list.forEach((i) => i.tags?.forEach((t) => set.add(t)))
   return Array.from(set).sort()
@@ -273,7 +282,7 @@ function compareDates(a?: string, b?: string, asc = true): number {
 // Reads whichever year-ish field the item happens to have populated.
 // Different categories store year in different places (games use releaseDate,
 // music/movies use releaseYear, series use startYear, anime uses airedFrom, etc).
-function pickYear(i: Item): number {
+function pickYear(i: AnyItem): number {
   const first = i.releaseYear || i.seasonYear || i.startYear
     || (i.airedFrom ? i.airedFrom.slice(0, 4) : '')
     || (i.releaseDate ? i.releaseDate.slice(0, 4) : '')
@@ -283,9 +292,9 @@ function pickYear(i: Item): number {
 
 // Total runtime / listen time in seconds. Music sums track durations,
 // movies use their `duration` (minutes), series/anime use eps * ep duration.
-function pickDuration(i: Item): number {
+function pickDuration(i: AnyItem): number {
   if (i.tracks && i.tracks.length > 0) {
-    return i.tracks.reduce((acc, t) => acc + parseDurationToSeconds(t.duration), 0)
+    return i.tracks.reduce((acc: number, t) => acc + parseDurationToSeconds(t.duration), 0)
   }
   const movieMin = parseInt(i.duration || '', 10)
   if (!isNaN(movieMin) && movieMin > 0) return movieMin * 60
@@ -301,22 +310,22 @@ function statusRank<T extends string>(value: T | undefined, fallback: T, options
   return idx < 0 ? options.length : idx
 }
 
-function filterAndSort(list: Item[], search: string, filterTags: string[], filterStatus: GameStatus[], filterPlatforms: Platform[], filterGenres: string[], sortBy: SortBy | null, customOrder: string[] = [], minRating = 0, tagTree?: Record<string, string>): Item[] {
+function filterAndSort<T extends AnyItem>(list: T[], search: string, filterTags: string[], filterStatus: GameStatus[], filterPlatforms: Platform[], filterGenres: string[], sortBy: SortBy | null, customOrder: string[] = [], minRating = 0, tagTree?: Record<string, string>): T[] {
   filterTags = expandTagSelection(filterTags, tagTree)
   let result = list
   if (search.trim()) {
     const q = search.trim().toLowerCase()
     result = result.filter((i) => {
       if (i.title.toLowerCase().includes(q)) return true
-      if (i.alternativeTitles?.some((a) => a.toLowerCase().includes(q))) return true
+      if (i.alternativeTitles?.some((a: string) => a.toLowerCase().includes(q))) return true
       if (i.artist?.toLowerCase().includes(q)) return true
       return false
     })
   }
-  if (filterTags.length > 0) result = result.filter((i) => i.tags?.some((t) => filterTags.includes(t)))
+  if (filterTags.length > 0) result = result.filter((i) => i.tags?.some((t: string) => filterTags.includes(t)))
   if (filterStatus.length > 0) result = result.filter((i) => filterStatus.includes(i.gameStatus || 'backlog'))
-  if (filterPlatforms.length > 0) result = result.filter((i) => i.platforms?.some((p) => filterPlatforms.includes(p)))
-  if (filterGenres.length > 0) result = result.filter((i) => i.genres?.some((g) => filterGenres.includes(g)))
+  if (filterPlatforms.length > 0) result = result.filter((i) => i.platforms?.some((p: string) => filterPlatforms.includes(p)))
+  if (filterGenres.length > 0) result = result.filter((i) => i.genres?.some((g: string) => filterGenres.includes(g)))
   if (minRating > 0) result = result.filter((i) => (i.rating ?? 0) >= minRating)
   if (!sortBy) return result
   const arr = [...result]
@@ -353,36 +362,61 @@ function filterAndSort(list: Item[], search: string, filterTags: string[], filte
 
 
 function App() {
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id)
-  const [items, setItems] = useState<Item[]>([])
+  const [activeCategory, setActiveCategory] = useState<CategoryId>(CATEGORIES[0].id)
+  // App-level items state stays on the loose `AnyItem` bag so the
+  // dozens of generic mappers / bulk ops inside App.tsx keep compiling
+  // without a narrow per line. Component boundaries (detail modals,
+  // editor sections) declare their strict variant (`GameItem`,
+  // `MusicItem`, …) — narrowing happens at the pass site via the
+  // `isGameItem` / `isMusicItem` type guards. Fase 2 will split this
+  // per-category and drop `AnyItem` entirely.
+  const [items, setItems] = useState<AnyItem[]>([])
   const [collections, setCollections] = useState<Collection[]>([])
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [loaded, setLoaded] = useState(false)
   const [layout, setLayout] = useState<Layout>('grid')
-  const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'simulcastBoard' | 'stats' | 'calendar' | 'settings' | 'arcade'>('none')
+  const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'vnBoard' | 'simulcastBoard' | 'stats' | 'calendar' | 'settings' | 'arcade'>('none')
   // Arcade section state (score log + 1cc grid). Loaded from and
   // persisted to the same JSON blob as `items` — see save/load below.
   const [arcadeGames, setArcadeGames] = useState<ArcadeGame[]>([])
   const [animeBoardStatus, setAnimeBoardStatus] = useState<AnimeStatus>('plan_to_watch')
   const [seriesBoardStatus, setSeriesBoardStatus] = useState<SeriesStatus>('plan_to_watch')
   const [bookBoardStatus, setBookBoardStatus] = useState<BookStatus>('plan_to_read')
-  const [viewingSeries, setViewingSeries] = useState<Item | null>(null)
+  const [vnBoardStatus, setVnBoardStatus] = useState<VisualNovelStatus>('plan_to_play')
+  // Single detail-modal state. `viewing` holds whichever item the
+  // user opened; `<DetailModalRouter>` narrows via the per-category
+  // type guards and picks the right modal. Replaces eight separate
+  // `viewingX` slots that used to live one per category — see
+  // components/DetailModalRouter.tsx.
+  const [viewing, setViewing] = useState<AnyItem | null>(null)
   const [settingsTab, setSettingsTab] = useState<'appearance' | 'behavior' | 'libraries' | 'cards' | 'data' | 'integrations' | 'maintenance'>('appearance')
   const [welcomeStep, setWelcomeStep] = useState<'libraries' | 'keys' | 'tips'>('libraries')
   const [welcomePicks, setWelcomePicks] = useState<Record<string, boolean>>({})
   const [moviesBoardFilter, setMoviesBoardFilter] = useState<'watched' | 'unwatched'>('watched')
   const [mangaBoardStatus, setMangaBoardStatus] = useState<MangaStatus>('plan_to_read')
   const [musicBoardFilter, setMusicBoardFilter] = useState<'listened' | 'unlistened'>('listened')
-  const [statsCategory, setStatsCategory] = useState(CATEGORIES[0].id)
+  const [statsCategory, setStatsCategory] = useState<CategoryId>(CATEGORIES[0].id)
 
   useEffect(() => {
     if (settings.enabledCategories && settings.enabledCategories.length > 0 && !settings.enabledCategories.includes(activeCategory)) {
-      setActiveCategory(settings.enabledCategories[0])
+      // Guard: `enabledCategories` is `string[]` on disk, so cross the
+      // boundary through isCategoryId — a bad value from a hand-edited
+      // settings file falls back to the first CATEGORIES entry rather
+      // than corrupting state.
+      const first = settings.enabledCategories[0]
+      if (isCategoryId(first)) setActiveCategory(first)
     }
     if (settings.enabledCategories && settings.enabledCategories.length > 0 && !settings.enabledCategories.includes(statsCategory)) {
-      setStatsCategory(settings.enabledCategories[0])
+      const first = settings.enabledCategories[0]
+      if (isCategoryId(first)) setStatsCategory(first)
     }
   }, [settings.enabledCategories, activeCategory, statsCategory])
+
+  useEffect(() => {
+    if (settings.arcadeEnabled === false && specialView === 'arcade') {
+      setSpecialView('home')
+    }
+  }, [settings.arcadeEnabled, specialView])
 
   const [subView, setSubView] = useState<'items' | 'groups' | 'artists'>('items')
   const [musicArtists, setMusicArtists] = useState<MusicArtist[]>([])
@@ -425,13 +459,7 @@ function App() {
   const [panelOpen, setPanelOpen] = useState(false)
   const [editPreviewMode, setEditPreviewMode] = useState<'card' | 'detail'>('card')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [viewingGame, setViewingGame] = useState<Item | null>(null)
   const savedScrollRef = useRef<number>(0)
-  const [viewingMusic, setViewingMusic] = useState<Item | null>(null)
-  const [viewingManga, setViewingManga] = useState<Item | null>(null)
-  const [viewingBook, setViewingBook] = useState<Item | null>(null)
-  const [viewingMovie, setViewingMovie] = useState<Item | null>(null)
-  const [viewingAnime, setViewingAnime] = useState<Item | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const bannerFileInputRef = useRef<HTMLInputElement>(null)
   const logoFileInputRef = useRef<HTMLInputElement>(null)
@@ -496,14 +524,14 @@ function App() {
   }
   const [searchOpen, setSearchOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const [ctxMenu, setCtxMenu] = useState<{ item: Item; x: number; y: number } | null>(null)
+  const [ctxMenu, setCtxMenu] = useState<{ item: AnyItem; x: number; y: number } | null>(null)
   // Active tab in the tabbed editor prototype. Reset to 'overview' each
   // time the user opens a new item so they always land on the essentials.
   const [editorTab, setEditorTab] = useState<'overview' | 'identity' | 'progress' | 'media' | 'history' | 'related' | 'notes'>('overview')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
   const [bundleSgdbFor, setBundleSgdbFor] = useState<null | { entryId: string; title: string }>(null)
-  const [updateInfo, setUpdateInfo] = useState<null | { current: string; latest: string; htmlUrl: string; publishedAt?: string; notes?: string; matchedAssetUrl?: string; matchedAssetName?: string }>(null)
+  const [updateInfo, setUpdateInfo] = useState<null | { current: string; latest: string; htmlUrl?: string; publishedAt?: string; notes?: string; matchedAssetUrl?: string; matchedAssetName?: string }>(null)
   const [updateCheckState, setUpdateCheckState] = useState<'idle' | 'checking' | 'up-to-date' | 'error'>('idle')
   const [updateCheckError, setUpdateCheckError] = useState<string | null>(null)
   const [updateBannerDismissed, setUpdateBannerDismissed] = useState(false)
@@ -519,21 +547,21 @@ function App() {
   const runUpdateCheck = async (silent: boolean) => {
     if (!silent) setUpdateCheckState('checking')
     setUpdateCheckError(null)
-    const r = await window.ipcRenderer.invoke('updates:check', APP_VERSION)
-    if (!r?.ok) {
-      if (!silent) { setUpdateCheckState('error'); setUpdateCheckError(r?.error ?? 'Check failed') }
+    const r = await invoke('updates:check', APP_VERSION)
+    if (!r.ok) {
+      if (!silent) { setUpdateCheckState('error'); setUpdateCheckError(r.error) }
       return
     }
     if (r.hasUpdate) {
       // Point the user at the exact asset that matches their install kind.
-      const installKind = await window.ipcRenderer.invoke('updates:install-kind') as { kind?: string; assetHint?: string } | null
+      const installKind = await invoke('updates:install-kind')
       let matchedAssetUrl: string | undefined
       let matchedAssetName: string | undefined
-      if (installKind?.assetHint && Array.isArray(r.assets)) {
-        const hit = (r.assets as { name: string; url: string }[]).find((a) => a.name.toLowerCase().endsWith(installKind.assetHint!.toLowerCase()))
+      if (installKind.assetHint && Array.isArray(r.assets)) {
+        const hit = r.assets.find((a) => a.name.toLowerCase().endsWith(installKind.assetHint.toLowerCase()))
         if (hit) { matchedAssetUrl = hit.url; matchedAssetName = hit.name }
       }
-      setUpdateInstallKind(installKind?.kind ?? 'unknown')
+      setUpdateInstallKind(installKind.kind)
       setUpdateInfo({ current: r.current, latest: r.latest, htmlUrl: r.htmlUrl, publishedAt: r.publishedAt, notes: r.notes, matchedAssetUrl, matchedAssetName })
       setUpdateBannerDismissed(false)
       if (!silent) setUpdateCheckState('idle')
@@ -561,9 +589,9 @@ function App() {
     if (!updateInfo?.matchedAssetUrl || !updateInfo.matchedAssetName) return
     setUpdateModalOpen(true)
     setDownloadState({ phase: 'downloading', received: 0, total: 0 })
-    const r = await window.ipcRenderer.invoke('updates:download', updateInfo.matchedAssetUrl, updateInfo.matchedAssetName)
-    if (!r?.ok) {
-      setDownloadState({ phase: 'error', message: r?.error ?? 'Download failed' })
+    const r = await invoke('updates:download', updateInfo.matchedAssetUrl, updateInfo.matchedAssetName)
+    if (!r.ok) {
+      setDownloadState({ phase: 'error', message: r.error })
       return
     }
     setDownloadState({ phase: 'done', path: r.path, size: r.size })
@@ -572,16 +600,16 @@ function App() {
   const finalizeUpdate = async () => {
     if (downloadState.phase !== 'done') return
     if (updateInstallKind === 'win-nsis') {
-      await window.ipcRenderer.invoke('updates:launch-installer', downloadState.path)
+      await invoke('updates:launch-installer', downloadState.path)
     } else if (updateInstallKind === 'linux-appimage') {
-      const r = await window.ipcRenderer.invoke('updates:appimage-swap', downloadState.path)
-      if (!r?.ok) setDownloadState({ phase: 'error', message: r?.error ?? 'AppImage swap failed' })
+      const r = await invoke('updates:appimage-swap', downloadState.path)
+      if (!r.ok) setDownloadState({ phase: 'error', message: r.error })
     } else if (updateInstallKind === 'mac-arm64' || updateInstallKind === 'mac-x64') {
-      await window.ipcRenderer.invoke('updates:open-dmg', downloadState.path)
+      await invoke('updates:open-dmg', downloadState.path)
       setUpdateModalOpen(false)
     } else {
       // Portable / unknown → reveal in explorer, user runs manually.
-      await window.ipcRenderer.invoke('updates:reveal', downloadState.path)
+      await invoke('updates:reveal', downloadState.path)
       setUpdateModalOpen(false)
     }
   }
@@ -608,7 +636,7 @@ function App() {
   // We snapshot items+collections+artists on every observable change and
   // let Ctrl+Z pop back through them. Deliberately limited to library data
   // — settings, panel state and modal state are not undoable.
-  interface HistorySnap { items: Item[]; collections: Collection[]; artists: MusicArtist[] }
+  interface HistorySnap { items: AnyItem[]; collections: Collection[]; artists: MusicArtist[] }
   const historyRef = useRef<HistorySnap[]>([])
   const redoRef = useRef<HistorySnap[]>([])
   const skipHistoryRef = useRef(false)
@@ -737,6 +765,26 @@ function App() {
   const [isbn, setIsbn] = useState('')
   const [translator, setTranslator] = useState('')
   const [bookReview, setBookReview] = useState('')
+  // Visual Novels — VNDB-shaped state
+  const [visualNovelStatus, setVisualNovelStatus] = useState<VisualNovelStatus>('plan_to_play')
+  const [vnLength, setVnLength] = useState<VnLength | ''>('')
+  const [vnLengthHours, setVnLengthHours] = useState('')
+  const [vnEngine, setVnEngine] = useState('')
+  const [vnOriginalLanguage, setVnOriginalLanguage] = useState('')
+  const [vnLanguages, setVnLanguages] = useState<string[]>([])
+  const [vnAliases, setVnAliases] = useState<string[]>([])
+  const [vnCharacters, setVnCharacters] = useState<VnCharacter[]>([])
+  const [vnStaff, setVnStaff] = useState<VnStaffMember[]>([])
+  const [vnScreenshots, setVnScreenshots] = useState<VnScreenshot[]>([])
+  const [vnCovers, setVnCovers] = useState<VnCover[]>([])
+  const [vnEditions, setVnEditions] = useState<VnEdition[]>([])
+  const [vnPublishers, setVnPublishers] = useState<VnPublisher[]>([])
+  const [vnCommunityRating, setVnCommunityRating] = useState('')
+  const [vnDevStatus, setVnDevStatus] = useState<VnDevStatus | ''>('')
+  const [vnDescription, setVnDescription] = useState('')
+  const [vnReview, setVnReview] = useState('')
+  const [vndbId, setVndbId] = useState('')
+  const [nsfw, setNsfw] = useState(false)
   const [movieSource, setMovieSource] = useState<MovieSource | ''>('')
   const [movieReview, setMovieReview] = useState('')
   const [gameSource, setGameSource] = useState<GameSource | ''>('')
@@ -769,7 +817,7 @@ function App() {
   // mount and again whenever the user hits F5, so external edits to the
   // data/ folder (or a snapshot restore) show up without a full app restart.
   const loadFromDisk = async ({ applySettings }: { applySettings: boolean }): Promise<void> => {
-    const migrate = async (list: Item[]): Promise<{ list: Item[]; changed: boolean }> => {
+    const migrate = async (list: AnyItem[]): Promise<{ list: AnyItem[]; changed: boolean }> => {
       let changed = false
       const persist = async (val: string | undefined, categoryId: string, kind: string, basename?: string): Promise<string | undefined> => {
         if (!val || !val.startsWith('data:')) return val
@@ -875,6 +923,7 @@ function App() {
         animeFields: { ...DEFAULT_ANIME_FIELDS, ...data.settings.animeFields },
         seriesFields: { ...DEFAULT_SERIES_FIELDS, ...data.settings.seriesFields },
           bookFields: { ...DEFAULT_BOOK_FIELDS, ...data.settings.bookFields },
+          vnFields: { ...DEFAULT_VN_FIELDS, ...(data.settings.vnFields ?? {}) },
         enabledCategories: data.settings.enabledCategories && !data.settings.enabledCategories.includes('donghua') && data.settings.enabledCategories.includes('anime')
           ? [...data.settings.enabledCategories, 'donghua']
           : data.settings.enabledCategories,
@@ -887,7 +936,7 @@ function App() {
       if (merged.httpProxy !== undefined) {
         window.ipcRenderer.invoke('proxy:apply', merged.httpProxy)
       }
-      if (merged.startupCategory === 'last' && merged.lastCategory && CATEGORIES.some((c) => c.id === merged.lastCategory)) {
+      if (merged.startupCategory === 'last' && merged.lastCategory && isCategoryId(merged.lastCategory)) {
         setActiveCategory(merged.lastCategory)
       }
       // Home dashboard takes precedence when the setting is on — sets a
@@ -1023,13 +1072,7 @@ function App() {
       else if (confirmState) setConfirmState(null)
       else if (artistPanelOpen) closeArtistPanel()
       else if (panelOpen) closePanel()
-      else if (viewingGame) setViewingGame(null)
-      else if (viewingMusic) setViewingMusic(null)
-      else if (viewingManga) setViewingManga(null)
-      else if (viewingBook) setViewingBook(null)
-      else if (viewingMovie) setViewingMovie(null)
-      else if (viewingAnime) setViewingAnime(null)
-      else if (viewingSeries) setViewingSeries(null)
+      else if (viewing) setViewing(null)
       else if (viewingArtist) setViewingArtist(null)
     }
     window.addEventListener('keydown', handler)
@@ -1038,7 +1081,7 @@ function App() {
     // cause the listener to rebind constantly; the closure captures the
     // latest versions each time this effect re-runs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alertMsg, confirmState, viewingGame, viewingMusic, viewingManga, viewingBook, viewingMovie, viewingAnime, viewingSeries, viewingArtist, artistPanelOpen, panelOpen])
+  }, [alertMsg, confirmState, viewing, viewingArtist, artistPanelOpen, panelOpen])
 
   useEffect(() => {
     if (!toast) return
@@ -1173,9 +1216,10 @@ function App() {
       }
       const startIndex = Math.max(0, siblings.indexOf(img))
       const images = siblings.map((s) => ({
-        // The `src` attribute is already the fully resolved URL (Electron's
-        // omnio-asset:// or a http URL). ImageLightbox re-runs assetSrc on
-        // its input which is a no-op for those forms — safe to pass along.
+        // The `src` attribute is already the fully resolved URL (Tauri's
+        // asset:// via convertFileSrc, or a plain http URL). ImageLightbox
+        // re-runs assetSrc on its input which is a no-op for those forms
+        // — safe to pass along.
         src: s.currentSrc || s.src,
         label: s.dataset.zoomLabel,
         caption: s.dataset.zoomCaption || s.alt || undefined,
@@ -1246,32 +1290,34 @@ function App() {
     [items, editingId],
   )
 
-  const resetForm = () => {
-    setTitle(''); setCover(''); setNotes(''); setTags([]); setRating(0); setFinishedAt('')
-    setDevs([]); setPublishers([]); setAchievementsUnlocked(''); setAchievementsTotal(''); setReleaseDate(''); setBannerImage(''); setLogoImage(''); setDescription('')
-    setPlatforms([]); setOwnership(''); setGameStatus('backlog'); setPlayTime('')
-    setHasDlc(false); setDlcList([]); setHasAddons(false); setAddonsList([]); setIsBundle(false); setBundleContents([]); setSaveFiles([]); setAchievementsList([]); setScreenshots([]); setChapterNotes([]); setPcgwPage(undefined)
-    setReleaseYear(''); setDuration(''); setConsumed(false); setArtist(''); setMusicType('')
-    setGenres([]); setLabel(''); setPartOfAlbum(''); setPartOfAlbumId(''); setHasTracks(false); setTracks([]); setSingleCovers([]); setEditions([])
-    setMusicSource(''); setProducers([]); setMusicReview(''); setVinylCondition('')
-    setUnitCount(''); setStartYear(''); setEndYear(''); setUnits([])
-    setMangaAuthors([]); setMangaArtists([]); setVolumeCovers([]); setMangaDescription(''); setPubStatus(''); setReadingStatus('plan_to_read')
-    setMangaSource(''); setMagazine(''); setMangaReview(''); setHasChapters(false); setChapters([]); setMediaOwnership(''); setMangadexId(''); setDiscCount('')
-    setBookStatus('plan_to_read'); setBookFormat(''); setBookSource(''); setPagesRead(''); setTotalPages(''); setPublisher(''); setSaga(''); setSagaIndex(''); setIsbn(''); setTranslator(''); setBookReview('')
-    setMovieSource(''); setMovieReview('')
-    setGameSource(''); setOriginalWorkId(''); setGameReview('')
-    setDirectors([]); setCast([]); setProductionCompanies([]); setDistributors([]); setMovieDescription(''); setFranchise(''); setWatchedWhere(''); setMovieBanner(''); setHasSpoilers(false); setTimesWatched('')
-    setStudios([]); setAnimeFormat(''); setAiringStatus(''); setAiringDay(''); setWatchStatus('plan_to_watch'); setEpisodesWatched(''); setTotalEpisodes(''); setAnimeDescription('')
-    setSeason(''); setSeasonYear(''); setDemographic('')
-    setAlternativeTitles([]); setAnimeSource(''); setEpisodeDuration(''); setAiredFrom(''); setAiredTo(''); setAgeRating('')
-    setFavoriteEpisode(''); setFavoriteEpisodeNote(''); setDroppedAtEpisode(''); setDroppedReason('')
-    setHasEpisodes(false); setEpisodes([])
-    setAnimeReview(''); setRewatches([]); setRelatedItems([]); setRecommendedItems([]); setCustomFields([])
-    setSeriesStatus('plan_to_watch'); setSeriesFormat(''); setSeriesDescription(''); setShowrunners([]); setWriters([])
-    setNetwork(''); setCountry(''); setLanguage(''); setContentRating('')
-    setHasSeasons(false); setSeasons([]); setSeriesReview('')
-    setChaptersRead(''); setTotalChapters(''); setVolumesRead(''); setTotalVolumesM(''); setStartDate('')
-  }
+  // Setter bag reused by resetForm / loadItemIntoForm. All entries are
+  // React setters from useState calls above, which are stable across
+  // renders — so this object doesn't need memoization for identity, but
+  // wrapping in useMemo avoids re-building the (large) literal each
+  // render and makes it easy to spot new setters missing from either
+  // helper below.
+  const formSetters: FormSetters = useMemo(() => ({
+    setActiveCategory, setEditingId,
+    setTitle, setCover, setNotes, setTags, setRating, setFinishedAt, setCustomFields,
+    setDevs, setPublishers, setAchievementsUnlocked, setAchievementsTotal, setReleaseDate, setBannerImage, setLogoImage, setDescription,
+    setPlatforms, setOwnership, setGameStatus, setPlayTime,
+    setHasDlc, setDlcList, setHasAddons, setAddonsList, setIsBundle, setBundleContents, setSaveFiles, setAchievementsList, setScreenshots, setChapterNotes, setPcgwPage,
+    setGameSource, setOriginalWorkId, setGameReview, setHasSpoilers, setFranchise,
+    setReleaseYear, setDuration, setConsumed, setArtist, setMusicType, setGenres, setLabel, setPartOfAlbum, setPartOfAlbumId, setHasTracks, setTracks, setSingleCovers, setEditions,
+    setMusicSource, setVinylCondition, setProducers, setMusicReview,
+    setMangaAuthors, setMangaArtists, setVolumeCovers, setMangaDescription, setPubStatus, setReadingStatus, setChaptersRead, setTotalChapters, setVolumesRead, setTotalVolumesM, setStartDate,
+    setMangaSource, setMagazine, setMangaReview, setHasChapters, setChapters, setMediaOwnership, setDiscCount, setMangadexId,
+    setStudios, setAnimeFormat, setAiringStatus, setAiringDay, setWatchStatus, setEpisodesWatched, setTotalEpisodes, setAnimeDescription,
+    setSeason, setSeasonYear, setDemographic, setAlternativeTitles, setAnimeSource, setEpisodeDuration, setAiredFrom, setAiredTo, setAgeRating,
+    setFavoriteEpisode, setFavoriteEpisodeNote, setDroppedAtEpisode, setDroppedReason, setHasEpisodes, setEpisodes, setAnimeReview, setRewatches, setRelatedItems, setRecommendedItems,
+    setSeriesStatus, setSeriesFormat, setSeriesDescription, setShowrunners, setWriters, setNetwork, setCountry, setLanguage, setContentRating, setHasSeasons, setSeasons, setSeriesReview,
+    setUnitCount, setStartYear, setEndYear, setUnits,
+    setDirectors, setCast, setProductionCompanies, setDistributors, setMovieDescription, setMovieSource, setMovieReview, setWatchedWhere, setMovieBanner, setTimesWatched,
+    setBookStatus, setBookFormat, setBookSource, setPagesRead, setTotalPages, setPublisher, setSaga, setSagaIndex, setIsbn, setTranslator, setBookReview,
+    setVisualNovelStatus, setVnLength, setVnLengthHours, setVnEngine, setVnOriginalLanguage, setVnLanguages, setVnAliases, setVnCharacters, setVnStaff, setVnScreenshots, setVnCovers, setVnEditions, setVnPublishers, setVnCommunityRating, setVnDevStatus, setVnDescription, setVnReview, setVndbId, setNsfw,
+  }), [])
+
+  const resetForm = () => resetFormImpl(formSetters)
 
   const resetListControls = () => { setSearch(''); setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]) }
 
@@ -1355,10 +1401,10 @@ function App() {
   }
 
   const closeAllDetailViews = () => {
-    setViewingGame(null); setViewingMusic(null); setViewingManga(null); setViewingBook(null); setViewingMovie(null); setViewingAnime(null); setViewingSeries(null); setViewingArtist(null)
+    setViewing(null); setViewingArtist(null)
   }
 
-  const switchCategory = (id: string) => {
+  const switchCategory = (id: CategoryId) => {
     // Restore the sort the user last picked in this category (if the
     // "remember sort" setting is on) so their preferred view stays put
     // between visits. Falls back to 'recent' for first-time entries.
@@ -1382,159 +1428,13 @@ function App() {
 
   const openAddPanel = () => { setEditingId(null); resetForm(); setPanelOpen(true) }
 
-  const loadItemIntoForm = (item: Item) => {
-    setActiveCategory(item.categoryId)
-    setEditingId(item.id)
-    setTitle(item.title)
-    setCover(item.cover ?? '')
-    setNotes(item.notes ?? '')
-    setTags(item.tags ?? [])
-    setRating(item.rating ?? 0)
-    setFinishedAt(item.finishedAt ?? '')
-    setDevs(item.devs ?? [])
-    setPublishers(item.publishers ?? [])
-    setAchievementsUnlocked(item.achievementsUnlocked ?? '')
-    setAchievementsTotal(item.achievementsTotal ?? '')
-    setReleaseDate(item.releaseDate ?? '')
-    setBannerImage(item.bannerImage ?? '')
-    setLogoImage(item.logoImage ?? '')
-    setDescription(item.description ?? '')
-    setPlatforms(item.platforms ?? [])
-    setOwnership(item.ownership ?? '')
-    setGameStatus(item.gameStatus ?? 'backlog')
-    setPlayTime(item.playTime ?? '')
-    setHasDlc(item.hasDlc ?? false)
-    setDlcList(item.dlcList ?? [])
-    setHasAddons(item.hasAddons ?? false)
-    setAddonsList(item.addonsList ?? [])
-    setIsBundle(item.isBundle ?? false)
-    setBundleContents(item.bundleContents ?? [])
-    setSaveFiles(item.saveFiles ?? [])
-    setAchievementsList(item.achievements ?? [])
-    setScreenshots(item.screenshots ?? [])
-    setChapterNotes(item.chapterNotes ?? [])
-    setPcgwPage(item.pcgwPage)
-    setReleaseYear(item.releaseYear ?? '')
-    setDuration(item.duration ?? '')
-    setConsumed(item.consumed ?? false)
-    setArtist(item.artist ?? '')
-    setMusicType(item.musicType ?? '')
-    setGenres(item.genres ?? [])
-    setPartOfAlbum(item.partOfAlbum ?? '')
-    setPartOfAlbumId(item.partOfAlbumId ?? '')
-    setMusicSource(item.musicSource ?? '')
-    setProducers(item.producers ?? [])
-    setMusicReview(item.musicReview ?? '')
-    setVinylCondition(item.vinylCondition ?? '')
-    setLabel(item.label ?? '')
-    setHasTracks(item.hasTracks ?? false)
-    setTracks(item.tracks ?? [])
-    setSingleCovers(item.singleCovers ?? [])
-    setEditions(item.editions ?? [])
-    setUnitCount(item.unitCount ?? '')
-    setStartYear(item.startYear ?? '')
-    setEndYear(item.endYear ?? '')
-    setUnits(item.units ?? [])
-    setMangaAuthors(item.authors ?? [])
-    setMangaSource(item.mangaSource ?? '')
-    setMagazine(item.magazine ?? '')
-    setMediaOwnership(item.mediaOwnership ?? '')
-    setDiscCount(item.discCount ?? '')
-    setMangadexId(item.mangadexId ?? '')
-    setMangaReview(item.mangaReview ?? '')
-    setHasChapters(item.hasChapters ?? false)
-    setChapters(item.chapters ?? [])
-    setBookStatus(item.bookStatus ?? 'plan_to_read')
-    setBookFormat(item.bookFormat ?? '')
-    setBookSource(item.bookSource ?? '')
-    setPagesRead(item.pagesRead ?? '')
-    setTotalPages(item.totalPages ?? '')
-    setPublisher(item.publisher ?? '')
-    setSaga(item.saga ?? '')
-    setSagaIndex(item.sagaIndex ?? '')
-    setIsbn(item.isbn ?? '')
-    setTranslator(item.translator ?? '')
-    setBookReview(item.bookReview ?? '')
-    setMovieSource(item.movieSource ?? '')
-    setMovieReview(item.movieReview ?? '')
-    setGameSource(item.gameSource ?? '')
-    setOriginalWorkId(item.originalWorkId ?? '')
-    setGameReview(item.gameReview ?? '')
-    setMangaArtists(item.mangaArtists ?? [])
-    setVolumeCovers(item.volumeCovers ?? [])
-    setMangaDescription(item.mangaDescription ?? '')
-    setDirectors(item.directors ?? [])
-    setCast(item.cast ?? [])
-    setProductionCompanies(item.productionCompanies ?? [])
-    setDistributors(item.distributors ?? [])
-    setMovieDescription(item.movieDescription ?? '')
-    setStudios(item.studios ?? [])
-    setAnimeFormat(item.animeFormat ?? '')
-    setAiringStatus(item.airingStatus ?? '')
-    setAiringDay(item.airingDay ?? '')
-    setWatchStatus(item.watchStatus ?? 'plan_to_watch')
-    setEpisodesWatched(item.episodesWatched ?? '')
-    setTotalEpisodes(item.totalEpisodes ?? '')
-    setAnimeDescription(item.animeDescription ?? '')
-    setSeason(item.season ?? '')
-    setSeasonYear(item.seasonYear ?? '')
-    setDemographic(item.demographic ?? '')
-    setAlternativeTitles(item.alternativeTitles ?? [])
-    setAnimeSource(item.animeSource ?? '')
-    setEpisodeDuration(item.episodeDuration ?? '')
-    setAiredFrom(item.airedFrom ?? '')
-    setAiredTo(item.airedTo ?? '')
-    setAgeRating(item.ageRating ?? '')
-    setFavoriteEpisode(item.favoriteEpisode ?? '')
-    setFavoriteEpisodeNote(item.favoriteEpisodeNote ?? '')
-    setDroppedAtEpisode(item.droppedAtEpisode ?? '')
-    setDroppedReason(item.droppedReason ?? '')
-    setHasEpisodes(item.hasEpisodes ?? false)
-    setEpisodes(item.episodes ?? [])
-    setAnimeReview(item.animeReview ?? '')
-    setRewatches(item.rewatches ?? [])
-    setRelatedItems(item.relatedItems ?? [])
-    setRecommendedItems(item.recommendedItems ?? [])
-    setCustomFields(item.customFields ?? [])
-    setSeriesStatus(item.seriesStatus ?? 'plan_to_watch')
-    setSeriesFormat(item.seriesFormat ?? '')
-    setSeriesDescription(item.seriesDescription ?? '')
-    setShowrunners(item.showrunners ?? [])
-    setWriters(item.writers ?? [])
-    setNetwork(item.network ?? '')
-    setCountry(item.country ?? '')
-    setLanguage(item.language ?? '')
-    setContentRating(item.contentRating ?? '')
-    if (item.seasons && item.seasons.length > 0) {
-      setHasSeasons(item.hasSeasons ?? true)
-      setSeasons(item.seasons)
-    } else if (item.units && item.units.length > 0) {
-      setHasSeasons(true)
-      setSeasons(item.units.map((u) => ({ id: crypto.randomUUID(), number: String(u.number), watched: u.watched })))
-    } else {
-      setHasSeasons(item.hasSeasons ?? false)
-      setSeasons([])
-    }
-    setSeriesReview(item.seriesReview ?? '')
-    setFranchise(item.franchise ?? '')
-    setWatchedWhere(item.watchedWhere ?? '')
-    setMovieBanner(item.bannerImage2 ?? '')
-    setHasSpoilers(item.hasSpoilers ?? false)
-    setTimesWatched(item.timesWatched ?? '')
-    setPubStatus(item.pubStatus ?? '')
-    setReadingStatus(item.mangaStatus ?? 'plan_to_read')
-    setChaptersRead(item.chaptersRead ?? '')
-    setTotalChapters(item.totalChapters ?? '')
-    setVolumesRead(item.volumesRead ?? '')
-    setTotalVolumesM(item.totalVolumes ?? '')
-    setStartDate(item.startDate ?? '')
-  }
+  const loadItemIntoForm = (item: AnyItem) => loadItemIntoFormImpl(formSetters, item)
 
   // When every detail view closes and the list JSX remounts, restore the
   // scroll position we snapshotted before opening the detail. Uses rAF so it
   // runs after the DOM has painted the list at scrollTop 0.
   useEffect(() => {
-    const anyOpen = viewingGame || viewingMusic || viewingManga || viewingBook || viewingMovie || viewingAnime || viewingSeries || viewingArtist
+    const anyOpen = viewing || viewingArtist
     if (anyOpen) return
     if (savedScrollRef.current <= 0) return
     const target = savedScrollRef.current
@@ -1545,20 +1445,23 @@ function App() {
       if (el) el.scrollTop = target
     })
     return () => { cancelled = true }
-  }, [viewingGame, viewingMusic, viewingManga, viewingBook, viewingMovie, viewingAnime, viewingSeries, viewingArtist])
+  }, [viewing, viewingArtist])
 
-  const openEditPanel = (item: Item) => {
+  const openEditPanel = (item: AnyItem) => {
     // Snapshot the list's scroll position so we can put the user back where
     // they were after they close the detail view.
     const el = document.querySelector('main.content .content-scroll') as HTMLElement | null
     savedScrollRef.current = el?.scrollTop ?? 0
-    if (item.categoryId === 'videojuegos') { setViewingGame(item); return }
-    if (item.categoryId === 'musica') { setViewingMusic(item); return }
-    if (isMangaLike(item.categoryId)) { setViewingManga(item); return }
-    if (item.categoryId === 'libros') { setViewingBook(item); return }
-    if (item.categoryId === 'peliculas') { setViewingMovie(item); return }
-    if (isAnimeLikeCategory(item.categoryId)) { setViewingAnime(item); return }
-    if (item.categoryId === 'series') { setViewingSeries(item); return }
+    // Every category with a dedicated detail modal is handled by the
+    // DetailModalRouter (see components/DetailModalRouter.tsx). Items
+    // that don't have a modal fall through to the editor panel.
+    const HAS_DETAIL_MODAL = new Set([
+      'videojuegos', 'musica', 'libros', 'visual_novels', 'peliculas', 'series',
+    ])
+    if (HAS_DETAIL_MODAL.has(item.categoryId) || isMangaLike(item.categoryId) || isAnimeLikeCategory(item.categoryId)) {
+      setViewing(item)
+      return
+    }
     loadItemIntoForm(item)
     setPanelOpen(true)
   }
@@ -1566,9 +1469,8 @@ function App() {
   // Global search / cross-category open: switches category first so the
   // sidebar reflects where the item lives, then hands off to the normal
   // detail-modal flow. Also closes any open modals so we land clean.
-  const navigateToItem = (item: Item) => {
-    setViewingGame(null); setViewingMusic(null); setViewingManga(null); setViewingBook(null)
-    setViewingMovie(null); setViewingAnime(null); setViewingSeries(null); setViewingArtist(null)
+  const navigateToItem = (item: AnyItem) => {
+    setViewing(null); setViewingArtist(null)
     setActiveCategory(item.categoryId)
     setActiveCollectionId(null)
     setSpecialView('none')
@@ -1577,8 +1479,7 @@ function App() {
   }
 
   const navigateToArtist = (a: MusicArtist) => {
-    setViewingGame(null); setViewingMusic(null); setViewingManga(null)
-    setViewingMovie(null); setViewingAnime(null); setViewingSeries(null)
+    setViewing(null)
     setActiveCategory('musica')
     setSubView('items')
     setSpecialView('none')
@@ -1596,7 +1497,7 @@ function App() {
   }
   const clearSelection = () => setSelectedIds(new Set())
 
-  const applyToSelected = (updater: (item: Item) => Partial<Item>) => {
+  const applyToSelected = (updater: (item: AnyItem) => Partial<AnyItem>) => {
     setItems((all) => all.map((it) => selectedIds.has(it.id) ? { ...it, ...updater(it) } : it))
   }
   const bulkAddTag = (op: 'add' | 'remove', tag: string) => {
@@ -1618,7 +1519,7 @@ function App() {
     }))
     setToast(`Added ${selectedIds.size} items to group`)
   }
-  const bulkMoveToLibrary = (targetCategoryId: string) => {
+  const bulkMoveToLibrary = (targetCategoryId: CategoryId) => {
     const targetLabel = CATEGORIES.find((c) => c.id === targetCategoryId)?.label ?? targetCategoryId
     const count = selectedIds.size
     askConfirm(
@@ -1651,73 +1552,18 @@ function App() {
   // Handles the union of AniList / Jikan / TMDb output — each source only
   // populates the fields it knows about, and we just set what's present.
   const applyFetchedPatch = (
-    patch: Partial<Item>,
+    patch: Partial<AnyItem>,
     coverPath?: string,
     bannerPath?: string,
     sourceLabel = 'Metadata',
-    hints?: { parentGameTitle?: string },
+    hints?: { parentGameTitle?: string; vnRelations?: { vndbId: string; relation: string; title: string }[] },
   ) => {
-    if (patch.title) setTitle(patch.title)
-    if (patch.alternativeTitles) setAlternativeTitles(patch.alternativeTitles)
-    if (patch.genres) setGenres(patch.genres)
-    if (patch.airedFrom) setAiredFrom(patch.airedFrom)
-    if (patch.airedTo) setAiredTo(patch.airedTo)
-    if (patch.releaseDate) {
-      setReleaseDate(patch.releaseDate)
-      // Category forms that show a separate Release year field (movies) rely
-      // on this — without it the year is stored only inside the ISO date and
-      // the UI field stays empty even though the card shows the right year.
-      const yr = patch.releaseDate.slice(0, 4)
-      if (/^\d{4}$/.test(yr)) setReleaseYear(yr)
-    }
-    if (patch.seasonYear) setSeasonYear(patch.seasonYear)
-    if (patch.season) setSeason(patch.season)
-    if (patch.episodeDuration) setEpisodeDuration(patch.episodeDuration)
-    if (patch.unitCount) setUnitCount(patch.unitCount)
-    if (patch.studios) setStudios(patch.studios)
-    if (patch.animeFormat) setAnimeFormat(patch.animeFormat)
-    if (patch.animeSource) setAnimeSource(patch.animeSource)
-    if (patch.totalEpisodes) setTotalEpisodes(patch.totalEpisodes)
-    if (patch.totalChapters) setTotalChapters(patch.totalChapters)
-    if (patch.totalVolumes) setTotalVolumesM(patch.totalVolumes)
+    // Apply every pure per-field routing through the field-map table
+    // (see src/editor/applyPatch.ts). What remains here is the handful
+    // of side effects that need renderer-only state — items lookup,
+    // editingItem for stale-asset cleanup, and setToast.
+    applyPatchFieldsToForm(patch, formSetters, { activeCategory })
 
-    // Movies / Series (TMDb)
-    if (patch.movieDescription) setMovieDescription(patch.movieDescription)
-    if (patch.seriesDescription) setSeriesDescription(patch.seriesDescription)
-    if (patch.cast) setCast(patch.cast)
-    if (patch.directors) setDirectors(patch.directors)
-    if (patch.writers) setWriters(patch.writers)
-    if (patch.showrunners) setShowrunners(patch.showrunners)
-    if (patch.productionCompanies) setProductionCompanies(patch.productionCompanies)
-    if (patch.distributors) setDistributors(patch.distributors)
-    if (patch.network !== undefined) setNetwork(patch.network ?? '')
-    if (patch.country !== undefined) setCountry(patch.country ?? '')
-    if (patch.language !== undefined) setLanguage(patch.language ?? '')
-    if (patch.contentRating !== undefined) setContentRating(patch.contentRating ?? '')
-    if (patch.seriesFormat) setSeriesFormat(patch.seriesFormat)
-    if (patch.duration) setDuration(patch.duration)
-    if (patch.startYear !== undefined) setStartYear(patch.startYear ?? '')
-    if (patch.endYear !== undefined) setEndYear(patch.endYear ?? '')
-    if (patch.hasSeasons !== undefined) setHasSeasons(patch.hasSeasons)
-    if (patch.seasons) setSeasons(patch.seasons)
-
-    // Music (MusicBrainz, VGMdb)
-    if (patch.artist !== undefined) setArtist(patch.artist ?? '')
-    if (patch.releaseYear) setReleaseYear(patch.releaseYear)
-    if (patch.musicType) setMusicType(patch.musicType)
-    if (patch.musicSource) setMusicSource(patch.musicSource)
-    if (patch.label !== undefined) setLabel(patch.label ?? '')
-    if (patch.producers) setProducers(patch.producers)
-    if (patch.hasTracks !== undefined) setHasTracks(patch.hasTracks)
-    if (patch.tracks) setTracks(patch.tracks)
-
-    // Games (IGDB)
-    if (patch.devs) setDevs(patch.devs)
-    if (patch.publishers) setPublishers(patch.publishers)
-    if (patch.platforms) setPlatforms(patch.platforms)
-    if (patch.franchise !== undefined) setFranchise(patch.franchise ?? '')
-    if (patch.ageRating) setAgeRating(patch.ageRating)
-    if (patch.gameSource) setGameSource(patch.gameSource)
     // If IGDB reported a parent game, look for it in the user's library and
     // pre-fill originalWorkId when a case-insensitive title matches. Saves
     // the user from picking it manually for remakes/expansions/ports.
@@ -1726,52 +1572,38 @@ function App() {
       const parent = items.find((i) => i.categoryId === 'videojuegos' && i.id !== editingId && i.title.toLowerCase().trim() === t)
       if (parent) setOriginalWorkId(parent.id)
     }
-    // If IGDB gave us a franchise and the user already has other games in it,
-    // note that in the toast so they know Omnio's franchise timeline will
-    // include this entry. Never gate the rest of the field mapping on this —
-    // the game must still receive description, cover, banner, etc. below.
+    // Sibling-count sidebar for the toast — needs `items`, so it stays here.
     let franchiseSiblingCount = 0
     if (patch.franchise && activeCategory === 'videojuegos') {
       franchiseSiblingCount = items.filter((i) => i.categoryId === 'videojuegos' && i.franchise === patch.franchise && i.id !== editingId).length
     }
 
-    // Comics / Manga family (ComicVine, later MangaDex)
-    if (patch.authors && activeCategory !== 'libros') setMangaAuthors(patch.authors)
-    if (patch.mangaArtists) setMangaArtists(patch.mangaArtists)
-    if (patch.mangaDescription) setMangaDescription(patch.mangaDescription)
-    if (patch.totalChapters) setTotalChapters(patch.totalChapters)
-    if (patch.totalVolumes) setTotalVolumesM(patch.totalVolumes)
-    if (patch.magazine !== undefined) setMagazine(patch.magazine ?? '')
-    if (patch.pubStatus) setPubStatus(patch.pubStatus)
-    if (patch.mangaSource) setMangaSource(patch.mangaSource)
-    if (patch.mangadexId !== undefined) setMangadexId(patch.mangadexId ?? '')
-
-    // Books (OpenLibrary + future). `authors` doubles as the book-authors
-    // list when the active library is `libros`; the manga family reuses
-    // the same setter under `setMangaAuthors` above, gated to non-books.
-    if (patch.authors && activeCategory === 'libros') setMangaAuthors(patch.authors)
-    if (patch.publisher !== undefined) setPublisher(patch.publisher ?? '')
-    if (patch.isbn !== undefined) setIsbn(patch.isbn ?? '')
-    if (patch.totalPages !== undefined) setTotalPages(patch.totalPages ?? '')
-    if (patch.saga !== undefined) setSaga(patch.saga ?? '')
-    if (patch.sagaIndex !== undefined) setSagaIndex(patch.sagaIndex ?? '')
-    if (patch.bookFormat) setBookFormat(patch.bookFormat)
-    if (patch.bookSource) setBookSource(patch.bookSource)
-    if (patch.translator !== undefined) setTranslator(patch.translator ?? '')
-
-    // Explicit description fields (Kitsu passes them typed rather than
-    // routing through the generic description key).
-    if (patch.animeDescription) setAnimeDescription(patch.animeDescription)
-    if (patch.mangaDescription && !patch.description) setMangaDescription(patch.mangaDescription)
-    if (patch.airingStatus) setAiringStatus(patch.airingStatus)
-    if (patch.demographic) setDemographic(patch.demographic)
-
-    if (patch.description) {
-      if (activeCategory === 'anime' || activeCategory === 'donghua') setAnimeDescription(patch.description)
-      else if (isMangaLike(activeCategory)) setMangaDescription(patch.description)
-      else if (activeCategory === 'peliculas') setMovieDescription(patch.description)
-      else if (activeCategory === 'series') setSeriesDescription(patch.description)
-      else setDescription(patch.description)
+    // Resolve VNDB relation slugs against the user's own library — a
+    // slug that matches an existing item's `vndbId` becomes a proper
+    // RelatedItem entry. Uses the same relation vocabulary as VNDB
+    // (sequel/prequel/side/…) collapsed to what RelationKind accepts.
+    if (hints?.vnRelations && activeCategory === 'visual_novels') {
+      const mapRel = (r: string): RelatedItem['relation'] => {
+        const t = r.toLowerCase()
+        if (t === 'seq' || t === 'sequel') return 'sequel'
+        if (t === 'preq' || t === 'prequel') return 'prequel'
+        if (t === 'side' || t === 'ser' || t === 'side_story') return 'side_story'
+        if (t === 'alt' || t === 'alternative') return 'alt_version'
+        if (t === 'char' || t === 'shares') return 'same_universe'
+        if (t === 'fan' || t === 'orig') return 'other'
+        return 'other'
+      }
+      const resolved: RelatedItem[] = []
+      for (const hint of hints.vnRelations) {
+        const match = items.find((i) => i.vndbId === hint.vndbId && i.id !== editingId)
+        if (match) resolved.push({ itemId: match.id, relation: mapRel(hint.relation) })
+      }
+      if (resolved.length > 0) {
+        setRelatedItems((prev) => {
+          const seen = new Set(prev.map((r) => r.itemId))
+          return [...prev, ...resolved.filter((r) => !seen.has(r.itemId))]
+        })
+      }
     }
     if (coverPath) {
       // If the editor already had a fetched cover pending save from an
@@ -1796,45 +1628,12 @@ function App() {
     setToast(`${sourceLabel} data applied${franchiseNote}`)
   }
 
+  // Single opener for every detail modal — was eight near-identical
+  // per-category functions before Fase 2.2 collapsed the viewing
+  // state.
   const openEditFromModal = () => {
-    if (!viewingGame) return
-    loadItemIntoForm(viewingGame)
-    setPanelOpen(true)
-  }
-
-  const openEditFromMusicModal = () => {
-    if (!viewingMusic) return
-    loadItemIntoForm(viewingMusic)
-    setPanelOpen(true)
-  }
-
-  const openEditFromMangaModal = () => {
-    if (!viewingManga) return
-    loadItemIntoForm(viewingManga)
-    setPanelOpen(true)
-  }
-
-  const openEditFromBookModal = () => {
-    if (!viewingBook) return
-    loadItemIntoForm(viewingBook)
-    setPanelOpen(true)
-  }
-
-  const openEditFromMovieModal = () => {
-    if (!viewingMovie) return
-    loadItemIntoForm(viewingMovie)
-    setPanelOpen(true)
-  }
-
-  const openEditFromAnimeModal = () => {
-    if (!viewingAnime) return
-    loadItemIntoForm(viewingAnime)
-    setPanelOpen(true)
-  }
-
-  const openEditFromSeriesModal = () => {
-    if (!viewingSeries) return
-    loadItemIntoForm(viewingSeries)
+    if (!viewing) return
+    loadItemIntoForm(viewing)
     setPanelOpen(true)
   }
 
@@ -1920,279 +1719,43 @@ function App() {
   const handleBannerFile = pickImageToDataUrl(setBannerImage)
   const handleLogoFile   = pickImageToDataUrl(setLogoImage)
 
-  const buildItemFromForm = (id: string, createdAt: number): Item => {
-    // Trim custom-field keys/values and drop rows the user left completely
-    // empty so serialized JSON stays clean.
-    const cleanCustomFields = customFields
-      .map((f) => ({ ...f, key: f.key.trim(), value: f.value.trim() }))
-      .filter((f) => f.key || f.value)
-    const base: Item = {
-      id, categoryId: activeCategory, title: title.trim(),
-      cover: cover.trim() || undefined,
-      notes: notes.trim() || undefined,
-      tags: tags.length > 0 ? tags : undefined,
-      rating: rating || undefined,
-      finishedAt: finishedAt || undefined,
-      customFields: cleanCustomFields.length > 0 ? cleanCustomFields : undefined,
-      createdAt,
-    }
-
-    if (isVideojuegos) {
-      return {
-        ...base,
-        devs: devs.length > 0 ? devs : undefined,
-        publishers: publishers.length > 0 ? publishers : undefined,
-        achievementsUnlocked: achievementsUnlocked.trim() || undefined,
-        achievementsTotal: achievementsTotal.trim() || undefined,
-        releaseDate: releaseDate || undefined,
-        bannerImage: bannerImage.trim() || undefined,
-        logoImage: logoImage.trim() || undefined,
-        description: description.trim() || undefined,
-        platforms: platforms.length > 0 ? platforms : undefined,
-        ownership: ownership || undefined,
-        gameStatus,
-        playTime: playTime || undefined,
-        hasDlc,
-        dlcList: hasDlc && dlcList.length > 0 ? dlcList : undefined,
-        hasAddons,
-        addonsList: hasAddons && addonsList.length > 0 ? addonsList : undefined,
-        isBundle,
-        bundleContents: isBundle && bundleContents.length > 0 ? bundleContents : undefined,
-        saveFiles: saveFiles.length > 0 ? saveFiles : undefined,
-        achievements: achievementsList.length > 0 ? achievementsList : undefined,
-        screenshots: screenshots.length > 0 ? screenshots : undefined,
-        pcgwPage: pcgwPage || undefined,
-        alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
-        gameSource: gameSource || undefined,
-        originalWorkId: originalWorkId || undefined,
-        ageRating: ageRating || undefined,
-        genres: genres.length > 0 ? genres : undefined,
-        gameReview: gameReview.trim() || undefined,
-        hasSpoilers: gameReview.trim() ? hasSpoilers : undefined,
-        rewatches: rewatches.length > 0 ? rewatches : undefined,
-        franchise: franchise.trim() || undefined,
-        relatedItems: relatedItems.length > 0 ? relatedItems : undefined,
-        recommendedItems: recommendedItems.length > 0 ? recommendedItems : undefined,
-      }
-    }
-
-    if (activeCategory === 'peliculas') {
-      return {
-        ...base,
-        directors: directors.length > 0 ? directors : undefined,
-        cast: cast.length > 0 ? cast : undefined,
-        writers: writers.length > 0 ? writers : undefined,
-        productionCompanies: productionCompanies.length > 0 ? productionCompanies : undefined,
-        distributors: distributors.length > 0 ? distributors : undefined,
-        movieDescription: movieDescription.trim() || undefined,
-        franchise: franchise.trim() || undefined,
-        watchedWhere: watchedWhere || undefined,
-        bannerImage2: movieBanner.trim() || undefined,
-        hasSpoilers: movieReview.trim() ? hasSpoilers : undefined,
-        genres: genres.length > 0 ? genres : undefined,
-        releaseDate: releaseDate || undefined,
-        releaseYear: releaseYear || undefined,
-        duration: duration || undefined,
-        consumed,
-        timesWatched: timesWatched || undefined,
-        alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
-        movieSource: movieSource || undefined,
-        contentRating: contentRating.trim() || undefined,
-        movieReview: movieReview.trim() || undefined,
-        rewatches: rewatches.length > 0 ? rewatches : undefined,
-        relatedItems: relatedItems.length > 0 ? relatedItems : undefined,
-        recommendedItems: recommendedItems.length > 0 ? recommendedItems : undefined,
-      }
-    }
-
-    if (isSeriesLike) {
-      const useSeasons = hasSeasons && seasons.length > 0
-      const derived = useSeasons ? seasonsDerivedCounts(seasons) : null
-      return {
-        ...base,
-        bannerImage2: movieBanner.trim() || undefined,
-        unitCount: useSeasons ? String(seasons.length) : (unitCount || undefined),
-        startYear: startYear || undefined,
-        endYear: endYear || undefined,
-        units: useSeasons ? undefined : (units.length > 0 ? units : undefined),
-        seriesStatus,
-        seriesFormat: seriesFormat || undefined,
-        seriesDescription: seriesDescription.trim() || undefined,
-        directors: directors.length > 0 ? directors : undefined,
-        cast: cast.length > 0 ? cast : undefined,
-        showrunners: showrunners.length > 0 ? showrunners : undefined,
-        writers: writers.length > 0 ? writers : undefined,
-        genres: genres.length > 0 ? genres : undefined,
-        network: network.trim() || undefined,
-        country: country.trim() || undefined,
-        language: language.trim() || undefined,
-        contentRating: contentRating.trim() || undefined,
-        watchedWhere: watchedWhere || undefined,
-        episodesWatched: derived ? String(derived.watched) : (episodesWatched || undefined),
-        totalEpisodes: derived && derived.total > 0 ? String(derived.total) : (totalEpisodes || undefined),
-        episodeDuration: episodeDuration || undefined,
-        airedFrom: airedFrom || undefined,
-        airedTo: airedTo || undefined,
-        startDate: startDate || undefined,
-        franchise: franchise.trim() || undefined,
-        hasSeasons: useSeasons ? true : undefined,
-        seasons: useSeasons ? seasons : undefined,
-        seriesReview: seriesReview.trim() || undefined,
-        hasSpoilers: seriesReview.trim() ? hasSpoilers : undefined,
-        rewatches: rewatches.length > 0 ? rewatches : undefined,
-      }
-    }
-
-    if (isAnime) {
-      const useEpisodes = hasEpisodes && episodes.length > 0
-      const derivedWatched = useEpisodes ? String(episodes.filter((e) => e.watched).length) : (episodesWatched || undefined)
-      const derivedTotal = useEpisodes ? String(episodes.length) : (totalEpisodes || undefined)
-      return {
-        ...base,
-        studios: studios.length > 0 ? studios : undefined,
-        genres: genres.length > 0 ? genres : undefined,
-        animeFormat: animeFormat || undefined,
-        airingStatus: airingStatus || undefined,
-        airingDay: airingStatus === 'airing' && airingDay ? airingDay : undefined,
-        watchStatus,
-        episodesWatched: derivedWatched,
-        totalEpisodes: derivedTotal,
-        animeDescription: animeDescription.trim() || undefined,
-        season: season || undefined,
-        seasonYear: seasonYear || undefined,
-        demographic: demographic || undefined,
-        startDate: startDate || undefined,
-        alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
-        animeSource: animeSource || undefined,
-        episodeDuration: episodeDuration || undefined,
-        airedFrom: airedFrom || undefined,
-        airedTo: airedTo || undefined,
-        ageRating: ageRating || undefined,
-        favoriteEpisode: favoriteEpisode || undefined,
-        favoriteEpisodeNote: favoriteEpisodeNote.trim() || undefined,
-        droppedAtEpisode: watchStatus === 'dropped' ? (droppedAtEpisode || undefined) : undefined,
-        droppedReason: watchStatus === 'dropped' ? (droppedReason.trim() || undefined) : undefined,
-        hasEpisodes: useEpisodes ? true : undefined,
-        episodes: useEpisodes ? episodes : undefined,
-        animeReview: animeReview.trim() || undefined,
-        hasSpoilers: animeReview.trim() ? hasSpoilers : undefined,
-        rewatches: rewatches.length > 0 ? rewatches : undefined,
-        franchise: franchise.trim() || undefined,
-        relatedItems: relatedItems.length > 0 ? relatedItems : undefined,
-        recommendedItems: recommendedItems.length > 0 ? recommendedItems : undefined,
-      }
-    }
-
-    if (isManga) {
-      const useChapters = hasChapters && chapters.length > 0
-      const derivedChaptersRead = useChapters ? String(chapters.filter((c) => c.read).length) : (chaptersRead || undefined)
-      const derivedTotalChapters = useChapters ? String(chapters.length) : (totalChapters || undefined)
-      return {
-        ...base,
-        authors: mangaAuthors.length > 0 ? mangaAuthors : undefined,
-        mangaArtists: mangaArtists.length > 0 ? mangaArtists : undefined,
-        volumeCovers: volumeCovers.length > 0 ? volumeCovers : undefined,
-        mangaDescription: mangaDescription.trim() || undefined,
-        genres: genres.length > 0 ? genres : undefined,
-        pubStatus: pubStatus || undefined,
-        mangaStatus: readingStatus,
-        chaptersRead: derivedChaptersRead,
-        totalChapters: derivedTotalChapters,
-        volumesRead: volumesRead || undefined,
-        totalVolumes: totalVolumesM || undefined,
-        startDate: startDate || undefined,
-        releaseDate: releaseDate || undefined,
-        alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
-        mangaSource: mangaSource || undefined,
-        magazine: magazine.trim() || undefined,
-        mediaOwnership: mediaOwnership || undefined,
-        discCount: discCount.trim() || undefined,
-        mangadexId: mangadexId.trim() || undefined,
-        ageRating: ageRating || undefined,
-        mangaReview: mangaReview.trim() || undefined,
-        hasSpoilers: mangaReview.trim() ? hasSpoilers : undefined,
-        rewatches: rewatches.length > 0 ? rewatches : undefined,
-        franchise: franchise.trim() || undefined,
-        relatedItems: relatedItems.length > 0 ? relatedItems : undefined,
-        recommendedItems: recommendedItems.length > 0 ? recommendedItems : undefined,
-        hasChapters: useChapters ? true : undefined,
-        chapters: useChapters ? chapters : undefined,
-      }
-    }
-
-    if (activeCategory === 'libros') {
-      return {
-        ...base,
-        authors: mangaAuthors.length > 0 ? mangaAuthors : undefined,
-        description: description.trim() || undefined,
-        bookStatus,
-        bookFormat: bookFormat || undefined,
-        bookSource: bookSource || undefined,
-        pagesRead: pagesRead || undefined,
-        totalPages: totalPages || undefined,
-        publisher: publisher.trim() || undefined,
-        saga: saga.trim() || undefined,
-        sagaIndex: sagaIndex.trim() || undefined,
-        isbn: isbn.trim() || undefined,
-        translator: translator.trim() || undefined,
-        pubStatus: pubStatus || undefined,
-        genres: genres.length > 0 ? genres : undefined,
-        alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
-        releaseDate: releaseDate || undefined,
-        startDate: startDate || undefined,
-        ageRating: ageRating || undefined,
-        bookReview: bookReview.trim() || undefined,
-        hasSpoilers: bookReview.trim() ? hasSpoilers : undefined,
-        chapterNotes: chapterNotes.length > 0 ? chapterNotes : undefined,
-        rewatches: rewatches.length > 0 ? rewatches : undefined,
-        franchise: franchise.trim() || undefined,
-        relatedItems: relatedItems.length > 0 ? relatedItems : undefined,
-        recommendedItems: recommendedItems.length > 0 ? recommendedItems : undefined,
-      }
-    }
-
-    if (activeCategory === 'musica') {
-      const albumLike = isAlbumLikeMusic(musicType || undefined)
-      return {
-        ...base,
-        // Save whichever the user filled in — releaseDate is the more
-        // precise one and drives the Release calendar; releaseYear is the
-        // fallback shown on cards and used as the calendar's year-only
-        // entry when no full date exists.
-        releaseYear: releaseYear || undefined,
-        releaseDate: releaseDate || undefined,
-        musicType: musicType || undefined,
-        consumed,
-        artist: artist.trim() || undefined,
-        genres: albumLike && genres.length > 0 ? genres : undefined,
-        partOfAlbum: !albumLike ? (partOfAlbum.trim() || undefined) : undefined,
-        partOfAlbumId: !albumLike && partOfAlbumId ? partOfAlbumId : undefined,
-        label: albumLike ? (label.trim() || undefined) : undefined,
-        hasTracks: albumLike ? hasTracks : undefined,
-        tracks: albumLike && hasTracks && tracks.length > 0 ? tracks : undefined,
-        singleCovers: albumLike && singleCovers.length > 0 ? singleCovers : undefined,
-        editions: albumLike && editions.length > 0 ? editions : undefined,
-        alternativeTitles: alternativeTitles.length > 0 ? alternativeTitles : undefined,
-        musicSource: musicSource || undefined,
-        producers: producers.length > 0 ? producers : undefined,
-        musicReview: musicReview.trim() || undefined,
-        hasSpoilers: musicReview.trim() ? hasSpoilers : undefined,
-        vinylCondition: vinylCondition || undefined,
-        // Music now also uses mediaOwnership (physical / digital / both /
-        // neither) and discCount for multi-disc CDs / vinyl sets. Both
-        // were previously only saved on manga items, which meant the
-        // Format dropdown in the music editor silently threw its value
-        // away on save.
-        mediaOwnership: mediaOwnership || undefined,
-        discCount: (mediaOwnership === 'physical' || mediaOwnership === 'both') ? (discCount.trim() || undefined) : undefined,
-        rewatches: rewatches.length > 0 ? rewatches : undefined,
-        relatedItems: relatedItems.length > 0 ? relatedItems : undefined,
-        recommendedItems: recommendedItems.length > 0 ? recommendedItems : undefined,
-      }
-    }
-
-    return base
-  }
+  const buildItemFromForm = (id: string, createdAt: number): AnyItem => buildItemFromFormImpl(id, createdAt, {
+    activeCategory,
+    title, cover, notes, tags, rating, finishedAt, customFields,
+    devs, publishers, achievementsUnlocked, achievementsTotal, releaseDate,
+    bannerImage, logoImage, description, platforms, ownership, gameStatus,
+    playTime, hasDlc, dlcList, hasAddons, addonsList, isBundle, bundleContents,
+    saveFiles, achievementsList, screenshots, pcgwPage, gameSource,
+    originalWorkId, gameReview, hasSpoilers, franchise,
+    releaseYear, duration, consumed, artist, musicType, genres, label,
+    partOfAlbum, partOfAlbumId, hasTracks, tracks, singleCovers, editions,
+    musicSource, vinylCondition, producers, musicReview,
+    mangaAuthors, mangaArtists, volumeCovers, mangaDescription, pubStatus,
+    readingStatus, chaptersRead, totalChapters, volumesRead, totalVolumesM,
+    startDate, mangaSource, magazine, mangaReview, hasChapters, chapters,
+    mediaOwnership, discCount, mangadexId,
+    studios, animeFormat, airingStatus, airingDay, watchStatus,
+    episodesWatched, totalEpisodes, animeDescription, season, seasonYear,
+    demographic, alternativeTitles, animeSource, episodeDuration, airedFrom,
+    airedTo, ageRating, favoriteEpisode, favoriteEpisodeNote, droppedAtEpisode,
+    droppedReason, hasEpisodes, episodes, animeReview,
+    rewatches, relatedItems, recommendedItems,
+    seriesStatus, seriesFormat, seriesDescription, showrunners, writers,
+    network, country, language, contentRating, hasSeasons, seasons,
+    seriesReview, unitCount, startYear, endYear, units,
+    directors, cast, productionCompanies, distributors, movieDescription,
+    movieSource, movieReview, watchedWhere, movieBanner, timesWatched,
+    bookStatus, bookFormat, bookSource, pagesRead, totalPages, publisher,
+    saga, sagaIndex, isbn, translator, bookReview, chapterNotes,
+    visualNovelStatus, vnLength, vnLengthHours, vnEngine, vnOriginalLanguage,
+    vnLanguages, vnAliases, vnCharacters, vnStaff, vnScreenshots, vnCovers,
+    vnEditions, vnPublishers, vnCommunityRating, vnDevStatus, vnDescription,
+    vnReview, vndbId, nsfw,
+  })
+  // Placeholder — the actual implementation is now imported from
+  // ./editor/buildItemFromForm.ts. Every branch below (Games, Movies,
+  // Series, Anime, Manga, Books, VN, Music) is a category-specific
+  // return with the same field-mapping the helper implements.
 
   const persistDataUrl = async (val: string | undefined, categoryId: string, kind: string, basename?: string): Promise<string | undefined> => {
     if (!val || !val.startsWith('data:')) return val
@@ -2200,7 +1763,7 @@ function App() {
     return typeof rel === 'string' ? rel : val
   }
 
-  const persistItemImages = async (item: Item): Promise<Item> => {
+  const persistItemImages = async (item: AnyItem): Promise<AnyItem> => {
     const t = item.title
     const cover = await persistDataUrl(item.cover, item.categoryId, 'cover', assetBasename(t, 'cover'))
     const bannerImage = await persistDataUrl(item.bannerImage, item.categoryId, 'banner', assetBasename(t, 'banner'))
@@ -2218,7 +1781,32 @@ function App() {
     if (editions && editions.length > 0) {
       editions = await Promise.all(editions.map(async (e) => ({ ...e, cover: await persistDataUrl(e.cover, item.categoryId, 'edition', assetBasename(t, 'edition', e.name)) })))
     }
-    return { ...item, cover, bannerImage, bannerImage2, logoImage, volumeCovers, singleCovers, editions }
+    // VN character-card uploads land as data URLs in vnCharacters[].image
+    // (via pickImageToDataUrl on the editor). Fetched covers/screenshots
+    // already come back as asset paths from the fetcher's downloadImageAsset
+    // calls; persistDataUrl no-ops on those since they aren't data URLs.
+    let vnCharacters = item.vnCharacters
+    if (vnCharacters && vnCharacters.length > 0) {
+      vnCharacters = await Promise.all(vnCharacters.map(async (c, i) => ({
+        ...c,
+        image: (await persistDataUrl(c.image, item.categoryId, 'character', assetBasename(t, 'char', c.name || i + 1))) ?? c.image,
+      })))
+    }
+    let vnCovers = item.vnCovers
+    if (vnCovers && vnCovers.length > 0) {
+      vnCovers = await Promise.all(vnCovers.map(async (v, i) => ({
+        ...v,
+        path: (await persistDataUrl(v.path, item.categoryId, 'cover', assetBasename(t, 'cover', v.releaseTitle || i + 1))) ?? v.path,
+      })))
+    }
+    let vnScreenshots = item.vnScreenshots
+    if (vnScreenshots && vnScreenshots.length > 0) {
+      vnScreenshots = await Promise.all(vnScreenshots.map(async (s, i) => ({
+        ...s,
+        path: (await persistDataUrl(s.path, item.categoryId, 'screenshot', assetBasename(t, 'screen', i + 1))) ?? s.path,
+      })))
+    }
+    return { ...item, cover, bannerImage, bannerImage2, logoImage, volumeCovers, singleCovers, editions, vnCharacters, vnCovers, vnScreenshots }
   }
 
   // True only for asset paths we own on disk under assets/ — i.e. relative
@@ -2236,7 +1824,7 @@ function App() {
   // Compare the item we're about to save against the previously-saved version
   // and collect every asset path that used to be referenced but no longer is.
   // Covers the "clear cover", "replace banner", "remove one volume" cases.
-  const findOrphanedItemAssets = (oldItem: Item | undefined, newItem: Item): string[] => {
+  const findOrphanedItemAssets = (oldItem: AnyItem | undefined, newItem: AnyItem): string[] => {
     if (!oldItem) return []
     const orphans: string[] = []
     const check = (oldVal: string | undefined, newVal: string | undefined) => {
@@ -2279,13 +1867,7 @@ function App() {
       const updated = await persistItemImages(built)
       findOrphanedItemAssets(oldItem, updated).forEach(deleteAssetFile)
       setItems((prev) => prev.map((it) => (it.id === editingId ? updated : it)))
-      if (viewingGame && viewingGame.id === editingId) setViewingGame(updated)
-      if (viewingMusic && viewingMusic.id === editingId) setViewingMusic(updated)
-      if (viewingManga && viewingManga.id === editingId) setViewingManga(updated)
-      if (viewingBook && viewingBook.id === editingId) setViewingBook(updated)
-      if (viewingMovie && viewingMovie.id === editingId) setViewingMovie(updated)
-      if (viewingAnime && viewingAnime.id === editingId) setViewingAnime(updated)
-      if (viewingSeries && viewingSeries.id === editingId) setViewingSeries(updated)
+      if (viewing && viewing.id === editingId) setViewing(updated)
     } else {
       const built = buildItemFromForm(crypto.randomUUID(), Date.now())
       const created = await persistItemImages(built)
@@ -2295,7 +1877,7 @@ function App() {
     closePanel({ afterSave: true })
   }
 
-  const performDelete = (item: Item) => {
+  const performDelete = (item: AnyItem) => {
     // Fire-and-forget removal of any local asset files this item owned so
     // deleting an entry doesn't leave orphan images under assets/.
     deleteAssetFile(item.cover)
@@ -2305,26 +1887,23 @@ function App() {
     ;(item.volumeCovers ?? []).forEach((v) => deleteAssetFile(v.cover))
     ;(item.singleCovers ?? []).forEach((s) => deleteAssetFile(s.cover))
     ;(item.editions ?? []).forEach((e) => deleteAssetFile(e.cover))
+    ;(item.vnCovers ?? []).forEach((c) => deleteAssetFile(c.path))
+    ;(item.vnScreenshots ?? []).forEach((s) => deleteAssetFile(s.path))
+    ;(item.vnCharacters ?? []).forEach((c) => deleteAssetFile(c.image))
     setItems((prev) => prev.filter((i) => i.id !== item.id))
     setCollections((prev) => prev.map((c) => ({ ...c, itemIds: c.itemIds.filter((id) => id !== item.id) })))
     if (editingId === item.id) closePanel()
-    if (viewingGame && viewingGame.id === item.id) setViewingGame(null)
-    if (viewingMusic && viewingMusic.id === item.id) setViewingMusic(null)
-    if (viewingManga && viewingManga.id === item.id) setViewingManga(null)
-    if (viewingBook && viewingBook.id === item.id) setViewingBook(null)
-    if (viewingMovie && viewingMovie.id === item.id) setViewingMovie(null)
-    if (viewingAnime && viewingAnime.id === item.id) setViewingAnime(null)
-    if (viewingSeries && viewingSeries.id === item.id) setViewingSeries(null)
+    if (viewing && viewing.id === item.id) setViewing(null)
   }
 
-  const handleDelete = (item: Item) => {
+  const handleDelete = (item: AnyItem) => {
     if (settings.confirmDelete) askConfirm(`Delete "${item.title}"? This can't be undone.`, () => performDelete(item), true)
     else performDelete(item)
   }
 
   // Toggle item-level favorite ⭐. Called from every card + the detail
   // views. Undo-tracked because it's an observable data change.
-  const toggleItemFavorite = (item: Item) => {
+  const toggleItemFavorite = (item: AnyItem) => {
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, favorite: !i.favorite } : i)))
   }
 
@@ -2334,9 +1913,9 @@ function App() {
   // library (open, edit, duplicate, move, add to group, delete) so no
   // per-category branching is needed here — the modals underneath handle
   // the category-specific state.
-  const buildCardMenu = (item: Item): CardMenuAction[] => {
+  const buildCardMenu = (item: AnyItem): CardMenuAction[] => {
     const dup = () => {
-      const copy: Item = { ...item, id: crypto.randomUUID(), title: `${item.title} (Copy)`, createdAt: Date.now() }
+      const copy: AnyItem = { ...item, id: crypto.randomUUID(), title: `${item.title} (Copy)`, createdAt: Date.now() }
       setItems((prev) => [...prev, copy])
       setToast(`Duplicated as "${copy.title}"`)
     }
@@ -2370,65 +1949,15 @@ function App() {
     ]
   }
 
-  const handleDuplicateGame = () => {
-    if (!viewingGame) return
-    const copy: Item = { ...viewingGame, id: crypto.randomUUID(), title: `${viewingGame.title} (Copy)`, createdAt: Date.now() }
+  // Single "duplicate" handler for every detail modal. Fase 2.3
+  // collapsed eight per-category near-identical functions into this
+  // one — copy the item currently in `viewing`, give it a new uuid +
+  // `(Copy)` title, drop it into the library, and open the editor.
+  const handleDuplicate = () => {
+    if (!viewing) return
+    const copy: AnyItem = { ...viewing, id: crypto.randomUUID(), title: `${viewing.title} (Copy)`, createdAt: Date.now() }
     setItems((prev) => [...prev, copy])
-    setViewingGame(null)
-    loadItemIntoForm(copy)
-    setPanelOpen(true)
-  }
-
-  const handleDuplicateMusic = () => {
-    if (!viewingMusic) return
-    const copy: Item = { ...viewingMusic, id: crypto.randomUUID(), title: `${viewingMusic.title} (Copy)`, createdAt: Date.now() }
-    setItems((prev) => [...prev, copy])
-    setViewingMusic(null)
-    loadItemIntoForm(copy)
-    setPanelOpen(true)
-  }
-
-  const handleDuplicateManga = () => {
-    if (!viewingManga) return
-    const copy: Item = { ...viewingManga, id: crypto.randomUUID(), title: `${viewingManga.title} (Copy)`, createdAt: Date.now() }
-    setItems((prev) => [...prev, copy])
-    setViewingManga(null)
-    loadItemIntoForm(copy)
-    setPanelOpen(true)
-  }
-
-  const handleDuplicateBook = () => {
-    if (!viewingBook) return
-    const copy: Item = { ...viewingBook, id: crypto.randomUUID(), title: `${viewingBook.title} (Copy)`, createdAt: Date.now() }
-    setItems((prev) => [...prev, copy])
-    setViewingBook(null)
-    loadItemIntoForm(copy)
-    setPanelOpen(true)
-  }
-
-  const handleDuplicateMovie = () => {
-    if (!viewingMovie) return
-    const copy: Item = { ...viewingMovie, id: crypto.randomUUID(), title: `${viewingMovie.title} (Copy)`, createdAt: Date.now() }
-    setItems((prev) => [...prev, copy])
-    setViewingMovie(null)
-    loadItemIntoForm(copy)
-    setPanelOpen(true)
-  }
-
-  const handleDuplicateAnime = () => {
-    if (!viewingAnime) return
-    const copy: Item = { ...viewingAnime, id: crypto.randomUUID(), title: `${viewingAnime.title} (Copy)`, createdAt: Date.now() }
-    setItems((prev) => [...prev, copy])
-    setViewingAnime(null)
-    loadItemIntoForm(copy)
-    setPanelOpen(true)
-  }
-
-  const handleDuplicateSeries = () => {
-    if (!viewingSeries) return
-    const copy: Item = { ...viewingSeries, id: crypto.randomUUID(), title: `${viewingSeries.title} (Copy)`, createdAt: Date.now() }
-    setItems((prev) => [...prev, copy])
-    setViewingSeries(null)
+    setViewing(null)
     loadItemIntoForm(copy)
     setPanelOpen(true)
   }
@@ -2613,6 +2142,12 @@ function App() {
       active: (specialView as string) === 'bookBoard' && bookBoardStatus === s.value,
       onClick: () => { setSpecialView('bookBoard'); setBookBoardStatus(s.value); closePanel(); closeAllDetailViews() },
     }))
+    if (activeCategory === 'visual_novels') return VN_STATUS_OPTIONS.map((s) => ({
+      key: s.value, label: s.label,
+      count: itemsInCategory.filter((i) => (i.visualNovelStatus || 'plan_to_play') === s.value).length,
+      active: (specialView as string) === 'vnBoard' && vnBoardStatus === s.value,
+      onClick: () => { setSpecialView('vnBoard'); setVnBoardStatus(s.value); closePanel(); closeAllDetailViews() },
+    }))
     return []
   }
   type PageCount = { n: number; unit: string }
@@ -2652,6 +2187,11 @@ function App() {
     if (specialView === 'bookBoard') {
       const n = itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === bookBoardStatus).length
       return { icon: <MangaStatusIcon value={bookBoardStatus as MangaStatus} />, title: getBookStatus(bookBoardStatus).label, count: { n, unit: n === 1 ? 'book' : 'books' }, onBack: backToLibrary, actions: viewToggleBtns }
+    }
+    if (specialView === 'vnBoard') {
+      const label = VN_STATUS_OPTIONS.find((s) => s.value === vnBoardStatus)?.label ?? ''
+      const n = itemsInCategory.filter((i) => (i.visualNovelStatus || 'plan_to_play') === vnBoardStatus).length
+      return { icon: <CategoryIcon id="visual_novels" />, title: label, count: { n, unit: n === 1 ? 'VN' : 'VNs' }, onBack: backToLibrary, actions: viewToggleBtns }
     }
     if (specialView === 'simulcastBoard') {
       const airing = itemsInCategory.filter((i) => i.airingStatus === 'airing' && i.airingDay)
@@ -2716,7 +2256,7 @@ function App() {
             {updateInfo.matchedAssetUrl && (
               <button type="button" className="update-banner-btn primary" onClick={startAssistedDownload}>Update</button>
             )}
-            <button type="button" className={updateInfo.matchedAssetUrl ? 'update-banner-btn ghost' : 'update-banner-btn primary'} onClick={() => window.ipcRenderer.invoke('updates:open-url', updateInfo.htmlUrl)}>Release page</button>
+            <button type="button" className={updateInfo.matchedAssetUrl ? 'update-banner-btn ghost' : 'update-banner-btn primary'} onClick={() => { if (updateInfo.htmlUrl) invoke('updates:open-url', updateInfo.htmlUrl) }}>Release page</button>
             <button type="button" className="update-banner-btn ghost" onClick={() => setUpdateBannerDismissed(true)}>Later</button>
           </div>
         </div>
@@ -2726,6 +2266,7 @@ function App() {
           items={items}
           collections={collections}
           enabledCategories={settings.enabledCategories}
+          arcadeEnabled={settings.arcadeEnabled}
           active={
             specialView === 'home' ? { kind: 'home' } :
             specialView === 'calendar' ? { kind: 'special', id: 'calendar' } :
@@ -2782,81 +2323,21 @@ function App() {
         </nav>
       )}
         <main className="content">
-          {viewingGame ? (
-            <GameDetailModal
-              item={viewingGame}
-              groups={collections.filter((c) => c.categoryId === 'videojuegos' && c.itemIds.includes(viewingGame.id))}
-              allGames={items.filter((i) => i.categoryId === 'videojuegos')}
-              onClose={() => setViewingGame(null)}
+          {viewing ? (
+            <DetailModalRouter
+              viewing={viewing}
+              items={items}
+              collections={collections}
+              onClose={() => setViewing(null)}
               onEdit={openEditFromModal}
-              onDuplicate={handleDuplicateGame}
-              onNavigate={(id) => { const target = items.find((i) => i.id === id); if (target) setViewingGame(target) }}
-            />
-          ) : viewingMusic ? (
-            <MusicDetailModal
-              item={viewingMusic}
-              groups={collections.filter((c) => c.categoryId === 'musica' && c.itemIds.includes(viewingMusic.id))}
-              allMusic={items.filter((i) => i.categoryId === 'musica')}
-              onClose={() => setViewingMusic(null)}
-              onEdit={openEditFromMusicModal}
-              onDuplicate={handleDuplicateMusic}
-              onNavigate={(id) => { const target = items.find((i) => i.id === id); if (target) setViewingMusic(target) }}
-              onSaveTrackLyrics={(trackId, lyrics) => {
-                const updated: Item = { ...viewingMusic, tracks: (viewingMusic.tracks ?? []).map((t) => t.id === trackId ? { ...t, lyrics: lyrics.trim() || undefined } : t) }
-                setItems((prev) => prev.map((i) => i.id === viewingMusic.id ? updated : i))
-                setViewingMusic(updated)
+              onDuplicate={handleDuplicate}
+              onNavigate={(id) => { const target = items.find((i) => i.id === id); if (target) setViewing(target) }}
+              onSaveTrackLyrics={(item, trackId, lyrics) => {
+                const updated: AnyItem = { ...item, tracks: (item.tracks ?? []).map((t) => t.id === trackId ? { ...t, lyrics: lyrics.trim() || undefined } : t) }
+                setItems((prev) => prev.map((i) => i.id === item.id ? updated : i))
+                setViewing(updated)
                 setToast('Lyrics saved')
               }}
-            />
-          ) : viewingMovie ? (
-            <MovieDetailModal
-              item={viewingMovie}
-              groups={collections.filter((c) => c.categoryId === 'peliculas' && c.itemIds.includes(viewingMovie.id))}
-              allMovies={items.filter((i) => i.categoryId === 'peliculas')}
-              onClose={() => setViewingMovie(null)}
-              onEdit={openEditFromMovieModal}
-              onDuplicate={handleDuplicateMovie}
-              onNavigate={(id) => { const target = items.find((i) => i.id === id); if (target) setViewingMovie(target) }}
-            />
-          ) : viewingAnime ? (
-            <AnimeDetailModal
-              item={viewingAnime}
-              groups={collections.filter((c) => c.categoryId === viewingAnime.categoryId && c.itemIds.includes(viewingAnime.id))}
-              allAnime={items.filter((i) => isAnimeLikeCategory(i.categoryId))}
-              onClose={() => setViewingAnime(null)}
-              onEdit={openEditFromAnimeModal}
-              onDuplicate={handleDuplicateAnime}
-              onNavigate={(id) => { const target = items.find((i) => i.id === id); if (target) setViewingAnime(target) }}
-            />
-          ) : viewingSeries ? (
-            <SeriesDetailModal
-              item={viewingSeries}
-              groups={collections.filter((c) => c.categoryId === 'series' && c.itemIds.includes(viewingSeries.id))}
-              allSeries={items.filter((i) => i.categoryId === 'series')}
-              onClose={() => setViewingSeries(null)}
-              onEdit={openEditFromSeriesModal}
-              onDuplicate={handleDuplicateSeries}
-              onNavigate={(id) => { const target = items.find((i) => i.id === id); if (target) setViewingSeries(target) }}
-            />
-          ) : viewingManga ? (
-            <MangaDetailModal
-              item={viewingManga}
-              groups={collections.filter((c) => c.categoryId === viewingManga.categoryId && c.itemIds.includes(viewingManga.id))}
-              allManga={items.filter((i) => isMangaLike(i.categoryId))}
-              onClose={() => setViewingManga(null)}
-              onEdit={openEditFromMangaModal}
-              onDuplicate={handleDuplicateManga}
-              onNavigate={(id) => { const target = items.find((i) => i.id === id); if (target) setViewingManga(target) }}
-            />
-          ) : viewingBook ? (
-            <BookDetailModal
-              item={viewingBook}
-              groups={collections.filter((c) => c.categoryId === 'libros' && c.itemIds.includes(viewingBook.id))}
-              allBooks={items.filter((i) => i.categoryId === 'libros')}
-              onClose={() => setViewingBook(null)}
-              onEdit={openEditFromBookModal}
-              onDuplicate={handleDuplicateBook}
-              onNavigate={(id) => { const target = items.find((i) => i.id === id); if (target) setViewingBook(target) }}
             />
           ) : viewingArtist ? (
             <ArtistDetailView
@@ -3052,6 +2533,30 @@ function App() {
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
                   <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} bookFields={settings.bookFields} />
+                ))}
+              </div>
+              </div>
+            </>)
+          })()}
+
+          {specialView === 'vnBoard' && (() => {
+            const list = filterAndSort(itemsInCategory.filter((i) => (i.visualNovelStatus || 'plan_to_play') === vnBoardStatus), search, [], [], [], [], sortBy)
+            return (<>
+              <div className="toolbar">
+                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
+                  <option value="recent">Most recent</option>
+                  <option value="alpha">Alphabetical</option>
+                  <option value="rating">Rating</option>
+                  <option value="yearAsc">Release year ↑</option>
+                  <option value="yearDesc">Release year ↓</option>
+                </select>
+              </div>
+              <div className="content-scroll">
+              <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
+                {list.length === 0 && <p className="empty">Nothing here.</p>}
+                {list.map((i) => (
+                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} vnFields={settings.vnFields} />
                 ))}
               </div>
               </div>
@@ -3720,32 +3225,82 @@ function App() {
                   </>
                 )}
 
-                {settingsTab === 'libraries' && (
-                  <div className="field-group">
-                    <label>Enabled libraries</label>
-                    <p className="hint">Uncheck a library to hide it from Home and insights. Your data is preserved even if you disable one.</p>
-                    <div className="library-toggle-list">
-                      {CATEGORIES.map((cat) => {
-                        const enabled = !settings.enabledCategories || settings.enabledCategories.includes(cat.id)
-                        return (
-                          <label key={cat.id} className="library-toggle-row">
-                            <input
-                              type="checkbox"
-                              checked={enabled}
-                              onChange={() => setSettings((s) => {
-                                const current = s.enabledCategories ?? CATEGORIES.map((c) => c.id)
-                                const next = enabled ? current.filter((id) => id !== cat.id) : [...current, cat.id]
-                                return { ...s, enabledCategories: next }
-                              })}
-                            />
-                            <span className="library-toggle-icon"><CategoryIcon id={cat.id} /></span>
-                            <span>{cat.label}</span>
-                          </label>
-                        )
-                      })}
+                {settingsTab === 'libraries' && (() => {
+                  // VN is a category (has editor/save/fetcher) but visually
+                  // belongs to Extras alongside Arcade. Filter it out of the
+                  // main list; render it with the Extras toggles below.
+                  const EXTRA_CAT_IDS = new Set(['visual_novels'])
+                  const mainCats = CATEGORIES.filter((c) => !EXTRA_CAT_IDS.has(c.id))
+                  const extraCats = CATEGORIES.filter((c) => EXTRA_CAT_IDS.has(c.id))
+                  return (
+                  <>
+                    <div className="field-group">
+                      <label>Enabled libraries</label>
+                      <p className="hint">Uncheck a library to hide it from Home and insights. Your data is preserved even if you disable one.</p>
+                      <div className="library-toggle-list">
+                        {mainCats.map((cat) => {
+                          const enabled = !settings.enabledCategories || settings.enabledCategories.includes(cat.id)
+                          return (
+                            <label key={cat.id} className="library-toggle-row">
+                              <input
+                                type="checkbox"
+                                checked={enabled}
+                                onChange={() => setSettings((s) => {
+                                  const current = s.enabledCategories ?? CATEGORIES.map((c) => c.id)
+                                  const next = enabled ? current.filter((id) => id !== cat.id) : [...current, cat.id]
+                                  return { ...s, enabledCategories: next }
+                                })}
+                              />
+                              <span className="library-toggle-icon"><CategoryIcon id={cat.id} /></span>
+                              <span>{cat.label}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                    <div className="field-group">
+                      <label>Extras</label>
+                      <p className="hint">Optional sections that live outside the standard libraries. Disabling one only hides its sidebar entry — the data stays intact.</p>
+                      <div className="library-toggle-list">
+                        <label className="library-toggle-row">
+                          <input
+                            type="checkbox"
+                            checked={settings.arcadeEnabled !== false}
+                            onChange={() => setSettings((s) => ({ ...s, arcadeEnabled: s.arcadeEnabled === false ? true : false }))}
+                          />
+                          <span className="library-toggle-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="6" width="18" height="12" rx="2" />
+                              <path d="M8 10v4M6 12h4" />
+                              <circle cx="15" cy="11" r="1" fill="currentColor" />
+                              <circle cx="17.5" cy="13.5" r="1" fill="currentColor" />
+                            </svg>
+                          </span>
+                          <span>Arcade</span>
+                        </label>
+                        {extraCats.map((cat) => {
+                          const enabled = !settings.enabledCategories || settings.enabledCategories.includes(cat.id)
+                          return (
+                            <label key={cat.id} className="library-toggle-row">
+                              <input
+                                type="checkbox"
+                                checked={enabled}
+                                onChange={() => setSettings((s) => {
+                                  const current = s.enabledCategories ?? CATEGORIES.map((c) => c.id)
+                                  const next = enabled ? current.filter((id) => id !== cat.id) : [...current, cat.id]
+                                  return { ...s, enabledCategories: next }
+                                })}
+                              />
+                              <span className="library-toggle-icon"><CategoryIcon id={cat.id} /></span>
+                              <span>{cat.label}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </>
+                  )
+                })()}
 
                 {settingsTab === 'cards' && (
                   <>
@@ -3802,6 +3357,14 @@ function App() {
                       <div className="pills">
                         {BOOK_FIELD_OPTIONS.map((f) => (
                           <button key={f.value} type="button" className={settings.bookFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, bookFields: { ...s.bookFields, [f.value]: !s.bookFields[f.value] } }))}>{f.label}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="field-group">
+                      <label>Visual Novels</label>
+                      <div className="pills">
+                        {VN_FIELD_OPTIONS.map((f) => (
+                          <button key={f.value} type="button" className={settings.vnFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, vnFields: { ...s.vnFields, [f.value]: !s.vnFields[f.value] } }))}>{f.label}</button>
                         ))}
                       </div>
                     </div>
@@ -4056,7 +3619,7 @@ function App() {
                           </button>
                         )}
                         {updateInfo && (
-                          <button type="button" className="secondary-btn" onClick={() => window.ipcRenderer.invoke('updates:open-url', updateInfo.htmlUrl)}>
+                          <button type="button" className="secondary-btn" onClick={() => { if (updateInfo.htmlUrl) invoke('updates:open-url', updateInfo.htmlUrl) }}>
                             ↗ Open release page
                           </button>
                         )}
@@ -4250,10 +3813,19 @@ function App() {
                           <a
                             href="https://github.com/TonyMontania/Omnio/releases"
                             className="about-releases-link"
-                            onClick={(e) => { e.preventDefault(); window.ipcRenderer.invoke('updates:open-url', 'https://github.com/TonyMontania/Omnio/releases') }}
+                            onClick={(e) => { e.preventDefault(); invoke('updates:open-url', 'https://github.com/TonyMontania/Omnio/releases') }}
                           >Show all release notes →</a>
                         </p>
-                        <p className="about-line about-stack">Built with Electron · React · Vite · TypeScript</p>
+                        <p className="about-line about-stack">Built with Tauri · Rust · React · Vite · TypeScript</p>
+                        <p className="about-line" style={{ marginTop: 8 }}>
+                          Arcade → Grid mode adapted from{' '}
+                          <a
+                            href="https://github.com/doopu/1ccTracker"
+                            className="about-releases-link"
+                            onClick={(e) => { e.preventDefault(); invoke('updates:open-url', 'https://github.com/doopu/1ccTracker') }}
+                          >doopu/1ccTracker</a>
+                          .
+                        </p>
                       </div>
                     </div>
                   </>
@@ -4450,6 +4022,7 @@ function App() {
                         animeFields={settings.animeFields}
                         seriesFields={settings.seriesFields}
                         bookFields={settings.bookFields}
+                        vnFields={settings.vnFields}
                         onContextMenu={(it, x, y) => setCtxMenu({ item: it, x, y })}
                       />
                     ))}
@@ -4498,6 +4071,8 @@ function App() {
                         movieFields={settings.movieFields}
                         animeFields={settings.animeFields}
                         seriesFields={settings.seriesFields}
+                        bookFields={settings.bookFields}
+                        vnFields={settings.vnFields}
                       />
                     </div>
                   ) : (
@@ -5038,6 +4613,48 @@ function App() {
                     chapters={chapters} setChapters={setChapters}
                     volumeCovers={volumeCovers} setVolumeCovers={setVolumeCovers}
                     intHandler={intHandler}
+                  />
+                )}
+
+                {activeCategory === 'visual_novels' && (
+                  <VisualNovelEditorSection
+                    editingId={editingId}
+                    items={items}
+                    relatedCrossLibraryOptions={relatedCrossLibraryOptions}
+                    visualNovelStatus={visualNovelStatus} setVisualNovelStatus={setVisualNovelStatus}
+                    vnDescription={vnDescription} setVnDescription={setVnDescription}
+                    devs={devs} setDevs={setDevs}
+                    publishers={publishers} setPublishers={setPublishers}
+                    vnPublishers={vnPublishers} setVnPublishers={setVnPublishers}
+                    vnEngine={vnEngine} setVnEngine={setVnEngine}
+                    vnLength={vnLength} setVnLength={setVnLength}
+                    vnLengthHours={vnLengthHours} setVnLengthHours={setVnLengthHours}
+                    vnCommunityRating={vnCommunityRating} setVnCommunityRating={setVnCommunityRating}
+                    vnDevStatus={vnDevStatus} setVnDevStatus={setVnDevStatus}
+                    vnOriginalLanguage={vnOriginalLanguage} setVnOriginalLanguage={setVnOriginalLanguage}
+                    vnLanguages={vnLanguages} setVnLanguages={setVnLanguages}
+                    vnAliases={vnAliases} setVnAliases={setVnAliases}
+                    platforms={platforms} setPlatforms={setPlatforms}
+                    existingPlatforms={Array.from(new Set(items.flatMap((i) => i.platforms ?? [])))}
+                    releaseDate={releaseDate} setReleaseDate={setReleaseDate}
+                    releaseYear={releaseYear} setReleaseYear={setReleaseYear}
+                    playTime={playTime} setPlayTime={setPlayTime}
+                    startDate={startDate} setStartDate={setStartDate}
+                    finishedAt={finishedAt} setFinishedAt={setFinishedAt}
+                    rating={rating} setRating={setRating}
+                    nsfw={nsfw} setNsfw={setNsfw}
+                    vnStaff={vnStaff} setVnStaff={setVnStaff}
+                    vnCharacters={vnCharacters} setVnCharacters={setVnCharacters}
+                    vnCovers={vnCovers} setVnCovers={setVnCovers}
+                    vnEditions={vnEditions} setVnEditions={setVnEditions}
+                    vnScreenshots={vnScreenshots} setVnScreenshots={setVnScreenshots}
+                    cover={cover} setCover={setCover}
+                    vnReview={vnReview} setVnReview={setVnReview}
+                    hasSpoilers={hasSpoilers} setHasSpoilers={setHasSpoilers}
+                    rewatches={rewatches} setRewatches={setRewatches}
+                    vndbId={vndbId} setVndbId={setVndbId}
+                    relatedItems={relatedItems} setRelatedItems={setRelatedItems}
+                    recommendedItems={recommendedItems} setRecommendedItems={setRecommendedItems}
                   />
                 )}
 

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Omnio",
+  "version": "0.5.0",
+  "identifier": "com.omnio.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Omnio (Tauri POC)",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": ["**"],
+          "deny": []
+        }
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi", "app", "dmg", "appimage"],
+    "publisher": "Omnio",
+    "copyright": "Copyright © 2026 Omnio",
+    "shortDescription": "Local-first hobby tracker",
+    "longDescription": "One local library for every hobby you track — games, music, movies, series, anime, donghua, manga family and books. No accounts, no cloud, no telemetry.",
+    "category": "Utility",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "languages": ["English", "Spanish"],
+        "compression": "lzma"
+      },
+      "wix": {
+        "language": "en-US"
+      }
+    },
+    "createUpdaterArtifacts": false
+  }
+}

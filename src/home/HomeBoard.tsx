@@ -6,6 +6,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item } from '../types'
+import type { CategoryId } from '../types/items'
 import { CATEGORIES } from '../categories'
 import './widgets'         // side-effect: registers built-in widgets
 import {
@@ -18,7 +19,7 @@ interface Props {
   enabledCategories?: string[]
   layout?: readonly HomeWidgetSlot[]      // undefined = fall back to default
   onSaveLayout: (next: HomeWidgetSlot[]) => void
-  onOpenCategory: (id: string) => void
+  onOpenCategory: (id: CategoryId) => void
   onOpenItem: (item: Item) => void
   onOpenCalendar: () => void
   onOpenStats: () => void

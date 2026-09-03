@@ -8,9 +8,15 @@
 
 import type { Item, Collection } from './types'
 import { CATEGORIES } from './categories'
+import type { CategoryId } from './types/items'
 import {
   CategoryIcon, HomeIcon, CalendarIcon, InsightsIcon, SettingsIcon, DiceIcon,
 } from './icons'
+
+// Categories that belong to the "Extras" sidebar group instead of the main
+// "Libraries" list. VNDB-shaped works live alongside Arcade rather than
+// mixed in with mainstream libraries — that's where the user expects them.
+const EXTRA_CATEGORY_IDS = new Set(['visual_novels'])
 
 export type SidebarView =
   | { kind: 'home' }
@@ -22,11 +28,12 @@ interface Props {
   items: Item[]
   collections: Collection[]                 // reserved for future "pinned collections" section
   enabledCategories?: string[]
+  arcadeEnabled?: boolean
   active: SidebarView
   collapsed: boolean
   onToggleCollapsed: () => void
   onOpenHome: () => void
-  onOpenLibrary: (categoryId: string) => void
+  onOpenLibrary: (categoryId: CategoryId) => void
   onOpenCalendar: () => void
   onOpenStats: () => void
   onOpenSettings: () => void
@@ -44,11 +51,15 @@ function isActiveSpecial(active: SidebarView, id: 'calendar' | 'stats' | 'settin
 
 export default function Sidebar(props: Props) {
   const {
-    items, enabledCategories, active, collapsed, onToggleCollapsed,
+    items, enabledCategories, arcadeEnabled, active, collapsed, onToggleCollapsed,
     onOpenHome, onOpenLibrary, onOpenCalendar, onOpenStats, onOpenSettings, onOpenSearch, onOpenRandomizer, onOpenArcade,
   } = props
+  const arcadeOn = arcadeEnabled !== false
 
-  const cats = CATEGORIES.filter((c) => !enabledCategories || enabledCategories.includes(c.id))
+  const enabledCats = CATEGORIES.filter((c) => !enabledCategories || enabledCategories.includes(c.id))
+  const cats = enabledCats.filter((c) => !EXTRA_CATEGORY_IDS.has(c.id))
+  const extraCats = enabledCats.filter((c) => EXTRA_CATEGORY_IDS.has(c.id))
+  const showExtras = arcadeOn || extraCats.length > 0
 
   return (
     <aside className={collapsed ? 'sidebar sidebar-icons' : 'sidebar'}>
@@ -84,45 +95,67 @@ export default function Sidebar(props: Props) {
         <span className="sidebar-label">Home</span>
       </button>
 
-      <div className="sidebar-section">
-        {!collapsed && <span className="sidebar-section-title">Libraries</span>}
-        {cats.map((c) => {
-          const n = items.filter((i) => i.categoryId === c.id).length
-          return (
-            <button
-              key={c.id}
-              type="button"
-              className={isActiveLibrary(active, c.id) ? 'sidebar-item active' : 'sidebar-item'}
-              onClick={() => onOpenLibrary(c.id)}
-              title={`${c.label} — ${n} ${n === 1 ? 'item' : 'items'}`}
-            >
-              <span className="sidebar-icon"><CategoryIcon id={c.id} /></span>
-              <span className="sidebar-label">{c.label}</span>
-              {!collapsed && <span className="sidebar-count">{n}</span>}
-            </button>
-          )
-        })}
-      </div>
+      {cats.length > 0 && (
+        <div className="sidebar-section">
+          {!collapsed && <span className="sidebar-section-title">Libraries</span>}
+          {cats.map((c) => {
+            const n = items.filter((i) => i.categoryId === c.id).length
+            return (
+              <button
+                key={c.id}
+                type="button"
+                className={isActiveLibrary(active, c.id) ? 'sidebar-item active' : 'sidebar-item'}
+                onClick={() => onOpenLibrary(c.id)}
+                title={`${c.label} — ${n} ${n === 1 ? 'item' : 'items'}`}
+              >
+                <span className="sidebar-icon"><CategoryIcon id={c.id} /></span>
+                <span className="sidebar-label">{c.label}</span>
+                {!collapsed && <span className="sidebar-count">{n}</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
-      <div className="sidebar-section">
-        {!collapsed && <span className="sidebar-section-title">Extras</span>}
-        <button
-          type="button"
-          className={active.kind === 'arcade' ? 'sidebar-item active' : 'sidebar-item'}
-          onClick={onOpenArcade}
-          title="Arcade — score log, 1cc grid, run tracker"
-        >
-          <span className="sidebar-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="6" width="18" height="12" rx="2" />
-              <path d="M8 10v4M6 12h4" />
-              <circle cx="15" cy="11" r="1" fill="currentColor" />
-              <circle cx="17.5" cy="13.5" r="1" fill="currentColor" />
-            </svg>
-          </span>
-          <span className="sidebar-label">Arcade</span>
-        </button>
-      </div>
+      {showExtras && (
+        <div className="sidebar-section">
+          {!collapsed && <span className="sidebar-section-title">Extras</span>}
+          {arcadeOn && (
+            <button
+              type="button"
+              className={active.kind === 'arcade' ? 'sidebar-item active' : 'sidebar-item'}
+              onClick={onOpenArcade}
+              title="Arcade — score log, 1cc grid, run tracker"
+            >
+              <span className="sidebar-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="6" width="18" height="12" rx="2" />
+                  <path d="M8 10v4M6 12h4" />
+                  <circle cx="15" cy="11" r="1" fill="currentColor" />
+                  <circle cx="17.5" cy="13.5" r="1" fill="currentColor" />
+                </svg>
+              </span>
+              <span className="sidebar-label">Arcade</span>
+            </button>
+          )}
+          {extraCats.map((c) => {
+            const n = items.filter((i) => i.categoryId === c.id).length
+            return (
+              <button
+                key={c.id}
+                type="button"
+                className={isActiveLibrary(active, c.id) ? 'sidebar-item active' : 'sidebar-item'}
+                onClick={() => onOpenLibrary(c.id)}
+                title={`${c.label} — ${n} ${n === 1 ? 'item' : 'items'}`}
+              >
+                <span className="sidebar-icon"><CategoryIcon id={c.id} /></span>
+                <span className="sidebar-label">{c.label}</span>
+                {!collapsed && <span className="sidebar-count">{n}</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       <div className="sidebar-footer">
         <button type="button" className="sidebar-item" onClick={onOpenSearch} title="Search (Ctrl+K)">

@@ -11,6 +11,7 @@ import type {
   MovieSource, MovieField, WatchLocation,
   BookStatus, BookFormat, BookSource, BookField,
   AgeRating, RelationKind, Platform, BandStatus, MemberStatus,
+  VisualNovelStatus, VnLength, VnField, VnCharacterRole, VnStaffRole, VnDevStatus,
 } from './entities'
 
 // ---- Shared ----
@@ -387,4 +388,115 @@ export const BOOK_FIELD_OPTIONS: { value: BookField; label: string }[] = [
 
 export const DEFAULT_BOOK_FIELDS: Record<BookField, boolean> = {
   title: true, authors: true, status: true, pages: true, rating: true, tags: true,
+}
+
+// ---- Visual Novels ----
+
+export const VN_STATUS_OPTIONS: { value: VisualNovelStatus; label: string }[] = [
+  { value: 'plan_to_play', label: 'Plan to play' },
+  { value: 'playing',      label: 'Playing' },
+  { value: 'paused',       label: 'Paused' },
+  { value: 'completed',    label: 'Completed' },
+  { value: 'dropped',      label: 'Dropped' },
+]
+
+// VNDB's own length buckets, with the hour ranges baked into the label so
+// users don't have to guess what "medium" means.
+export const VN_LENGTH_OPTIONS: { value: VnLength; label: string }[] = [
+  { value: 'very_short', label: 'Very short (<2h)' },
+  { value: 'short',      label: 'Short (2–10h)' },
+  { value: 'medium',     label: 'Medium (10–30h)' },
+  { value: 'long',       label: 'Long (30–50h)' },
+  { value: 'very_long',  label: 'Very long (>50h)' },
+]
+
+export const VN_CHARACTER_ROLE_OPTIONS: { value: VnCharacterRole; label: string }[] = [
+  { value: 'protagonist', label: 'Protagonist' },
+  { value: 'main',        label: 'Main character' },
+  { value: 'side',        label: 'Side character' },
+  { value: 'appears',     label: 'Appears' },
+]
+
+export const VN_STAFF_ROLE_OPTIONS: { value: VnStaffRole; label: string }[] = [
+  { value: 'writer',     label: 'Writer / Scenario' },
+  { value: 'artist',     label: 'Artist / CG' },
+  { value: 'composer',   label: 'Composer / Music' },
+  { value: 'director',   label: 'Director' },
+  { value: 'translator', label: 'Translator' },
+  { value: 'other',      label: 'Other' },
+]
+
+// Common engines a Ren'Py-user might type. Free-form input; these seed the
+// datalist so muscle memory works.
+export const VN_ENGINE_SUGGESTIONS: string[] = [
+  "Ren'Py", 'Kirikiri', 'TyranoBuilder', 'NScripter', 'ONScripter',
+  'Unity', 'Unreal', 'Naninovel', 'BGI / Ethornell', 'Majiro',
+  'ADV+', 'Custom',
+]
+
+export const VN_FIELD_OPTIONS: { value: VnField; label: string }[] = [
+  { value: 'title',  label: 'Title' },
+  { value: 'status', label: 'Status' },
+  { value: 'length', label: 'Length' },
+  { value: 'rating', label: 'Rating' },
+  { value: 'tags',   label: 'Tags' },
+]
+
+export const DEFAULT_VN_FIELDS: Record<VnField, boolean> = {
+  title: true, status: true, length: true, rating: true, tags: true,
+}
+
+export const VN_DEV_STATUS_OPTIONS: { value: VnDevStatus; label: string }[] = [
+  { value: 'finished',       label: 'Finished' },
+  { value: 'in_development', label: 'In development' },
+  { value: 'cancelled',      label: 'Cancelled' },
+]
+
+// Language code → country flag emoji + human label. Used to prefix every
+// VN publisher with a flag ("Frontwing 🇯🇵") and to render the languages
+// list on the detail view without leaking raw ISO codes.
+export const VN_LANGUAGE_FLAGS: Record<string, { flag: string; label: string }> = {
+  'ja':      { flag: '🇯🇵', label: 'Japanese' },
+  'en':      { flag: '🇺🇸', label: 'English' },
+  'zh':      { flag: '🇨🇳', label: 'Chinese' },
+  'zh-Hans': { flag: '🇨🇳', label: 'Chinese (Simplified)' },
+  'zh-Hant': { flag: '🇹🇼', label: 'Chinese (Traditional)' },
+  'ko':      { flag: '🇰🇷', label: 'Korean' },
+  'de':      { flag: '🇩🇪', label: 'German' },
+  'fr':      { flag: '🇫🇷', label: 'French' },
+  'es':      { flag: '🇪🇸', label: 'Spanish' },
+  'ca':      { flag: '🇪🇸', label: 'Catalan' },
+  'it':      { flag: '🇮🇹', label: 'Italian' },
+  'pt':      { flag: '🇵🇹', label: 'Portuguese' },
+  'pt-br':   { flag: '🇧🇷', label: 'Portuguese (Brazil)' },
+  'pt-BR':   { flag: '🇧🇷', label: 'Portuguese (Brazil)' },
+  'ru':      { flag: '🇷🇺', label: 'Russian' },
+  'pl':      { flag: '🇵🇱', label: 'Polish' },
+  'nl':      { flag: '🇳🇱', label: 'Dutch' },
+  'sv':      { flag: '🇸🇪', label: 'Swedish' },
+  'no':      { flag: '🇳🇴', label: 'Norwegian' },
+  'da':      { flag: '🇩🇰', label: 'Danish' },
+  'fi':      { flag: '🇫🇮', label: 'Finnish' },
+  'cs':      { flag: '🇨🇿', label: 'Czech' },
+  'sk':      { flag: '🇸🇰', label: 'Slovak' },
+  'hu':      { flag: '🇭🇺', label: 'Hungarian' },
+  'ro':      { flag: '🇷🇴', label: 'Romanian' },
+  'uk':      { flag: '🇺🇦', label: 'Ukrainian' },
+  'tr':      { flag: '🇹🇷', label: 'Turkish' },
+  'ar':      { flag: '🇸🇦', label: 'Arabic' },
+  'th':      { flag: '🇹🇭', label: 'Thai' },
+  'vi':      { flag: '🇻🇳', label: 'Vietnamese' },
+  'id':      { flag: '🇮🇩', label: 'Indonesian' },
+  'he':      { flag: '🇮🇱', label: 'Hebrew' },
+  'ta':      { flag: '🇮🇳', label: 'Tamil' },
+  'hi':      { flag: '🇮🇳', label: 'Hindi' },
+  'el':      { flag: '🇬🇷', label: 'Greek' },
+}
+
+// Fallback for unknown codes — a neutral globe so nothing renders empty.
+export function vnLangFlag(code: string): string {
+  return VN_LANGUAGE_FLAGS[code]?.flag ?? '🌐'
+}
+export function vnLangLabel(code: string): string {
+  return VN_LANGUAGE_FLAGS[code]?.label ?? code
 }

@@ -8,6 +8,7 @@
 
 import type { ReactElement } from 'react'
 import type { Item } from '../types'
+import type { CategoryId } from '../types/items'
 
 export type WidgetSize = 'small' | 'medium' | 'large'
 
@@ -15,7 +16,7 @@ export interface HomeContext {
   items: Item[]
   enabledCategories: readonly string[]
   onOpenItem: (item: Item) => void
-  onOpenCategory: (categoryId: string) => void
+  onOpenCategory: (categoryId: CategoryId) => void
   onOpenCalendar: () => void
   onOpenStats: () => void
 }

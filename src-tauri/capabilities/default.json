@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability set for the Omnio Tauri POC — grants every core permission the shim + registered plugins need. Tightened later before v1.0.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:allow-listen",
+    "core:event:allow-emit",
+    "core:event:allow-unlisten",
+    "core:event:allow-emit-to",
+    "core:window:default",
+    "core:webview:default",
+    "core:path:default",
+    "core:app:default",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "shell:default",
+    "shell:allow-open"
+  ]
+}

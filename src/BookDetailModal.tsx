@@ -1,6 +1,6 @@
 import { getBookStatus, getBookFormatLabel, getBookSourceLabel, getPublicationStatusLabel, getAgeRatingLabel, assetSrc } from './types'
 import { MangaStatusIcon } from './icons'  // Book status uses the same visual language as Manga (plan/reading/completed/paused/dropped).
-import type { Item, Collection, MangaStatus } from './types'
+import type { Item, AnyItem, Collection, MangaStatus, BookItem } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import CoverPlaceholder from './components/CoverPlaceholder'
 import { exportItemAsJson } from './utils/files'
@@ -15,9 +15,9 @@ const timelineSortKey = (i: Item) => i.releaseDate || i.releaseYear || ''
 const yearOf = (i: Item) => timelineSortKey(i).slice(0, 4)
 
 interface Props {
-  item: Item
+  item: BookItem
   groups: Collection[]
-  allBooks: Item[]
+  allBooks: AnyItem[]     // sibling lookup still uses the bag — franchise / related pull from every category
   onClose: () => void
   onEdit: () => void
   onDuplicate: () => void
