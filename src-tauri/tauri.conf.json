@@ -33,7 +33,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi", "app", "dmg", "appimage"],
+    "targets": ["nsis", "msi", "app", "dmg", "appimage", "deb"],
     "publisher": "Omnio",
     "copyright": "Copyright © 2026 Omnio",
     "shortDescription": "Local-first hobby tracker",

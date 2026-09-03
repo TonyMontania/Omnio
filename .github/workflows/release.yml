@@ -85,28 +85,55 @@ jobs:
       - name: npm install
         run: npm ci
 
-      - name: Build renderer
-        run: npm run build --if-present
+      - name: Renderer smoke build
+        run: npm run renderer:build
         # tauri-action below runs its own vite build as part of the
-        # bundle pipeline. This extra step is a smoke test that the
-        # renderer bundles cleanly before we start the (much longer)
-        # cargo build.
+        # bundle pipeline. This extra step is a smoke test that
+        # tsc + vite bundle cleanly before we start the (much longer)
+        # cargo build. Uses `renderer:build` (tsc && vite build) —
+        # `npm run build` now delegates to `tauri build` and would
+        # double-compile.
 
       - name: Tauri build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # `tagName` + `releaseName` here fill in the same Release
-          # that release.yml also uploads to — the tauri-action reuses
-          # the tag if one already exists. `releaseDraft: false` +
-          # `prerelease: false` matches release.yml so both flows
-          # target the same visibility.
           tagName: ${{ github.ref_name }}
           releaseName: 'Omnio ${{ github.ref_name }}'
           releaseBody: |
-            Cross-platform installers: Windows NSIS + MSI, macOS DMG
-            (arm64 + x64), Linux AppImage + deb.
+            Cross-platform installers: Windows NSIS + MSI + portable ZIP,
+            macOS DMG (arm64 + x64), Linux AppImage + deb.
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      # Tauri v2 doesn't produce a single-file portable EXE like
+      # electron-builder did. Ship the raw binary as a zip alongside
+      # the installers — needs WebView2 on the host (installed by
+      # default on Windows 10 21H2+ and every Windows 11).
+      - name: Package Windows portable
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $exe = "src-tauri\target\release\omnio.exe"
+          $zip = "Omnio_${version}_windows-portable.zip"
+          if (-not (Test-Path $exe)) {
+            Write-Error "omnio.exe not found at $exe"
+            exit 1
+          }
+          Compress-Archive -Path $exe -DestinationPath $zip -Force
+          $size = (Get-Item $zip).Length
+          Write-Host "Created: $zip ($size bytes)"
+
+      - name: Upload Windows portable to release
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release upload "$GITHUB_REF_NAME" \
+            "Omnio_${version}_windows-portable.zip" \
+            --repo "${{ github.repository }}" --clobber
