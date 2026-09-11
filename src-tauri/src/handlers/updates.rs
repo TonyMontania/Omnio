@@ -323,15 +323,64 @@ fn detect_linux_install_kind() -> (&'static str, &'static str) {
         Err(_) => return ("linux-appimage", ".AppImage"),
     };
     let path = exe.to_string_lossy().to_string();
-    // .deb installs the binary under `/usr/bin/` (or `/usr/local/bin/`
-    // if built from source with a custom prefix). Match the release
-    // asset `omnio_<version>_amd64.deb`.
+    // Both `.deb` and `.rpm` install the binary under `/usr/bin/` (or
+    // `/usr/local/bin/` if built from source with a custom prefix). To
+    // pick the right update asset we peek at `/etc/os-release` and read
+    // the distro's `ID` / `ID_LIKE`.
     if path.starts_with("/usr/bin/") || path.starts_with("/usr/local/bin/") {
-        return ("linux-deb", ".deb");
+        return match detect_linux_package_family() {
+            LinuxPackageFamily::Rpm => ("linux-rpm", ".rpm"),
+            LinuxPackageFamily::Deb => ("linux-deb", ".deb"),
+        };
     }
     // Fallback: AppImage. Covers users who moved the AppImage payload
     // out of its default location and lost the $APPIMAGE env var.
     ("linux-appimage", ".AppImage")
+}
+
+enum LinuxPackageFamily {
+    Deb,
+    Rpm,
+}
+
+/// Read `/etc/os-release` and decide whether the distro belongs to the
+/// rpm family (Fedora, RHEL, CentOS, Rocky, AlmaLinux, openSUSE…) or
+/// the deb family (Debian, Ubuntu, Mint, Pop!_OS…). Anything else falls
+/// back to deb — Debian's userbase is the larger of the two, so a
+/// mis-detected obscure distro at least gets the more likely artifact.
+fn detect_linux_package_family() -> LinuxPackageFamily {
+    let content = match std::fs::read_to_string("/etc/os-release") {
+        Ok(s) => s,
+        Err(_) => return LinuxPackageFamily::Deb,
+    };
+    // The file is shell-style `KEY=value` with optional quotes. We only
+    // care about `ID` and `ID_LIKE`; parse simply.
+    let mut id = String::new();
+    let mut id_like = String::new();
+    for line in content.lines() {
+        let (k, v) = match line.split_once('=') {
+            Some(kv) => kv,
+            None => continue,
+        };
+        let v = v.trim_matches('"').trim_matches('\'').to_lowercase();
+        match k {
+            "ID" => id = v,
+            "ID_LIKE" => id_like = v,
+            _ => {}
+        }
+    }
+    // Union both fields so an id_like="fedora rhel" derivative still hits.
+    let haystack = format!("{id} {id_like}");
+    const RPM_MARKERS: &[&str] = &[
+        "fedora", "rhel", "centos", "rocky", "almalinux", "amazon",
+        "opensuse", "suse", "mandriva", "openmandriva", "mageia",
+    ];
+    for marker in RPM_MARKERS {
+        if haystack.contains(marker) {
+            return LinuxPackageFamily::Rpm;
+        }
+    }
+    LinuxPackageFamily::Deb
 }
 
 // -- updates:open-url -----------------------------------------------

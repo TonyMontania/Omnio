@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.6.0.schema.json
+
+# Version manifest — the top-level pointer to the installer + locale
+# manifests. Submitted to microsoft/winget-pkgs under
+# `manifests/t/TonyMontania/Omnio/<version>/` alongside the other two
+# YAMLs.
+
+PackageIdentifier: TonyMontania.Omnio
+PackageVersion: @VERSION@
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: 1.6.0

@@ -1,0 +1,47 @@
+# Maintainer: Tony <eze.bigplanet@gmail.com>
+#
+# omnio-bin — pre-compiled `.deb` payload from the upstream GitHub Release,
+# repackaged for Arch and derivatives. Follows the AUR "-bin" convention:
+# no compilation, just download-verify-install.
+#
+# Placeholders below (@VERSION@, @SHA256_AMD64@, @SHA256_AARCH64@,
+# @PKGREL@) are filled in by scripts/stamp-packaging.mjs during the
+# release workflow. The stamped PKGBUILD is uploaded as a release asset
+# and pushed to AUR from the same job (when AUR_SSH_PRIVATE_KEY is set).
+
+pkgname=omnio-bin
+_pkgname=omnio
+pkgver=@VERSION@
+pkgrel=@PKGREL@
+pkgdesc="Local-first hobby tracker — games, music, movies, series, anime, manga family, books and visual novels in one desktop app"
+# Upstream only publishes x86_64 Linux artifacts today. An aarch64
+# variant would need a matching build in .github/workflows/release.yml.
+arch=('x86_64')
+url="https://github.com/TonyMontania/Omnio"
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator')
+optdepends=(
+    'librsvg: SVG rendering for embedded icons'
+)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+
+source=("$_pkgname-$pkgver-x86_64.deb::https://github.com/TonyMontania/Omnio/releases/download/v$pkgver/${_pkgname}_${pkgver}_amd64.deb")
+sha256sums=('@SHA256_AMD64@')
+
+package() {
+    # Extract the deb's data.tar into the pkgdir. The .deb layout is a
+    # standard `ar` archive with three members: debian-binary,
+    # control.tar.*, data.tar.*. We only need `data.tar.*`.
+    bsdtar -xf "$srcdir/$_pkgname-$pkgver-x86_64.deb" -C "$srcdir"
+
+    # Tauri v2 packs data.tar.gz. Older bundlers used .xz; handle both.
+    if [[ -f "$srcdir/data.tar.gz" ]]; then
+        bsdtar -xf "$srcdir/data.tar.gz" -C "$pkgdir"
+    elif [[ -f "$srcdir/data.tar.xz" ]]; then
+        bsdtar -xf "$srcdir/data.tar.xz" -C "$pkgdir"
+    else
+        echo "Unexpected .deb layout — no data.tar.gz or .xz found" >&2
+        return 1
+    fi
+}

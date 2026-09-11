@@ -28,9 +28,9 @@
 
 Download the build for your platform from the [releases page](https://github.com/TonyMontania/Omnio/releases/latest). All builds are unsigned — SmartScreen / Gatekeeper show a first-launch warning that clears with one confirmation.
 
-- **Windows** — `Omnio_<version>_x64-setup.exe` (NSIS, per-user, no admin) or `.msi` for group-policy rollouts. Data lives under `%APPDATA%\com.omnio.app\`.
+- **Windows** — `Omnio_<version>_x64-setup.exe` (NSIS, per-user, no admin), `.msi` for group-policy rollouts, or `Omnio_<version>_windows-portable.zip` (needs WebView2, included by default on Windows 10 21H2+ and every Windows 11). Also on **[winget](https://github.com/microsoft/winget-pkgs)**: `winget install TonyMontania.Omnio`. Data lives under `%APPDATA%\com.omnio.app\`.
 - **macOS** — `Omnio_<version>_aarch64.dmg` (Apple Silicon) or `_x64.dmg` (Intel). Drag Omnio.app to Applications. First launch: right-click → **Open** to bypass Gatekeeper.
-- **Linux** — `omnio_<version>_amd64.AppImage` (may need `libfuse2` on Debian/Ubuntu) or `.deb` (`sudo dpkg -i omnio_<version>_amd64.deb`).
+- **Linux** — `omnio_<version>_amd64.AppImage` (may need `libfuse2` on Debian/Ubuntu), `omnio_<version>_amd64.deb` (`sudo dpkg -i …`) or `omnio-<version>-1.x86_64.rpm` (`sudo dnf install …`). Arch users: **[`omnio-bin`](https://aur.archlinux.org/packages/omnio-bin)** on the AUR.
 
 Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#running-locally).
 

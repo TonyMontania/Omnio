@@ -6,9 +6,17 @@ Each `## v<version>` section becomes the body of that tag's [GitHub Release](htt
 
 ## Unreleased
 
+### Added
+
+- **Fedora / RHEL `.rpm` build.** Added `"rpm"` to Tauri's bundle targets and `rpm` to the Linux CI prereqs. The release publishes `omnio-<version>-1.x86_64.rpm` alongside the AppImage + `.deb`.
+- **AUR package `omnio-bin`.** `packaging/aur/PKGBUILD` repackages the upstream `.deb` for Arch and derivatives (`extract data.tar.gz`, drop into `pkgdir`). The release workflow stamps the version + SHA256 into the PKGBUILD and uploads the stamped file as a release asset (`omnio-bin.PKGBUILD.txt`); submitting to AUR is one `git push` from a maintainer machine with SSH access to `ssh://aur@aur.archlinux.org/omnio-bin.git`.
+- **winget manifests (`TonyMontania.Omnio`).** `packaging/winget/*.yaml` describes the NSIS + MSI + portable-ZIP installers, each with its own SHA256. Same stamping flow; the stamped YAMLs are uploaded as release assets ready for `wingetcreate submit` against `microsoft/winget-pkgs`.
+- **`scripts/stamp-packaging.mjs`.** Node script that reads the release assets, computes SHA256 per artifact, replaces `@VERSION@` / `@SHA256_*@` / `@RELEASE_DATE@` tokens in each template and writes stamped copies under `stamped/`. No templating engine — literal `@TOKEN@` strings so unfilled slots are trivially greppable.
+- **`packaging/README.md`.** How each channel gets submitted, plus a recipe for adding new channels (Homebrew / Flathub / Snap) later.
+
 ### Fixed
 
-- **In-app updater points at the wrong asset.** The install-kind detector was hard-coded to check an env var (`PORTABLE_EXECUTABLE_DIR`) that our `windows-portable.zip` never sets, and had no branch at all for MSI or `.deb` installs — so portable users were pointed at `-portable.exe` (an asset that doesn't exist), MSI users got the NSIS `.exe`, and `.deb` users got the AppImage. Detection now reads `current_exe()` and matches against Tauri v2's default install directories: `%ProgramFiles%` → MSI, `%LOCALAPPDATA%\Programs` → NSIS, anywhere else → portable zip. On Linux, `$APPIMAGE` → AppImage, `/usr/bin` or `/usr/local/bin` → `.deb`.
+- **In-app updater points at the wrong asset.** The install-kind detector was hard-coded to check an env var (`PORTABLE_EXECUTABLE_DIR`) that our `windows-portable.zip` never sets, and had no branch at all for MSI or `.deb` installs — so portable users were pointed at `-portable.exe` (an asset that doesn't exist), MSI users got the NSIS `.exe`, and `.deb` users got the AppImage. Detection now reads `current_exe()` and matches against Tauri v2's default install directories: `%ProgramFiles%` → MSI, `%LOCALAPPDATA%\Programs` → NSIS, anywhere else → portable zip. On Linux, `$APPIMAGE` → AppImage, `/usr/bin` or `/usr/local/bin` → `.deb` or `.rpm` (picked by reading `ID` / `ID_LIKE` from `/etc/os-release` — Fedora / RHEL / CentOS / Rocky / Alma / openSUSE / SUSE all go to `.rpm`).
 
 ## v0.5.1 — Item templates, quick-add via URL, settings rework, mobile cleanup
 

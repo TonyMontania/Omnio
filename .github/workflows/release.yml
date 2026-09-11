@@ -5,19 +5,26 @@
 # installer to a GitHub Release named after the tag.
 #
 # The matrix produces:
-#   * Windows: `Omnio_<version>_x64-setup.exe` (NSIS installer)
-#              `Omnio_<version>_x64_en-US.msi` (MSI installer)
+#   * Windows: `Omnio_<version>_x64-setup.exe`      (NSIS installer)
+#              `Omnio_<version>_x64_en-US.msi`      (MSI installer)
+#              `Omnio_<version>_windows-portable.zip` (portable EXE)
 #   * macOS:   `Omnio_<version>_aarch64.dmg`
 #              `Omnio_<version>_x64.dmg`
 #   * Linux:   `omnio_<version>_amd64.AppImage`
 #              `omnio_<version>_amd64.deb`
+#              `omnio-<version>-1.x86_64.rpm`
+#
+# A follow-up `package-channels` job stamps the AUR PKGBUILD + winget
+# manifests under `packaging/` with the release version + real SHA256s
+# and uploads them as extra release assets. Downstream automation
+# (submit to AUR, PR to microsoft/winget-pkgs) picks up from there.
 #
 # The in-app updater (`updates:check` → `updates:install-kind`)
 # matches assets on filename suffix (`-setup.exe`, `aarch64.dmg`,
-# `x64.dmg`, `.AppImage`), so Tauri's default names Just Work with
-# the existing GitHub Releases assisted-download flow. Nothing here
-# is signed — Windows SmartScreen and macOS Gatekeeper warn on first
-# launch. Documented in the README.
+# `x64.dmg`, `.AppImage`, `.deb`, `.rpm`, `windows-portable.zip`), so
+# Tauri's default names Just Work with the existing GitHub Releases
+# assisted-download flow. Nothing here is signed — Windows SmartScreen
+# and macOS Gatekeeper warn on first launch. Documented in the README.
 
 name: Release
 
@@ -111,7 +118,8 @@ jobs:
             curl \
             wget \
             file \
-            libssl-dev
+            libssl-dev \
+            rpm
 
       - name: npm install
         run: npm ci
@@ -165,4 +173,52 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           gh release upload "$GITHUB_REF_NAME" \
             "Omnio_${version}_windows-portable.zip" \
+            --repo "${{ github.repository }}" --clobber
+
+  # Stamp the AUR + winget manifests with the release version + real
+  # SHA256s pulled from the freshly-uploaded assets, then upload the
+  # stamped files back to the release. Runs after every matrix build
+  # completes so the assets are guaranteed to exist.
+  package-channels:
+    needs: build-tauri
+    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download release assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p release-assets
+          gh release download "$GITHUB_REF_NAME" \
+            --repo "${{ github.repository }}" \
+            --dir release-assets
+
+      - name: Stamp packaging manifests
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p stamped
+          node scripts/stamp-packaging.mjs \
+            --version "$version" \
+            --assets-dir release-assets \
+            --out stamped
+
+      - name: Upload stamped manifests to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # AUR PKGBUILD — uploaded with .txt suffix so browsers preview it
+          cp stamped/aur/PKGBUILD "omnio-bin.PKGBUILD.txt"
+          gh release upload "$GITHUB_REF_NAME" \
+            "omnio-bin.PKGBUILD.txt" \
+            stamped/winget/TonyMontania.Omnio.yaml \
+            stamped/winget/TonyMontania.Omnio.installer.yaml \
+            stamped/winget/TonyMontania.Omnio.locale.en-US.yaml \
             --repo "${{ github.repository }}" --clobber
