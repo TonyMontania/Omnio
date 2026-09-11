@@ -6,6 +6,11 @@ Each `## v<version>` section becomes the body of that tag's [GitHub Release](htt
 
 ## Unreleased
 
+### Fixed
+
+- **Track artist column in the Music detail view split band names that contain a `/`.** The parser that decided when to render "artistA, artistB" as separate pills was splitting on `/` and `:` too — so `156/Silence`, `AC/DC`, `Sunami:Portrayal Of Guilt` and every other band that carries one of those characters showed as two pills instead of one. The split is now scoped to real featured-artist separators (`,`, `&`, `feat.`, `ft.`, ` x `).
+- **Track artist rendering was inconsistent within the same album.** When every track shared the album artist, the cell rendered as plain text; when a track added a featured artist, both names rendered as yellow accent pills. Same "Architects" text ended up styled differently row to row. Every artist name is now a pill, so a lone `Architects` sits at the same visual weight as `Architects · Jon Green` two rows down.
+
 ### Changed
 
 - **In-app updater downloads land in the app's install folder instead of `~/Downloads`.** The download destination is now the parent of `current_exe()` — so a portable user gets the new ZIP right next to their extracted `omnio.exe`, an NSIS user gets the new `setup.exe` inside `%LocalAppData%\Programs\Omnio\`, and an AppImage user gets the new AppImage sitting next to the running one. Falls back to the OS Downloads folder (and then to the app-data dir) when the install location is read-only for the process — typical for MSI installs in Program Files or `.deb` / `.rpm` installs under `/usr/bin`, where writing without elevation isn't allowed.

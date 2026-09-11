@@ -192,8 +192,21 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
               {(() => {
                 const raw = t.artist?.trim()
                 if (!raw) return null
-                const parts = raw.split(/\s*(?:,|&|\/|\bfeat\.?|\bft\.?|\sx\s)\s*/i).map((p) => p.trim()).filter(Boolean)
-                if (parts.length <= 1) return raw
+                // Only split on separators that mean "multiple artists"
+                // — commas, ampersands, `feat.` / `ft.`, and ` x `. Do
+                // NOT split on `/` or `:` — those are common inside a
+                // single band name (156/Silence, AC/DC, He Is Legend,
+                // Sunami:Portrayal Of Guilt). Splitting on those was
+                // turning one band into two pills.
+                const parts = raw
+                  .split(/\s*(?:,|&|\bfeat\.?|\bft\.?|\sx\s)\s*/i)
+                  .map((p) => p.trim())
+                  .filter(Boolean)
+                // Always render as pills — same visual weight whether
+                // there's one artist or many, so a track with a lone
+                // "Architects" doesn't sit next to another track with
+                // "Architects · Jon Green" in a different style. Before,
+                // the single-artist branch fell back to plain text.
                 return (
                   <span className="track-artist-pills">
                     {parts.map((p, i) => <span key={i} className="track-artist-pill">{p}</span>)}
