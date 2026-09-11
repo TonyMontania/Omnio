@@ -233,40 +233,49 @@ pub async fn updates_check(
 //
 // Which build did the user actually install? Fed into the "download
 // this asset" hint in the update dialog so a portable user doesn't get
-// pointed at the NSIS setup by mistake.
+// pointed at the NSIS setup by mistake, and vice versa for MSI + .deb.
+//
+// Detection is done by inspecting `current_exe()` against the default
+// install directories the Tauri v2 bundlers use:
+//
+//   Windows
+//     * NSIS  → `%LOCALAPPDATA%\Programs\<ProductName>\`
+//     * MSI   → `%ProgramFiles%\<ProductName>\` (or `Program Files (x86)`)
+//     * anything else → treat as portable (zip extracted somewhere)
+//   Linux
+//     * AppImage → the runtime sets `$APPIMAGE` to the .AppImage path
+//     * .deb    → installs binary to `/usr/bin/` (or `/usr/local/bin/`)
+//     * anything else → default to AppImage (safest fallback)
+//   macOS
+//     * arm64 vs x64 → uses arch alone (single .app bundle format)
+//
+// The asset-hint strings are matched against release asset filenames
+// with `endsWith` on the renderer side, so they must line up with what
+// `.github/workflows/release.yml` publishes.
 #[command]
 pub fn updates_install_kind() -> InstallKindResult {
     let platform = std::env::consts::OS;      // "windows" / "macos" / "linux"
     let arch = std::env::consts::ARCH;         // "x86_64" / "aarch64"
-    // Renderer expects Node-style names — normalize both.
     let platform_node = match platform {
         "windows" => "win32",
         "macos" => "darwin",
-        other => other,  // "linux" stays
+        other => other,
     };
     let arch_node = match arch {
         "x86_64" => "x64",
         "aarch64" => "arm64",
         other => other,
     };
-    let is_portable_win = platform_node == "win32"
-        && std::env::var("PORTABLE_EXECUTABLE_DIR")
-            .map(|v| !v.is_empty())
-            .unwrap_or(false);
 
-    let (kind, asset_hint): (&'static str, &'static str) = match (platform_node, arch_node, is_portable_win) {
-        ("win32", _, true) => ("win-portable", "-portable.exe"),
-        ("win32", _, false) => ("win-nsis", "-setup.exe"),
-        // Suffix strings match Tauri v2's default DMG naming
-        // (`Omnio_<version>_aarch64.dmg` / `Omnio_<version>_x64.dmg`).
-        // The Electron builds used `-arm64.dmg` / `-x64.dmg`; both
-        // families are checked with `endsWith`, so this update only
-        // changes what NEW Tauri releases advertise.
-        ("darwin", "arm64", _) => ("mac-arm64", "aarch64.dmg"),
-        ("darwin", _, _) => ("mac-x64", "x64.dmg"),
-        // Best-effort: default to AppImage. .deb / Flatpak / Snap
-        // users have their own package manager anyway.
-        ("linux", _, _) => ("linux-appimage", ".AppImage"),
+    let (kind, asset_hint): (&'static str, &'static str) = match platform_node {
+        "win32" => detect_windows_install_kind(),
+        "darwin" => match arch_node {
+            // Suffix strings match Tauri v2's default DMG naming
+            // (`Omnio_<version>_aarch64.dmg` / `Omnio_<version>_x64.dmg`).
+            "arm64" => ("mac-arm64", "aarch64.dmg"),
+            _ => ("mac-x64", "x64.dmg"),
+        },
+        "linux" => detect_linux_install_kind(),
         _ => ("unknown", ""),
     };
     InstallKindResult {
@@ -275,6 +284,54 @@ pub fn updates_install_kind() -> InstallKindResult {
         platform: platform_node,
         arch: arch_node,
     }
+}
+
+fn detect_windows_install_kind() -> (&'static str, &'static str) {
+    let exe = match std::env::current_exe() {
+        Ok(p) => p,
+        Err(_) => return ("win-portable", "windows-portable.zip"),
+    };
+    let path_lower = exe.to_string_lossy().to_lowercase();
+    // MSI's default target on Windows is `%ProgramFiles%` — treat both
+    // 32-bit and 64-bit Program Files trees as MSI installs. The asset
+    // suffix is `.msi` alone so the match is locale-tolerant (the
+    // artifact ships as `Omnio_<version>_x64_en-US.msi` today, but a
+    // future locale swap wouldn't break the hint).
+    if path_lower.contains("\\program files\\") || path_lower.contains("\\program files (x86)\\") {
+        return ("win-msi", ".msi");
+    }
+    // NSIS's default target is `%LOCALAPPDATA%\Programs\<ProductName>`.
+    // (The path may resolve to `\users\<name>\appdata\local\programs\…`.)
+    if path_lower.contains("\\appdata\\local\\programs\\") {
+        return ("win-nsis", "-setup.exe");
+    }
+    // Anywhere else the exe lives (Desktop, C:\Tools\Omnio, an external
+    // drive, …) means the user ran the portable zip. Match the release
+    // asset `Omnio_<version>_windows-portable.zip`.
+    ("win-portable", "windows-portable.zip")
+}
+
+fn detect_linux_install_kind() -> (&'static str, &'static str) {
+    // The AppImage runtime sets `$APPIMAGE` to the .AppImage file's
+    // absolute path when it launches the payload. Presence of the var
+    // is the canonical way to tell we're running from an AppImage.
+    if std::env::var("APPIMAGE").map(|v| !v.is_empty()).unwrap_or(false) {
+        return ("linux-appimage", ".AppImage");
+    }
+    let exe = match std::env::current_exe() {
+        Ok(p) => p,
+        Err(_) => return ("linux-appimage", ".AppImage"),
+    };
+    let path = exe.to_string_lossy().to_string();
+    // .deb installs the binary under `/usr/bin/` (or `/usr/local/bin/`
+    // if built from source with a custom prefix). Match the release
+    // asset `omnio_<version>_amd64.deb`.
+    if path.starts_with("/usr/bin/") || path.starts_with("/usr/local/bin/") {
+        return ("linux-deb", ".deb");
+    }
+    // Fallback: AppImage. Covers users who moved the AppImage payload
+    // out of its default location and lost the $APPIMAGE env var.
+    ("linux-appimage", ".AppImage")
 }
 
 // -- updates:open-url -----------------------------------------------

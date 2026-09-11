@@ -4,6 +4,12 @@ All notable changes to Omnio are documented in this file. Format loosely follows
 
 Each `## v<version>` section becomes the body of that tag's [GitHub Release](https://github.com/TonyMontania/Omnio/releases) — the release workflow reads this file and passes the matching section to `tauri-action`, so patch notes stay authored here (versioned in git, reviewable in PRs) instead of in a separate release form.
 
+## Unreleased
+
+### Fixed
+
+- **In-app updater points at the wrong asset.** The install-kind detector was hard-coded to check an env var (`PORTABLE_EXECUTABLE_DIR`) that our `windows-portable.zip` never sets, and had no branch at all for MSI or `.deb` installs — so portable users were pointed at `-portable.exe` (an asset that doesn't exist), MSI users got the NSIS `.exe`, and `.deb` users got the AppImage. Detection now reads `current_exe()` and matches against Tauri v2's default install directories: `%ProgramFiles%` → MSI, `%LOCALAPPDATA%\Programs` → NSIS, anywhere else → portable zip. On Linux, `$APPIMAGE` → AppImage, `/usr/bin` or `/usr/local/bin` → `.deb`.
+
 ## v0.5.1 — Item templates, quick-add via URL, settings rework, mobile cleanup
 
 Second Tauri release. Three new user-facing features — **item templates**, **quick-add via URL** and **half-star ratings across the board** — a big **visual rework of Settings**, and the experimental mobile companion / encrypted backup / git-backed data folder all get retired to keep the desktop app lean.
