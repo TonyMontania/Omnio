@@ -25,7 +25,7 @@ The release workflow (`.github/workflows/release.yml`) invokes `scripts/stamp-pa
 1. Downloads every asset published to the tag via `gh release download`.
 2. Computes SHA256 for each file the manifests reference.
 3. Copies each template from `packaging/` into a temp `stamped/` directory with `@TOKEN@` replaced by the real values.
-4. Uploads the stamped files back to the release as assets (`omnio-bin.PKGBUILD.txt`, `TonyMontania.Omnio.*.yaml`) so downstream tooling / maintainers can grab them.
+4. Uploads the stamped files as a **workflow artifact** (`packaging-manifests-v<tag>`) — retention 90 days. The artifact is downloadable from the workflow run's summary page in the Actions tab; end users on the Release page don't see it.
 
 The stamped files are **not** committed back to `main` — the source of truth stays under `packaging/`.
 
@@ -40,9 +40,11 @@ Neither channel auto-publishes; the release run only prepares the stamped manife
 git clone ssh://aur@aur.archlinux.org/omnio-bin.git
 cd omnio-bin
 
-# For each new release
-curl -LO "https://github.com/TonyMontania/Omnio/releases/download/v<version>/omnio-bin.PKGBUILD.txt"
-mv omnio-bin.PKGBUILD.txt PKGBUILD
+# For each new release: download the artifact from the workflow run
+# (Actions tab → the release run → "packaging-manifests-v<version>"),
+# unzip, and copy the PKGBUILD in.
+unzip packaging-manifests-v<version>.zip -d /tmp/omnio-pkg
+cp /tmp/omnio-pkg/aur/PKGBUILD .
 makepkg --printsrcinfo > .SRCINFO
 git add PKGBUILD .SRCINFO
 git commit -m "v<version>"
@@ -51,14 +53,14 @@ git push
 
 ### winget (`TonyMontania.Omnio`)
 
-Use [`wingetcreate`](https://github.com/microsoft/winget-create) to submit the stamped manifests as a PR against `microsoft/winget-pkgs`:
+Download the workflow artifact (Actions tab → the release run → `packaging-manifests-v<version>`) and hand the extracted YAMLs to [`wingetcreate`](https://github.com/microsoft/winget-create):
 
 ```bash
 wingetcreate submit \
     --token <your-github-pat> \
-    ./TonyMontania.Omnio.yaml \
-    ./TonyMontania.Omnio.installer.yaml \
-    ./TonyMontania.Omnio.locale.en-US.yaml
+    ./winget/TonyMontania.Omnio.yaml \
+    ./winget/TonyMontania.Omnio.installer.yaml \
+    ./winget/TonyMontania.Omnio.locale.en-US.yaml
 ```
 
 Or run `wingetcreate update TonyMontania.Omnio` after the release lands and it will pull the new installer URLs / SHA256s from the manifest metadata automatically.

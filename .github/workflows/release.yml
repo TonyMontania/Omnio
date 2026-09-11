@@ -220,15 +220,19 @@ jobs:
             --assets-dir release-assets \
             --out stamped
 
-      - name: Upload stamped manifests to release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # AUR PKGBUILD — uploaded with .txt suffix so browsers preview it
-          cp stamped/aur/PKGBUILD "omnio-bin.PKGBUILD.txt"
-          gh release upload "$GITHUB_REF_NAME" \
-            "omnio-bin.PKGBUILD.txt" \
-            stamped/winget/TonyMontania.Omnio.yaml \
-            stamped/winget/TonyMontania.Omnio.installer.yaml \
-            stamped/winget/TonyMontania.Omnio.locale.en-US.yaml \
-            --repo "${{ github.repository }}" --clobber
+      # The stamped AUR PKGBUILD + winget YAMLs are maintainer artifacts:
+      # they're the input to `git push` (AUR) or `wingetcreate submit`
+      # (winget-pkgs), NOT files a normal user should ever download. We
+      # store them as workflow artifacts so the maintainer can grab them
+      # from the Actions tab when they're ready to submit, without
+      # cluttering the Release page for end users.
+      - name: Upload stamped manifests as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaging-manifests-${{ github.ref_name }}
+          path: |
+            stamped/aur/PKGBUILD
+            stamped/winget/TonyMontania.Omnio.yaml
+            stamped/winget/TonyMontania.Omnio.installer.yaml
+            stamped/winget/TonyMontania.Omnio.locale.en-US.yaml
+          retention-days: 90
