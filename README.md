@@ -15,6 +15,9 @@
 ## Contents
 
 - [Install](#install)
+  - [Windows](#windows)
+  - [macOS](#macos)
+  - [Linux](#linux)
 - [See it in action](#see-it-in-action)
 - [Features](#features)
 - [Metadata sources](#metadata-sources)
@@ -26,11 +29,40 @@
 
 ## Install
 
-Download the build for your platform from the [releases page](https://github.com/TonyMontania/Omnio/releases/latest). All builds are unsigned — SmartScreen / Gatekeeper show a first-launch warning that clears with one confirmation.
+Grab the build for your OS from the [latest release](https://github.com/TonyMontania/Omnio/releases/latest). Every build is unsigned — Windows SmartScreen and macOS Gatekeeper show a one-time first-launch warning that clears with one confirmation.
 
-- **Windows** — `Omnio_<version>_x64-setup.exe` (NSIS, per-user, no admin), `.msi` for group-policy rollouts, or `Omnio_<version>_windows-portable.zip` (needs WebView2, included by default on Windows 10 21H2+ and every Windows 11). Also on **[winget](https://github.com/microsoft/winget-pkgs)**: `winget install TonyMontania.Omnio`. Data lives under `%APPDATA%\com.omnio.app\`.
-- **macOS** — `Omnio_<version>_aarch64.dmg` (Apple Silicon) or `_x64.dmg` (Intel). Drag Omnio.app to Applications. First launch: right-click → **Open** to bypass Gatekeeper.
-- **Linux** — `omnio_<version>_amd64.AppImage` (may need `libfuse2` on Debian/Ubuntu), `omnio_<version>_amd64.deb` (`sudo dpkg -i …`) or `omnio-<version>-1.x86_64.rpm` (`sudo dnf install …`). Arch users: **[`omnio-bin`](https://aur.archlinux.org/packages/omnio-bin)** on the AUR.
+### Windows
+
+| Package | File | Command | Notes |
+| --- | --- | --- | --- |
+| **NSIS installer** | `Omnio_<version>_x64-setup.exe` | double-click | Per-user, no admin. Recommended default. |
+| **MSI installer** | `Omnio_<version>_x64_en-US.msi` | `msiexec /i Omnio_<version>_x64_en-US.msi /qb` | For group-policy / SCCM / Intune rollouts. |
+| **Portable ZIP** | `Omnio_<version>_windows-portable.zip` | extract, run `omnio.exe` | Needs [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) (installed by default on Windows 10 21H2+ and every Windows 11). |
+| **winget** | — | `winget install TonyMontania.Omnio` | Ships the NSIS build. Available after the manifest lands in [`microsoft/winget-pkgs`](https://github.com/microsoft/winget-pkgs). |
+
+Data lives under `%APPDATA%\com.omnio.app\`.
+
+### macOS
+
+| Package | File | Command | Notes |
+| --- | --- | --- | --- |
+| **DMG (Apple Silicon)** | `Omnio_<version>_aarch64.dmg` | drag to Applications | For M1 / M2 / M3 / M4 Macs. |
+| **DMG (Intel)** | `Omnio_<version>_x64.dmg` | drag to Applications | For pre-Apple-Silicon Macs. |
+
+First launch: right-click **Open** → **Open** (this bypasses Gatekeeper for unsigned apps).
+
+Data lives under `~/Library/Application Support/com.omnio.app/`.
+
+### Linux
+
+| Package | File | Command | Notes |
+| --- | --- | --- | --- |
+| **AppImage** | `omnio_<version>_amd64.AppImage` | `chmod +x omnio_<version>_amd64.AppImage && ./omnio_<version>_amd64.AppImage` | Universal. May need `libfuse2` on Debian / Ubuntu 22.04+. |
+| **Debian package** | `omnio_<version>_amd64.deb` | `sudo dpkg -i omnio_<version>_amd64.deb` | Debian, Ubuntu, Mint, Pop!_OS, elementary. |
+| **RPM package** | `omnio-<version>-1.x86_64.rpm` | `sudo dnf install ./omnio-<version>-1.x86_64.rpm` | Fedora, RHEL, CentOS Stream, Rocky, Alma, openSUSE. |
+| **AUR** | — | `yay -S omnio-bin` (or your AUR helper) | Arch, Manjaro, EndeavourOS. Repackages the upstream `.deb`. |
+
+Data lives under `~/.config/com.omnio.app/`.
 
 Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#running-locally).
 

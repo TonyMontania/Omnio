@@ -4,19 +4,65 @@ All notable changes to Omnio are documented in this file. Format loosely follows
 
 Each `## v<version>` section becomes the body of that tag's [GitHub Release](https://github.com/TonyMontania/Omnio/releases) — the release workflow reads this file and passes the matching section to `tauri-action`, so patch notes stay authored here (versioned in git, reviewable in PRs) instead of in a separate release form.
 
-## Unreleased
+## v0.5.2 — RPM + AUR + winget, updater fixes
 
-### Added
+Small patch release. Two things: three new Linux / Windows delivery channels come online (`.rpm`, AUR `omnio-bin`, winget `TonyMontania.Omnio`), and the in-app updater finally hands every install variant the matching release asset.
 
-- **Fedora / RHEL `.rpm` build.** Added `"rpm"` to Tauri's bundle targets and `rpm` to the Linux CI prereqs. The release publishes `omnio-<version>-1.x86_64.rpm` alongside the AppImage + `.deb`.
-- **AUR package `omnio-bin`.** `packaging/aur/PKGBUILD` repackages the upstream `.deb` for Arch and derivatives (`extract data.tar.gz`, drop into `pkgdir`). The release workflow stamps the version + SHA256 into the PKGBUILD and uploads the stamped file as a release asset (`omnio-bin.PKGBUILD.txt`); submitting to AUR is one `git push` from a maintainer machine with SSH access to `ssh://aur@aur.archlinux.org/omnio-bin.git`.
-- **winget manifests (`TonyMontania.Omnio`).** `packaging/winget/*.yaml` describes the NSIS + MSI + portable-ZIP installers, each with its own SHA256. Same stamping flow; the stamped YAMLs are uploaded as release assets ready for `wingetcreate submit` against `microsoft/winget-pkgs`.
-- **`scripts/stamp-packaging.mjs`.** Node script that reads the release assets, computes SHA256 per artifact, replaces `@VERSION@` / `@SHA256_*@` / `@RELEASE_DATE@` tokens in each template and writes stamped copies under `stamped/`. No templating engine — literal `@TOKEN@` strings so unfilled slots are trivially greppable.
-- **`packaging/README.md`.** How each channel gets submitted, plus a recipe for adding new channels (Homebrew / Flathub / Snap) later.
+Nothing on disk changes. Upgrade is a normal installer swap; your library stays where it is.
+
+### Downloads
+
+Grab the build for your platform from the assets below.
+
+| OS | File | Notes |
+| --- | --- | --- |
+| Windows | `Omnio_0.5.2_x64-setup.exe` | NSIS installer, per-user, no admin required |
+| Windows | `Omnio_0.5.2_x64_en-US.msi` | MSI for group-policy / SCCM rollouts |
+| Windows | `Omnio_0.5.2_windows-portable.zip` | portable EXE — needs WebView2 (installed by default on Windows 10 21H2+ and every Windows 11) |
+| macOS (Apple Silicon) | `Omnio_0.5.2_aarch64.dmg` | drag to Applications |
+| macOS (Intel) | `Omnio_0.5.2_x64.dmg` | drag to Applications |
+| Linux | `omnio_0.5.2_amd64.AppImage` | `chmod +x` and run (may need `libfuse2`) |
+| Linux | `omnio_0.5.2_amd64.deb` | `sudo dpkg -i omnio_0.5.2_amd64.deb` |
+| Linux | `omnio-0.5.2-1.x86_64.rpm` | `sudo dnf install ./omnio-0.5.2-1.x86_64.rpm` |
+| Arch AUR | — | `yay -S omnio-bin` (or your AUR helper) |
+| winget | — | `winget install TonyMontania.Omnio` |
+
+All builds are unsigned — Windows SmartScreen and macOS Gatekeeper warn on first launch, one confirmation clears them.
+
+### What's new
+
+#### New delivery channels
+
+Three channels come back after being retired in the Tauri migration. All three are stamped by CI from templates in `packaging/`, uploaded to the release as extra assets, and ready for one-command downstream submission.
+
+- **Fedora / RHEL `.rpm` build.** Tauri v2 has a native `rpm` bundle target; adding `"rpm"` to `bundle.targets` + `rpm` to the Linux CI prereqs is all it took. The release publishes `omnio-0.5.2-1.x86_64.rpm` alongside the AppImage + `.deb`. Distros covered: Fedora, RHEL, CentOS Stream, Rocky, AlmaLinux, openSUSE (via zypper), Amazon Linux 2023.
+- **AUR package `omnio-bin`.** `packaging/aur/PKGBUILD` repackages the upstream `.deb` for Arch and derivatives — no rebuild, just download-verify-install. The release workflow stamps the version + SHA256 into the PKGBUILD and uploads the stamped file as `omnio-bin.PKGBUILD.txt`; submitting to AUR is one `git push` from a maintainer machine with SSH access to `ssh://aur@aur.archlinux.org/omnio-bin.git`.
+- **winget package `TonyMontania.Omnio`.** `packaging/winget/*.yaml` describes the NSIS + MSI + portable-ZIP installers, each with its own SHA256 and installer switches (silent + interactive). The stamped YAMLs land on the release, ready for `wingetcreate submit` against `microsoft/winget-pkgs`.
+
+Under the hood: `scripts/stamp-packaging.mjs` reads the release-assets directory, computes SHA256 per artifact and replaces `@VERSION@` / `@SHA256_*@` / `@RELEASE_DATE@` tokens in each template. No templating engine — literal `@TOKEN@` strings, so unfilled slots are trivially greppable. `packaging/README.md` documents the submission flow per channel plus a recipe for adding Homebrew / Flathub / Snap later.
 
 ### Fixed
 
-- **In-app updater points at the wrong asset.** The install-kind detector was hard-coded to check an env var (`PORTABLE_EXECUTABLE_DIR`) that our `windows-portable.zip` never sets, and had no branch at all for MSI or `.deb` installs — so portable users were pointed at `-portable.exe` (an asset that doesn't exist), MSI users got the NSIS `.exe`, and `.deb` users got the AppImage. Detection now reads `current_exe()` and matches against Tauri v2's default install directories: `%ProgramFiles%` → MSI, `%LOCALAPPDATA%\Programs` → NSIS, anywhere else → portable zip. On Linux, `$APPIMAGE` → AppImage, `/usr/bin` or `/usr/local/bin` → `.deb` or `.rpm` (picked by reading `ID` / `ID_LIKE` from `/etc/os-release` — Fedora / RHEL / CentOS / Rocky / Alma / openSUSE / SUSE all go to `.rpm`).
+#### In-app updater picked the wrong asset for MSI / portable / .deb / .rpm
+
+The install-kind detector was hard-coded to check an env var (`PORTABLE_EXECUTABLE_DIR`) that our `windows-portable.zip` never sets, and had no branch at all for MSI or `.deb`. Portable users saw a hint (`-portable.exe`) that didn't match any published asset; MSI users got pointed at the NSIS `.exe`; `.deb` users got the AppImage.
+
+Detection now reads `current_exe()` and matches against Tauri v2's default install directories:
+
+- Windows: `%ProgramFiles%` (or `Program Files (x86)`) → MSI. `%LOCALAPPDATA%\Programs\` → NSIS. Anywhere else → portable zip.
+- Linux: `$APPIMAGE` set → AppImage. Exe under `/usr/bin` or `/usr/local/bin` → `.deb` or `.rpm` (picked by reading `ID` / `ID_LIKE` from `/etc/os-release` — Fedora, RHEL, CentOS, Rocky, Alma, openSUSE, SUSE, Amazon Linux, Mandriva and Mageia go to `.rpm`).
+- macOS unchanged (single `.app` bundle format; arch alone picks the DMG).
+
+Only the frontend match string changes; the download + install-launch pipeline is untouched.
+
+### Docs
+
+- **Install section rewritten** — the three cramped bullets became per-OS tables (Windows / macOS / Linux) with a Package / File / Command / Notes column each. Every channel we publish (NSIS, MSI, portable ZIP, winget, arm64 DMG, x64 DMG, AppImage, `.deb`, `.rpm`, AUR) shows its exact filename, the command to run and any prerequisites.
+- **`CHANGELOG.md` is now the source of truth for release notes.** The release workflow extracts the `## v<tag>` section from `CHANGELOG.md` and hands it to `tauri-action` as the release body, so future patch notes live in git alongside the code they describe.
+
+### Full changelog
+
+`v0.5.1...v0.5.2` on GitHub — https://github.com/TonyMontania/Omnio/compare/v0.5.1...v0.5.2
 
 ## v0.5.1 — Item templates, quick-add via URL, settings rework, mobile cleanup
 

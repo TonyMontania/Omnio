@@ -523,15 +523,18 @@ pub async fn plugin_saves_delete_all(
 // that need to scrape HTML (e.g. an update checker that reads
 // version info from a forum thread). Public generic infra; nothing
 // plugin-specific here.
+//
+// Uses the shared reqwest client from `AppState` — that client has
+// keep-alive + HTTP/2 connection pooling on, so a batch of same-host
+// requests (like "check every game on F95Zone") reuses TCP + TLS
+// across the whole loop instead of paying the handshake per call.
 #[command]
 pub async fn net_fetch_text(
     url: String,
     headers: Option<std::collections::HashMap<String, String>>,
-) -> StringResult {
-    let client = match reqwest::Client::builder().build() {
-        Ok(c) => c,
-        Err(e) => return StringResult::Err { ok: false, error: e.to_string() },
-    };
+    state: tauri::State<'_, crate::state::AppState>,
+) -> Result<StringResult, String> {
+    let client = crate::net::get_http_client(&state);
     let mut req = client.get(&url);
     if let Some(h) = headers {
         for (k, v) in h {
@@ -545,15 +548,15 @@ pub async fn net_fetch_text(
     }
     let resp = match req.send().await {
         Ok(r) => r,
-        Err(e) => return StringResult::Err { ok: false, error: e.to_string() },
+        Err(e) => return Ok(StringResult::Err { ok: false, error: e.to_string() }),
     };
     if !resp.status().is_success() {
-        return StringResult::Err { ok: false, error: format!("HTTP {}", resp.status().as_u16()) };
+        return Ok(StringResult::Err { ok: false, error: format!("HTTP {}", resp.status().as_u16()) });
     }
-    match resp.text().await {
+    Ok(match resp.text().await {
         Ok(t) => StringResult::Ok(t),
         Err(e) => StringResult::Err { ok: false, error: e.to_string() },
-    }
+    })
 }
 
 // -- helpers -----------------------------------------------------

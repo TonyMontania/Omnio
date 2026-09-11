@@ -74,22 +74,19 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
-      # Extract the changelog section for this tag from CHANGELOG.md.
-      # The section header is `## v<version>` (matching the tag). Every
-      # matrix job does this — cheap, keeps the release body consistent
-      # across platforms. tauri-action would otherwise use its own generic
-      # `releaseBody` string, which is what we're replacing.
+      # Extract the changelog section for this tag from CHANGELOG.md and
+      # feed it to `tauri-action` as the `releaseBody` string. tauri-action
+      # does NOT accept a `releaseBodyPath`, so we have to read the file
+      # into a multiline GitHub Actions output. Falls back to an empty
+      # body (which lets tauri-action write its own default) if the
+      # section isn't found.
       - name: Extract release notes for this tag
         id: notes
         shell: bash
         run: |
           tag="${GITHUB_REF_NAME}"
-          file=".github/release-notes.md"
+          file="release-notes.md"
           if [ -f CHANGELOG.md ]; then
-            # Pull everything between `## <tag>` (inclusive of blank line
-            # after the heading) and the next `## v` heading. If nothing
-            # matches, we leave the file empty and tauri-action will fall
-            # back to its default text.
             awk -v tag="$tag" '
               BEGIN { inside = 0 }
               /^## / {
@@ -103,7 +100,13 @@ jobs:
           fi
           bytes=$(wc -c < "$file" | tr -d ' ')
           echo "Extracted $bytes bytes of release notes for $tag"
-          echo "path=$file" >> "$GITHUB_OUTPUT"
+          # Multi-line output via heredoc — the delimiter has to be
+          # unique inside the payload, so use a random-enough marker.
+          {
+            echo "body<<OMNIO_RELEASE_NOTES_EOF"
+            cat "$file"
+            echo "OMNIO_RELEASE_NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Linux prerequisites
         if: matrix.platform == 'ubuntu-22.04'
@@ -140,7 +143,11 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Omnio ${{ github.ref_name }}'
-          releaseBodyPath: ${{ steps.notes.outputs.path }}
+          # `releaseBody` (a string) — tauri-action does NOT accept a
+          # `releaseBodyPath` param, so we inline the extracted CHANGELOG
+          # section from `steps.notes` above. The output was set via a
+          # multiline heredoc, so this expands to the full markdown body.
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
