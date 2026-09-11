@@ -1,10 +1,5 @@
 // Persistent left sidebar. Brand + Home + every enabled library + a
 // utility footer (Search / Calendar / Random / Stats / Settings).
-// The old sidebar was retired in commit 30b78d0 in favor of a
-// top-nav + home-dashboard combo; users wanted the desktop-native
-// feel back and Home widgets alone weren't enough, so this is a
-// leaner take on the original — pure nav, no per-category
-// collections (those live in each library's own toolbar now).
 
 import type { Item, Collection } from './types'
 import { CATEGORIES } from './categories'
@@ -12,21 +7,20 @@ import type { CategoryId } from './types/items'
 import {
   CategoryIcon, HomeIcon, CalendarIcon, InsightsIcon, SettingsIcon, DiceIcon,
 } from './icons'
+import type { PluginDef } from './plugins/registry'
 
-// Categories that belong to the "Extras" sidebar group instead of the main
-// "Libraries" list. VNDB-shaped works live alongside Arcade rather than
-// mixed in with mainstream libraries — that's where the user expects them.
 const EXTRA_CATEGORY_IDS = new Set(['visual_novels'])
 
 export type SidebarView =
   | { kind: 'home' }
   | { kind: 'library'; categoryId: string }
   | { kind: 'arcade' }
+  | { kind: 'plugin'; slug: string }
   | { kind: 'special'; id: 'calendar' | 'stats' | 'settings' }
 
 interface Props {
   items: Item[]
-  collections: Collection[]                 // reserved for future "pinned collections" section
+  collections: Collection[]
   enabledCategories?: string[]
   arcadeEnabled?: boolean
   active: SidebarView
@@ -40,6 +34,9 @@ interface Props {
   onOpenSearch: () => void
   onOpenRandomizer?: () => void
   onOpenArcade: () => void
+  pluginCounts?: Record<string, number>
+  onOpenPlugin?: (slug: string) => void
+  visiblePlugins?: PluginDef[]
 }
 
 function isActiveLibrary(active: SidebarView, id: string): boolean {
@@ -53,16 +50,23 @@ export default function Sidebar(props: Props) {
   const {
     items, enabledCategories, arcadeEnabled, active, collapsed, onToggleCollapsed,
     onOpenHome, onOpenLibrary, onOpenCalendar, onOpenStats, onOpenSettings, onOpenSearch, onOpenRandomizer, onOpenArcade,
+    pluginCounts, onOpenPlugin, visiblePlugins,
   } = props
   const arcadeOn = arcadeEnabled !== false
 
   const enabledCats = CATEGORIES.filter((c) => !enabledCategories || enabledCategories.includes(c.id))
   const cats = enabledCats.filter((c) => !EXTRA_CATEGORY_IDS.has(c.id))
   const extraCats = enabledCats.filter((c) => EXTRA_CATEGORY_IDS.has(c.id))
-  const showExtras = arcadeOn || extraCats.length > 0
+  const plugins = onOpenPlugin ? (visiblePlugins ?? []) : []
+  const showExtras = arcadeOn || extraCats.length > 0 || plugins.length > 0
+
+  const sidebarClass = [
+    'sidebar',
+    collapsed ? 'sidebar-icons' : '',
+  ].filter(Boolean).join(' ')
 
   return (
-    <aside className={collapsed ? 'sidebar sidebar-icons' : 'sidebar'}>
+    <aside className={sidebarClass}>
       <div className="sidebar-brand">
         <svg className="brand-logo" viewBox="0 0 128 128" aria-hidden="true">
           <circle cx="64" cy="64" r="46" fill="none" stroke="currentColor" strokeWidth="6" />
@@ -150,6 +154,24 @@ export default function Sidebar(props: Props) {
               >
                 <span className="sidebar-icon"><CategoryIcon id={c.id} /></span>
                 <span className="sidebar-label">{c.label}</span>
+                {!collapsed && <span className="sidebar-count">{n}</span>}
+              </button>
+            )
+          })}
+          {plugins.map((p) => {
+            const n = pluginCounts?.[p.slug] ?? 0
+            const isActive = active.kind === 'plugin' && active.slug === p.slug
+            const Icon = p.icon
+            return (
+              <button
+                key={p.slug}
+                type="button"
+                className={isActive ? 'sidebar-item active' : 'sidebar-item'}
+                onClick={() => onOpenPlugin?.(p.slug)}
+                title={`${p.label} — ${n} ${n === 1 ? 'item' : 'items'}`}
+              >
+                <span className="sidebar-icon"><Icon /></span>
+                <span className="sidebar-label">{p.label}</span>
                 {!collapsed && <span className="sidebar-count">{n}</span>}
               </button>
             )

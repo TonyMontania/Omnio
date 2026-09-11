@@ -71,6 +71,9 @@ import Sidebar from './Sidebar'
 const ReleaseCalendar    = lazy(() => import('./ReleaseCalendar'))
 const Home              = lazy(() => import('./home/HomeBoard'))
 const ArcadeView        = lazy(() => import('./arcade/ArcadeView'))
+import { PLUGINS } from './plugins/registry'
+import type { PluginDef, PluginPageMeta } from './plugins/registry'
+import { subscribePluginCounts } from './plugins/counts'
 const ArtistDetailView  = lazy(() => import('./ArtistDetailView'))
 // The eight per-category detail modals were pulled out of this
 // module and now live inside `components/DetailModalRouter.tsx`.
@@ -91,6 +94,10 @@ const GenericImporter   = lazy(() => import('./GenericImporter'))
 const SteamImporter     = lazy(() => import('./SteamImporter'))
 const LetterboxdImporter = lazy(() => import('./LetterboxdImporter'))
 const BackloggdImporter  = lazy(() => import('./BackloggdImporter'))
+const StoryGraphImporter = lazy(() => import('./StoryGraphImporter'))
+const ImdbImporter       = lazy(() => import('./ImdbImporter'))
+const RymImporter        = lazy(() => import('./RymImporter'))
+const HltbImporter       = lazy(() => import('./HltbImporter'))
 const SerializdImporter  = lazy(() => import('./SerializdImporter'))
 const SpotifyImporter    = lazy(() => import('./SpotifyImporter'))
 const HighlightsImporter = lazy(() => import('./HighlightsImporter'))
@@ -98,6 +105,11 @@ const LastfmImporter    = lazy(() => import('./LastfmImporter'))
 const TraktImporter     = lazy(() => import('./TraktImporter'))
 const DiscogsImporter   = lazy(() => import('./DiscogsImporter'))
 const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
+const CoverWallExporter = lazy(() => import('./CoverWallExporter'))
+const CrossLibraryFranchiseModal = lazy(() => import('./components/CrossLibraryFranchiseModal'))
+const DiscographyChecker = lazy(() => import('./DiscographyChecker'))
+const LocalInstallScanner = lazy(() => import('./LocalInstallScanner'))
+import { BasedOnPicker } from './components/BasedOn'
 import { buildStaticSiteHtml } from './exportSite'
 import { buildCsvExports } from './CsvExporter'
 import {
@@ -117,6 +129,7 @@ import { expandTagSelection } from './utils/tags'
 // `fetchers/registrations.tsx`; that side-effect import seeds the map.
 import './fetchers'
 import { getFetchersFor, resolveHint, type FetcherRegistration } from './fetchers/registry'
+import { detectQuickAddUrl } from './utils/quickAddUrl'
 import ConcertLogEditor from './components/editors/ConcertLogEditor'
 import MusicEditorSection from './components/editors/MusicEditorSection'
 import GameEditorSection from './components/editors/GameEditorSection'
@@ -140,7 +153,7 @@ type Layout = 'list' | 'grid' | 'compact'
 type SortBy =
   | 'alpha' | 'recent' | 'rating' | 'custom'
   // Games
-  | 'time' | 'status' | 'releaseAsc' | 'releaseDesc'
+  | 'time' | 'status' | 'releaseAsc' | 'releaseDesc' | 'hltbAsc' | 'hltbDesc'
   // Cross-category
   | 'yearAsc' | 'yearDesc' | 'duration'
   // Series / Anime
@@ -179,7 +192,6 @@ const ACCENT_OPTIONS: { value: AccentName; label: string; swatch: string }[] = [
 ]
 
 type DensityName = 'comfortable' | 'compact'
-type FontSizeName = 'small' | 'medium' | 'large'
 type StartupCategoryMode = 'last' | 'first' | 'home'
 type MotionMode = 'auto' | 'reduced'
 
@@ -189,7 +201,6 @@ interface Settings {
   theme: ThemeName
   accent: AccentName
   density: DensityName
-  fontSize: FontSizeName
   motion: MotionMode
   startupCategory: StartupCategoryMode
   lastCategory?: string
@@ -247,6 +258,37 @@ interface Settings {
   // Extras section in the sidebar can be toggled per item from
   // Settings → Enabled libraries. Omitted = enabled (default).
   arcadeEnabled?: boolean
+  // Plugins that the user has explicitly unlocked. Compiled plugins
+  // stay invisible in the sidebar, "Enabled libraries" list and
+  // card-field settings until their slug is added here. Unlocking is
+  // gated by a user action (e.g. typing a plugin's slug into the
+  // Home viewport keyboard listener).
+  unlockedPlugins?: string[]
+  // Per-plugin, per-field on/off overrides. Missing entries fall back
+  // to the plugin's declared defaults.
+  pluginCardFields?: Record<string, Record<string, boolean>>
+  // Per-category defaults applied when the user opens Add. Set via
+  // "Save as template" in the add panel; cleared per-category from
+  // Settings → Behavior. Keys are CategoryId strings.
+  itemTemplates?: Partial<Record<string, ItemTemplate>>
+}
+
+// Small subset of add-panel fields we're willing to prefill for a new
+// item. Kept optional so a template only touches the slots the user
+// actually filled in when they saved it — a template with just
+// `platforms: ['PC']` doesn't force a status onto every new game.
+interface ItemTemplate {
+  gameStatus?: GameStatus
+  watchStatus?: AnimeStatus
+  seriesStatus?: SeriesStatus
+  mangaStatus?: MangaStatus
+  bookStatus?: BookStatus
+  visualNovelStatus?: VisualNovelStatus
+  consumed?: boolean
+  ownership?: Ownership | ''
+  gameSource?: GameSource | ''
+  tags?: string[]
+  platforms?: Platform[]
 }
 
 interface AppData {
@@ -262,7 +304,7 @@ interface AppData {
 // About string can't drift from the packaged version number.
 const APP_VERSION = __APP_VERSION__
 
-const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', fontSize: 'medium', motion: 'auto', startupCategory: 'last', gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, vnFields: DEFAULT_VN_FIELDS, rememberCategorySort: true, categorySortModes: {}, cardZoom: 'md' }
+const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', motion: 'auto', startupCategory: 'last', gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, vnFields: DEFAULT_VN_FIELDS, rememberCategorySort: true, categorySortModes: {}, cardZoom: 'md' }
 
 function getUniqueTags(list: AnyItem[]): string[] {
   const set = new Set<string>()
@@ -335,6 +377,15 @@ function filterAndSort<T extends AnyItem>(list: T[], search: string, filterTags:
   else if (sortBy === 'rating') arr.sort((a, b) => (b.rating || 0) - (a.rating || 0))
   // Games
   else if (sortBy === 'time') arr.sort((a, b) => parseFloat(b.playTime || '0') - parseFloat(a.playTime || '0'))
+  // Backlog prioritization — shortest / longest games first based on
+  // HowLongToBeat's main-story estimate. Unrated games fall to the
+  // end so a fresh backlog with no HLTB data still sorts sensibly.
+  else if (sortBy === 'hltbAsc') arr.sort((a, b) => {
+    const av = (a as { hltbHours?: number }).hltbHours ?? Number.POSITIVE_INFINITY
+    const bv = (b as { hltbHours?: number }).hltbHours ?? Number.POSITIVE_INFINITY
+    return av - bv
+  })
+  else if (sortBy === 'hltbDesc') arr.sort((a, b) => ((b as { hltbHours?: number }).hltbHours ?? -1) - ((a as { hltbHours?: number }).hltbHours ?? -1))
   else if (sortBy === 'status') arr.sort((a, b) => getGameStatusRank(b.gameStatus) - getGameStatusRank(a.gameStatus))
   else if (sortBy === 'releaseAsc') arr.sort((a, b) => compareDates(a.releaseDate, b.releaseDate, true))
   else if (sortBy === 'releaseDesc') arr.sort((a, b) => compareDates(a.releaseDate, b.releaseDate, false))
@@ -379,6 +430,78 @@ function App() {
   // Arcade section state (score log + 1cc grid). Loaded from and
   // persisted to the same JSON blob as `items` — see save/load below.
   const [arcadeGames, setArcadeGames] = useState<ArcadeGame[]>([])
+  // Locally-installed plugin (git-ignored overlay under
+  // `src/categories/<slug>/`). When non-null, its <View/> replaces
+  // the library grid. Registry populates via `import.meta.glob` — the
+  // public build has zero entries so this state stays `null`.
+  const [activePluginSlug, setActivePluginSlug] = useState<string | null>(null)
+  const [pluginCounts, setPluginCounts] = useState<Record<string, number>>({})
+  const [pluginPageMeta, setPluginPageMeta] = useState<PluginPageMeta | null>(null)
+  useEffect(() => subscribePluginCounts(setPluginCounts), [])
+
+  // Fire each plugin's `preload` once so the sidebar count is
+  // populated before the user opens the plugin for the first time.
+  useEffect(() => { for (const p of PLUGINS) { void p.preload?.() } }, [])
+
+  // Home-screen keyboard listener: user types a plugin's slug and
+  // the app unlocks (or re-locks) it. Only active on the Home view
+  // and when no input/textarea has focus — otherwise we'd steal
+  // keystrokes from search boxes.
+  const pluginKeyBufferRef = useRef('')
+  useEffect(() => {
+    if (specialView !== 'home' || activePluginSlug) return
+    const onKey = (e: KeyboardEvent) => {
+      const active = document.activeElement
+      const tag = active?.tagName ?? ''
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (active as HTMLElement | null)?.isContentEditable) return
+      if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return
+      const ch = e.key.toLowerCase()
+      if (!/[a-z]/.test(ch)) { pluginKeyBufferRef.current = ''; return }
+      const buf = (pluginKeyBufferRef.current + ch).slice(-32)
+      pluginKeyBufferRef.current = buf
+      for (const plug of PLUGINS) {
+        // Trigger word = plugin slug's singular form, matched case-
+        // insensitively at the end of the buffer. Keeps the trigger
+        // discoverable-but-unspoken — same word the user would guess
+        // if a friend mentioned it exists.
+        const triggers = [plug.slug.toLowerCase(), plug.slug.toLowerCase().replace(/s$/, '')]
+          .filter((t) => t.length >= 3)
+        if (!triggers.some((t) => buf.endsWith(t))) continue
+        pluginKeyBufferRef.current = ''
+        setSettings((prev) => {
+          const unlocked = new Set(prev.unlockedPlugins ?? [])
+          if (unlocked.has(plug.slug)) {
+            unlocked.delete(plug.slug)
+            setToast(`${plug.label} library deactivated`)
+          } else {
+            unlocked.add(plug.slug)
+            setToast(`Activated ${plug.label} library`)
+          }
+          return { ...prev, unlockedPlugins: Array.from(unlocked) }
+        })
+        break
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [specialView, activePluginSlug])
+  useEffect(() => { if (!activePluginSlug) setPluginPageMeta(null) }, [activePluginSlug])
+  // If the user re-locks a plugin whose view is currently open, snap
+  // them back to Home so they aren't stranded in a hidden library.
+  useEffect(() => {
+    if (activePluginSlug && !settings.unlockedPlugins?.includes(activePluginSlug)) {
+      setActivePluginSlug(null)
+      setSpecialView('home')
+    }
+  }, [activePluginSlug, settings.unlockedPlugins])
+  // Only compiled plugins the user has unlocked (via the Home
+  // keyboard listener) show up in the sidebar / settings / card
+  // fields. Everyone else runs the same build with the plugin's code
+  // present but no visible surface anywhere.
+  const visiblePlugins: PluginDef[] = useMemo(
+    () => PLUGINS.filter((p) => settings.unlockedPlugins?.includes(p.slug)),
+    [settings.unlockedPlugins],
+  )
   const [animeBoardStatus, setAnimeBoardStatus] = useState<AnimeStatus>('plan_to_watch')
   const [seriesBoardStatus, setSeriesBoardStatus] = useState<SeriesStatus>('plan_to_watch')
   const [bookBoardStatus, setBookBoardStatus] = useState<BookStatus>('plan_to_read')
@@ -419,6 +542,10 @@ function App() {
   }, [settings.arcadeEnabled, specialView])
 
   const [subView, setSubView] = useState<'items' | 'groups' | 'artists'>('items')
+  // Sort order for the folder-grid sub-views (Groups and Artists).
+  // Independent of the main library `sortBy` so switching between
+  // items and groups doesn't clobber either one's ordering.
+  const [folderSort, setFolderSort] = useState<'alpha' | 'recent'>('alpha')
   const [musicArtists, setMusicArtists] = useState<MusicArtist[]>([])
   const [newArtistName, setNewArtistName] = useState('')
   const [viewingArtist, setViewingArtist] = useState<MusicArtist | null>(null)
@@ -625,10 +752,18 @@ function App() {
   const [traktImportOpen, setTraktImportOpen] = useState(false)
   const [discogsImportOpen, setDiscogsImportOpen] = useState(false)
   const [backloggdOpen, setBackloggdOpen] = useState(false)
+  const [storyGraphOpen, setStoryGraphOpen] = useState(false)
+  const [imdbOpen, setImdbOpen] = useState(false)
+  const [rymOpen, setRymOpen] = useState(false)
+  const [hltbOpen, setHltbOpen] = useState(false)
   const [serializdOpen, setSerializdOpen] = useState(false)
   const [spotifyOpen, setSpotifyOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
+  const [coverWallOpen, setCoverWallOpen] = useState(false)
+  const [franchiseTimelineOpen, setFranchiseTimelineOpen] = useState<string | null>(null)
+  const [discographyCheckerOpen, setDiscographyCheckerOpen] = useState(false)
+  const [installScanOpen, setInstallScanOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportScope, setExportScope] = useState<string>('all')
 
@@ -666,6 +801,7 @@ function App() {
   const [ownership, setOwnership] = useState<Ownership | ''>('')
   const [gameStatus, setGameStatus] = useState<GameStatus>('backlog')
   const [playTime, setPlayTime] = useState('')
+  const [hltbHours, setHltbHours] = useState('')
   const [hasDlc, setHasDlc] = useState(false)
   const [dlcList, setDlcList] = useState<DlcEntry[]>([])
   const [hasAddons, setHasAddons] = useState(false)
@@ -791,6 +927,7 @@ function App() {
   const [originalWorkId, setOriginalWorkId] = useState<string>('')
   const [gameReview, setGameReview] = useState('')
   const [franchise, setFranchise] = useState('')
+  const [basedOnItemId, setBasedOnItemId] = useState('')
   const [watchedWhere, setWatchedWhere] = useState<WatchLocation | ''>('')
   const [movieBanner, setMovieBanner] = useState('')
   const [hasSpoilers, setHasSpoilers] = useState(false)
@@ -1280,6 +1417,7 @@ function App() {
     () => filterAndSort(scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree),
     [scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree],
   )
+
   const editingItem = items.find((i) => i.id === editingId) || null
 
   // Memoized once for every RelatedListEditor's cross-library allItems prop —
@@ -1426,9 +1564,66 @@ function App() {
     }
   }
 
-  const openAddPanel = () => { setEditingId(null); resetForm(); setPanelOpen(true) }
+  const applyItemTemplate = (t: ItemTemplate | undefined) => {
+    if (!t) return
+    if (t.gameStatus !== undefined) setGameStatus(t.gameStatus)
+    if (t.watchStatus !== undefined) setWatchStatus(t.watchStatus)
+    if (t.seriesStatus !== undefined) setSeriesStatus(t.seriesStatus)
+    if (t.mangaStatus !== undefined) setReadingStatus(t.mangaStatus)
+    if (t.bookStatus !== undefined) setBookStatus(t.bookStatus)
+    if (t.visualNovelStatus !== undefined) setVisualNovelStatus(t.visualNovelStatus)
+    if (t.consumed !== undefined) setConsumed(t.consumed)
+    if (t.ownership !== undefined) setOwnership(t.ownership)
+    if (t.gameSource !== undefined) setGameSource(t.gameSource)
+    if (t.tags !== undefined) setTags(t.tags)
+    if (t.platforms !== undefined) setPlatforms(t.platforms)
+  }
 
-  const loadItemIntoForm = (item: AnyItem) => loadItemIntoFormImpl(formSetters, item)
+  const captureCurrentTemplate = (): ItemTemplate => {
+    // Only categories that use each field see it back. `undefined` here
+    // means "don't override". Empty arrays / '' are still meaningful (a
+    // template of "no platforms" is a valid template).
+    const t: ItemTemplate = {}
+    if (activeCategory === 'videojuegos') {
+      t.gameStatus = gameStatus
+      t.ownership = ownership
+      t.gameSource = gameSource
+      t.platforms = platforms
+    } else if (activeCategory === 'anime' || activeCategory === 'donghua') {
+      t.watchStatus = watchStatus
+    } else if (activeCategory === 'series') {
+      t.seriesStatus = seriesStatus
+    } else if (isMangaLike(activeCategory)) {
+      t.mangaStatus = readingStatus
+    } else if (activeCategory === 'libros') {
+      t.bookStatus = bookStatus
+    } else if (activeCategory === 'visual_novels') {
+      t.visualNovelStatus = visualNovelStatus
+    } else if (activeCategory === 'musica' || activeCategory === 'peliculas') {
+      t.consumed = consumed
+    }
+    t.tags = tags
+    return t
+  }
+
+  const openAddPanel = () => {
+    setEditingId(null); resetForm(); setHltbHours(''); setBasedOnItemId('')
+    // Apply the per-category template AFTER resetForm so template
+    // slots override the reset defaults. Editing an existing item
+    // never triggers this path — templates are for brand-new items only.
+    applyItemTemplate(settings.itemTemplates?.[activeCategory])
+    setPanelOpen(true)
+  }
+
+  const loadItemIntoForm = (item: AnyItem) => {
+    loadItemIntoFormImpl(formSetters, item)
+    // Extra fields not covered by the auto-generated FormSetters bag.
+    // Adding them there would ripple through every form-related type;
+    // wire them inline instead.
+    const hltb = (item as { hltbHours?: number }).hltbHours
+    setHltbHours(hltb !== undefined ? String(hltb) : '')
+    setBasedOnItemId((item as { basedOnItemId?: string }).basedOnItemId ?? '')
+  }
 
   // When every detail view closes and the list JSX remounts, restore the
   // scroll position we snapshotted before opening the detail. Uses rAF so it
@@ -1690,6 +1885,7 @@ function App() {
     createdAt: editingItem?.createdAt || Date.now(),
     gameStatus: gameStatus || undefined,
     playTime: playTime || undefined,
+    hltbHours: hltbHours ? Number(hltbHours) : undefined,
     devs: devs.length > 0 ? devs : undefined,
     publishers: publishers.length > 0 ? publishers : undefined,
     platforms: platforms.length > 0 ? platforms : undefined,
@@ -1710,7 +1906,7 @@ function App() {
     seriesStatus: seriesStatus || undefined,
   } as Item), [
     editingId, editingItem, activeCategory, title, cover, description, tags, rating,
-    gameStatus, playTime, devs, publishers, platforms, genres, bannerImage, logoImage,
+    gameStatus, playTime, hltbHours, devs, publishers, platforms, genres, bannerImage, logoImage,
     artist, musicType, releaseYear, releaseDate, consumed, readingStatus,
     chaptersRead, totalChapters, watchStatus, episodesWatched, totalEpisodes, seriesStatus,
   ])
@@ -1860,16 +2056,23 @@ function App() {
 
   const handleSave = async () => {
     if (!title.trim()) return
+    // `basedOnItemId` lives on BaseItem so every category can carry a
+    // cross-library adaptation link, but the form scaffolding
+    // (FormSnapshot / buildItemFromForm) is per-category. Patch it in
+    // after the build so we don't have to thread the field through
+    // every editor section's props.
+    const withBasedOn = (it: AnyItem): AnyItem =>
+      basedOnItemId ? ({ ...it, basedOnItemId } as AnyItem) : ({ ...it, basedOnItemId: undefined } as AnyItem)
     if (editingId) {
       const oldItem = items.find((it) => it.id === editingId)
       const createdAt = oldItem?.createdAt ?? Date.now()
-      const built = buildItemFromForm(editingId, createdAt)
+      const built = withBasedOn(buildItemFromForm(editingId, createdAt))
       const updated = await persistItemImages(built)
       findOrphanedItemAssets(oldItem, updated).forEach(deleteAssetFile)
       setItems((prev) => prev.map((it) => (it.id === editingId ? updated : it)))
       if (viewing && viewing.id === editingId) setViewing(updated)
     } else {
-      const built = buildItemFromForm(crypto.randomUUID(), Date.now())
+      const built = withBasedOn(buildItemFromForm(crypto.randomUUID(), Date.now()))
       const created = await persistItemImages(built)
       setItems((prev) => [...prev, created])
     }
@@ -2156,6 +2359,10 @@ function App() {
     // or grid), so the shell doesn't add a topbar on top.
     if (specialView === 'home') return null
     if (specialView === 'arcade') return null
+    // When a plugin is active, it owns the topnav and publishes its
+    // own meta via `setPageMeta` — mirror it here so the shell
+    // renders it in the standard Omnio topbar.
+    if (activePluginSlug) return pluginPageMeta
     if (specialView === 'calendar') return { icon: <CalendarIcon />, title: 'Release calendar' }
     if (specialView === 'stats') return { icon: <InsightsIcon />, title: 'Statistics' }
     if (specialView === 'settings') return { icon: <SettingsIcon />, title: 'Settings' }
@@ -2236,7 +2443,6 @@ function App() {
       data-theme={settings.theme}
       data-accent={settings.accent === 'default' ? undefined : settings.accent}
       data-density={settings.density}
-      data-font-size={settings.fontSize}
       data-motion={settings.motion}
       data-layout="sidebar"
       data-sidebar={settings.sidebarCollapsed ? 'collapsed' : 'expanded'}
@@ -2273,18 +2479,22 @@ function App() {
             specialView === 'stats' ? { kind: 'special', id: 'stats' } :
             specialView === 'settings' ? { kind: 'special', id: 'settings' } :
             specialView === 'arcade' ? { kind: 'arcade' } :
+            activePluginSlug ? { kind: 'plugin', slug: activePluginSlug } :
             { kind: 'library', categoryId: activeCategory }
           }
           collapsed={!!settings.sidebarCollapsed}
           onToggleCollapsed={() => setSettings((s) => ({ ...s, sidebarCollapsed: !s.sidebarCollapsed }))}
-          onOpenHome={() => { setSpecialView('home'); closePanel(); closeAllDetailViews() }}
-          onOpenLibrary={(id) => { switchCategory(id); closePanel(); closeAllDetailViews() }}
-          onOpenCalendar={() => { setSpecialView('calendar'); closePanel(); closeAllDetailViews() }}
-          onOpenStats={() => { setSpecialView('stats'); closePanel(); closeAllDetailViews() }}
-          onOpenSettings={() => { setSpecialView('settings'); closePanel(); closeAllDetailViews() }}
+          onOpenHome={() => { setActivePluginSlug(null); setSpecialView('home'); closePanel(); closeAllDetailViews() }}
+          onOpenLibrary={(id) => { setActivePluginSlug(null); switchCategory(id); closePanel(); closeAllDetailViews() }}
+          onOpenCalendar={() => { setActivePluginSlug(null); setSpecialView('calendar'); closePanel(); closeAllDetailViews() }}
+          onOpenStats={() => { setActivePluginSlug(null); setSpecialView('stats'); closePanel(); closeAllDetailViews() }}
+          onOpenSettings={() => { setActivePluginSlug(null); setSpecialView('settings'); closePanel(); closeAllDetailViews() }}
           onOpenSearch={() => setSearchOpen(true)}
           onOpenRandomizer={() => setRandomizerOpen(true)}
-          onOpenArcade={() => { setSpecialView('arcade'); closePanel(); closeAllDetailViews() }}
+          onOpenArcade={() => { setSpecialView('arcade'); setActivePluginSlug(null); closePanel(); closeAllDetailViews() }}
+          pluginCounts={pluginCounts}
+          visiblePlugins={visiblePlugins}
+          onOpenPlugin={(slug) => { setSpecialView('none'); setActivePluginSlug(slug); closePanel(); closeAllDetailViews() }}
         />
 
         <div className="main-column">
@@ -2292,7 +2502,11 @@ function App() {
         <nav className="topnav">
           <div className="topnav-page">
             {pageMeta.onBack && (
-              <button className="topnav-back" onClick={pageMeta.onBack} title="Back">←</button>
+              <button className="topnav-back" onClick={pageMeta.onBack} title="Back" aria-label="Back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 6l-6 6 6 6" />
+                </svg>
+              </button>
             )}
             <span className="topnav-page-icon">{pageMeta.icon}</span>
             <span className="topnav-page-title">{pageMeta.title}</span>
@@ -3084,6 +3298,25 @@ function App() {
             </Suspense>
           )}
 
+          {activePluginSlug && (() => {
+            const p = PLUGINS.find((x) => x.slug === activePluginSlug)
+            if (!p) return null
+            const View = p.View
+            // Merge defaults declared by the plugin with the user's
+            // per-field overrides. `cardFields` is what the plugin
+            // ultimately checks in its card renderer.
+            const overrides = settings.pluginCardFields?.[p.slug] ?? {}
+            const cardFields: Record<string, boolean> = {}
+            for (const f of p.cardFields ?? []) {
+              cardFields[f.value] = overrides[f.value] ?? f.default ?? true
+            }
+            return (
+              <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
+                <View setPageMeta={setPluginPageMeta} cardFields={cardFields} />
+              </Suspense>
+            )
+          })()}
+
           {specialView === 'arcade' && (
             <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
               <ArcadeView
@@ -3160,14 +3393,6 @@ function App() {
                       </div>
                     </div>
                     <div className="field-group">
-                      <label>Font size</label>
-                      <div className="yesno">
-                        <button type="button" className={settings.fontSize === 'small' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, fontSize: 'small' }))}>Small</button>
-                        <button type="button" className={settings.fontSize === 'medium' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, fontSize: 'medium' }))}>Medium</button>
-                        <button type="button" className={settings.fontSize === 'large' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, fontSize: 'large' }))}>Large</button>
-                      </div>
-                    </div>
-                    <div className="field-group">
                       <label>Card zoom</label>
                       <div className="yesno">
                         {(['sm','md','lg','xl'] as const).map((z) => (
@@ -3221,6 +3446,55 @@ function App() {
                         <button type="button" className={settings.startupCategory === 'last' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'last' }))}>Last used category</button>
                         <button type="button" className={settings.startupCategory === 'first' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'first' }))}>First category</button>
                       </div>
+                    </div>
+                    <div className="field-group">
+                      <label>Item templates</label>
+                      <p className="hint">When you save a template from the Add panel ("Save as template"), new items in that category prefill status / tags / (games: platforms · ownership · source). Clear one below.</p>
+                      {(() => {
+                        const entries = Object.entries(settings.itemTemplates ?? {})
+                          .filter(([id]) => CATEGORIES.some((c) => c.id === id))
+                        if (entries.length === 0) {
+                          return <p className="hint" style={{ marginTop: 6, opacity: 0.7 }}>No templates saved yet.</p>
+                        }
+                        return (
+                          <div className="library-toggle-list stacked" style={{ marginTop: 6 }}>
+                            {entries.map(([id, t]) => {
+                              const cat = CATEGORIES.find((c) => c.id === id)
+                              if (!cat || !t) return null
+                              const parts: string[] = []
+                              if (t.gameStatus) parts.push(t.gameStatus.replace(/_/g, ' '))
+                              if (t.watchStatus) parts.push(t.watchStatus.replace(/_/g, ' '))
+                              if (t.seriesStatus) parts.push(t.seriesStatus.replace(/_/g, ' '))
+                              if (t.mangaStatus) parts.push(t.mangaStatus.replace(/_/g, ' '))
+                              if (t.bookStatus) parts.push(t.bookStatus.replace(/_/g, ' '))
+                              if (t.visualNovelStatus) parts.push(t.visualNovelStatus.replace(/_/g, ' '))
+                              if (t.consumed !== undefined) parts.push(t.consumed ? 'consumed' : 'unconsumed')
+                              if (t.ownership) parts.push(t.ownership)
+                              if (t.gameSource) parts.push(t.gameSource)
+                              if (t.platforms && t.platforms.length > 0) parts.push(`platforms: ${t.platforms.join(', ')}`)
+                              if (t.tags && t.tags.length > 0) parts.push(`tags: ${t.tags.join(', ')}`)
+                              return (
+                                <div key={id} className="library-toggle-row" style={{ justifyContent: 'space-between' }}>
+                                  <span className="library-toggle-icon"><CategoryIcon id={id} /></span>
+                                  <span style={{ flex: 1 }}>
+                                    <b>{cat.label}</b>
+                                    {parts.length > 0 && <span style={{ marginLeft: 8, color: 'var(--text-dim)', fontSize: 12 }}>{parts.join(' · ')}</span>}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="secondary-btn"
+                                    onClick={() => setSettings((s) => {
+                                      const rest = { ...(s.itemTemplates ?? {}) }
+                                      delete rest[id]
+                                      return { ...s, itemTemplates: rest }
+                                    })}
+                                  >Clear</button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()}
                     </div>
                   </>
                 )}
@@ -3298,77 +3572,132 @@ function App() {
                         })}
                       </div>
                     </div>
+                    {visiblePlugins.length > 0 && (
+                      <div className="field-group">
+                        <label>Plugins</label>
+                        <p className="hint">Optional libraries you've unlocked. Uncheck to hide from the sidebar again.</p>
+                        <div className="library-toggle-list">
+                          {visiblePlugins.map((plug) => {
+                            const Icon = plug.icon
+                            return (
+                              <label key={plug.slug} className="library-toggle-row">
+                                <input
+                                  type="checkbox"
+                                  checked={true}
+                                  onChange={() => setSettings((s) => ({
+                                    ...s,
+                                    unlockedPlugins: (s.unlockedPlugins ?? []).filter((sl) => sl !== plug.slug),
+                                  }))}
+                                  title={`Uncheck to hide ${plug.label} again`}
+                                />
+                                <span className="library-toggle-icon"><Icon /></span>
+                                <span>{plug.label}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </>
                   )
                 })()}
 
                 {settingsTab === 'cards' && (
-                  <>
-                    <div className="field-group">
-                      <label>Games</label>
-                      <div className="pills">
-                        {GAME_FIELD_OPTIONS.map((f) => (
-                          <button key={f.value} type="button" className={settings.gameFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, gameFields: { ...s.gameFields, [f.value]: !s.gameFields[f.value] } }))}>{f.label}</button>
-                        ))}
+                  <div className="settings-grid-card">
+                    <div className="settings-grid-2">
+                      <div className="settings-grid-item">
+                        <div className="settings-grid-item-title">Games</div>
+                        <div className="pills">
+                          {GAME_FIELD_OPTIONS.map((f) => (
+                            <button key={f.value} type="button" className={settings.gameFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, gameFields: { ...s.gameFields, [f.value]: !s.gameFields[f.value] } }))}>{f.label}</button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Music</label>
-                      <div className="pills">
-                        {MUSIC_FIELD_OPTIONS.map((f) => (
-                          <button key={f.value} type="button" className={settings.musicFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, musicFields: { ...s.musicFields, [f.value]: !s.musicFields[f.value] } }))}>{f.label}</button>
-                        ))}
+                      <div className="settings-grid-item">
+                        <div className="settings-grid-item-title">Music</div>
+                        <div className="pills">
+                          {MUSIC_FIELD_OPTIONS.map((f) => (
+                            <button key={f.value} type="button" className={settings.musicFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, musicFields: { ...s.musicFields, [f.value]: !s.musicFields[f.value] } }))}>{f.label}</button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Manga, Manhwa, Manhua &amp; Western Comics</label>
-                      <div className="pills">
-                        {MANGA_FIELD_OPTIONS.map((f) => (
-                          <button key={f.value} type="button" className={settings.mangaFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, mangaFields: { ...s.mangaFields, [f.value]: !s.mangaFields[f.value] } }))}>{f.label}</button>
-                        ))}
+                      <div className="settings-grid-item">
+                        <div className="settings-grid-item-title">Manga, Manhwa, Manhua &amp; Western Comics</div>
+                        <div className="pills">
+                          {MANGA_FIELD_OPTIONS.map((f) => (
+                            <button key={f.value} type="button" className={settings.mangaFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, mangaFields: { ...s.mangaFields, [f.value]: !s.mangaFields[f.value] } }))}>{f.label}</button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Movies</label>
-                      <div className="pills">
-                        {MOVIE_FIELD_OPTIONS.map((f) => (
-                          <button key={f.value} type="button" className={settings.movieFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, movieFields: { ...s.movieFields, [f.value]: !s.movieFields[f.value] } }))}>{f.label}</button>
-                        ))}
+                      <div className="settings-grid-item">
+                        <div className="settings-grid-item-title">Movies</div>
+                        <div className="pills">
+                          {MOVIE_FIELD_OPTIONS.map((f) => (
+                            <button key={f.value} type="button" className={settings.movieFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, movieFields: { ...s.movieFields, [f.value]: !s.movieFields[f.value] } }))}>{f.label}</button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Anime</label>
-                      <div className="pills">
-                        {ANIME_FIELD_OPTIONS.map((f) => (
-                          <button key={f.value} type="button" className={settings.animeFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, animeFields: { ...s.animeFields, [f.value]: !s.animeFields[f.value] } }))}>{f.label}</button>
-                        ))}
+                      <div className="settings-grid-item">
+                        <div className="settings-grid-item-title">Anime</div>
+                        <div className="pills">
+                          {ANIME_FIELD_OPTIONS.map((f) => (
+                            <button key={f.value} type="button" className={settings.animeFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, animeFields: { ...s.animeFields, [f.value]: !s.animeFields[f.value] } }))}>{f.label}</button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Series</label>
-                      <div className="pills">
-                        {SERIES_FIELD_OPTIONS.map((f) => (
-                          <button key={f.value} type="button" className={settings.seriesFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, seriesFields: { ...s.seriesFields, [f.value]: !s.seriesFields[f.value] } }))}>{f.label}</button>
-                        ))}
+                      <div className="settings-grid-item">
+                        <div className="settings-grid-item-title">Series</div>
+                        <div className="pills">
+                          {SERIES_FIELD_OPTIONS.map((f) => (
+                            <button key={f.value} type="button" className={settings.seriesFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, seriesFields: { ...s.seriesFields, [f.value]: !s.seriesFields[f.value] } }))}>{f.label}</button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Books</label>
-                      <div className="pills">
-                        {BOOK_FIELD_OPTIONS.map((f) => (
-                          <button key={f.value} type="button" className={settings.bookFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, bookFields: { ...s.bookFields, [f.value]: !s.bookFields[f.value] } }))}>{f.label}</button>
-                        ))}
+                      <div className="settings-grid-item">
+                        <div className="settings-grid-item-title">Books</div>
+                        <div className="pills">
+                          {BOOK_FIELD_OPTIONS.map((f) => (
+                            <button key={f.value} type="button" className={settings.bookFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, bookFields: { ...s.bookFields, [f.value]: !s.bookFields[f.value] } }))}>{f.label}</button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="field-group">
-                      <label>Visual Novels</label>
-                      <div className="pills">
-                        {VN_FIELD_OPTIONS.map((f) => (
-                          <button key={f.value} type="button" className={settings.vnFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, vnFields: { ...s.vnFields, [f.value]: !s.vnFields[f.value] } }))}>{f.label}</button>
-                        ))}
+                      <div className="settings-grid-item">
+                        <div className="settings-grid-item-title">Visual Novels</div>
+                        <div className="pills">
+                          {VN_FIELD_OPTIONS.map((f) => (
+                            <button key={f.value} type="button" className={settings.vnFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, vnFields: { ...s.vnFields, [f.value]: !s.vnFields[f.value] } }))}>{f.label}</button>
+                          ))}
+                        </div>
                       </div>
+                      {visiblePlugins.filter((p) => p.cardFields && p.cardFields.length > 0).map((plug) => {
+                        const overrides = settings.pluginCardFields?.[plug.slug] ?? {}
+                        return (
+                          <div key={plug.slug} className="settings-grid-item">
+                            <div className="settings-grid-item-title">{plug.label}</div>
+                            <div className="pills">
+                              {plug.cardFields!.map((f) => {
+                                const on = overrides[f.value] ?? f.default ?? true
+                                return (
+                                  <button
+                                    key={f.value}
+                                    type="button"
+                                    className={on ? 'pill active' : 'pill'}
+                                    onClick={() => setSettings((s) => ({
+                                      ...s,
+                                      pluginCardFields: {
+                                        ...(s.pluginCardFields ?? {}),
+                                        [plug.slug]: { ...(s.pluginCardFields?.[plug.slug] ?? {}), [f.value]: !on },
+                                      },
+                                    }))}
+                                  >{f.label}</button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {settingsTab === 'data' && (
@@ -3464,6 +3793,12 @@ function App() {
                         <button type="button" className="secondary-btn" onClick={() => setLastfmImportOpen(true)}>Import Last.fm scrobbles</button>
                         <button type="button" className="secondary-btn" onClick={() => setTraktImportOpen(true)}>Import from Trakt.tv</button>
                         <button type="button" className="secondary-btn" onClick={() => setDiscogsImportOpen(true)}>Import Discogs collection</button>
+                        <button type="button" className="secondary-btn" onClick={() => setStoryGraphOpen(true)}>Import from StoryGraph</button>
+                        <button type="button" className="secondary-btn" onClick={() => setImdbOpen(true)}>Import from IMDb</button>
+                        <button type="button" className="secondary-btn" onClick={() => setRymOpen(true)}>Import from RateYourMusic</button>
+                        <button type="button" className="secondary-btn" onClick={() => setHltbOpen(true)}>Import HowLongToBeat times</button>
+                        <button type="button" className="secondary-btn" onClick={() => setDiscographyCheckerOpen(true)}>Check music discography completion</button>
+                        <button type="button" className="secondary-btn" onClick={() => setInstallScanOpen(true)}>Detect installed games (Steam / GOG / Epic)</button>
                       </div>
                       <p className="hint">Steam import reads a public profile via the community XML endpoint — no API key. Letterboxd accepts the CSVs from your account export (Settings → Data → Export on letterboxd.com). Kindle highlights import parses <code>My Clippings.txt</code> from your Kindle's <code>documents/</code> folder and attaches each highlight to a matching book (or creates one). Playtime and status pre-fill; open each item afterwards to fetch cover + metadata via IGDB or SteamGridDB / TMDb.</p>
                     </div>
@@ -3485,6 +3820,7 @@ function App() {
                       <label>Share your library</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={() => setWrappedOpen(true)}>Yearly wrapped</button>
+                        <button type="button" className="secondary-btn" onClick={() => setCoverWallOpen(true)}>Cover wall export</button>
                         <select value={exportScope} onChange={(e) => setExportScope(e.target.value)} style={{ maxWidth: 200 }}>
                           <option value="all">All libraries</option>
                           {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((c) => (
@@ -3788,14 +4124,14 @@ function App() {
                         <p className="about-line">Local-only. No accounts, no telemetry, no cloud. Your data lives on this machine.</p>
                         <p className="about-section-title">New in this release</p>
                         <ul className="about-changelog">
-                          <li><b>Backend rewritten in Rust (Tauri)</b> — the main process moved from Electron to Tauri v2. Every one of the 66 IPC channels the renderer uses got a matching Rust command. Wire shapes are identical, so no JSON on disk changed and nothing about your library needs migrating manually.</li>
-                          <li><b>~90% smaller installer</b> — bundle dropped from ~180 MB (Electron with bundled Chromium) to ~12 MB (Tauri uses the OS's system WebView). Idle RAM roughly a third of what it was.</li>
-                          <li><b>First-boot library migration</b> — the first time you open the new Tauri build, Omnio detects an existing Electron install (<code>%APPDATA%\Omnio</code> on Windows, macOS Application Support, or Linux XDG config) and copies <code>data/</code> + <code>assets/</code> into the new storage root (<code>%APPDATA%\com.omnio.app</code>). Copy semantics — you can roll back to Electron with zero data loss until you uninstall.</li>
-                          <li><b>Visual Novels category</b> — new library sitting under Extras with a dedicated editor + detail view. Full <b>VNDB Kana API</b> integration: description, aliases, engine, length + votes, original language, languages available, dev status, community rating, tags, screenshots gallery, multi-region cover gallery (per-country flags via <code>/release</code>), publishers per language, staff, and character list with images. VNDB relations (sequel / prequel / side story / …) resolve against your own library so links back to the right item you already have.</li>
-                          <li><b>Same UI, faster feel</b> — Tauri's native WebView2 (Windows) / WebKitGTK (Linux) / WKWebView (macOS) starts faster than Electron's bundled Chromium and renders long grids with less jank.</li>
-                          <li><b>Better error surfacing on fetch failures</b> — <code>proxy_json</code> in Rust attaches the error <code>source()</code> chain to toast text and logs the URL + cause to the dev terminal. A generic "fetch failed" now reads as "fetch failed (Connect Timeout Error … vgmdb.info:443)".</li>
-                          <li><b>Loose schema validation at the disk boundary</b> — every item / collection / artist / arcade game loaded from JSON goes through a minimum-required-fields check (id / categoryId / title / createdAt). Rows with a corrupt shape get dropped and logged so a partially broken file still boots the rest of the library.</li>
-                          <li><b>Sidebar polish</b> — dragging the sidebar closed now also hides the Libraries header when every library is disabled (previously left an orphan header row). Small consistency win, easier to hit "Add" without libraries in the way.</li>
+                          <li><b>Item templates</b> — save the current status / tags / (games: platforms + ownership + source) as a per-category default. New items in that category prefill those slots. Managed from the Add panel ("Save as template") and Settings → Behavior.</li>
+                          <li><b>Quick-add via URL</b> — paste an IGDB / TMDb / AniList / MyAnimeList / VNDB / MangaDex / OpenLibrary / Steam URL into the Title field; the matching fetcher opens with the slug pre-searched.</li>
+                          <li><b>Half-star ratings</b> — 0.5-step scores across every editor, display and filter. RatingPicker uses a 10-pill row (0.5 → 5.0); the min-rating filter and star display track halves too.</li>
+                          <li><b>Settings visual rework</b> — floating navigation card, one-card-per-setting layout with bold titles, Card fields tab now a 2-column grid inside a single card, Enabled libraries + Extras + Plugins render as inline chips that wrap. Cover wall export dialog got the same treatment.</li>
+                          <li><b>Mobile app / PWA discontinued</b> — the experimental mobile companion has been removed. Mobile-specific state, sheets, LAN sync, manifest, service worker and the Rust LAN server are all gone. Desktop-only from here.</li>
+                          <li><b>Encrypted backup + git version history removed</b> — the 7z-encrypted rolling backup and the git-backed data folder were both retired. Rolling <b>5-snapshot backups</b> on every save remain.</li>
+                          <li><b>Dead-code sweep</b> — ~600 LoC of Rust and ~250 LoC of TypeScript removed, plus 3 Cargo crates (<code>sevenz-rust</code>, <code>walkdir</code>, <code>chrono</code>) dropped. Slimmer bundle, less to maintain.</li>
+                          <li><b>Import list expanded in the docs</b> — StoryGraph, IMDb, RateYourMusic, HowLongToBeat and TXT input for the Generic importer — these were already wired, now documented in the README.</li>
                         </ul>
                         <p className="about-line">
                           <a
@@ -3824,7 +4160,7 @@ function App() {
             </>
           )}
 
-          {specialView === 'none' && (
+          {specialView === 'none' && !activePluginSlug && (
             <>
               <div className="sub-tabs">
                 <button className={subView === 'items' ? 'sub-tab active' : 'sub-tab'} onClick={() => { setSubView('items'); setActiveCollectionId(null); resetListControls() }}>
@@ -3850,10 +4186,21 @@ function App() {
                       onKeyDown={(e) => { if (e.key === 'Enter') handleAddArtist() }}
                     />
                     <button type="button" onClick={handleAddArtist}>+ Add artist</button>
+                    <select
+                      className="sort-select"
+                      value={folderSort}
+                      onChange={(e) => setFolderSort(e.target.value as 'alpha' | 'recent')}
+                      title="Sort artists"
+                    >
+                      <option value="alpha">Alphabetical</option>
+                      <option value="recent">Most recent</option>
+                    </select>
                   </div>
                   <div className="folder-grid">
                     {musicArtists.length === 0 && <p className="empty">No artists yet.</p>}
-                    {musicArtists.map((a) => (
+                    {[...musicArtists]
+                      .sort((a, b) => folderSort === 'recent' ? (b.createdAt ?? 0) - (a.createdAt ?? 0) : a.name.localeCompare(b.name))
+                      .map((a) => (
                       <div key={a.id} className="folder-card" onClick={() => setViewingArtist(a)}>
                         <button className="delete" onClick={(e) => { e.stopPropagation(); handleDeleteArtist(a.id) }}>✕</button>
                         {a.photo
@@ -3875,10 +4222,21 @@ function App() {
                       onKeyDown={(e) => { if (e.key === 'Enter') handleCreateCollection() }}
                     />
                     <button type="button" onClick={handleCreateCollection}>+ Create group</button>
+                    <select
+                      className="sort-select"
+                      value={folderSort}
+                      onChange={(e) => setFolderSort(e.target.value as 'alpha' | 'recent')}
+                      title="Sort groups"
+                    >
+                      <option value="alpha">Alphabetical</option>
+                      <option value="recent">Most recent</option>
+                    </select>
                   </div>
                   <div className="folder-grid">
                     {categoryCollections.length === 0 && <p className="empty">You haven't created any groups here yet.</p>}
-                    {categoryCollections.map((c) => (
+                    {[...categoryCollections]
+                      .sort((a, b) => folderSort === 'recent' ? (b.createdAt ?? 0) - (a.createdAt ?? 0) : a.name.localeCompare(b.name))
+                      .map((c) => (
                       <div key={c.id} className="folder-card" onClick={() => { setActiveCollectionId(c.id); resetListControls(); setSortBy('custom') }}>
                         <button className="folder-edit" onClick={(e) => { e.stopPropagation(); openCollectionEditModal(c) }} title="Edit group">✎</button>
                         <button className="delete" onClick={(e) => { e.stopPropagation(); handleDeleteCollection(c.id) }}>✕</button>
@@ -3908,6 +4266,8 @@ function App() {
                       <option value="custom">{activeCollection ? 'Manual order' : 'Custom order'}</option>
                       {activeCategory === 'videojuegos' && <>
                         <option value="time">Time played</option>
+                        <option value="hltbAsc">Shortest to beat</option>
+                        <option value="hltbDesc">Longest to beat</option>
                         <option value="status">Status</option>
                         <option value="releaseAsc">Release date ↑</option>
                         <option value="releaseDesc">Release date ↓</option>
@@ -3986,7 +4346,7 @@ function App() {
                       ) : (
                         <div className="empty-state small">
                           <p>No items match your filters.</p>
-                          <button className="secondary-btn" onClick={resetListControls}>Clear filters</button>
+                          <button className="secondary-btn" onClick={() => { resetListControls() }}>Clear filters</button>
                         </div>
                       )
                     )}
@@ -4023,8 +4383,6 @@ function App() {
             </>
           )}
         </main>
-        </div>
-
         {panelOpen && (
           <>
             <div className="panel-backdrop">
@@ -4032,6 +4390,21 @@ function App() {
               <div className="panel-header">
               <h3>{editingId ? `Edit ${current?.label}` : `Add ${current?.label}`}</h3>
               <div className="panel-header-actions">
+                {!editingId && (
+                  <button
+                    type="button"
+                    className="ghost"
+                    title={`Save the current status / tags / platforms as the default for new ${current?.label ?? 'items'}`}
+                    onClick={() => {
+                      const template = captureCurrentTemplate()
+                      setSettings((s) => ({
+                        ...s,
+                        itemTemplates: { ...(s.itemTemplates ?? {}), [activeCategory]: template },
+                      }))
+                      setToast(`Template saved for ${current?.label ?? 'this category'}`)
+                    }}
+                  >Save as template</button>
+                )}
                 <button className="panel-close" onClick={() => closePanel()}>✕</button>
               </div>
             </div>
@@ -4314,7 +4687,27 @@ function App() {
                     </div>
                     <div className="field-group">
                       <label>Title</label>
-                      <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+                      <input
+                        placeholder="Title — or paste an IGDB / TMDb / AniList / VNDB / MangaDex / OpenLibrary / Steam URL"
+                        value={title}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          // Paste-a-URL shortcut: if the new value is a
+                          // supported metadata URL and the current category
+                          // has that fetcher wired, humanize the slug into
+                          // the title field and open the fetcher so the
+                          // user goes straight to picking a result.
+                          const available = getFetchersFor(activeCategory).map((r) => r.id)
+                          const match = detectQuickAddUrl(v, available)
+                          if (match) {
+                            setTitle(match.query)
+                            setActiveFetcher(match.fetcherId)
+                            setToast(`Opening ${match.source} search…`)
+                          } else {
+                            setTitle(v)
+                          }
+                        }}
+                      />
                     </div>
 
                     <div className="form-section-header" data-belongs-to="media">
@@ -4423,6 +4816,7 @@ function App() {
                         ownership={ownership} setOwnership={setOwnership}
                         gameStatus={gameStatus} setGameStatus={setGameStatus}
                         playTime={playTime} handlePlayTimeChange={handlePlayTimeChange}
+                        hltbHours={hltbHours} setHltbHours={setHltbHours}
                         hasDlc={hasDlc} setHasDlc={setHasDlc} dlcList={dlcList} setDlcList={setDlcList}
                         hasAddons={hasAddons} setHasAddons={setHasAddons} addonsList={addonsList} setAddonsList={setAddonsList}
                         isBundle={isBundle} setIsBundle={setIsBundle} bundleContents={bundleContents} setBundleContents={setBundleContents} setBundleSgdbFor={setBundleSgdbFor}
@@ -4774,6 +5168,16 @@ function App() {
                         >+ Add field</button>
                       </div>
                     </div>
+                    <div className="field-group">
+                      <label>Adapted from another library item</label>
+                      <p className="hint" style={{ margin: '2px 0 6px' }}>Link this item to the original work it's based on — anime → manga, movie → book, series → comic, game → novel, etc. The reverse edge ("Adapted as") shows on the source item automatically.</p>
+                      <BasedOnPicker
+                        currentItemId={editingId ?? undefined}
+                        value={basedOnItemId}
+                        onChange={setBasedOnItemId}
+                        allItems={items}
+                      />
+                    </div>
                   </div>
                 </div>
                 </div>
@@ -4815,6 +5219,7 @@ function App() {
           </div>
           </>
         )}
+        </div>
       </div>
 
       {!settings.welcomeShown && items.length === 0 && loaded && (
@@ -5076,6 +5481,30 @@ function App() {
         onClose={() => setSearchOpen(false)}
         onOpenItem={navigateToItem}
         onOpenArtist={navigateToArtist}
+        onRunAction={(a) => {
+          if (a.kind === 'open-library') {
+            switchCategory(a.categoryId as CategoryId)
+            setSpecialView('none')
+            setActivePluginSlug(null)
+          } else if (a.kind === 'open-view') {
+            setActivePluginSlug(null)
+            if (a.view === 'randomizer') { setRandomizerOpen(true); return }
+            setSpecialView(a.view)
+          } else if (a.kind === 'franchise') {
+            setFranchiseTimelineOpen(a.franchise)
+          } else if (a.kind === 'add-item') {
+            if (a.categoryId) switchCategory(a.categoryId as CategoryId)
+            setSpecialView('none')
+            setActivePluginSlug(null)
+            openAddPanel()
+            // Prefill the add panel's title with the requested string
+            // on the next tick — the panel needs a paint to mount.
+            setTimeout(() => {
+              const el = document.querySelector<HTMLInputElement>('.add-panel input[name="title"], .add-panel input[type="text"]')
+              if (el) { el.value = a.title; el.dispatchEvent(new Event('input', { bubbles: true })); el.focus() }
+            }, 60)
+          }
+        }}
       />
 
       {dupOpen && (
@@ -5475,6 +5904,63 @@ function App() {
         </Suspense>
       )}
 
+      {storyGraphOpen && (
+        <Suspense fallback={null}>
+          <StoryGraphImporter
+            existingItems={items}
+            onImport={(newItems) => {
+              setItems((all) => [...all, ...newItems])
+              setToast(`Imported ${newItems.length} book${newItems.length === 1 ? '' : 's'} from StoryGraph`)
+            }}
+            onClose={() => setStoryGraphOpen(false)}
+          />
+        </Suspense>
+      )}
+
+      {imdbOpen && (
+        <Suspense fallback={null}>
+          <ImdbImporter
+            existingItems={items}
+            onImport={(newItems) => {
+              setItems((all) => [...all, ...newItems])
+              setToast(`Imported ${newItems.length} entr${newItems.length === 1 ? 'y' : 'ies'} from IMDb`)
+            }}
+            onClose={() => setImdbOpen(false)}
+          />
+        </Suspense>
+      )}
+
+      {rymOpen && (
+        <Suspense fallback={null}>
+          <RymImporter
+            existingItems={items}
+            onImport={(newItems) => {
+              setItems((all) => [...all, ...newItems])
+              setToast(`Imported ${newItems.length} album${newItems.length === 1 ? '' : 's'} from RateYourMusic`)
+            }}
+            onClose={() => setRymOpen(false)}
+          />
+        </Suspense>
+      )}
+
+      {hltbOpen && (
+        <Suspense fallback={null}>
+          <HltbImporter
+            existingItems={items}
+            onPatch={(patches) => {
+              const byId = new Map(patches.map((p) => [p.id, p.hltbHours]))
+              setItems((all) => all.map((it) => {
+                const h = byId.get(it.id)
+                if (h === undefined) return it
+                return { ...it, hltbHours: h } as Item
+              }))
+              setToast(`Patched ${patches.length} game${patches.length === 1 ? '' : 's'} with HLTB times`)
+            }}
+            onClose={() => setHltbOpen(false)}
+          />
+        </Suspense>
+      )}
+
       {serializdOpen && (
         <Suspense fallback={null}>
           <SerializdImporter
@@ -5569,6 +6055,63 @@ function App() {
         />
       )}
 
+      {coverWallOpen && (
+        <Suspense fallback={null}>
+          <CoverWallExporter
+            open={coverWallOpen}
+            items={items}
+            enabledCategories={settings.enabledCategories}
+            onClose={() => setCoverWallOpen(false)}
+          />
+        </Suspense>
+      )}
+      {franchiseTimelineOpen && (
+        <Suspense fallback={null}>
+          <CrossLibraryFranchiseModal
+            franchise={franchiseTimelineOpen}
+            allItems={items}
+            onClose={() => setFranchiseTimelineOpen(null)}
+            onNavigate={(id) => {
+              const target = items.find((i) => i.id === id)
+              if (target) navigateToItem(target)
+            }}
+          />
+        </Suspense>
+      )}
+      {installScanOpen && (
+        <Suspense fallback={null}>
+          <LocalInstallScanner
+            existingItems={items}
+            onImport={(newItems) => {
+              setItems((all) => [...all, ...newItems])
+              setToast(`Added ${newItems.length} game${newItems.length === 1 ? '' : 's'} from install scan · open each to fetch cover/metadata`)
+            }}
+            onClose={() => setInstallScanOpen(false)}
+          />
+        </Suspense>
+      )}
+      {discographyCheckerOpen && (
+        <Suspense fallback={null}>
+          <DiscographyChecker
+            items={items}
+            onAddMissing={(rows) => {
+              const now = Date.now()
+              const newItems: AnyItem[] = rows.map((r) => ({
+                id: crypto.randomUUID(),
+                categoryId: 'musica',
+                title: r.title,
+                artist: r.artist,
+                releaseYear: r.year,
+                musicType: 'album',
+                createdAt: now,
+              } as AnyItem))
+              setItems((all) => [...all, ...newItems])
+              setToast(`Added ${newItems.length} placeholder album${newItems.length === 1 ? '' : 's'} — open each to fetch cover/metadata`)
+            }}
+            onClose={() => setDiscographyCheckerOpen(false)}
+          />
+        </Suspense>
+      )}
       {wrappedOpen && (
         <YearlyWrapped items={items} onClose={() => setWrappedOpen(false)} />
       )}

@@ -83,6 +83,24 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'anidb:anime': ['client', 'aid'],
   'pcgw:search': ['term'],
   'pcgw:save-paths': ['pageName'],
+
+  // -- plugin sandbox (generic infra for `src/categories/<slug>/`) --
+  'install:scan': ['customRoots'],
+  'plugin:data-load': ['slug'],
+  'plugin:data-save': ['slug', 'data'],
+  'plugin:asset-download': ['slug', 'kind', 'url', 'basename', 'referer', 'cookie'],
+  'plugin:asset-save-data-url': ['slug', 'kind', 'dataUrl', 'basename'],
+  'plugin:asset-save-from-file': ['slug', 'kind', 'sourcePath', 'basename'],
+  'plugin:asset-delete': ['slug', 'kind', 'basename'],
+  'plugin:asset-rename': ['slug', 'kind', 'oldBasename', 'newBasename'],
+  'plugin:saves-list': ['slug', 'gameName'],
+  'plugin:saves-add': ['slug', 'gameName'],
+  'plugin:saves-delete': ['slug', 'gameName', 'fileName'],
+  'plugin:saves-open-folder': ['slug', 'gameName'],
+  'plugin:saves-reveal': ['slug', 'gameName', 'fileName'],
+  'plugin:saves-rename-folder': ['slug', 'oldName', 'newName'],
+  'plugin:saves-delete-all': ['slug', 'gameName'],
+  'net:fetch-text': ['url', 'headers'],
 }
 
 // Convert an Electron-style channel name to a Tauri command name.

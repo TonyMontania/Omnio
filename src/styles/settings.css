@@ -80,49 +80,87 @@
 .welcome-tips li { font-size: 13px; color: var(--text-dim); padding-left: 14px; position: relative; }
 .welcome-tips li::before { content: '→'; position: absolute; left: 0; color: var(--accent); }
 .welcome-tips b { color: var(--text); font-weight: 600; }
-.library-toggle-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.library-toggle-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
 .library-toggle-list.welcome-libs { margin: 10px 0 4px; }
-.library-toggle-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); cursor: pointer; }
+.library-toggle-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.library-toggle-row:hover { border-color: var(--border); }
 .library-toggle-row input { accent-color: var(--accent); margin: 0; }
-.library-toggle-icon { display: inline-flex; width: 20px; color: var(--text-dim); }
+.library-toggle-icon { display: inline-flex; width: 18px; color: var(--text-dim); }
 .library-toggle-icon svg { width: 18px; height: 18px; }
+/* Welcome wizard + item-templates viewer keep the vertical stack —
+   those rows carry descriptions / actions and benefit from a
+   full-width layout. Signal with `.welcome-libs` (wizard) or
+   `.stacked` (settings-side list of saved templates). */
+.library-toggle-list.welcome-libs,
+.library-toggle-list.stacked {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+.library-toggle-list.welcome-libs .library-toggle-row,
+.library-toggle-list.stacked .library-toggle-row {
+  width: 100%;
+}
 
-/* Settings has its own inner sidebar (Look & feel / Libraries / Data /
-   Maintenance) — those live inside the .content column of the app
-   shell, so no negative margins are needed. The old rules used
-   calc(100% + 64px) + margin: 0 -32px to butt against the window edge
-   back when there was no persistent left sidebar; that trick left a
-   visible gap once the sidebar was reinstated. */
+/* -----------------------------------------------------------------
+   Settings shell — two-column layout with a floating navigation card
+   on the left and a spacious content area on the right. Both columns
+   have breathing room from the app chrome so nothing pegs against the
+   sidebar / topnav edges.
+   ----------------------------------------------------------------- */
 .settings-layout {
   display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 0;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 24px;
   width: 100%;
   flex: 1;
   min-height: 0;
+  /* Cancels the .content top/bottom padding so the settings shell
+     runs edge-to-edge inside the topnav frame — no floating black
+     strips above the sidebar card or below the last field. */
+  margin: -20px -32px 0;
+  padding: 20px 32px 20px;
+  align-items: start;
+  overflow: auto;
 }
-/* Pinned styles — the settings nav is intentionally density-agnostic so
-   users get the same look in both comfortable and compact mode. All the
-   values below are hard-coded and shouldn't respond to the global
-   density attribute. */
+.app[data-density="compact"] .settings-layout {
+  margin: -18px -20px 0;
+  padding: 18px 20px 18px;
+}
+
 .settings-sidebar {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 16px 12px 20px 20px;
-  border-right: 1px solid var(--border-soft);
-  overflow-y: auto;
+  padding: 18px 12px 22px;
   background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  position: sticky;
+  top: 4px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
 }
-.app[data-density="compact"] .settings-sidebar,
-.app[data-density="comfortable"] .settings-sidebar {
-  padding: 16px 12px 20px 20px;
-}
+
 .settings-sidebar .settings-nav-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 14px;
+  gap: 12px;
+  padding: 10px 14px;
   background: transparent;
   border: none;
   color: var(--text-dim);
@@ -131,12 +169,7 @@
   font-size: 13.5px;
   font-family: var(--font-body);
   border-radius: var(--radius-sm);
-  transition: background 0.12s, color 0.12s;
-}
-.app[data-density="compact"] .settings-sidebar .settings-nav-btn,
-.app[data-density="comfortable"] .settings-sidebar .settings-nav-btn {
-  padding: 9px 14px;
-  font-size: 13.5px;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 .settings-sidebar .settings-nav-btn:hover { background: var(--surface-2); color: var(--text); }
 .settings-sidebar .settings-nav-btn.active {
@@ -146,35 +179,123 @@
 }
 .settings-sidebar .settings-nav-icon {
   display: inline-flex;
-  width: 16px;
+  width: 18px;
   font-size: 14px;
   justify-content: center;
+  opacity: 0.85;
 }
-/* Group labels ("Look & feel", "Libraries", "Data") that section the
-   sidebar rows into related clusters. Non-interactive; first label has
-   no top gap so the sidebar doesn't start with awkward whitespace. */
+.settings-sidebar .settings-nav-btn.active .settings-nav-icon { opacity: 1; }
+
+/* Group labels ("LOOK & FEEL" / "LIBRARIES" / "DATA") that section
+   the sidebar rows. Kept small + mono so they read as taxonomy, not
+   as clickable entries. */
 .settings-sidebar .settings-nav-group-label {
-  margin: 14px 6px 4px;
+  margin: 16px 12px 6px;
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-faint);
   user-select: none;
 }
-.settings-sidebar .settings-nav-group-label:first-child { margin-top: 0; }
+.settings-sidebar .settings-nav-group-label:first-child { margin-top: 4px; }
+
+/* Content column — no forced background. Each field-group becomes its
+   own card, so the outer surface stays as the app bg. */
 .settings-main {
-  padding: 16px 32px 32px 28px;
-  overflow: auto;             /* both axes — content is content-sized */
+  padding: 0 4px 32px 0;
+  overflow: auto;
   min-width: 0;
 }
+
 .settings-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   width: 100%;
-  max-width: 1080px;
+  max-width: 920px;
 }
+
+/* Every top-level field-group inside Settings becomes a card. The
+   label ("THEME", "ACCENT COLOR", …) is promoted to a header and the
+   hint sits inside the same card so nothing floats loose. */
+.settings-form > .field-group,
+.app[data-density="compact"] .settings-form > .field-group,
+.app[data-density="comfortable"] .settings-form > .field-group {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 20px 22px;
+  gap: 18px;
+}
+
+/* -----------------------------------------------------------------
+   Multi-item card — for tabs like Card fields where a bunch of small
+   related sub-forms (one per library) share one outer card and lay
+   themselves out in a 2-column grid that wraps on narrower widths.
+   ----------------------------------------------------------------- */
+.settings-grid-card {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 20px 22px;
+}
+.settings-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 28px;
+}
+@media (max-width: 900px) {
+  .settings-grid-2 { grid-template-columns: 1fr; }
+}
+.settings-grid-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.settings-grid-item-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.settings-form > .field-group > label {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+  margin: 0;
+  line-height: 1;
+}
+.settings-form > .field-group > .hint,
+.settings-form > .field-group > p.hint {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* Nested field-groups (like inside 'appearance' > theme families)
+   keep the compact mono label look — they're already visually contained
+   by their parent card. */
+.settings-form > .field-group .field-group > label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
 .settings-form .field-group input[type="text"],
 .settings-form .field-group input[type="url"],
 .settings-form .field-group input[type="password"],
@@ -211,13 +332,20 @@
 
 .about-text { font-size: 13px; color: var(--text-dim); margin: 0; }
 
+/* Sub-heading inside a settings tab — visually stronger than a field
+   label so users can scan Data / Integrations / Danger zone quickly.
+   Sits above the card group it introduces. */
 .settings-section-title {
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 15px;
+  font-weight: 700;
+  font-size: 18px;
   color: var(--text);
-  margin-top: 4px;
+  margin: 22px 4px 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-soft);
+  letter-spacing: -0.01em;
 }
+.settings-form > .settings-section-title:first-child { margin-top: 4px; }
 
 .spoiler-reveal-btn {
   background: var(--surface-2);

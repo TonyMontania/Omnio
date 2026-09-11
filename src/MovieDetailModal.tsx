@@ -8,12 +8,16 @@ import CustomFieldsView from './components/CustomFieldsView'
 import DetailFranchiseTimeline from './components/detail/DetailFranchiseTimeline'
 import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
+import { BasedOnDisplay } from './components/BasedOn'
 import DetailNotes from './components/detail/DetailNotes'
 
 interface Props {
   item: MovieItem
   groups: Collection[]
   allMovies: AnyItem[]
+  // All items, not just Movies — cross-library adaptation links
+  // (BasedOnDisplay) need to resolve targets in any category.
+  allItems?: AnyItem[]
   onClose: () => void
   onEdit: () => void
   onDuplicate: () => void
@@ -22,7 +26,7 @@ interface Props {
 
 const yearOf = (i: Item) => i.releaseYear || ''
 
-export default function MovieDetailModal({ item, groups, allMovies, onClose, onEdit, onDuplicate, onNavigate }: Props) {
+export default function MovieDetailModal({ item, groups, allMovies, allItems, onClose, onEdit, onDuplicate, onNavigate }: Props) {
   const banner = item.bannerImage2
   const franchiseItems = item.franchise
     ? allMovies.filter((a) => a.franchise === item.franchise).sort((a, b) => yearOf(a).localeCompare(yearOf(b)))
@@ -56,6 +60,7 @@ export default function MovieDetailModal({ item, groups, allMovies, onClose, onE
             <div className="game-modal-title-row">
               <h1>{item.title} {item.releaseYear && <span className="game-modal-year">({item.releaseYear})</span>}</h1>
             </div>
+            {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
             {item.alternativeTitles && item.alternativeTitles.length > 0 && (
               <p className="game-modal-alt-titles">{item.alternativeTitles.join(' · ')}</p>
             )}

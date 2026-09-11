@@ -64,8 +64,10 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
 
   const showTitle = isGame ? gf!.title : isMusic ? mf!.title : isManga ? mgf!.title : isMovie ? movf!.title : isAnime ? anf!.title : isSeries ? sf!.title : isBook ? bf!.title : isVn ? vf!.title : true
   const showLine = isGame ? gf!.playTime : isManga ? mgf!.chapters : isMovie ? movf!.year : isAnime ? anf!.episodes : isSeries ? sf!.episodes : isBook ? bf!.pages : isVn ? vf!.length : true
-  const showRating = isGame ? gf!.rating : isMusic ? mf!.rating : isMovie ? movf!.rating : isAnime ? anf!.rating : isSeries ? sf!.rating : isBook ? bf!.rating : isVn ? vf!.rating : true
-  const showTags = isGame ? gf!.tags : isMusic ? mf!.tags : isMovie ? movf!.tags : isAnime ? anf!.tags : isSeries ? sf!.tags : isBook ? bf!.tags : isVn ? vf!.tags : true
+  const showRating = isGame ? gf!.rating : isMusic ? mf!.rating : isManga ? mgf!.rating : isMovie ? movf!.rating : isAnime ? anf!.rating : isSeries ? sf!.rating : isBook ? bf!.rating : isVn ? vf!.rating : true
+  const showTags = isGame ? gf!.tags : isMusic ? mf!.tags : isManga ? mgf!.tags : isMovie ? movf!.tags : isAnime ? anf!.tags : isSeries ? sf!.tags : isBook ? bf!.tags : isVn ? vf!.tags : true
+  const mangaAuthorsList = (item as unknown as { mangaAuthors?: string[] }).mangaAuthors
+  const showMangaAuthors = isManga && mgf!.authors && mangaAuthorsList && mangaAuthorsList.length > 0
   const gs = isGame && gf!.status ? getGameStatus(item.gameStatus) : null
   const ms = isManga && mgf!.status ? getMangaStatus(item.mangaStatus) : null
   const as = isAnime && anf!.status ? getAnimeStatus(item.watchStatus) : null
@@ -145,6 +147,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
         {bs && <p className="item-status"><MangaStatusIcon value={bs.value as MangaStatus} /> {bs.label}</p>}
         {vns && <p className="item-status">{vns.label}</p>}
         {showBookAuthors && <p className="item-meta">{item.authors!.slice(0, 2).join(', ')}</p>}
+        {showMangaAuthors && <p className="item-meta">{mangaAuthorsList!.slice(0, 2).join(', ')}</p>}
         {showVnDevs && <p className="item-meta">{item.devs!.slice(0, 2).join(', ')}</p>}
         {vnLength && <p className="item-time">{vnLength}</p>}
         {showMovieStatus && <p className="item-status">{item.consumed ? 'Watched' : 'Not watched'}</p>}

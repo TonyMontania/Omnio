@@ -4,12 +4,6 @@
 
 .app[data-motion="reduced"] * { transition: none !important; animation: none !important; }
 
-/* `zoom` scales the rendered box, but height: 100vh on .app is calculated
-   from the un-zoomed viewport. Without compensating, small zoom leaves an
-   empty strip at the bottom and large zoom overflows past the window. */
-.app[data-font-size="small"] { zoom: 0.9; height: calc(100vh / 0.9); }
-.app[data-font-size="large"] { zoom: 1.12; height: calc(100vh / 1.12); }
-
 .app[data-density="compact"] .content { padding: 18px 20px 0; }
 .app[data-density="compact"] .content-header { margin-bottom: 14px; }
 .app[data-density="compact"] .sidebar { padding: 14px 8px; }
@@ -34,10 +28,16 @@ body {
   color: var(--text);
 }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: var(--surface-hover); }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb {
+  background: var(--text-dim);
+  border-radius: 8px;
+  border: 2px solid var(--surface);
+  min-height: 40px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text); }
+* { scrollbar-color: var(--text-dim) var(--surface); }
 
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: 2px solid var(--accent);

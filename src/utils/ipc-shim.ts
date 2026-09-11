@@ -81,9 +81,19 @@ function positionalToNamed(channel: string, args: unknown[]): Record<string, unk
  * Install the shim. Idempotent — calling twice is a no-op.
  * Under Electron this returns without touching `window.ipcRenderer`.
  * Under Tauri it replaces the (missing) global with a router.
+ * Under a plain browser (e.g. `vite preview` or a jsdom test) it
+ * installs a fallback shim so the app still boots.
  */
 export async function installIpcShim(): Promise<void> {
-  if (!isTauriHost()) return
+  if (!isTauriHost()) {
+    // Electron already provides `window.ipcRenderer` via preload —
+    // don't touch it. Otherwise install the browser fallback so the
+    // renderer isn't stranded without a shim.
+    if (!(window as Window & { ipcRenderer?: unknown }).ipcRenderer) {
+      installBrowserFallback()
+    }
+    return
+  }
   // If preload happened to define one anyway, respect it (dev cross-
   // configuration guard). The shim is opt-in — Tauri host + no
   // existing global.
@@ -151,5 +161,82 @@ export async function installIpcShim(): Promise<void> {
     },
   }
 
+  ;(window as Window & { ipcRenderer: Window['ipcRenderer'] }).ipcRenderer = shim
+}
+
+// -----------------------------------------------------------------
+// Browser fallback shim
+// -----------------------------------------------------------------
+// Only reachable outside Tauri/Electron — e.g. `vite preview` or a
+// jsdom test. Keeps a minimal library in localStorage so the app
+// boots and returns "not available" for Rust-only commands.
+
+const BROWSER_STORE_KEY = 'omnio-browser-store'
+
+function readBrowserStore(): Record<string, unknown> {
+  try {
+    const raw = localStorage.getItem(BROWSER_STORE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return typeof parsed === 'object' && parsed ? parsed as Record<string, unknown> : {}
+  } catch { return {} }
+}
+function writeBrowserStore(next: Record<string, unknown>): void {
+  try { localStorage.setItem(BROWSER_STORE_KEY, JSON.stringify(next)) }
+  catch { /* quota exceeded — silent */ }
+}
+
+function browserRoute(channel: string, args: unknown[]): unknown {
+  const store = readBrowserStore()
+  switch (channel) {
+    case 'data:load':
+      return {
+        items: (store.items as unknown[]) ?? [],
+        collections: (store.collections as unknown[]) ?? [],
+        settings: (store.settings as unknown) ?? {},
+        artists: (store.artists as unknown[]) ?? [],
+        arcadeGames: (store.arcadeGames as unknown[]) ?? [],
+      }
+    case 'data:save': {
+      const payload = args[0] as Record<string, unknown> | undefined
+      if (payload && typeof payload === 'object') writeBrowserStore(payload)
+      return true
+    }
+    case 'data:list-backups':
+      return []
+    case 'storage:root':
+      return 'browser://localStorage'
+    case 'updates:check':
+      return { ok: true, hasUpdate: false }
+    // Plugin sandbox — read/write our own scoped slot per slug.
+    case 'plugin:data-load': {
+      const slug = args[0] as string
+      return (store[`plugin:${slug}`] as unknown) ?? null
+    }
+    case 'plugin:data-save': {
+      const slug = args[0] as string
+      const data = args[1] as unknown
+      const next = { ...store }
+      next[`plugin:${slug}`] = data
+      writeBrowserStore(next)
+      return { ok: true }
+    }
+    // Anything Rust-only (backup, git, install-scan, image blob io,
+    // f95 fetch, MB search, …) — return a shaped "not available"
+    // reply so the UI can render its own error without crashing.
+    default:
+      return { ok: false, error: 'not available in browser mode' }
+  }
+}
+
+function installBrowserFallback(): void {
+  const shim: Window['ipcRenderer'] = {
+    invoke(channel: string, ...args: unknown[]) {
+      return Promise.resolve(browserRoute(channel, args))
+    },
+    on() { /* no events in browser mode */ },
+    off() { /* no events */ },
+    send() { /* fire-and-forget no-op */ },
+  }
   ;(window as Window & { ipcRenderer: Window['ipcRenderer'] }).ipcRenderer = shim
 }

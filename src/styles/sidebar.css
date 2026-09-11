@@ -138,21 +138,6 @@
   padding: 8px 0;
 }
 
-/* On mobile: sidebar becomes an off-canvas drawer. Kept simple for the
-   prototype — could gain a hamburger toggle later. */
-@media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    z-index: 50;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    transform: translateX(-100%);
-    transition: transform 200ms ease;
-  }
-  .app[data-sidebar="expanded"] .sidebar { transform: translateX(0); }
-}
-
 /* Right side of the shell: topbar (when present) stacked over main content.
    Sidebar is a flex row sibling; this column takes the remaining width. */
 .main-column {

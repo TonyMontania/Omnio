@@ -20,16 +20,26 @@ library category, add a per-item editor field).
 
 ## Running locally
 
-Requires **Node 22+**, **npm 10+**, **Rust stable** (via rustup) and
-Visual Studio Build Tools (Windows) / Xcode CLT (macOS) / build-essential
-(Linux) for the Tauri native compile.
+Omnio is a Tauri (Rust) + React + Vite + TypeScript app. Requires **Node.js 22+**,
+**npm 10+**, **Rust stable** (via [rustup](https://rustup.rs/)) and the platform's
+C toolchain: Visual Studio Build Tools with "Desktop development with C++" on
+Windows, Xcode Command Line Tools on macOS, `build-essential` +
+`libwebkit2gtk-4.1-dev` on Linux.
 
 ```bash
 git clone https://github.com/TonyMontania/Omnio.git
 cd Omnio
 npm install
-npm run dev       # tauri dev — starts vite for the renderer + cargo run for the backend
+npm run dev                     # tauri dev — vite + cargo run
+npm run build                   # tauri build — installers for the current OS
+npm run lint                    # ESLint (zero-warning gate)
+npm test                        # Vitest (renderer)
+(cd src-tauri && cargo test)    # Rust unit tests
 ```
+
+Build artifacts land in `src-tauri/target/release/bundle/` (`nsis/*.exe`,
+`msi/*.msi`, `dmg/*.dmg`, `appimage/*.AppImage`, `deb/*.deb`). Bundle
+configuration lives in [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json).
 
 The first launch creates `data/` and `assets/` under
 `%APPDATA%\com.omnio.app\` (Windows), `~/Library/Application Support/com.omnio.app/`

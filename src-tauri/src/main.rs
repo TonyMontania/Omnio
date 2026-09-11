@@ -123,6 +123,24 @@ fn main() {
             handlers::fetchers::anidb_anime,
             handlers::fetchers::pcgw_search,
             handlers::fetchers::pcgw_save_paths,
+            // Plugin sandbox — generic infra for locally-installed
+            // renderer overlays under `src/categories/<slug>/`.
+            handlers::install_scan::install_scan,
+            handlers::plugins::plugin_data_load,
+            handlers::plugins::plugin_data_save,
+            handlers::plugins::plugin_asset_download,
+            handlers::plugins::plugin_asset_save_data_url,
+            handlers::plugins::plugin_asset_save_from_file,
+            handlers::plugins::plugin_asset_delete,
+            handlers::plugins::plugin_asset_rename,
+            handlers::plugins::plugin_saves_list,
+            handlers::plugins::plugin_saves_add,
+            handlers::plugins::plugin_saves_delete,
+            handlers::plugins::plugin_saves_open_folder,
+            handlers::plugins::plugin_saves_reveal,
+            handlers::plugins::plugin_saves_rename_folder,
+            handlers::plugins::plugin_saves_delete_all,
+            handlers::plugins::net_fetch_text,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

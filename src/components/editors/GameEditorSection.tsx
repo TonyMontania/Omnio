@@ -37,6 +37,7 @@ export interface GameEditorSectionProps {
   ownership: Ownership | '';            setOwnership: (v: Ownership | '') => void
   gameStatus: GameStatus;               setGameStatus: (v: GameStatus) => void
   playTime: string;                     handlePlayTimeChange: (v: string) => void
+  hltbHours?: string;                   setHltbHours?: (v: string) => void
   hasDlc: boolean;                      setHasDlc: (v: boolean) => void
   dlcList: DlcEntry[];                  setDlcList: Setter<DlcEntry[]>
   hasAddons: boolean;                   setHasAddons: (v: boolean) => void
@@ -76,6 +77,7 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
     ownership, setOwnership,
     gameStatus, setGameStatus,
     playTime, handlePlayTimeChange,
+    hltbHours, setHltbHours,
     hasDlc, setHasDlc, dlcList, setDlcList,
     hasAddons, setHasAddons, addonsList, setAddonsList,
     isBundle, setIsBundle, bundleContents, setBundleContents, setBundleSgdbFor,
@@ -163,6 +165,15 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
         <label>Time played (hours.minutes)</label>
         <input placeholder="e.g. 22.49" value={playTime} onChange={(e) => handlePlayTimeChange(e.target.value)} inputMode="decimal" />
       </div>
+      {setHltbHours && (
+        <div className="field-group">
+          <label>Estimated hours to beat (HowLongToBeat)</label>
+          <input placeholder="e.g. 40" value={hltbHours ?? ''} onChange={(e) => {
+            const v = e.target.value
+            if (/^\d*\.?\d{0,2}$/.test(v)) setHltbHours(v)
+          }} inputMode="decimal" />
+        </div>
+      )}
       <GameSubItems
         question="Has DLC or expansions?"
         placeholder="DLC/expansion name"

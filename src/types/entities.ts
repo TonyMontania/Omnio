@@ -48,7 +48,7 @@ export interface ConcertEntry {
 export type MangaStatus = 'plan_to_read' | 'reading' | 'completed' | 'paused' | 'dropped'
 export type PublicationStatus = 'publishing' | 'finished' | 'hiatus' | 'cancelled' | 'not_yet_released'
 export type MangaSource = 'original' | 'light_novel' | 'novel' | 'game' | 'visual_novel' | 'anime' | 'other'
-export type MangaField = 'title' | 'status' | 'chapters'
+export type MangaField = 'title' | 'authors' | 'status' | 'chapters' | 'rating' | 'tags'
 
 export type AnimeStatus = 'plan_to_watch' | 'watching' | 'completed' | 'paused' | 'dropped'
 export type AiringStatus = 'airing' | 'finished' | 'not_yet_aired' | 'cancelled'
@@ -577,6 +577,9 @@ export interface AnyItem {
   directors?: string[]
   cast?: string[]
   franchise?: string
+  // Cross-library adaptation link — points at another item (any
+  // category). Used by BasedOnDisplay + FranchiseTimeline.
+  basedOnItemId?: string
   watchedWhere?: WatchLocation
   bannerImage2?: string
   movieDescription?: string

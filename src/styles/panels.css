@@ -709,3 +709,179 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* -----------------------------------------------------------------
+   Modal shell extras — a compact "×" close in the header and a
+   descriptive subtitle line under the title. Used by dialogs like
+   the Cover wall export where the header carries context, not just
+   a title. Kept generic so any modal-panel can adopt them.
+   ----------------------------------------------------------------- */
+.modal-panel > .modal-header h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.modal-panel > .modal-header .modal-subtitle {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+.modal-panel > .modal-header .modal-close {
+  align-self: flex-start;
+  margin-left: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  font-size: 20px;
+  line-height: 1;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.14s, background 0.14s, border-color 0.14s;
+}
+.modal-panel > .modal-header .modal-close:hover {
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--border-soft);
+}
+
+/* -----------------------------------------------------------------
+   Cover wall export — a compose-a-shelfie modal. The body groups the
+   form into labeled rows; the footer carries Close + Render + (once
+   rendered) Download. Preview sits between the form and the footer
+   when available.
+   ----------------------------------------------------------------- */
+.cover-wall-modal {
+  width: 100%;
+  max-width: 780px;
+}
+.cover-wall-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 22px 22px;
+}
+.cover-wall-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.cover-wall-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cover-wall-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 500;
+}
+.cover-wall-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 22px;
+}
+@media (max-width: 640px) {
+  .cover-wall-grid { grid-template-columns: 1fr; }
+}
+.cover-wall-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cover-wall-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cover-wall-check input { accent-color: var(--accent); margin: 0; }
+.cover-wall-title-input {
+  flex: 1;
+  min-width: 0;
+}
+.cover-wall-title-input:disabled { opacity: 0.5; cursor: not-allowed; }
+.cover-wall-color-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px 5px 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  align-self: flex-start;
+}
+.cover-wall-color-row input[type="color"] {
+  width: 40px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.cover-wall-color-hex {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+.cover-wall-summary {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+}
+.cover-wall-summary b { color: var(--text); font-weight: 600; }
+.cover-wall-preview {
+  padding: 10px;
+  background: #000;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  max-height: 360px;
+  overflow: auto;
+}
+.cover-wall-preview img { max-width: 100%; display: block; }
+.cover-wall-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cover-wall-footer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Category chip count — inline small number next to the label. */
+.pill .pill-count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding-left: 6px;
+  opacity: 0.7;
+}
+.pill.active .pill-count { opacity: 0.9; }
+.pill:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

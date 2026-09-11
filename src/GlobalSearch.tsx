@@ -7,6 +7,15 @@ import type { Item, MusicArtist } from './types'
 import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
 
+// Action verbs the palette can execute on Enter. Each maps to a
+// callback wired at the App level so we don't reach into router
+// or setter internals from here.
+export type CmdKAction =
+  | { kind: 'open-library'; categoryId: string; label: string }
+  | { kind: 'open-view'; view: 'home' | 'calendar' | 'stats' | 'settings' | 'arcade' | 'randomizer'; label: string }
+  | { kind: 'add-item'; categoryId?: string; title: string; label: string }
+  | { kind: 'franchise'; franchise: string; label: string }
+
 interface Props {
   open: boolean
   items: Item[]
@@ -14,12 +23,22 @@ interface Props {
   onClose: () => void
   onOpenItem: (item: Item) => void
   onOpenArtist: (artist: MusicArtist) => void
+  onRunAction?: (action: CmdKAction) => void
+}
+
+// Every distinct non-empty `franchise` value across the library, used
+// by the command palette's `franchise <name>` verb.
+function collectFranchises(items: Item[]): string[] {
+  const set = new Set<string>()
+  for (const it of items) if (it.franchise) set.add(it.franchise)
+  return Array.from(set).sort((a, b) => a.localeCompare(b))
 }
 
 interface Hit {
-  kind: 'item' | 'artist'
+  kind: 'item' | 'artist' | 'action'
   item?: Item
   artist?: MusicArtist
+  action?: CmdKAction
   score: number
   matched: string
 }
@@ -133,7 +152,72 @@ function scoreArtist(a: MusicArtist, q: string): { score: number; matched: strin
   return null
 }
 
-export default function GlobalSearch({ open, items, artists, onClose, onOpenItem, onOpenArtist }: Props) {
+// Action-verb parser. Runs BEFORE the operator/free-text parser and
+// short-circuits it when the query is clearly an action, so the
+// action UI takes over the palette instead of listing search hits.
+function parseAction(raw: string, items: Item[] = []): CmdKAction[] {
+  const q = raw.trim()
+  if (!q) return []
+  const [head, ...rest] = q.split(/\s+/)
+  const verb = head.toLowerCase()
+  const arg = rest.join(' ').trim()
+  const argLower = arg.toLowerCase()
+  const out: CmdKAction[] = []
+  // > open <view>
+  if (verb === 'open' || verb === 'go' || verb === 'goto') {
+    type ViewKey = 'home' | 'calendar' | 'stats' | 'settings' | 'arcade' | 'randomizer'
+    const views: { key: string; view: ViewKey; label: string }[] = [
+      { key: 'home', view: 'home', label: 'Open Home' },
+      { key: 'calendar', view: 'calendar', label: 'Open Release calendar' },
+      { key: 'stats', view: 'stats', label: 'Open Statistics' },
+      { key: 'settings', view: 'settings', label: 'Open Settings' },
+      { key: 'arcade', view: 'arcade', label: 'Open Arcade' },
+      { key: 'random', view: 'randomizer', label: 'Open Random picker' },
+      { key: 'randomizer', view: 'randomizer', label: 'Open Random picker' },
+    ]
+    for (const v of views) {
+      if (!arg || v.key.startsWith(argLower)) out.push({ kind: 'open-view', view: v.view, label: v.label })
+    }
+    // > open <library>
+    for (const cat of CATEGORIES) {
+      const label = cat.label.toLowerCase()
+      const id = cat.id.toLowerCase()
+      if (!arg || label.startsWith(argLower) || id.startsWith(argLower) || label.includes(argLower)) {
+        out.push({ kind: 'open-library', categoryId: cat.id, label: `Open ${cat.label} library` })
+      }
+    }
+  }
+  // > library <name>  (alias for `open <library>`)
+  if (verb === 'library' || verb === 'lib') {
+    for (const cat of CATEGORIES) {
+      if (!arg || cat.label.toLowerCase().includes(argLower) || cat.id.toLowerCase().includes(argLower)) {
+        out.push({ kind: 'open-library', categoryId: cat.id, label: `Open ${cat.label} library` })
+      }
+    }
+  }
+  // > franchise <name>
+  if (verb === 'franchise' || verb === 'saga' || verb === 'series') {
+    const franchises = collectFranchises(items)
+    for (const f of franchises) {
+      if (!arg || f.toLowerCase().includes(argLower)) {
+        out.push({ kind: 'franchise', franchise: f, label: `Show cross-library timeline: ${f}` })
+      }
+    }
+  }
+  // > add [category] <title>
+  if (verb === 'add' || verb === 'new' || verb === '+') {
+    const first = rest[0]?.toLowerCase()
+    const catByToken = first && CATEGORIES.find((c) => c.id.toLowerCase() === first || c.label.toLowerCase() === first)
+    const title = catByToken ? rest.slice(1).join(' ').trim() : arg
+    if (title) {
+      if (catByToken) out.push({ kind: 'add-item', categoryId: catByToken.id, title, label: `Add “${title}” to ${catByToken.label}` })
+      else out.push({ kind: 'add-item', title, label: `Add “${title}” to current library` })
+    }
+  }
+  return out
+}
+
+export default function GlobalSearch({ open, items, artists, onClose, onOpenItem, onOpenArtist, onRunAction }: Props) {
   const [q, setQ] = useState('')
   const [cursor, setCursor] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -149,9 +233,15 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
 
   const hits: Hit[] = useMemo(() => {
     if (!q.trim()) return []
+    // Action verbs win over free-text search — if the palette
+    // recognises them, we take over the result list entirely so the
+    // user doesn't confuse "open games" (verb) with a search hit
+    // titled "Open Games".
+    const actions = parseAction(q, items)
+    if (actions.length > 0) {
+      return actions.slice(0, 40).map((a) => ({ kind: 'action' as const, action: a, score: 100, matched: 'action' }))
+    }
     const parsed = parseQuery(q)
-    // If nothing was typed at all (empty free-text AND no operators),
-    // don't flood the list with everything.
     if (!parsed.text.trim() && parsed.status === undefined && parsed.year === undefined && parsed.rating === undefined && parsed.tag === undefined && parsed.category === undefined && parsed.favorite === undefined) {
       return []
     }
@@ -160,8 +250,6 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
       const s = scoreItem(it, parsed)
       if (s) results.push({ kind: 'item', item: it, score: s.score, matched: s.matched })
     }
-    // Artists don't match operator filters (no status/rating on an
-    // artist), so only surface them when the query has free-text.
     if (parsed.text.trim()) {
       for (const a of artists) {
         const s = scoreArtist(a, parsed.text.trim())
@@ -183,6 +271,7 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
   const activate = (h: Hit) => {
     if (h.kind === 'item' && h.item) onOpenItem(h.item)
     else if (h.kind === 'artist' && h.artist) onOpenArtist(h.artist)
+    else if (h.kind === 'action' && h.action && onRunAction) onRunAction(h.action)
     onClose()
   }
 
@@ -197,11 +286,15 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
 
   const grouped: Record<string, Hit[]> = {}
   for (const h of hits) {
-    const key = h.kind === 'artist' ? '_artists' : (h.item?.categoryId ?? 'other')
+    const key = h.kind === 'action' ? '_actions'
+      : h.kind === 'artist' ? '_artists'
+      : (h.item?.categoryId ?? 'other')
     if (!grouped[key]) grouped[key] = []
     grouped[key].push(h)
   }
-  const groupLabel = (k: string) => k === '_artists' ? 'Artists' : (CATEGORIES.find((c) => c.id === k)?.label ?? k)
+  const groupLabel = (k: string) => k === '_actions' ? 'Actions'
+    : k === '_artists' ? 'Artists'
+    : (CATEGORIES.find((c) => c.id === k)?.label ?? k)
 
   return (
     <div className="cmdk-backdrop" onClick={onClose}>
@@ -222,10 +315,14 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
           {!q.trim() && (
             <div className="cmdk-hint">
               <p style={{ margin: '0 0 8px' }}>Search across every library — titles, artists, alt titles, tags.</p>
-              <p style={{ margin: 0, fontSize: 11.5 }}>
+              <p style={{ margin: '0 0 6px', fontSize: 11.5 }}>
                 Operators: <code>status:completed</code>, <code>year:2024</code>, <code>year:&gt;2020</code>,
                 &nbsp;<code>rating:&gt;=4</code>, <code>tag:jrpg</code>, <code>category:musica</code>,
                 &nbsp;<code>favorite:true</code>. Combine freely with free-text.
+              </p>
+              <p style={{ margin: 0, fontSize: 11.5 }}>
+                Actions: <code>open home</code>, <code>open calendar</code>, <code>open games</code>,
+                &nbsp;<code>library music</code>, <code>add game Hollow Knight</code>.
               </p>
             </div>
           )}
@@ -239,22 +336,29 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
                 const idx = hits.indexOf(h)
                 const it = h.item
                 const ar = h.artist
-                const label = it?.title ?? ar?.name ?? ''
+                const ac = h.action
+                const label = it?.title ?? ar?.name ?? ac?.label ?? ''
                 const sub = it
-                  ? [it.artist, it.releaseYear, it.releaseDate ? new Date(it.releaseDate).getFullYear() : null]
-                      .filter(Boolean).join(' · ')
-                  : (ar?.origin || 'Artist')
+                  ? [it.artist, it.releaseYear, it.releaseDate ? new Date(it.releaseDate).getFullYear() : null].filter(Boolean).join(' · ')
+                  : ar ? (ar.origin || 'Artist')
+                  : (ac?.kind === 'add-item' ? 'Add'
+                    : ac?.kind === 'open-view' ? 'Navigate'
+                    : ac?.kind === 'franchise' ? 'Franchise'
+                    : 'Open library')
                 const cover = assetSrc(it?.cover ?? ar?.photo)
+                const key = `${h.kind}-${it?.id ?? ar?.id ?? idx}`
                 return (
                   <button
-                    key={`${h.kind}-${it?.id ?? ar?.id}`}
+                    key={key}
                     data-hit-idx={idx}
                     className={`cmdk-hit ${idx === cursor ? 'active' : ''}`}
                     onMouseEnter={() => setCursor(idx)}
                     onClick={() => activate(h)}
                   >
                     <div className="cmdk-thumb">
-                      {cover ? <img src={cover} alt="" /> : <span>{label.charAt(0).toUpperCase()}</span>}
+                      {cover ? <img src={cover} alt="" />
+                        : h.kind === 'action' ? <span>›</span>
+                        : <span>{label.charAt(0).toUpperCase()}</span>}
                     </div>
                     <div className="cmdk-hit-text">
                       <div className="cmdk-hit-title">{label}</div>

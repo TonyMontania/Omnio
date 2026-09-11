@@ -5,6 +5,8 @@
 pub mod data;
 pub mod fetchers;
 pub mod images;
+pub mod install_scan;
+pub mod plugins;
 pub mod storage;
 pub mod system;
 pub mod updates;

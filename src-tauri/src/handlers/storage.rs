@@ -183,6 +183,15 @@ pub async fn storage_clean_orphan_assets() -> CleanOrphanResult {
             Ok(r) => r.to_string_lossy().replace('\\', "/"),
             Err(_) => continue,
         };
+        // Skip anything owned by a plugin — plugin JSONs live under
+        // `data/plugins/<slug>.json` and store bare filenames (not the
+        // full `plugins/<slug>/<kind>/<file>` path), so the main
+        // reference set never sees them. Plugins already manage their
+        // own asset lifecycle via `plugin:asset-delete` on remove, so
+        // scoping the sweep to non-plugin assets is safe.
+        if rel.starts_with("plugins/") {
+            continue;
+        }
         if referenced.contains(&rel) {
             continue;
         }

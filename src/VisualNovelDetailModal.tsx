@@ -8,6 +8,7 @@ import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
 import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
+import { BasedOnDisplay } from './components/BasedOn'
 import DetailNotes from './components/detail/DetailNotes'
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
   onEdit: () => void
   onDuplicate: () => void
   onNavigate: (id: string) => void
+  allItems?: AnyItem[]
 }
 
 const STATUS_LABEL = (v?: string): string => VN_STATUS_OPTIONS.find((s) => s.value === v)?.label ?? ''
@@ -26,7 +28,7 @@ const DEVSTATUS_LABEL = (v?: string): string => VN_DEV_STATUS_OPTIONS.find((s) =
 const STAFF_ROLE_LABEL = (v: VnStaffRole): string => VN_STAFF_ROLE_OPTIONS.find((r) => r.value === v)?.label ?? v
 const CHAR_ROLE_LABEL = (v: string): string => VN_CHARACTER_ROLE_OPTIONS.find((r) => r.value === v)?.label ?? v
 
-export default function VisualNovelDetailModal({ item, groups, allVns, onClose, onEdit, onDuplicate, onNavigate }: Props) {
+export default function VisualNovelDetailModal({ item, groups, allVns, onClose, onEdit, onDuplicate, onNavigate, allItems }: Props) {
   const [revealedScreens, setRevealedScreens] = useState<Set<string>>(new Set())
   const [openScreen, setOpenScreen] = useState<string | null>(null)
 
@@ -73,6 +75,7 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onClose, 
               <h1>{item.title}</h1>
               {item.nsfw && <span className="badge" style={{ background: 'var(--danger-soft)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>18+</span>}
             </div>
+            {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
             {item.vnAliases && item.vnAliases.length > 0 && (
               <p className="game-modal-alt-titles">{item.vnAliases.join(' · ')}</p>
             )}

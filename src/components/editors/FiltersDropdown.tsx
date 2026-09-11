@@ -95,7 +95,7 @@ export default function FiltersDropdown({
           <div className="filters-section">
             <span className="filters-label">Minimum rating</span>
             <div className="dropdown-pills">
-              {[0, 3, 3.5, 4, 4.5, 5].map((r) => (
+              {[0, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map((r) => (
                 <button key={r} type="button" className={minRating === r ? 'pill active' : 'pill'} onClick={() => onSetMinRating(r)}>
                   {r === 0 ? 'Any' : `★ ${r}+`}
                 </button>

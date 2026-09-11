@@ -54,7 +54,7 @@ export function assetSrc(value?: string | null): string | undefined {
     const url = convert(abs)
     if (url) return url
   }
-  // No backend attached — return the raw path for debugging.
+  // No Tauri asset root available — return the raw path for debugging.
   return value
 }
 

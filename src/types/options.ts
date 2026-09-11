@@ -203,12 +203,15 @@ export const MANGA_SOURCE_OPTIONS: { value: MangaSource; label: string }[] = [
 
 export const MANGA_FIELD_OPTIONS: { value: MangaField; label: string }[] = [
   { value: 'title', label: 'Title' },
+  { value: 'authors', label: 'Author' },
   { value: 'status', label: 'Status' },
   { value: 'chapters', label: 'Chapters read/total' },
+  { value: 'rating', label: 'Rating' },
+  { value: 'tags', label: 'Tags' },
 ]
 
 export const DEFAULT_MANGA_FIELDS: Record<MangaField, boolean> = {
-  title: true, status: true, chapters: true,
+  title: true, authors: true, status: true, chapters: true, rating: true, tags: true,
 }
 
 // ---- Anime / Donghua ----

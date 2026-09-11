@@ -1,0 +1,378 @@
+/* Eroges plugin — Nyx layout ported to Omnio's design tokens. All
+   colors reference Omnio's --surface / --border / --text / --accent
+   variables so the plugin follows the app theme (dark, light, custom).
+   The engine/status/backlog "tag" pills carry their own hues so a
+   game's engine is recognizable at a glance regardless of theme. */
+
+/* Wrapper — no padding/gap of our own; the enclosing Omnio
+   `<main class="content">` provides horizontal padding, and the
+   native `.sub-tabs` / `.toolbar` rules bring their own
+   `margin-bottom: 20px`. Match `text-align: left` so the plugin
+   doesn't inherit an unexpected center from a parent. */
+/* The Omnio `<main class="content">` container hides overflow so its
+   own scroll semantics stay predictable; the plugin has to opt into
+   scrolling explicitly. `.er-view` claims the full remaining height
+   and scrolls vertically so long detail pages (descriptions +
+   savefiles) can be read from top to bottom. */
+.er-view {
+  text-align: left;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+
+/* --- Grid + Card (Nyx-style landscape banner) --- */
+.er-view .er-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.er-view .er-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); overflow: hidden; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+  display: flex; flex-direction: column;
+  /* Skip offscreen cards during layout/paint so scrolling a 100-item
+     grid stays smooth. Reserve the intrinsic size the card would
+     otherwise measure to avoid scrollbar jumps. */
+  content-visibility: auto;
+  contain-intrinsic-size: 260px 220px;
+}
+.er-view .er-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .25);
+}
+.er-view .gc-banner {
+  position: relative; height: 130px;
+  background-color: #000; overflow: hidden;
+}
+.er-view .gc-banner img {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center; display: block;
+}
+.er-view .gc-nocover {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-faint); font-size: 12px;
+  background: linear-gradient(135deg, var(--surface-2), var(--surface));
+}
+.er-view .gc-tags {
+  position: absolute; top: 8px; left: 8px;
+  display: flex; gap: 4px; flex-wrap: wrap;
+  max-width: calc(100% - 44px);
+}
+.er-view .gc-fav {
+  position: absolute; top: 6px; right: 6px;
+  background: rgba(0, 0, 0, .55); color: #f6d55c;
+  border: none; border-radius: 50%; padding: 4px 6px;
+  cursor: pointer; font-size: 14px; line-height: 1;
+}
+.er-view .gc-fav:hover { background: rgba(0, 0, 0, .8); }
+.er-view .gc-fav.on { color: #ffce3a; }
+.er-view .gc-fav:not(.on) { opacity: .55; }
+.er-view .gc-update-badge {
+  position: absolute; bottom: 8px; left: 8px;
+  background: linear-gradient(135deg, #22c55e, #15803d); color: white;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  padding: 3px 8px; border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, .45);
+}
+.er-view .gc-info { padding: 10px 12px 12px; }
+.er-view .gc-name {
+  color: var(--text); font-weight: 600; font-size: 14px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.er-view .gc-meta {
+  color: var(--text-dim); font-size: 12px; margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.er-view .gc-meta .gc-version { color: var(--accent); margin-right: 4px; }
+.er-view .gc-meta .gc-creator { color: var(--text-dim); }
+
+/* --- Tags (engine / status / backlog) --- */
+.er-view .er-tag {
+  display: inline-block; padding: 3px 8px;
+  border-radius: 4px; font-size: 10px; font-weight: 600;
+  letter-spacing: .5px; text-transform: uppercase; color: white;
+  background: #555; line-height: 1.2;
+}
+.er-view .er-tag.eng-vn      { background: #c72525; }
+.er-view .er-tag.eng-renpy   { background: #7b4fbf; }
+.er-view .er-tag.eng-rpgm    { background: #2c6a9e; }
+.er-view .er-tag.eng-unity   { background: #e0691a; }
+.er-view .er-tag.eng-unreal  { background: #1f3d7a; }
+.er-view .er-tag.eng-godot   { background: #4dabce; }
+.er-view .er-tag.eng-webgl   { background: #a05a2c; }
+.er-view .er-tag.eng-html    { background: #d4823d; }
+.er-view .er-tag.eng-flash   { background: #a1312c; }
+.er-view .er-tag.eng-qsp     { background: #7d7d3d; }
+.er-view .er-tag.eng-wolfrpg { background: #3fa63f; }
+.er-view .er-tag.eng-java    { background: #5f3a1f; }
+.er-view .er-tag.eng-others  { background: #666; }
+.er-view .er-tag.st-completed { background: #2c6a9e; }
+.er-view .er-tag.st-ongoing   { background: #2f9e5e; }
+.er-view .er-tag.st-onhold    { background: #4dabce; }
+.er-view .er-tag.st-abandoned { background: #f4a15a; color: #201209; }
+.er-view .er-tag.bl-playing { background: #a855e6; }
+.er-view .er-tag.bl-backlog { background: #6b6b6b; }
+.er-view .er-tag.bl-played  { background: #4a7a2a; }
+
+/* --- Detail view (Nyx layout) --- */
+.er-view .er-detail { display: flex; flex-direction: column; gap: 14px; }
+.er-view .er-detail-head {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.er-view .er-detail-title {
+  font-size: 22px; font-weight: 700; color: var(--text);
+  flex: 1; min-width: 200px;
+}
+.er-view .er-detail-title .er-detail-version {
+  color: var(--text-dim); font-weight: 400; font-size: 16px;
+  margin-left: 8px;
+}
+.er-view .er-detail-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.er-view .er-detail-cover-wrap {
+  display: flex; justify-content: center;
+  background: #000; border-radius: var(--radius-md);
+  padding: 8px; border: 1px solid var(--border);
+}
+.er-view .er-detail-cover {
+  max-width: 100%; max-height: 55vh;
+  border-radius: 4px; display: block;
+}
+.er-view .er-detail-nocover {
+  padding: 40px; color: var(--text-faint); text-align: center;
+}
+
+.er-view .er-detail-meta {
+  display: flex; flex-wrap: wrap; gap: 18px;
+  background: var(--surface); padding: 10px 14px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+  font-size: 13px; color: var(--text-dim);
+}
+.er-view .er-detail-meta b { color: var(--text); font-weight: 600; margin-right: 4px; }
+
+.er-view .er-update-info {
+  padding: 10px 14px; border-radius: var(--radius-sm);
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 13px;
+}
+.er-view .er-update-info.has-update {
+  border-color: var(--accent); color: var(--text); background: var(--accent-soft);
+}
+.er-view .er-update-info .er-uc-when { color: var(--text-faint); margin-left: 8px; font-size: 12px; }
+
+.er-view .er-colls-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 12px; color: var(--text-dim);
+}
+.er-view .er-colls-bar .er-coll-chip {
+  background: var(--surface-2); color: var(--text);
+  padding: 3px 8px; border-radius: 12px; font-size: 12px;
+}
+
+.er-view .er-detail-desc {
+  white-space: pre-line; padding: 18px 20px;
+  background: var(--surface); border-radius: var(--radius-sm);
+  border: 1px solid var(--border); line-height: 1.6; color: var(--text);
+  text-align: center;
+}
+
+/* Inline description formatting */
+.er-view .er-desc-link {
+  color: var(--accent); text-decoration: underline;
+}
+.er-view .er-desc-link:hover { color: var(--accent-hover); }
+.er-view .er-desc-heading {
+  margin: 8px 0 4px; color: var(--text); font-weight: 700;
+}
+.er-view .er-ispoiler {
+  background: var(--text); color: var(--text);
+  padding: 0 4px; border-radius: 3px; cursor: pointer;
+  filter: blur(4px); transition: filter .15s, background .15s;
+  user-select: none;
+}
+.er-view .er-ispoiler:hover { filter: blur(3px); }
+.er-view .er-ispoiler.revealed {
+  background: rgba(234, 54, 70, .16); color: var(--text);
+  filter: none; user-select: text;
+}
+
+/* Spoiler blocks — F95-style red pill button that expands to reveal
+   the hidden content. Uses native <details>/<summary> so keyboard
+   toggles and default open/close semantics come free. */
+.er-view .er-spoiler {
+  display: inline-block; margin: 4px 2px; text-align: center;
+}
+.er-view .er-spoiler-btn {
+  cursor: pointer; list-style: none;
+  display: inline-block;
+  background: transparent;
+  color: #ea3646;
+  border: 1px solid #ea3646;
+  border-radius: 4px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  transition: background .12s, color .12s;
+  user-select: none;
+}
+.er-view .er-spoiler-btn::-webkit-details-marker { display: none; }
+.er-view .er-spoiler-btn:hover { background: rgba(234, 54, 70, .14); }
+.er-view .er-spoiler[open] .er-spoiler-btn { background: #ea3646; color: white; }
+.er-view .er-spoiler-body {
+  margin-top: 8px; padding: 10px 14px;
+  background: var(--bg); color: var(--text);
+  border: 1px solid #ea3646;
+  border-radius: 4px;
+  text-align: center; white-space: pre-line;
+  font-size: 13px; line-height: 1.5;
+}
+
+/* Official links list — icon badge + full URL as clickable hyperlink.
+   Sits below the description so long detail pages read like
+   `banner → meta → description → external links → savefiles`. */
+.er-view .er-links {
+  display: flex; flex-direction: column; gap: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+}
+.er-view .er-link {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--text); text-decoration: none;
+  padding: 4px 2px; border-radius: 4px;
+  font-size: 13px;
+}
+.er-view .er-link:hover { background: var(--surface-hover); }
+.er-view .er-link:hover .er-link-url { color: var(--accent); text-decoration: underline; }
+.er-view .er-link-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; flex-shrink: 0;
+}
+.er-view .er-link-icon svg { display: block; }
+.er-view .er-link-url {
+  color: var(--text-dim); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-mono, monospace); font-size: 12px;
+}
+
+.er-view .er-detail-saves {
+  background: var(--surface); padding: 14px 16px;
+  border-radius: var(--radius-md); border: 1px solid var(--border);
+}
+.er-view .er-detail-saves .er-saves-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.er-view .er-detail-saves h3 { margin: 0; color: var(--text); font-size: 15px; font-weight: 600; }
+.er-view .er-detail-saves .er-saves-list { display: flex; flex-direction: column; gap: 6px; }
+.er-view .er-detail-saves .er-save-row {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 12px; gap: 10px;
+}
+.er-view .er-detail-saves .er-save-row:hover { border-color: var(--accent); }
+.er-view .er-detail-saves .er-save-name {
+  color: var(--text); font-size: 13px; font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex: 1;
+}
+.er-view .er-detail-saves .er-save-actions { display: flex; gap: 4px; }
+.er-view .er-detail-saves .er-saves-empty { color: var(--text-faint); font-size: 13px; padding: 6px 0; }
+
+/* --- Buttons (align to Omnio's `.secondary-btn` / `.add-btn` / `.btn-danger`) --- */
+.er-view .er-btn {
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 6px 12px; font-size: 13px; cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 4px;
+  transition: background .15s, border-color .15s;
+}
+.er-view .er-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--surface-hover); }
+.er-view .er-btn:disabled { opacity: .5; cursor: default; }
+.er-view .er-btn.er-btn-primary {
+  background: var(--accent); color: #1a1408;
+  border-color: var(--accent); font-weight: 600;
+}
+.er-view .er-btn.er-btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+.er-view .er-btn.er-btn-danger { color: var(--danger); border-color: var(--danger); background: var(--danger-soft); }
+.er-view .er-btn.er-btn-danger:hover:not(:disabled) { background: var(--danger); color: white; }
+.er-view .er-btn.er-btn-sm { padding: 4px 8px; font-size: 12px; }
+
+.er-view .er-empty { text-align: center; color: var(--text-faint); padding: 48px; font-size: 14px; }
+
+/* --- List view (Nyx `game-row.game-card` port) --- */
+.er-view .er-list { display: flex; flex-direction: column; gap: 6px; }
+.er-view .er-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 12px; cursor: pointer;
+  transition: border-color .12s, background .12s;
+  content-visibility: auto;
+  contain-intrinsic-size: 100% 44px;
+}
+.er-view .er-row:hover { border-color: var(--accent); background: var(--surface-hover); }
+.er-view .er-row-fav {
+  background: transparent; border: none; color: var(--text-faint);
+  font-size: 16px; cursor: pointer; padding: 2px 4px; line-height: 1;
+}
+.er-view .er-row-fav.on { color: #ffce3a; }
+.er-view .er-row-tags { display: flex; gap: 4px; flex-wrap: nowrap; flex-shrink: 0; }
+.er-view .er-row-title { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; overflow: hidden; }
+.er-view .er-row-name { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.er-view .er-row-version { color: var(--accent); font-size: 12px; flex-shrink: 0; }
+.er-view .er-row-creator { color: var(--text-dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.er-view .er-row-update {
+  background: linear-gradient(135deg, #22c55e, #15803d); color: white;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  padding: 3px 8px; border-radius: 4px; flex-shrink: 0;
+}
+
+/* --- Modal (matches Omnio's modal panels) --- */
+.er-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 20px;
+}
+.er-modal {
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 22px; width: min(680px, 100%); max-height: 92vh; overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .4);
+}
+.er-modal h2 { margin: 0 0 16px; font-size: 18px; font-weight: 600; }
+.er-modal .er-f95-import { display: flex; gap: 8px; margin-bottom: 8px; }
+.er-modal .er-f95-import input { flex: 1; }
+.er-modal .er-f95-status { color: var(--text-dim); font-size: 12px; margin-bottom: 14px; min-height: 16px; }
+.er-modal form label {
+  display: block; margin-bottom: 10px; font-size: 12px;
+  color: var(--text-dim); font-weight: 500;
+}
+.er-modal form label input[type="text"],
+.er-modal form label select,
+.er-modal form label textarea {
+  display: block; width: 100%; margin-top: 4px; box-sizing: border-box;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 10px; font-size: 14px; font-family: inherit;
+}
+.er-modal form label textarea { resize: vertical; min-height: 90px; }
+.er-modal form label.er-checkbox {
+  display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 13px;
+}
+.er-modal form label.er-checkbox input { width: auto; margin: 0; }
+.er-modal .er-form-cover { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.er-modal .er-form-collections { margin: 12px 0; }
+.er-modal .er-form-collections .er-fc-label { color: var(--text-dim); font-size: 12px; margin-bottom: 6px; }
+.er-modal .er-form-collections .er-fc-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.er-modal .er-form-collections .er-fc-list label {
+  display: inline-flex; align-items: center; gap: 4px; margin: 0;
+  padding: 4px 10px; background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 999px; cursor: pointer; color: var(--text); font-size: 12px;
+}
+.er-modal .er-form-collections .er-fc-list label input { width: auto; margin: 0; }
+.er-modal .er-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }

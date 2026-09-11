@@ -21,6 +21,7 @@ interface Props {
   onEdit: () => void
   onDuplicate: () => void
   onNavigate: (id: string) => void
+  allItems?: AnyItem[]
   onSaveTrackLyrics: (trackId: string, lyrics: string) => void
 }
 

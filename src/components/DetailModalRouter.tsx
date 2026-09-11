@@ -1,16 +1,8 @@
 // Dispatch component for the eight per-category detail modals.
 //
-// Before: App.tsx held eight separate `viewingGame` / `viewingMusic` /
-// `viewingBook` / … useState slots, eight `openEditFromXModal`
-// helpers, eight `handleDuplicateX` helpers, and one giant JSX
-// ternary chain that walked all eight branches — every new category
-// meant editing App.tsx in twelve places.
-//
-// Now: one `viewing: AnyItem | null` state slot flows through this
-// router. It calls a single type guard per branch (`isGameItem`,
-// `isMusicItem`, …) and hands the matching item to the right modal.
-// Adding the ninth category is one branch here plus the modal
-// component itself.
+// One `viewing: AnyItem | null` state slot flows through this router.
+// It calls a single type guard per branch (`isGameItem`, `isMusicItem`, …)
+// and hands the matching item to the right modal.
 
 import { lazy, Suspense } from 'react'
 import type { AnyItem, Collection, Track, MusicArtist } from '../types'
@@ -21,9 +13,6 @@ import {
 import { isAnimeLikeCategory } from '../categories'
 import { isMangaLike } from '../types'
 
-// Same lazy imports as before, moved here so the router owns the
-// module boundary. Falls back to `null` while chunks fetch — the app
-// already renders the empty detail area at that point.
 const GameDetailModal        = lazy(() => import('../GameDetailModal'))
 const MusicDetailModal       = lazy(() => import('../MusicDetailModal'))
 const MangaDetailModal       = lazy(() => import('../MangaDetailModal'))
@@ -41,14 +30,9 @@ export interface DetailModalRouterProps {
   onEdit: () => void
   onDuplicate: () => void
   onNavigate: (id: string) => void
-  // Music-only: called when the user saves per-track lyrics inline
-  // from the detail view. Wired only for the music branch; every
-  // other category ignores it.
   onSaveTrackLyrics: (item: AnyItem, trackId: string, lyrics: string) => void
 }
 
-// Small helper that trims the `collections.filter(...)` boilerplate
-// duplicated across every branch.
 function groupsFor(item: AnyItem, collections: Collection[]): Collection[] {
   return collections.filter((c) => c.categoryId === item.categoryId && c.itemIds.includes(item.id))
 }
@@ -56,11 +40,6 @@ function groupsFor(item: AnyItem, collections: Collection[]): Collection[] {
 export default function DetailModalRouter(props: DetailModalRouterProps) {
   const { viewing, items, collections, onClose, onEdit, onDuplicate, onNavigate, onSaveTrackLyrics } = props
   if (!viewing) return null
-
-  // Every branch below narrows via a category type guard so the
-  // matching modal receives a strict per-variant type (GameItem,
-  // MusicItem, …). Fase 1.1 landed those variants; this is where the
-  // narrowing actually pays off.
 
   const wrap = (child: React.ReactElement) => <Suspense fallback={null}>{child}</Suspense>
 
@@ -74,6 +53,7 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onEdit={onEdit}
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
+        allItems={items}
       />,
     )
   }
@@ -88,6 +68,7 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onEdit={onEdit}
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
+        allItems={items}
         onSaveTrackLyrics={(trackId, lyrics) => onSaveTrackLyrics(viewing, trackId, lyrics)}
       />,
     )
@@ -103,6 +84,7 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onEdit={onEdit}
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
+        allItems={items}
       />,
     )
   }
@@ -117,6 +99,7 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onEdit={onEdit}
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
+        allItems={items}
       />,
     )
   }
@@ -131,6 +114,7 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onEdit={onEdit}
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
+        allItems={items}
       />,
     )
   }
@@ -145,6 +129,7 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onEdit={onEdit}
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
+        allItems={items}
       />,
     )
   }
@@ -159,6 +144,7 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onEdit={onEdit}
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
+        allItems={items}
       />,
     )
   }
@@ -173,20 +159,13 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onEdit={onEdit}
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
+        allItems={items}
       />,
     )
   }
 
-  // Uncategorised / future category → no modal. App.tsx still shows
-  // the library grid behind so the user isn't blocked.
   return null
 }
 
-// Music track lyric save is the only per-modal side-effect that
-// couldn't collapse into the generic `onSaveTrackLyrics` prop above —
-// it needs access to setItems + toast. Rather than plumb those in,
-// App.tsx owns the state mutation and hands us a bound callback.
-// Exposed so App.tsx can build the callback without importing Track
-// from types.
 export type OnSaveTrackLyrics = (item: AnyItem, trackId: string, lyrics: string) => void
 export type { Track, MusicArtist }

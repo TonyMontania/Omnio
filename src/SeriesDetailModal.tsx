@@ -10,6 +10,7 @@ import CustomFieldsView from './components/CustomFieldsView'
 import DetailFranchiseTimeline from './components/detail/DetailFranchiseTimeline'
 import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
+import { BasedOnDisplay } from './components/BasedOn'
 import DetailNotes from './components/detail/DetailNotes'
 
 const timelineSortKey = (i: Item) => i.airedFrom || i.startYear || i.releaseYear || ''
@@ -23,9 +24,10 @@ interface Props {
   onEdit: () => void
   onDuplicate: () => void
   onNavigate: (id: string) => void
+  allItems?: AnyItem[]
 }
 
-export default function SeriesDetailModal({ item, groups, allSeries, onClose, onEdit, onDuplicate, onNavigate }: Props) {
+export default function SeriesDetailModal({ item, groups, allSeries, onClose, onEdit, onDuplicate, onNavigate, allItems }: Props) {
   const [openSeason, setOpenSeason] = useState<string | null>(null)
   const ss = getSeriesStatus(item.seriesStatus)
   const franchiseItems = item.franchise
@@ -56,6 +58,7 @@ export default function SeriesDetailModal({ item, groups, allSeries, onClose, on
             <div className="game-modal-title-row">
               <h1>{item.title}</h1>
             </div>
+            {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
             {item.network && <p className="game-modal-devs">{item.network}</p>}
             {item.seriesDescription && <div className="game-modal-description">{item.seriesDescription}</div>}
             <div className="dlc-addons-row">

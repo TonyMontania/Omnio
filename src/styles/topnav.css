@@ -64,25 +64,30 @@
   gap: 10px;
   flex: 1;
   min-width: 0;
-  padding-left: 6px;
-  border-left: 1px solid var(--border-soft);
 }
 .topnav-back {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: transparent;
-  border: none;
+  width: 30px;
+  height: 30px;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-dim);
   cursor: pointer;
-  font-size: 16px;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.12s;
   flex-shrink: 0;
+  padding: 0;
 }
-.topnav-back:hover { background: var(--surface-2); color: var(--text); }
+.topnav-back svg { width: 16px; height: 16px; }
+.topnav-back:hover {
+  background: var(--surface-2);
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: translateX(-1px);
+}
+.topnav-back:active { transform: translateX(-2px); }
 .topnav-page-icon {
   display: flex;
   align-items: center;

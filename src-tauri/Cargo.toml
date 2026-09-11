@@ -1,6 +1,6 @@
 [package]
 name = "omnio"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 description = "Local-first hobby tracker — Rust POC of the Tauri backend"
 authors = ["Tony <eze.bigplanet@gmail.com>"]
@@ -26,7 +26,7 @@ serde_json = "1"
 # Async runtime. Every handler that touches disk or network uses
 # tokio::fs — matches the async ergonomics of the current
 # `typedHandle('name', async () => ...)` shape.
-tokio = { version = "1", features = ["fs", "sync", "rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["fs", "sync", "rt-multi-thread", "macros", "process"] }
 
 # Structured errors that convert to `Result<T, String>` at the IPC
 # boundary. Keeps handler bodies short.

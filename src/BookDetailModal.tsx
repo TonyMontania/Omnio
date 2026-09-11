@@ -9,6 +9,7 @@ import CustomFieldsView from './components/CustomFieldsView'
 import DetailFranchiseTimeline from './components/detail/DetailFranchiseTimeline'
 import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
+import { BasedOnDisplay } from './components/BasedOn'
 import DetailNotes from './components/detail/DetailNotes'
 
 const timelineSortKey = (i: Item) => i.releaseDate || i.releaseYear || ''
@@ -22,9 +23,10 @@ interface Props {
   onEdit: () => void
   onDuplicate: () => void
   onNavigate: (id: string) => void
+  allItems?: AnyItem[]
 }
 
-export default function BookDetailModal({ item, groups, allBooks, onClose, onEdit, onDuplicate, onNavigate }: Props) {
+export default function BookDetailModal({ item, groups, allBooks, onClose, onEdit, onDuplicate, onNavigate, allItems }: Props) {
   const bs = getBookStatus(item.bookStatus)
   // Same franchise/related/recommended shape as every other detail view —
   // Books share the code path so behaviour is identical.
@@ -53,6 +55,7 @@ export default function BookDetailModal({ item, groups, allBooks, onClose, onEdi
             <div className="game-modal-title-row">
               <h1>{item.title}</h1>
             </div>
+            {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
             {item.alternativeTitles && item.alternativeTitles.length > 0 && (
               <p className="game-modal-alt-titles">{item.alternativeTitles.join(' · ')}</p>
             )}

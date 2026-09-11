@@ -104,6 +104,13 @@ export interface BaseItem {
   franchise?: string
   ageRating?: AgeRating
   hasSpoilers?: boolean
+  // Cross-library adaptation link. Points at another item in the
+  // library — typically the original work an adaptation is based on
+  // (Anime → Manga, Movie → Book, Series → Comic, Game → its source
+  // novel, etc.). Unlike `originalWorkId` (games-only, remake chain),
+  // this crosses categories. Rendering the reverse edge (all items
+  // that link back to `me`) is done at render-time — no second field.
+  basedOnItemId?: string
   startDate?: string
   // History + graph edges — every category has them.
   rewatches?: RewatchEntry[]
@@ -123,6 +130,13 @@ export interface GameFields {
   gameReview?: string
   playTime?: string
   duration?: string
+  // Estimated hours to beat the main story (HowLongToBeat). Used by
+  // the backlog prioritization sort ("Shortest first") and displayed
+  // in the games detail view. Stored as a number so we can sort
+  // numerically without parsing.
+  hltbHours?: number
+  hltbHoursCompletionist?: number
+  hltbHoursExtras?: number
   ownership?: Ownership
   platforms?: Platform[]
   devs?: string[]
