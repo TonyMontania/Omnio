@@ -390,12 +390,50 @@ pub async fn updates_open_url(url: String, app: AppHandle) -> bool {
     app.shell().open(url, None).is_ok()
 }
 
+// Where should a downloaded installer land?
+//
+// The user's mental model is: "put the new build next to where Omnio
+// runs from, whichever folder that happens to be — my portable ZIP
+// unzipped under D:\Games\Omnio, an NSIS install under
+// %LocalAppData%\Programs\Omnio, an MSI install under
+// %ProgramFiles%\Omnio, or a .deb install under /usr/bin — I want the
+// download to end up right there so my updater flow is 'download →
+// double-click'."
+//
+// We try the install directory first (`current_exe()`'s parent), fall
+// back to OS Downloads, and finally to app_data_dir. The install-dir
+// write test uses a tiny probe file — a failing create means the
+// folder is read-only for our process (typical for Program Files
+// without elevation, or /usr/bin under a non-root install), which is
+// the signal to fall back instead of crashing mid-download.
+async fn pick_download_dir(app: &AppHandle) -> PathBuf {
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            let probe = parent.join(".omnio-update-write-probe");
+            if fs::write(&probe, b"omnio").await.is_ok() {
+                let _ = fs::remove_file(&probe).await;
+                return parent.to_path_buf();
+            }
+        }
+    }
+    app.path()
+        .download_dir()
+        .unwrap_or_else(|_| app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from(".")))
+}
+
 // -- updates:download ------------------------------------------------
 //
 // Streaming download with progress events. The renderer listens for
 // `updates:progress` via `listen('updates:progress', ...)` — the event
 // name and payload shape match the TS side byte-for-byte so the front
 // wiring stays identical.
+//
+// Destination is the current install directory whenever we can write
+// there (so a portable user gets the new zip / a NSIS user gets the
+// new setup.exe right next to the running Omnio, regardless of where
+// they installed it), with a fallback to the OS Downloads folder if
+// the install location is read-only — MSI installs in Program Files
+// and .deb / .rpm installs in /usr/bin hit that path.
 #[command]
 pub async fn updates_download(
     url: String,
@@ -403,14 +441,8 @@ pub async fn updates_download(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<DownloadResult, ()> {
-    // Downloads dir via Tauri path resolver. `download_dir()` may fail
-    // on locked-down configs — fall back to app data root so the
-    // download still lands somewhere the user can find.
-    let downloads_dir = app
-        .path()
-        .download_dir()
-        .unwrap_or_else(|_| app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from(".")));
-    if let Err(e) = fs::create_dir_all(&downloads_dir).await {
+    let target_dir = pick_download_dir(&app).await;
+    if let Err(e) = fs::create_dir_all(&target_dir).await {
         return Ok(DownloadResult::Err { ok: false, error: e.to_string() });
     }
     // Reject filesystem-reserved chars — same char set the TS strips.
@@ -422,7 +454,7 @@ pub async fn updates_download(
             c => c,
         })
         .collect();
-    let target = downloads_dir.join(&safe_name);
+    let target = target_dir.join(&safe_name);
 
     let client = get_http_client(&state);
     let resp = match client.get(&url).send().await {

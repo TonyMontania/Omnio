@@ -4,7 +4,12 @@ All notable changes to Omnio are documented in this file. Format loosely follows
 
 Each `## v<version>` section becomes the body of that tag's [GitHub Release](https://github.com/TonyMontania/Omnio/releases) — the release workflow reads this file and passes the matching section to `tauri-action`, so patch notes stay authored here (versioned in git, reviewable in PRs) instead of in a separate release form.
 
-## v0.5.2 — RPM + AUR + winget, updater fixes
+## Unreleased
+
+### Changed
+
+- **In-app updater downloads land in the app's install folder instead of `~/Downloads`.** The download destination is now the parent of `current_exe()` — so a portable user gets the new ZIP right next to their extracted `omnio.exe`, an NSIS user gets the new `setup.exe` inside `%LocalAppData%\Programs\Omnio\`, and an AppImage user gets the new AppImage sitting next to the running one. Falls back to the OS Downloads folder (and then to the app-data dir) when the install location is read-only for the process — typical for MSI installs in Program Files or `.deb` / `.rpm` installs under `/usr/bin`, where writing without elevation isn't allowed.
+- **Release title on GitHub is just the tag** — `v0.5.3` instead of `Omnio v0.5.3`. Cleaner in the releases list, matches how most Tauri projects render.
 
 Small patch release. Two things: three new Linux / Windows delivery channels come online (`.rpm`, AUR `omnio-bin`, winget `TonyMontania.Omnio`), and the in-app updater finally hands every install variant the matching release asset.
 

@@ -142,7 +142,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Omnio ${{ github.ref_name }}'
+          # Release title is just the version tag ("v0.5.3", "v0.6.0",
+          # …) — no "Omnio " prefix. Repo context already makes it clear
+          # which app the release belongs to.
+          releaseName: ${{ github.ref_name }}
           # `releaseBody` (a string) — tauri-action does NOT accept a
           # `releaseBodyPath` param, so we inline the extracted CHANGELOG
           # section from `steps.notes` above. The output was set via a
