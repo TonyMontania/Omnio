@@ -67,6 +67,37 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
+      # Extract the changelog section for this tag from CHANGELOG.md.
+      # The section header is `## v<version>` (matching the tag). Every
+      # matrix job does this — cheap, keeps the release body consistent
+      # across platforms. tauri-action would otherwise use its own generic
+      # `releaseBody` string, which is what we're replacing.
+      - name: Extract release notes for this tag
+        id: notes
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          file=".github/release-notes.md"
+          if [ -f CHANGELOG.md ]; then
+            # Pull everything between `## <tag>` (inclusive of blank line
+            # after the heading) and the next `## v` heading. If nothing
+            # matches, we leave the file empty and tauri-action will fall
+            # back to its default text.
+            awk -v tag="$tag" '
+              BEGIN { inside = 0 }
+              /^## / {
+                if (inside) { exit }
+                if ($2 == tag || $2 ~ "^" tag "([^0-9]|$)") { inside = 1; next }
+              }
+              inside { print }
+            ' CHANGELOG.md > "$file"
+          else
+            : > "$file"
+          fi
+          bytes=$(wc -c < "$file" | tr -d ' ')
+          echo "Extracted $bytes bytes of release notes for $tag"
+          echo "path=$file" >> "$GITHUB_OUTPUT"
+
       - name: Linux prerequisites
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -101,9 +132,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Omnio ${{ github.ref_name }}'
-          releaseBody: |
-            Cross-platform installers: Windows NSIS + MSI + portable ZIP,
-            macOS DMG (arm64 + x64), Linux AppImage + deb.
+          releaseBodyPath: ${{ steps.notes.outputs.path }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
