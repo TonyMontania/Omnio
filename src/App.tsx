@@ -61,6 +61,10 @@ import {
 // bundle stays lean — the app boots faster and users only pay for a
 // modal's JS the first time they open it (imperceptible on local disk).
 import ItemCard from './ItemCard'
+import KanbanView from './views/KanbanView'
+import DiaryView from './views/DiaryView'
+import TimelineView from './views/TimelineView'
+import { patchItemStatus, getUniversalStatusOptions } from './utils/statusUniversal'
 import CardContextMenu, { type CardMenuAction } from './components/CardContextMenu'
 import ImageLightbox from './components/ImageLightbox'
 import FirstRunWizard from './FirstRunWizard'
@@ -149,7 +153,8 @@ import { applyPatchFieldsToForm } from './editor/applyPatch'
 
 import './App.css'
 
-type Layout = 'list' | 'grid' | 'compact'
+type Layout = 'list' | 'grid' | 'compact' | 'kanban' | 'timeline' | 'diary'
+type GroupBy = 'none' | 'year' | 'decade' | 'status' | 'rating'
 type SortBy =
   | 'alpha' | 'recent' | 'rating' | 'custom'
   // Games
@@ -324,6 +329,65 @@ function compareDates(a?: string, b?: string, asc = true): number {
 // Reads whichever year-ish field the item happens to have populated.
 // Different categories store year in different places (games use releaseDate,
 // music/movies use releaseYear, series use startYear, anime uses airedFrom, etc).
+// Group a pre-sorted item list into buckets for the "Group by" render
+// mode. Every bucket keeps its input order (so the outer sortBy still
+// controls how items appear inside a group). Categories that don't
+// carry a given axis (e.g. Music has no `year` on every album) still
+// work — items without a key land in the "Unknown" bucket at the end.
+interface Bucket { key: string; label: string; list: AnyItem[] }
+function groupItems(list: AnyItem[], by: 'year' | 'decade' | 'status' | 'rating', categoryId: string): Bucket[] {
+  const buckets = new Map<string, Bucket>()
+  const putIn = (key: string, label: string, it: AnyItem) => {
+    if (!buckets.has(key)) buckets.set(key, { key, label, list: [] })
+    buckets.get(key)!.list.push(it)
+  }
+  for (const it of list) {
+    if (by === 'year') {
+      const raw = it.releaseYear ?? it.seasonYear ?? it.startYear
+        ?? (it.airedFrom ? it.airedFrom.slice(0, 4) : '')
+        ?? (it.releaseDate ? it.releaseDate.slice(0, 4) : '')
+      const y = parseInt(String(raw || ''), 10)
+      if (!isNaN(y) && y >= 1000 && y <= 3000) putIn(String(y), String(y), it)
+      else putIn('_unknown', 'Unknown year', it)
+    } else if (by === 'decade') {
+      const raw = it.releaseYear ?? it.seasonYear ?? it.startYear
+        ?? (it.airedFrom ? it.airedFrom.slice(0, 4) : '')
+        ?? (it.releaseDate ? it.releaseDate.slice(0, 4) : '')
+      const y = parseInt(String(raw || ''), 10)
+      if (!isNaN(y) && y >= 1000 && y <= 3000) {
+        const d = Math.floor(y / 10) * 10
+        putIn(String(d), `${d}s`, it)
+      } else putIn('_unknown', 'Unknown decade', it)
+    } else if (by === 'status') {
+      const v = it.gameStatus ?? it.watchStatus ?? it.seriesStatus ?? it.mangaStatus ?? it.bookStatus ?? it.visualNovelStatus
+        ?? (categoryId === 'peliculas' ? (it.consumed ? 'watched' : 'unwatched')
+          : categoryId === 'musica' ? (it.consumed ? 'listened' : 'unlistened') : '')
+      const key = String(v || '_unknown')
+      const label = key === '_unknown' ? 'No status' : key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      putIn(key, label, it)
+    } else if (by === 'rating') {
+      const r = it.rating ?? 0
+      if (!r) putIn('_unknown', 'Unrated', it)
+      else {
+        const key = String(Math.floor(r))
+        putIn(key, `★ ${key}${r % 1 === 0.5 ? '.5' : ''}+`, it)
+      }
+    }
+  }
+  const arr = Array.from(buckets.values())
+  // Sort buckets: numeric keys ascending (year / decade / rating),
+  // status by original enum order, "_unknown" last.
+  arr.sort((a, b) => {
+    if (a.key === '_unknown') return 1
+    if (b.key === '_unknown') return -1
+    const an = parseInt(a.key, 10)
+    const bn = parseInt(b.key, 10)
+    if (!isNaN(an) && !isNaN(bn)) return by === 'rating' ? bn - an : an - bn
+    return a.label.localeCompare(b.label)
+  })
+  return arr
+}
+
 function pickYear(i: AnyItem): number {
   const first = i.releaseYear || i.seasonYear || i.startYear
     || (i.airedFrom ? i.airedFrom.slice(0, 4) : '')
@@ -426,6 +490,13 @@ function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [loaded, setLoaded] = useState(false)
   const [layout, setLayout] = useState<Layout>('grid')
+  const [groupBy, setGroupBy] = useState<GroupBy>('none')
+  // `ItemCard` only accepts the three classic layouts. Special views
+  // (musicBoard, mangaBoard, per-status boards, etc.) always render as
+  // grid/list/compact, so when the main layout is kanban/timeline/diary
+  // we degrade to 'grid' inside those special renderers.
+  const classicLayout: 'list' | 'grid' | 'compact' =
+    layout === 'list' || layout === 'compact' ? layout : 'grid'
   const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'vnBoard' | 'simulcastBoard' | 'stats' | 'calendar' | 'settings' | 'arcade'>('none')
   // Arcade section state (score log + 1cc grid). Loaded from and
   // persisted to the same JSON blob as `items` — see save/load below.
@@ -2295,9 +2366,12 @@ function App() {
   // The topnav is the single header now.
   const viewToggleBtns = (
     <div className="view-toggle">
-      <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
-      <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
-      <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')}>≡ Compact</button>
+      <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')} title="List — one card per row with meta">☰ List</button>
+      <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')} title="Grid — cover-first tiles">▦ Grid</button>
+      <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')} title="Compact — dense list, tiny covers">≡ Compact</button>
+      <button className={layout === 'kanban' ? 'active' : ''} onClick={() => setLayout('kanban')} title="Kanban — columns per status, drag cards to change status">⊞ Kanban</button>
+      <button className={layout === 'timeline' ? 'active' : ''} onClick={() => setLayout('timeline')} title="Timeline — items grouped by release year">⇢ Timeline</button>
+      <button className={layout === 'diary' ? 'active' : ''} onClick={() => setLayout('diary')} title="Diary — chronological log by finished/added date">✎ Diary</button>
     </div>
   )
   const backToLibrary = () => setSpecialView('none')
@@ -2557,8 +2631,8 @@ function App() {
             <ArtistDetailView
               artist={viewingArtist}
               items={musicList.filter((m) => m.artist === viewingArtist.name)}
-              layout={layout}
-              onSetLayout={setLayout}
+              layout={classicLayout}
+              onSetLayout={(l) => setLayout(l)}
               onBack={() => setViewingArtist(null)}
               onEdit={() => openArtistEditPanel(viewingArtist)}
               onOpenItem={openEditPanel}
@@ -2589,7 +2663,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {filterAndSort(gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus), search, [], [], [], [], sortBy).length === 0 && <p className="empty">No games here.</p>}
                 {filterAndSort(gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus), search, [], [], [], [], sortBy).map((g) => (
-                  <ItemCard key={g.id} item={g} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite}
+                  <ItemCard key={g.id} item={g} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite}
                         gameFields={settings.gameFields}
                         musicFields={settings.musicFields}
                         mangaFields={settings.mangaFields} />
@@ -2618,7 +2692,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((m) => (
-                  <ItemCard key={m.id} item={m} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} musicFields={settings.musicFields} />
+                  <ItemCard key={m.id} item={m} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} musicFields={settings.musicFields} />
                 ))}
               </div>
               </div>
@@ -2644,7 +2718,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} mangaFields={settings.mangaFields} />
+                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} mangaFields={settings.mangaFields} />
                 ))}
               </div>
               </div>
@@ -2669,7 +2743,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} movieFields={settings.movieFields} />
+                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} movieFields={settings.movieFields} />
                 ))}
               </div>
               </div>
@@ -2696,7 +2770,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} animeFields={settings.animeFields} />
+                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} animeFields={settings.animeFields} />
                 ))}
               </div>
               </div>
@@ -2722,7 +2796,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} seriesFields={settings.seriesFields} />
+                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} seriesFields={settings.seriesFields} />
                 ))}
               </div>
               </div>
@@ -2746,7 +2820,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} bookFields={settings.bookFields} />
+                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} bookFields={settings.bookFields} />
                 ))}
               </div>
               </div>
@@ -2770,7 +2844,7 @@ function App() {
               <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
                 {list.length === 0 && <p className="empty">Nothing here.</p>}
                 {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={layout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} vnFields={settings.vnFields} />
+                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} vnFields={settings.vnFields} />
                 ))}
               </div>
               </div>
@@ -4267,6 +4341,19 @@ function App() {
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
+                    <select
+                      className="sort-select"
+                      value={groupBy}
+                      onChange={(e) => setGroupBy(e.target.value as GroupBy)}
+                      title="Group items visually"
+                      disabled={layout === 'kanban' || layout === 'timeline' || layout === 'diary'}
+                    >
+                      <option value="none">No grouping</option>
+                      <option value="year">Group by year</option>
+                      <option value="decade">Group by decade</option>
+                      <option value="status">Group by status</option>
+                      <option value="rating">Group by rating</option>
+                    </select>
                     <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
                       <option value="recent">Most recent</option>
                       <option value="alpha">Alphabetical</option>
@@ -4342,47 +4429,119 @@ function App() {
                   {sortBy === 'custom' && <p className="hint drag-hint">Drag cards to reorder them.</p>}
                   {deleteMode && <p className="hint drag-hint" style={{ color: 'var(--danger)' }}>Delete mode — click the red ✕ on any card to remove it.</p>}
 
-                  <div className={`${layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}${deleteMode ? ' delete-mode' : ''}`}>
-                    {visibleItems.length === 0 && (
-                      itemsInCategory.length === 0 ? (
-                        <div className="empty-state">
-                          <div className="empty-state-icon"><CategoryIcon id={activeCategory} /></div>
-                          <h3>Your {current?.label.toLowerCase()} library is empty</h3>
-                          <p>Add your first {current?.singular ?? 'item'} to start tracking.</p>
-                          <button className="add-btn" onClick={openAddPanel}>+ Add {current?.singular ?? 'item'}</button>
-                        </div>
-                      ) : (
-                        <div className="empty-state small">
-                          <p>No items match your filters.</p>
-                          <button className="secondary-btn" onClick={() => { resetListControls() }}>Clear filters</button>
+                  {layout === 'kanban' ? (
+                    getUniversalStatusOptions(activeCategory).length === 0 ? (
+                      <p className="hint">This library doesn't have a status enum, so the Kanban view isn't available. Switch to Grid or List.</p>
+                    ) : (
+                      <KanbanView
+                        items={visibleItems}
+                        categoryId={activeCategory}
+                        onOpen={openEditPanel}
+                        onSetStatus={(id, status) => {
+                          setItems((prev) => prev.map((it) => {
+                            if (it.id !== id) return it
+                            return { ...it, ...patchItemStatus(it.categoryId, status) }
+                          }))
+                        }}
+                      />
+                    )
+                  ) : layout === 'timeline' ? (
+                    <TimelineView items={visibleItems} onOpen={openEditPanel} />
+                  ) : layout === 'diary' ? (
+                    <DiaryView items={visibleItems} onOpen={openEditPanel} />
+                  ) : (() => {
+                    // Group-by wrapper: bucket the visible items when the
+                    // user picked a non-'none' groupBy, otherwise render
+                    // them flat like before. Group keys are grouped in
+                    // insertion order — sortBy still controls per-group
+                    // order because `visibleItems` was already sorted.
+                    if (groupBy === 'none') {
+                      return (
+                        <div className={`${layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}${deleteMode ? ' delete-mode' : ''}`}>
+                          {visibleItems.length === 0 && (
+                            itemsInCategory.length === 0 ? (
+                              <div className="empty-state">
+                                <div className="empty-state-icon"><CategoryIcon id={activeCategory} /></div>
+                                <h3>Your {current?.label.toLowerCase()} library is empty</h3>
+                                <p>Add your first {current?.singular ?? 'item'} to start tracking.</p>
+                                <button className="add-btn" onClick={openAddPanel}>+ Add {current?.singular ?? 'item'}</button>
+                              </div>
+                            ) : (
+                              <div className="empty-state small">
+                                <p>No items match your filters.</p>
+                                <button className="secondary-btn" onClick={() => { resetListControls() }}>Clear filters</button>
+                              </div>
+                            )
+                          )}
+                          {visibleItems.map((item) => (
+                            <ItemCard
+                              key={item.id}
+                              item={item}
+                              layout={layout as 'list' | 'grid' | 'compact'}
+                              onOpen={openEditPanel}
+                              onDelete={handleDelete} onToggleFavorite={toggleItemFavorite}
+                              onToggleSelect={toggleSelect}
+                              selected={selectedIds.has(item.id)}
+                              selectionActive={selectedIds.size > 0}
+                              draggableEnabled={sortBy === 'custom'}
+                              onDragStartItem={setDraggedId}
+                              onDropItem={activeCollection ? handleReorder : handleReorderCategory}
+                              gameFields={settings.gameFields}
+                              musicFields={settings.musicFields}
+                              mangaFields={settings.mangaFields}
+                              movieFields={settings.movieFields}
+                              animeFields={settings.animeFields}
+                              seriesFields={settings.seriesFields}
+                              bookFields={settings.bookFields}
+                              vnFields={settings.vnFields}
+                              onContextMenu={(it, x, y) => setCtxMenu({ item: it, x, y })}
+                            />
+                          ))}
                         </div>
                       )
-                    )}
-                    {visibleItems.map((item) => (
-                      <ItemCard
-                        key={item.id}
-                        item={item}
-                        layout={layout}
-                        onOpen={openEditPanel}
-                        onDelete={handleDelete} onToggleFavorite={toggleItemFavorite}
-                        onToggleSelect={toggleSelect}
-                        selected={selectedIds.has(item.id)}
-                        selectionActive={selectedIds.size > 0}
-                        draggableEnabled={sortBy === 'custom'}
-                        onDragStartItem={setDraggedId}
-                        onDropItem={activeCollection ? handleReorder : handleReorderCategory}
-                        gameFields={settings.gameFields}
-                        musicFields={settings.musicFields}
-                        mangaFields={settings.mangaFields}
-                        movieFields={settings.movieFields}
-                        animeFields={settings.animeFields}
-                        seriesFields={settings.seriesFields}
-                        bookFields={settings.bookFields}
-                        vnFields={settings.vnFields}
-                        onContextMenu={(it, x, y) => setCtxMenu({ item: it, x, y })}
-                      />
-                    ))}
-                  </div>
+                    }
+                    // Grouped render — one section per group, each with
+                    // its own header + ItemCard grid/list. Collapsed
+                    // sections carry all their meta so the count line is
+                    // still meaningful without expanding.
+                    const groups = groupItems(visibleItems, groupBy, activeCategory)
+                    return (
+                      <div className="library-groups">
+                        {groups.map(({ key, label, list }) => (
+                          <section key={key} className="library-group">
+                            <header className="library-group-header">
+                              <span className="library-group-label">{label}</span>
+                              <span className="library-group-count">{list.length}</span>
+                            </header>
+                            <div className={`${layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}${deleteMode ? ' delete-mode' : ''}`}>
+                              {list.map((item) => (
+                                <ItemCard
+                                  key={item.id}
+                                  item={item}
+                                  layout={layout as 'list' | 'grid' | 'compact'}
+                                  onOpen={openEditPanel}
+                                  onDelete={handleDelete} onToggleFavorite={toggleItemFavorite}
+                                  onToggleSelect={toggleSelect}
+                                  selected={selectedIds.has(item.id)}
+                                  selectionActive={selectedIds.size > 0}
+                                  draggableEnabled={false}
+                                  gameFields={settings.gameFields}
+                                  musicFields={settings.musicFields}
+                                  mangaFields={settings.mangaFields}
+                                  movieFields={settings.movieFields}
+                                  animeFields={settings.animeFields}
+                                  seriesFields={settings.seriesFields}
+                                  bookFields={settings.bookFields}
+                                  vnFields={settings.vnFields}
+                                  onContextMenu={(it, x, y) => setCtxMenu({ item: it, x, y })}
+                                />
+                              ))}
+                            </div>
+                          </section>
+                        ))}
+                      </div>
+                    )
+                  })()}
                   </div>
                 </>
               )}
