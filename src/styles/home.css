@@ -450,3 +450,134 @@
   border-left: 1px solid var(--border);
 }
 .home-lib-chip:hover .home-lib-chip-count { color: var(--accent); border-left-color: var(--accent-soft); }
+
+/* -----------------------------------------------------------------
+   Sprint A widgets — big numbers, quick add, cover carousel.
+   ----------------------------------------------------------------- */
+
+/* Big numbers — a row of chunky tiles with a hero value + label. Grid
+   wraps to two rows on narrower widget slots. */
+.home-bignum-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+.home-bignum-tile {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.home-bignum-value {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.home-bignum-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* Quick add — inline single-row form (category select + title input +
+   button). Meant to sit in a `small` slot; the three children flex to
+   fill the widget. */
+.home-quickadd {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  width: 100%;
+}
+.home-quickadd-cat {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  max-width: 45%;
+}
+.home-quickadd-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.home-quickadd-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.home-quickadd-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #1a1408;
+  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.14s;
+  flex-shrink: 0;
+}
+.home-quickadd-btn:hover:not(:disabled) { background: var(--accent-hover, var(--accent)); }
+.home-quickadd-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Cover carousel — infinite auto-scrolling marquee of cover images.
+   The track holds two copies of the strip so translateX(-50%) loops
+   seamlessly. Pause on hover so users can click a specific cover. */
+.home-carousel {
+  overflow: hidden;
+  padding: 4px 0;
+  mask-image: linear-gradient(90deg, transparent 0, black 8%, black 92%, transparent 100%);
+}
+.home-carousel-track {
+  display: flex;
+  gap: 12px;
+  width: max-content;
+  animation: home-carousel-scroll 60s linear infinite;
+}
+.home-carousel:hover .home-carousel-track { animation-play-state: paused; }
+.home-carousel-cover {
+  width: 80px;
+  height: 112px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  padding: 0;
+  background: var(--surface);
+  cursor: pointer;
+  transition: transform 0.16s, border-color 0.16s;
+}
+.home-carousel-cover:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+}
+.home-carousel-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+@keyframes home-carousel-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-carousel-track { animation: none; }
+}

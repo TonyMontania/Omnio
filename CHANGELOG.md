@@ -6,6 +6,16 @@ Each `## v<version>` section becomes the body of that tag's [GitHub Release](htt
 
 ## Unreleased
 
+### Added
+
+- **Home widget: Big numbers.** A row of scrapbook-style tiles at the top of the dashboard — total items in the library, finished this year, hours logged (sums game playtime + movie runtime + episodes × episode duration + VN estimated hours), and count of items rated ★4 or higher. No comparisons, no deltas, no "less than last month" framing — the widget is a portrait of what you have, not a report card.
+- **Home widget: Currently airing.** Filters anime, donghua and series with `airingStatus === 'airing'` — the shows actually on air this season, distinct from "upcoming" (future releases). Newest-first.
+- **Home widget: Upcoming this week.** Companion to the existing 30-day upcoming widget; tighter 7-day horizon for users who only want the imminent stuff.
+- **Home widget: Quick add.** Inline single-row form (category select + title input + Add button) that skips the full Add panel and drops a stub item straight into the chosen library. Faster path when you just want to remember something exists — flesh-fill the rest later.
+- **Home widget: Cover carousel.** Auto-scrolling marquee of covers from your library; pauses on hover, respects `prefers-reduced-motion`, click a cover to open the item. Purely decorative.
+- **Currently widget covers Visual Novels too.** The existing "in progress" widget now surfaces VNs with `visualNovelStatus === 'playing'`, matching how it already covered every other category.
+- **Default Home layout ships with the new widgets** enabled — big-numbers → currently → carousel → upcoming-week → currently-airing → quick-add → recently-rated. Existing users who saved their own layout keep theirs; anyone who never touched Edit mode gets the new default on next boot.
+
 ### Fixed
 
 - **Track artist column in the Music detail view split band names that contain a `/`.** The parser that decided when to render "artistA, artistB" as separate pills was splitting on `/` and `:` too — so `156/Silence`, `AC/DC`, `Sunami:Portrayal Of Guilt` and every other band that carries one of those characters showed as two pills instead of one. The split is now scoped to real featured-artist separators (`,`, `&`, `feat.`, `ft.`, ` x `).

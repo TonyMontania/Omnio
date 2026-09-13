@@ -26,6 +26,7 @@ interface Props {
   onOpenSettings: () => void
   onOpenSearch: () => void
   onOpenRandomizer?: () => void
+  onQuickAdd?: (categoryId: CategoryId, title: string) => void
 }
 
 const SIZE_LABELS: Record<WidgetSize, string> = {
@@ -38,6 +39,7 @@ export default function HomeBoard(props: Props) {
   const {
     items, enabledCategories, layout, onSaveLayout,
     onOpenCategory, onOpenItem, onOpenCalendar, onOpenStats,
+    onQuickAdd,
   } = props
 
   const [editing, setEditing] = useState(false)
@@ -62,6 +64,7 @@ export default function HomeBoard(props: Props) {
   const ctx: HomeContext = {
     items, enabledCategories: cats,
     onOpenItem, onOpenCategory, onOpenCalendar, onOpenStats,
+    onQuickAdd,
   }
 
   const commit = (next: HomeWidgetSlot[]) => onSaveLayout(next)

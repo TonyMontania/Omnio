@@ -19,6 +19,10 @@ export interface HomeContext {
   onOpenCategory: (categoryId: CategoryId) => void
   onOpenCalendar: () => void
   onOpenStats: () => void
+  // Quick-add creates a minimal stub item (title + category) — the
+  // widget uses it to skip the full Add panel for fast entry. App.tsx
+  // wires this to a lightweight `setItems` push.
+  onQuickAdd?: (categoryId: CategoryId, title: string) => void
 }
 
 export interface HomeWidget {
@@ -59,8 +63,12 @@ export function listHomeWidgets(): HomeWidget[] {
 // Home is now pure content: what you're doing, what's coming, what you
 // loved recently.
 export const DEFAULT_HOME_LAYOUT: readonly HomeWidgetSlot[] = [
+  { id: 'big-numbers',    size: 'large' },
   { id: 'currently',      size: 'large' },
-  { id: 'upcoming',       size: 'medium' },
+  { id: 'cover-carousel', size: 'medium' },
+  { id: 'upcoming-week',  size: 'medium' },
+  { id: 'currently-airing', size: 'medium' },
+  { id: 'quick-add',      size: 'small'  },
   { id: 'recently-rated', size: 'medium' },
 ]
 

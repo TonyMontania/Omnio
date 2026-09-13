@@ -3288,6 +3288,18 @@ function App() {
                 onOpenSettings={() => { setSpecialView('settings'); closePanel(); closeAllDetailViews() }}
                 onOpenSearch={() => setSearchOpen(true)}
                 onOpenRandomizer={() => setRandomizerOpen(true)}
+                onQuickAdd={(categoryId, title) => {
+                  const stub: AnyItem = {
+                    id: crypto.randomUUID(),
+                    categoryId: categoryId as CategoryId,
+                    title,
+                    cover: '',
+                    tags: [],
+                    createdAt: Date.now(),
+                  }
+                  setItems((prev) => [...prev, stub])
+                  setToast(`Added "${title}"`)
+                }}
               />
             </Suspense>
           )}

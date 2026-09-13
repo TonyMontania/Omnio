@@ -2,7 +2,9 @@
 // tiny and moving them to separate files later is a rename operation.
 // Importing this module registers every widget for its side effect.
 
+import React from 'react'
 import type { Item } from '../types'
+import type { CategoryId } from '../types/items'
 import { assetSrc } from '../types'
 import { CATEGORIES } from '../categories'
 import { CategoryIcon, CalendarIcon, InsightsIcon } from '../icons'
@@ -22,6 +24,7 @@ function inProgressLabel(it: Item): string | null {
   if (it.seriesStatus === 'watching') return 'Watching'
   if (it.mangaStatus === 'reading') return 'Reading'
   if (it.bookStatus === 'reading') return 'Reading'
+  if (it.visualNovelStatus === 'playing') return 'Playing'
   return null
 }
 function parseISODate(s?: string): Date | null {
@@ -264,6 +267,252 @@ registerHomeWidget({
         <div className="home-placeholder-sub">
           Track credits, character, difficulty, and 1cc / no-miss / no-bomb runs per shmup.
           This tile is here so the widget board can already reserve its slot.
+        </div>
+      </div>
+    )
+  },
+})
+
+// ---- Widget: Big number tiles ----
+//
+// A row of scrapbook-style totals — no comparisons, no deltas, no
+// "you did less than last month" framing (per the design note that
+// insights never guilt-trip). Just current-state accumulators the
+// user might feel good about glancing at.
+
+function totalHoursLogged(items: Item[]): number {
+  let mins = 0
+  for (const it of items) {
+    const play = parseFloat(it.playTime ?? '')
+    if (!isNaN(play) && play > 0) mins += play * 60
+    const mov = parseInt(it.duration ?? '', 10)
+    if (!isNaN(mov) && mov > 0) mins += mov
+    const epW = parseInt(it.episodesWatched ?? '', 10)
+    const epDur = parseInt(it.episodeDuration ?? '', 10)
+    if (!isNaN(epW) && !isNaN(epDur) && epW > 0 && epDur > 0) mins += epW * epDur
+    const vnH = typeof it.vnLengthHours === 'number' ? it.vnLengthHours : parseFloat(String(it.vnLengthHours ?? ''))
+    if (!isNaN(vnH) && vnH > 0 && it.visualNovelStatus === 'completed') mins += vnH * 60
+  }
+  return Math.round(mins / 60)
+}
+
+function finalizedThisYear(items: Item[]): number {
+  const year = new Date().getFullYear()
+  let n = 0
+  for (const it of items) {
+    if (!it.finishedAt) continue
+    const y = new Date(it.finishedAt).getFullYear()
+    if (y === year) n++
+  }
+  return n
+}
+
+registerHomeWidget({
+  id: 'big-numbers',
+  label: 'Big numbers',
+  description: 'Scrapbook-style totals — items in your library, hours logged, finished this year, favorites.',
+  defaultSize: 'large',
+  sizesSupported: ['medium', 'large'],
+  render: (ctx) => {
+    const items = ctx.items
+    const tiles = [
+      { label: 'Items in your library', value: items.length.toLocaleString() },
+      { label: 'Finished this year',    value: finalizedThisYear(items).toLocaleString() },
+      { label: 'Hours logged',          value: `${totalHoursLogged(items).toLocaleString()}h` },
+      { label: 'Loved (★4+)',           value: items.filter((i) => (i.rating ?? 0) >= 4).length.toLocaleString() },
+    ]
+    return (
+      <div className="home-bignum-grid">
+        {tiles.map((t) => (
+          <div key={t.label} className="home-bignum-tile">
+            <div className="home-bignum-value">{t.value}</div>
+            <div className="home-bignum-label">{t.label}</div>
+          </div>
+        ))}
+      </div>
+    )
+  },
+})
+
+// ---- Widget: Upcoming (this week — 7-day horizon) ----
+//
+// Companion to the 30-day `upcoming` widget. Same data source, tighter
+// window — for users who want the "what's imminent" row instead of the
+// whole month.
+
+registerHomeWidget({
+  id: 'upcoming-week',
+  label: 'Upcoming this week',
+  description: 'Release / airing dates in the next 7 days.',
+  defaultSize: 'medium',
+  sizesSupported: ['small', 'medium', 'large'],
+  render: (ctx, size) => {
+    const today = new Date()
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const horizon = new Date(start); horizon.setDate(horizon.getDate() + 7)
+    const out: { item: Item; date: Date; label: string }[] = []
+    for (const it of ctx.items) {
+      const d = parseISODate(it.releaseDate) ?? parseISODate(it.airedFrom) ?? parseYear(it.releaseYear) ?? parseYear(it.startYear)
+      if (!d || d < start || d > horizon) continue
+      out.push({ item: it, date: d, label: it.airedFrom && !it.releaseDate ? 'Airs from' : 'Release' })
+    }
+    out.sort((a, b) => a.date.getTime() - b.date.getTime())
+    const cap = size === 'small' ? 3 : size === 'medium' ? 5 : 8
+    const list = out.slice(0, cap)
+    if (list.length === 0) return <p className="hint">Nothing scheduled this week.</p>
+    return (
+      <div className="home-upcoming-list">
+        {list.map((e, i) => (
+          <button key={`${e.item.id}-${i}`} type="button" className="home-upcoming-row" onClick={() => ctx.onOpenItem(e.item)}>
+            <div className="home-upcoming-cover">
+              {e.item.cover
+                ? <img src={assetSrc(e.item.cover)} alt="" loading="lazy" />
+                : <span>{e.item.title.charAt(0).toUpperCase()}</span>}
+            </div>
+            <div className="home-upcoming-body">
+              <div className="home-upcoming-title">{e.item.title}</div>
+              <div className="home-upcoming-sub">
+                {e.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                {' · '}{e.label}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    )
+  },
+})
+
+// ---- Widget: Currently airing ----
+//
+// Anime / donghua / series flagged as `airing` (or series with
+// `seriesStatus === 'ongoing'`) that you've marked as watching or
+// backlogged. Distinct from "upcoming" — this is stuff that's ALREADY
+// running, so new episodes drop weekly.
+
+registerHomeWidget({
+  id: 'currently-airing',
+  label: 'Currently airing',
+  description: 'Anime, donghua and series that are on air right now.',
+  defaultSize: 'medium',
+  sizesSupported: ['medium', 'large'],
+  render: (ctx, size) => {
+    const airingCats = new Set(['anime', 'donghua', 'series'])
+    const list = ctx.items
+      .filter((i) => airingCats.has(i.categoryId))
+      // Both anime and series carry `airingStatus` for the world-state
+      // (the show itself). `seriesStatus` is user-state ("I'm
+      // watching"). Airing = the anime/series is currently on air.
+      .filter((i) => i.airingStatus === 'airing')
+      .sort((a, b) => recencyScore(b) - recencyScore(a))
+    const cap = size === 'medium' ? 4 : 8
+    const cut = list.slice(0, cap)
+    if (cut.length === 0) return <p className="hint">Nothing airing in your library right now.</p>
+    return (
+      <div className="home-current-list">
+        {cut.map((it) => (
+          <button key={it.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(it)} title={it.title}>
+            <div className="home-current-cover">
+              {it.cover
+                ? <img src={assetSrc(it.cover)} alt="" loading="lazy" />
+                : <span>{it.title.charAt(0).toUpperCase()}</span>}
+              <span className="home-current-badge">Airing</span>
+            </div>
+            <div className="home-current-title">{it.title}</div>
+          </button>
+        ))}
+      </div>
+    )
+  },
+})
+
+// ---- Widget: Quick add ----
+//
+// Inline stub-creation form. Fills only the required minimum
+// (title + categoryId + createdAt); the user flesh-fills the rest in
+// the Add panel later. Bound to `ctx.onQuickAdd` which is wired up in
+// App.tsx to append the item and toast confirmation.
+
+// eslint-disable-next-line react-refresh/only-export-components
+const QuickAddWidget = ({ ctx }: { ctx: import('./registry').HomeContext }) => {
+  const cats = CATEGORIES.filter((c) => ctx.enabledCategories.includes(c.id))
+  const [title, setTitle] = React.useState('')
+  const [categoryId, setCategoryId] = React.useState<string>(cats[0]?.id ?? 'videojuegos')
+  React.useEffect(() => {
+    // If the default cat gets disabled, snap to the first enabled one.
+    if (!cats.some((c) => c.id === categoryId) && cats[0]) setCategoryId(cats[0].id)
+  }, [cats, categoryId])
+  const canSubmit = title.trim().length > 0 && !!ctx.onQuickAdd
+  const submit = () => {
+    if (!canSubmit) return
+    ctx.onQuickAdd!(categoryId as CategoryId, title.trim())
+    setTitle('')
+  }
+  return (
+    <div className="home-quickadd">
+      <select
+        value={categoryId}
+        onChange={(e) => setCategoryId(e.target.value)}
+        className="home-quickadd-cat"
+      >
+        {cats.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+      </select>
+      <input
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
+        placeholder={`Add a ${cats.find((c) => c.id === categoryId)?.singular ?? 'item'}…`}
+        className="home-quickadd-input"
+      />
+      <button type="button" className="home-quickadd-btn" onClick={submit} disabled={!canSubmit}>+ Add</button>
+    </div>
+  )
+}
+
+registerHomeWidget({
+  id: 'quick-add',
+  label: 'Quick add',
+  description: 'One-line "title + category" form — skip the full Add panel for fast stub entries.',
+  defaultSize: 'small',
+  sizesSupported: ['small', 'medium'],
+  render: (ctx) => <QuickAddWidget ctx={ctx} />,
+})
+
+// ---- Widget: Cover carousel ----
+//
+// Decorative auto-scrolling strip of covers pulled from the whole
+// library. Duplicated once so the CSS marquee loop reads seamless.
+// Purely visual — clicking a cover opens the item.
+
+registerHomeWidget({
+  id: 'cover-carousel',
+  label: 'Cover carousel',
+  description: 'Auto-scrolling ribbon of covers from your library. Purely decorative — click any cover to open.',
+  defaultSize: 'medium',
+  sizesSupported: ['medium', 'large'],
+  render: (ctx) => {
+    const withCover = ctx.items.filter((i) => !!i.cover)
+    if (withCover.length === 0) return <p className="hint">Add items with covers to fill this carousel.</p>
+    // Deterministic shuffle so re-renders don't reshuffle mid-hover.
+    const seeded = withCover.slice().sort((a, b) => (a.id > b.id ? 1 : -1))
+    const strip = seeded.slice(0, 40)
+    // Duplicate so the marquee has enough content to loop seamlessly.
+    const doubled = [...strip, ...strip]
+    return (
+      <div className="home-carousel">
+        <div className="home-carousel-track">
+          {doubled.map((it, i) => (
+            <button
+              key={`${it.id}-${i}`}
+              type="button"
+              className="home-carousel-cover"
+              onClick={() => ctx.onOpenItem(it)}
+              title={it.title}
+            >
+              <img src={assetSrc(it.cover)} alt="" loading="lazy" />
+            </button>
+          ))}
         </div>
       </div>
     )
