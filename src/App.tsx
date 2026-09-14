@@ -65,6 +65,9 @@ import KanbanView from './views/KanbanView'
 import DiaryView from './views/DiaryView'
 import TimelineView from './views/TimelineView'
 import { patchItemStatus, getUniversalStatusOptions } from './utils/statusUniversal'
+import { applyAutoStatus } from './utils/autoStatus'
+import { matchAction } from './utils/keyboardActions'
+import ShortcutsEditor from './components/ShortcutsEditor'
 import type { SmartList } from './types/smartLists'
 import { matchesSmartList } from './types/smartLists'
 import SmartListsModal from './components/SmartListsModal'
@@ -283,6 +286,17 @@ interface Settings {
   // "Save as template" in the add panel; cleared per-category from
   // Settings → Behavior. Keys are CategoryId strings.
   itemTemplates?: Partial<Record<string, ItemTemplate>>
+  // Sprint D — auto-status transitions. When on, giving an item a
+  // rating (or setting finishedAt) bumps its status to completed if
+  // it's still in a backlog / in-progress state. Off = the user logs
+  // status by hand and the app never touches it.
+  autoStatusOnRate?: boolean
+  autoFinishedAtOnComplete?: boolean
+  // Sprint D — keyboard shortcut overrides. Keys are action ids
+  // (see KEYBOARD_ACTIONS), values are a key-combo string built by
+  // formatCombo (e.g. "Ctrl+F", "Alt+Shift+K"). Missing entries fall
+  // back to the built-in default; a blank string disables the action.
+  shortcutOverrides?: Record<string, string>
 }
 
 // Small subset of add-panel fields we're willing to prefill for a new
@@ -320,7 +334,7 @@ interface AppData {
 // About string can't drift from the packaged version number.
 const APP_VERSION = __APP_VERSION__
 
-const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', motion: 'auto', startupCategory: 'last', gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, vnFields: DEFAULT_VN_FIELDS, rememberCategorySort: true, categorySortModes: {}, cardZoom: 'md' }
+const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', motion: 'auto', startupCategory: 'last', gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, vnFields: DEFAULT_VN_FIELDS, rememberCategorySort: true, categorySortModes: {}, cardZoom: 'md', autoStatusOnRate: true, autoFinishedAtOnComplete: true }
 
 function getUniqueTags(list: AnyItem[]): string[] {
   const set = new Set<string>()
@@ -608,7 +622,7 @@ function App() {
   // `viewingX` slots that used to live one per category — see
   // components/DetailModalRouter.tsx.
   const [viewing, setViewing] = useState<AnyItem | null>(null)
-  const [settingsTab, setSettingsTab] = useState<'appearance' | 'behavior' | 'libraries' | 'cards' | 'data' | 'integrations' | 'maintenance'>('appearance')
+  const [settingsTab, setSettingsTab] = useState<'appearance' | 'behavior' | 'libraries' | 'cards' | 'shortcuts' | 'data' | 'integrations' | 'maintenance'>('appearance')
   const [welcomeStep, setWelcomeStep] = useState<'libraries' | 'keys' | 'tips'>('libraries')
   const [welcomePicks, setWelcomePicks] = useState<Record<string, boolean>>({})
   const [moviesBoardFilter, setMoviesBoardFilter] = useState<'watched' | 'unwatched'>('watched')
@@ -1232,41 +1246,39 @@ function App() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const mod = e.ctrlKey || e.metaKey
       const inField = (e.target as HTMLElement | null)?.matches?.('input, textarea, [contenteditable="true"]')
-      if (mod && e.key.toLowerCase() === 'f' && subView === 'items' && specialView === 'none') {
-        e.preventDefault()
-        searchInputRef.current?.focus()
-      } else if (mod && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        setSearchOpen(true)
-      } else if (mod && !e.shiftKey && e.key.toLowerCase() === 'z' && !inField) {
-        e.preventDefault()
-        undo()
-      } else if (mod && e.shiftKey && e.key.toLowerCase() === 'z' && !inField) {
-        e.preventDefault()
-        redo()
-      } else if (mod && e.key.toLowerCase() === 'y' && !inField) {
-        e.preventDefault()
-        redo()
-      } else if (e.key === 'F5' && !inField) {
-        e.preventDefault()
-        loadFromDisk({ applySettings: false }).then(() => setToast('Library refreshed'))
-      } else if (e.key === '?' && !inField && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault()
-        setShortcutsOpen(true)
-      } else if (mod && e.key.toLowerCase() === 'h' && !inField) {
-        e.preventDefault()
-        setSpecialView('home'); closePanel(); closeAllDetailViews()
+      const action = matchAction(e, settings.shortcutOverrides)
+      if (!action) return
+      // A few actions are safe inside a text field (they act on the
+      // field itself). Everything else bails so a rebind of Ctrl+Z to
+      // "Undo" doesn't fight the field's own undo.
+      const okInField = action === 'focus-search' || action === 'open-global-search'
+      if (inField && !okInField) return
+      switch (action) {
+        case 'focus-search':
+          if (subView === 'items' && specialView === 'none') {
+            e.preventDefault(); searchInputRef.current?.focus()
+          }
+          return
+        case 'open-global-search':
+          e.preventDefault(); setSearchOpen(true); return
+        case 'undo':
+          e.preventDefault(); undo(); return
+        case 'redo':
+        case 'redo-alt':
+          e.preventDefault(); redo(); return
+        case 'refresh':
+          e.preventDefault(); loadFromDisk({ applySettings: false }).then(() => setToast('Library refreshed')); return
+        case 'shortcuts':
+          e.preventDefault(); setShortcutsOpen(true); return
+        case 'home':
+          e.preventDefault(); setSpecialView('home'); closePanel(); closeAllDetailViews(); return
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-    // closePanel + closeAllDetailViews are stable enough here — including
-    // them re-registers the handler on every render since they're not
-    // memoized. The effect only reads them, never depends on their identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subView, specialView])
+  }, [subView, specialView, settings.shortcutOverrides])
 
   // Track library mutations and stash them on a bounded history stack.
   // Only fires for real content edits (items/collections/artists), not
@@ -2173,17 +2185,26 @@ function App() {
     // every editor section's props.
     const withBasedOn = (it: AnyItem): AnyItem =>
       basedOnItemId ? ({ ...it, basedOnItemId } as AnyItem) : ({ ...it, basedOnItemId: undefined } as AnyItem)
+    // Sprint D — auto-status transitions. Runs on every save; a no-op
+    // when the toggle is off or when the rating/finishedAt signals
+    // didn't cross the "user finished this" threshold.
+    const autoStatusOpts = {
+      enabled: settings.autoStatusOnRate !== false,
+      autoFinishedAt: settings.autoFinishedAtOnComplete !== false,
+    }
     if (editingId) {
       const oldItem = items.find((it) => it.id === editingId)
       const createdAt = oldItem?.createdAt ?? Date.now()
       const built = withBasedOn(buildItemFromForm(editingId, createdAt))
-      const updated = await persistItemImages(built)
+      const withAuto = applyAutoStatus(oldItem ?? null, built, autoStatusOpts)
+      const updated = await persistItemImages(withAuto)
       findOrphanedItemAssets(oldItem, updated).forEach(deleteAssetFile)
       setItems((prev) => prev.map((it) => (it.id === editingId ? updated : it)))
       if (viewing && viewing.id === editingId) setViewing(updated)
     } else {
       const built = withBasedOn(buildItemFromForm(crypto.randomUUID(), Date.now()))
-      const created = await persistItemImages(built)
+      const withAuto = applyAutoStatus(null, built, autoStatusOpts)
+      const created = await persistItemImages(withAuto)
       setItems((prev) => [...prev, created])
     }
     setToast('Saved')
@@ -3481,6 +3502,7 @@ function App() {
                 <div className="settings-nav-group-label">Libraries</div>
                 <button className={settingsTab === 'libraries' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('libraries')}><span className="settings-nav-icon">☰</span>Enabled libraries</button>
                 <button className={settingsTab === 'cards' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('cards')}><span className="settings-nav-icon">▦</span>Card fields</button>
+                <button className={settingsTab === 'shortcuts' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('shortcuts')}><span className="settings-nav-icon">⌨</span>Keyboard shortcuts</button>
                 <div className="settings-nav-group-label">Data</div>
                 <button className={settingsTab === 'data' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('data')}><span className="settings-nav-icon">⌘</span>Backup, import &amp; export</button>
                 <button className={settingsTab === 'integrations' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('integrations')}><span className="settings-nav-icon">↗</span>Integrations &amp; network</button>
@@ -3570,6 +3592,22 @@ function App() {
                         <button type="button" className={settings.confirmDelete ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, confirmDelete: true }))}>Yes</button>
                         <button type="button" className={!settings.confirmDelete ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, confirmDelete: false }))}>No</button>
                       </div>
+                    </div>
+                    <div className="field-group">
+                      <label>Auto-mark as completed when you rate</label>
+                      <div className="yesno">
+                        <button type="button" className={(settings.autoStatusOnRate !== false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoStatusOnRate: true }))}>Yes</button>
+                        <button type="button" className={(settings.autoStatusOnRate === false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoStatusOnRate: false }))}>No</button>
+                      </div>
+                      <p className="hint">Giving an item a rating (or setting a finished date) bumps its status to "completed" if it was still in backlog / in-progress. Off = every status change is manual.</p>
+                    </div>
+                    <div className="field-group">
+                      <label>Stamp today's date when auto-completing</label>
+                      <div className="yesno">
+                        <button type="button" className={(settings.autoFinishedAtOnComplete !== false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoFinishedAtOnComplete: true }))}>Yes</button>
+                        <button type="button" className={(settings.autoFinishedAtOnComplete === false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoFinishedAtOnComplete: false }))}>No</button>
+                      </div>
+                      <p className="hint">Only affects items that had no finished date when the auto-completion fires — an existing date is never overwritten.</p>
                     </div>
                     <div className="field-group">
                       <label>Remember sort per library</label>
@@ -3838,6 +3876,16 @@ function App() {
                       })}
                     </div>
                   </div>
+                )}
+
+                {settingsTab === 'shortcuts' && (
+                  <>
+                    <div className="settings-section-title">Keyboard shortcuts</div>
+                    <ShortcutsEditor
+                      overrides={settings.shortcutOverrides ?? {}}
+                      onChange={(next) => setSettings((s) => ({ ...s, shortcutOverrides: next }))}
+                    />
+                  </>
                 )}
 
                 {settingsTab === 'data' && (
