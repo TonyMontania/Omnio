@@ -16,13 +16,18 @@ interface Props {
 }
 
 function pickYear(it: AnyItem): number | null {
-  const raw =
-    it.releaseYear ??
-    it.seasonYear ??
-    it.startYear ??
-    (it.airedFrom ? it.airedFrom.slice(0, 4) : '') ??
-    (it.releaseDate ? it.releaseDate.slice(0, 4) : '')
-  const n = parseInt(String(raw || ''), 10)
+  // NOTE: use `||`, not `??`. An unset year field on a game/book is
+  // typically the empty string `''`, which is not nullish — `??` would
+  // stop there instead of falling through to the next candidate. The
+  // truthy-fallback chain skips empty strings and picks the first
+  // populated value.
+  const raw = it.releaseYear
+    || it.seasonYear
+    || it.startYear
+    || (it.airedFrom ? it.airedFrom.slice(0, 4) : '')
+    || (it.releaseDate ? it.releaseDate.slice(0, 4) : '')
+    || ''
+  const n = parseInt(String(raw), 10)
   if (isNaN(n) || n < 1000 || n > 3000) return null
   return n
 }

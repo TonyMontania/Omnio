@@ -341,19 +341,24 @@ function groupItems(list: AnyItem[], by: 'year' | 'decade' | 'status' | 'rating'
     if (!buckets.has(key)) buckets.set(key, { key, label, list: [] })
     buckets.get(key)!.list.push(it)
   }
+  // `||` (not `??`) so unset-but-empty-string year fields fall through
+  // to the next candidate instead of pinning to '' and returning NaN.
+  const yearOf = (it: AnyItem): number => {
+    const raw = it.releaseYear
+      || it.seasonYear
+      || it.startYear
+      || (it.airedFrom ? it.airedFrom.slice(0, 4) : '')
+      || (it.releaseDate ? it.releaseDate.slice(0, 4) : '')
+      || ''
+    return parseInt(String(raw), 10)
+  }
   for (const it of list) {
     if (by === 'year') {
-      const raw = it.releaseYear ?? it.seasonYear ?? it.startYear
-        ?? (it.airedFrom ? it.airedFrom.slice(0, 4) : '')
-        ?? (it.releaseDate ? it.releaseDate.slice(0, 4) : '')
-      const y = parseInt(String(raw || ''), 10)
+      const y = yearOf(it)
       if (!isNaN(y) && y >= 1000 && y <= 3000) putIn(String(y), String(y), it)
       else putIn('_unknown', 'Unknown year', it)
     } else if (by === 'decade') {
-      const raw = it.releaseYear ?? it.seasonYear ?? it.startYear
-        ?? (it.airedFrom ? it.airedFrom.slice(0, 4) : '')
-        ?? (it.releaseDate ? it.releaseDate.slice(0, 4) : '')
-      const y = parseInt(String(raw || ''), 10)
+      const y = yearOf(it)
       if (!isNaN(y) && y >= 1000 && y <= 3000) {
         const d = Math.floor(y / 10) * 10
         putIn(String(d), `${d}s`, it)
@@ -2364,14 +2369,23 @@ function App() {
   // per-view actions). Replaces the duplicated `.content-header` blocks
   // that used to sit at the top of every board / library / stats view.
   // The topnav is the single header now.
+  // Kanban / Timeline / Diary only make sense on a real item list.
+  // Artists sub-tab shows folder cards, Groups shows collections,
+  // Artist detail view is its own thing — degrade to classic in all
+  // those cases.
+  const supportsExtendedViews = subView === 'items' && !viewingArtist && !activeCollectionId
   const viewToggleBtns = (
     <div className="view-toggle">
       <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')} title="List — one card per row with meta">☰ List</button>
       <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')} title="Grid — cover-first tiles">▦ Grid</button>
       <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')} title="Compact — dense list, tiny covers">≡ Compact</button>
-      <button className={layout === 'kanban' ? 'active' : ''} onClick={() => setLayout('kanban')} title="Kanban — columns per status, drag cards to change status">⊞ Kanban</button>
-      <button className={layout === 'timeline' ? 'active' : ''} onClick={() => setLayout('timeline')} title="Timeline — items grouped by release year">⇢ Timeline</button>
-      <button className={layout === 'diary' ? 'active' : ''} onClick={() => setLayout('diary')} title="Diary — chronological log by finished/added date">✎ Diary</button>
+      {supportsExtendedViews && (
+        <>
+          <button className={layout === 'kanban' ? 'active' : ''} onClick={() => setLayout('kanban')} title="Kanban — columns per status, drag cards to change status">⊞ Kanban</button>
+          <button className={layout === 'timeline' ? 'active' : ''} onClick={() => setLayout('timeline')} title="Timeline — items grouped by release year">⇢ Timeline</button>
+          <button className={layout === 'diary' ? 'active' : ''} onClick={() => setLayout('diary')} title="Diary — chronological log by finished/added date">✎ Diary</button>
+        </>
+      )}
     </div>
   )
   const backToLibrary = () => setSpecialView('none')

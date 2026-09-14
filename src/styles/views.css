@@ -211,20 +211,21 @@
 }
 
 /* -----------------------------------------------------------------
-   Timeline
+   Timeline — items grouped into year buckets. Wraps to the next row
+   at the viewport edge instead of horizontally scrolling: each row
+   carries its own axis line + dot markers so the "timeline" metaphor
+   still reads even when it flows over multiple rows.
    ----------------------------------------------------------------- */
 .timeline-view {
-  overflow-x: auto;
   padding-bottom: 16px;
 }
 .timeline-track {
   display: flex;
-  gap: 24px;
-  position: relative;
-  padding: 16px 0 20px;
-  border-bottom: 2px solid var(--border);
+  flex-wrap: wrap;
+  row-gap: 32px;
+  column-gap: 24px;
+  padding: 16px 0 12px;
   align-items: flex-end;
-  min-height: 160px;
 }
 .timeline-year {
   flex: 0 0 auto;
@@ -234,11 +235,13 @@
   align-items: center;
   gap: 6px;
   position: relative;
+  padding-bottom: 22px;
+  border-bottom: 2px solid var(--border);
 }
 .timeline-year::after {
   content: '';
   position: absolute;
-  bottom: -22px;
+  bottom: -6px;
   left: 50%;
   transform: translateX(-50%);
   width: 8px;
