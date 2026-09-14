@@ -60,9 +60,21 @@ export default function KanbanView({ items, categoryId, onOpen, onSetStatus }: P
     // DataTransfer needs something set for Firefox to fire drop.
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', id)
+    // Explicit drag image on the card itself. WebView2 sometimes picks
+    // the inner <img> as the drag source and never bubbles the drag to
+    // the parent — pinning the drag image to the card guarantees the
+    // whole card ships as the drag payload.
+    try {
+      const el = e.currentTarget as HTMLElement
+      e.dataTransfer.setDragImage(el, 20, 20)
+    } catch { /* older browsers */ }
   }
+  // Accept drops unconditionally while the mouse is over a column. We
+  // used to bail early if `draggingIdRef.current` was falsy, but any
+  // race that clears the ref between dragstart and dragover then made
+  // the column silently reject the drop. It's cheap to preventDefault
+  // on every dragover and let the drop handler decide.
   const onDragOver = (e: DragEvent, col: string) => {
-    if (!draggingIdRef.current) return
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
     if (hoverCol !== col) setHoverCol(col)
@@ -111,15 +123,17 @@ export default function KanbanView({ items, categoryId, onOpen, onSetStatus }: P
           <div
             key={col.value}
             className={hovered ? 'kanban-col hovered' : 'kanban-col'}
-            onDragOver={(e) => onDragOver(e, col.value)}
-            onDrop={(e) => onDrop(e, col.value)}
-            onDragLeave={() => setHoverCol((c) => c === col.value ? null : c)}
           >
             <header className="kanban-col-header">
               <span className="kanban-col-title">{col.label}</span>
               <span className="kanban-col-count">{list.length}</span>
             </header>
-            <div className="kanban-col-body">
+            <div
+              className="kanban-col-body"
+              onDragOver={(e) => onDragOver(e, col.value)}
+              onDrop={(e) => onDrop(e, col.value)}
+              onDragLeave={() => setHoverCol((c) => c === col.value ? null : c)}
+            >
               {list.length === 0 && <p className="kanban-col-empty">Drop items here</p>}
               {list.map((it) => (
                 <div
@@ -135,7 +149,7 @@ export default function KanbanView({ items, categoryId, onOpen, onSetStatus }: P
                 >
                   <div className="kanban-card-cover">
                     {it.cover
-                      ? <img src={assetSrc(it.cover)} alt="" loading="lazy" />
+                      ? <img src={assetSrc(it.cover)} alt="" loading="lazy" draggable={false} />
                       : <span>{it.title.charAt(0).toUpperCase()}</span>}
                   </div>
                   <div className="kanban-card-body">

@@ -213,6 +213,46 @@
 
 .folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px; }
 
+/* Folder-grid layout variants — driven by the toolbar's Layout toggle
+   when browsing folder-shaped sub-views (Music → Artists, Music →
+   Groups, and any other library that grows a similar sub-tab). Grid
+   is the default cover-first tile look above; list gives each folder
+   its own row with the photo pushed to the left; compact is a tight
+   text-first row for scanning long libraries. */
+.folder-grid-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.folder-grid-list .folder-card {
+  flex-direction: row;
+  align-items: center;
+  text-align: left;
+  padding: 10px 14px;
+  gap: 14px;
+}
+.folder-grid-list .folder-card h3 { margin: 0; font-size: 15px; flex: 1; }
+.folder-grid-list .folder-card:hover { transform: none; }
+.folder-grid-list .folder-photo { width: 44px; height: 44px; box-shadow: none; }
+
+.folder-grid-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.folder-grid-compact .folder-card {
+  flex-direction: row;
+  align-items: center;
+  text-align: left;
+  padding: 6px 12px;
+  gap: 10px;
+  border-radius: var(--radius-sm);
+}
+.folder-grid-compact .folder-card h3 { margin: 0; font-size: 13px; flex: 1; font-weight: 500; }
+.folder-grid-compact .folder-card:hover { transform: none; }
+.folder-grid-compact .folder-photo { width: 26px; height: 26px; box-shadow: none; }
+.folder-grid-compact .folder-photo.placeholder { font-size: 14px; }
+
 .folder-card {
   position: relative;
   background: var(--surface);

@@ -4292,7 +4292,7 @@ function App() {
                       <option value="recent">Most recent</option>
                     </select>
                   </div>
-                  <div className="folder-grid">
+                  <div className={`folder-grid folder-grid-${classicLayout}`}>
                     {musicArtists.length === 0 && <p className="empty">No artists yet.</p>}
                     {[...musicArtists]
                       .sort((a, b) => folderSort === 'recent' ? (b.createdAt ?? 0) - (a.createdAt ?? 0) : a.name.localeCompare(b.name))
@@ -4328,7 +4328,7 @@ function App() {
                       <option value="recent">Most recent</option>
                     </select>
                   </div>
-                  <div className="folder-grid">
+                  <div className={`folder-grid folder-grid-${classicLayout}`}>
                     {categoryCollections.length === 0 && <p className="empty">You haven't created any groups here yet.</p>}
                     {[...categoryCollections]
                       .sort((a, b) => folderSort === 'recent' ? (b.createdAt ?? 0) - (a.createdAt ?? 0) : a.name.localeCompare(b.name))
