@@ -19,6 +19,7 @@ Each `## v<version>` section becomes the body of that tag's [GitHub Release](htt
 - **Home widget: Cover carousel.** Auto-scrolling marquee of covers from your library; pauses on hover, respects `prefers-reduced-motion`, click a cover to open the item. Purely decorative.
 - **Currently widget covers Visual Novels too.** The existing "in progress" widget now surfaces VNs with `visualNovelStatus === 'playing'`, matching how it already covered every other category.
 - **Default Home layout ships with the new widgets** enabled — big-numbers → currently → carousel → upcoming-week → currently-airing → quick-add → recently-rated. Existing users who saved their own layout keep theirs; anyone who never touched Edit mode gets the new default on next boot.
+- **Smart lists — saved filter presets, per library or across every library.** New "Manage" button next to a dropdown in the toolbar opens a full CRUD modal: create as many lists as you like, name them, pick a scope (a specific library or "all"), and stack rules from a fixed vocabulary — favorite yes/no, rating floor and ceiling, has-tag, status is one of, year floor and ceiling, has review, has cover, finished / consumed. An item passes when it belongs to the scope AND satisfies every rule. Applying a list layers on top of the current search / tag / status filters, so you can bottle "4-star games I never finished" once and use it from the toolbar instead of re-toggling five chips every time. Persisted alongside the rest of your library data.
 
 ### Fixed
 

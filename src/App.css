@@ -15,6 +15,7 @@
 @import './styles/insights.css';      /* charts, badges, top-rated */
 @import './styles/settings.css';      /* theme/accent swatches, welcome, about, danger-btn, spoiler */
 @import './styles/views.css';         /* library view modes (kanban, diary, timeline) + group-by wrapper */
+@import './styles/smart-lists.css';   /* Smart lists modal + toolbar chip */
 @import './styles/utilities.css';     /* Ctrl+K search, backups, duplicates, bulk actions, selection state */
 @import './styles/topnav.css';        /* prototype: top-nav layout (Option A) */
 @import './styles/sidebar.css';       /* persistent left sidebar (restored) */

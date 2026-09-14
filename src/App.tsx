@@ -65,6 +65,9 @@ import KanbanView from './views/KanbanView'
 import DiaryView from './views/DiaryView'
 import TimelineView from './views/TimelineView'
 import { patchItemStatus, getUniversalStatusOptions } from './utils/statusUniversal'
+import type { SmartList } from './types/smartLists'
+import { matchesSmartList } from './types/smartLists'
+import SmartListsModal from './components/SmartListsModal'
 import CardContextMenu, { type CardMenuAction } from './components/CardContextMenu'
 import ImageLightbox from './components/ImageLightbox'
 import FirstRunWizard from './FirstRunWizard'
@@ -303,6 +306,9 @@ interface AppData {
   settings?: Settings
   customOrders?: Record<string, string[]>
   arcadeGames?: ArcadeGame[]
+  // Sprint C — saved filter presets (see types/smartLists). Optional on
+  // disk so older saves keep loading.
+  smartLists?: SmartList[]
 }
 
 // Displayed in Settings → Data → About. Sourced from package.json so the
@@ -506,6 +512,13 @@ function App() {
   // Arcade section state (score log + 1cc grid). Loaded from and
   // persisted to the same JSON blob as `items` — see save/load below.
   const [arcadeGames, setArcadeGames] = useState<ArcadeGame[]>([])
+  // Sprint C — saved filter presets. `activeSmartListId` layers on top
+  // of the current filter state: while set, `visibleItems` runs each
+  // item through the list's rules before rendering. Clearing it
+  // (setter → null) restores the plain filter view.
+  const [smartLists, setSmartLists] = useState<SmartList[]>([])
+  const [activeSmartListId, setActiveSmartListId] = useState<string | null>(null)
+  const [smartListsModalOpen, setSmartListsModalOpen] = useState(false)
   // Locally-installed plugin (git-ignored overlay under
   // `src/categories/<slug>/`). When non-null, its <View/> replaces
   // the library grid. Registry populates via `import.meta.glob` — the
@@ -1125,6 +1138,7 @@ function App() {
     setCollections(data?.collections ?? [])
     setMusicArtists(artists)
     setArcadeGames(data?.arcadeGames ?? [])
+    setSmartLists(data?.smartLists ?? [])
     if (applySettings && data?.settings) {
       const merged = {
         ...DEFAULT_SETTINGS,
@@ -1166,7 +1180,7 @@ function App() {
   useEffect(() => {
     if (!loaded) return
     void (async () => {
-      const res = await window.ipcRenderer.invoke('data:save', { items, collections, settings, artists: musicArtists, arcadeGames }) as { ok?: boolean; rewrites?: { from: string; to: string }[] } | boolean
+      const res = await window.ipcRenderer.invoke('data:save', { items, collections, settings, artists: musicArtists, arcadeGames, smartLists }) as { ok?: boolean; rewrites?: { from: string; to: string }[] } | boolean
       // Main-process rename step may have renamed some asset files to match
       // titles. Reflect those rewrites in local state so <img src> resolves
       // to the new filename without a full reload.
@@ -1203,7 +1217,7 @@ function App() {
       setEditions((list) => list.map((e) => ({ ...e, cover: swap(e.cover) ?? e.cover })))
       setBundleContents((list) => list.map((b) => ({ ...b, cover: swap(b.cover) ?? b.cover })))
     })()
-  }, [items, collections, settings, musicArtists, arcadeGames, loaded])
+  }, [items, collections, settings, musicArtists, arcadeGames, smartLists, loaded])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1489,9 +1503,18 @@ function App() {
     () => activeCollection ? activeCollection.itemIds : (customOrders[activeCategory] || []),
     [activeCollection, customOrders, activeCategory],
   )
+  const activeSmartList = useMemo(
+    () => (activeSmartListId ? smartLists.find((l) => l.id === activeSmartListId) ?? null : null),
+    [activeSmartListId, smartLists],
+  )
+  const allItemTags = useMemo(() => getUniqueTags(items), [items])
   const visibleItems = useMemo(
-    () => filterAndSort(scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree),
-    [scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree],
+    () => {
+      const filtered = filterAndSort(scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree)
+      if (!activeSmartList) return filtered
+      return filtered.filter((it) => matchesSmartList(it, activeSmartList))
+    },
+    [scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree, activeSmartList],
   )
 
   const editingItem = items.find((i) => i.id === editingId) || null
@@ -4355,6 +4378,27 @@ function App() {
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
+                    <div className="smart-list-toolbar">
+                      <select
+                        className="sort-select"
+                        value={activeSmartListId ?? ''}
+                        onChange={(e) => setActiveSmartListId(e.target.value || null)}
+                        title="Apply a saved smart list"
+                      >
+                        <option value="">All items</option>
+                        {smartLists
+                          .filter((l) => l.categoryId === 'all' || l.categoryId === activeCategory)
+                          .map((l) => (
+                            <option key={l.id} value={l.id}>★ {l.name}</option>
+                          ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="secondary-btn compact"
+                        onClick={() => setSmartListsModalOpen(true)}
+                        title="Manage smart lists"
+                      >Manage</button>
+                    </div>
                     <select
                       className="sort-select"
                       value={groupBy}
@@ -6298,6 +6342,35 @@ function App() {
       )}
 
       {toast && <Toast message={toast} />}
+
+      <SmartListsModal
+        open={smartListsModalOpen}
+        smartLists={smartLists}
+        allTags={allItemTags}
+        onClose={() => setSmartListsModalOpen(false)}
+        onSave={(list) => {
+          setSmartLists((prev) => {
+            const i = prev.findIndex((l) => l.id === list.id)
+            if (i === -1) return [...prev, list]
+            const next = prev.slice()
+            next[i] = list
+            return next
+          })
+        }}
+        onDelete={(id) => {
+          setSmartLists((prev) => prev.filter((l) => l.id !== id))
+          if (activeSmartListId === id) setActiveSmartListId(null)
+        }}
+        onApply={(list) => {
+          if (list.categoryId !== 'all' && isCategoryId(list.categoryId)) {
+            setActiveCategory(list.categoryId)
+            setSpecialView('none')
+          }
+          setActiveSmartListId(list.id)
+          setSmartListsModalOpen(false)
+        }}
+      />
+
 
       {updateModalOpen && updateInfo && (
         <div className="modal-overlay" onClick={() => downloadState.phase !== 'downloading' && setUpdateModalOpen(false)}>
