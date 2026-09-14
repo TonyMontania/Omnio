@@ -203,7 +203,13 @@ export default function SmartListsModal({ open, smartLists, onClose, onSave, onD
                             statusOptions={statusOptionsForScope}
                           />
                         </div>
-                        <button className="delete" onClick={() => removeRule(i)} title="Remove rule">✕</button>
+                        <button
+                          type="button"
+                          className="smart-list-rule-remove"
+                          onClick={() => removeRule(i)}
+                          title="Remove rule"
+                          aria-label="Remove rule"
+                        >✕</button>
                       </li>
                     ))}
                   </ul>

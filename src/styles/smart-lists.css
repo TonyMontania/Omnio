@@ -23,16 +23,23 @@
   z-index: 900;
   padding: 24px;
 }
-.modal.smart-lists-modal {
+/* Every modal spawned inside a .modal-backdrop shares an opaque panel
+   surface. Individual modals override only what they need (width,
+   max-height). Without this base, modals like library-picker /
+   playlist-picker inherit the backdrop's translucency and read as
+   "see-through" over the app behind. */
+.modal-backdrop > .modal {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  width: min(920px, 100%);
   max-height: 88vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+.modal.smart-lists-modal {
+  width: min(920px, 100%);
 }
 .smart-lists-modal .modal-header {
   display: flex;
@@ -149,14 +156,26 @@
   font-family: var(--font-mono);
 }
 .smart-list-rule-input { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.smart-list-rule .delete {
+.smart-list-rule-remove {
   background: transparent;
-  border: none;
+  border: 1px solid var(--border-soft);
   color: var(--text-dim);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
 }
-.smart-list-rule .delete:hover { color: var(--danger); }
+.smart-list-rule-remove:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
 
 .smart-lists-rule-input .status-multi { display: flex; flex-wrap: wrap; gap: 4px; }
 .smart-lists-rule-input .chip {

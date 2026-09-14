@@ -9,7 +9,13 @@ import {
 } from './icons'
 import type { PluginDef } from './plugins/registry'
 
-const EXTRA_CATEGORY_IDS = new Set(['visual_novels'])
+// Visual Novels used to live in the "Extras" bucket, split off from
+// the other libraries in the sidebar. Tony wanted it treated as a
+// first-class library — it IS a library — so the set is intentionally
+// empty. Kept as a set (not deleted) so future extras (arcade-shaped
+// pseudo-libraries, plugins in beta) can be added here without
+// touching the render logic.
+const EXTRA_CATEGORY_IDS = new Set<string>()
 
 export type SidebarView =
   | { kind: 'home' }
