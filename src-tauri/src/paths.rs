@@ -84,7 +84,7 @@ pub fn asset_folder_for_category(cat: &str) -> &'static str {
 // Top-level slices persisted at `data/<name>.json` alongside the
 // per-category shards. Mirrors TOP_SLICES in electron/paths.ts.
 pub const TOP_SLICES: &[&str] = &[
-    "collections", "artists", "settings", "customOrders", "arcadeGames", "smartLists",
+    "collections", "artists", "settings", "customOrders", "arcadeGames", "smartLists", "playlists",
 ];
 
 // Kinds of asset blobs that live under

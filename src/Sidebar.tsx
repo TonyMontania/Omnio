@@ -16,7 +16,7 @@ export type SidebarView =
   | { kind: 'library'; categoryId: string }
   | { kind: 'arcade' }
   | { kind: 'plugin'; slug: string }
-  | { kind: 'special'; id: 'calendar' | 'stats' | 'settings' }
+  | { kind: 'special'; id: 'calendar' | 'stats' | 'settings' | 'playlists' }
 
 interface Props {
   items: Item[]
@@ -34,6 +34,7 @@ interface Props {
   onOpenSearch: () => void
   onOpenRandomizer?: () => void
   onOpenArcade: () => void
+  onOpenPlaylists?: () => void
   pluginCounts?: Record<string, number>
   onOpenPlugin?: (slug: string) => void
   visiblePlugins?: PluginDef[]
@@ -42,7 +43,7 @@ interface Props {
 function isActiveLibrary(active: SidebarView, id: string): boolean {
   return active.kind === 'library' && active.categoryId === id
 }
-function isActiveSpecial(active: SidebarView, id: 'calendar' | 'stats' | 'settings'): boolean {
+function isActiveSpecial(active: SidebarView, id: 'calendar' | 'stats' | 'settings' | 'playlists'): boolean {
   return active.kind === 'special' && active.id === id
 }
 
@@ -50,6 +51,7 @@ export default function Sidebar(props: Props) {
   const {
     items, enabledCategories, arcadeEnabled, active, collapsed, onToggleCollapsed,
     onOpenHome, onOpenLibrary, onOpenCalendar, onOpenStats, onOpenSettings, onOpenSearch, onOpenRandomizer, onOpenArcade,
+    onOpenPlaylists,
     pluginCounts, onOpenPlugin, visiblePlugins,
   } = props
   const arcadeOn = arcadeEnabled !== false
@@ -199,6 +201,17 @@ export default function Sidebar(props: Props) {
           <button type="button" className="sidebar-item" onClick={onOpenRandomizer} title="Pick a random backlog item">
             <span className="sidebar-icon"><DiceIcon /></span>
             <span className="sidebar-label">Random</span>
+          </button>
+        )}
+        {onOpenPlaylists && (
+          <button
+            type="button"
+            className={isActiveSpecial(active, 'playlists') ? 'sidebar-item active' : 'sidebar-item'}
+            onClick={onOpenPlaylists}
+            title="Cross-library playlists"
+          >
+            <span className="sidebar-icon">♪</span>
+            <span className="sidebar-label">Playlists</span>
           </button>
         )}
         <button

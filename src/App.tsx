@@ -68,6 +68,8 @@ import { patchItemStatus, getUniversalStatusOptions } from './utils/statusUniver
 import type { SmartList } from './types/smartLists'
 import { matchesSmartList } from './types/smartLists'
 import SmartListsModal from './components/SmartListsModal'
+import type { Playlist } from './types/playlists'
+const PlaylistsView = lazy(() => import('./views/PlaylistsView'))
 import CardContextMenu, { type CardMenuAction } from './components/CardContextMenu'
 import ImageLightbox from './components/ImageLightbox'
 import FirstRunWizard from './FirstRunWizard'
@@ -309,6 +311,7 @@ interface AppData {
   // Sprint C — saved filter presets (see types/smartLists). Optional on
   // disk so older saves keep loading.
   smartLists?: SmartList[]
+  playlists?: Playlist[]
 }
 
 // Displayed in Settings → Data → About. Sourced from package.json so the
@@ -508,7 +511,7 @@ function App() {
   // we degrade to 'grid' inside those special renderers.
   const classicLayout: 'list' | 'grid' | 'compact' =
     layout === 'list' || layout === 'compact' ? layout : 'grid'
-  const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'vnBoard' | 'simulcastBoard' | 'stats' | 'calendar' | 'settings' | 'arcade'>('none')
+  const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'vnBoard' | 'simulcastBoard' | 'stats' | 'calendar' | 'settings' | 'arcade' | 'playlists'>('none')
   // Arcade section state (score log + 1cc grid). Loaded from and
   // persisted to the same JSON blob as `items` — see save/load below.
   const [arcadeGames, setArcadeGames] = useState<ArcadeGame[]>([])
@@ -519,6 +522,8 @@ function App() {
   const [smartLists, setSmartLists] = useState<SmartList[]>([])
   const [activeSmartListId, setActiveSmartListId] = useState<string | null>(null)
   const [smartListsModalOpen, setSmartListsModalOpen] = useState(false)
+  // Sprint C — cross-library ordered lists.
+  const [playlists, setPlaylists] = useState<Playlist[]>([])
   // Locally-installed plugin (git-ignored overlay under
   // `src/categories/<slug>/`). When non-null, its <View/> replaces
   // the library grid. Registry populates via `import.meta.glob` — the
@@ -1139,6 +1144,7 @@ function App() {
     setMusicArtists(artists)
     setArcadeGames(data?.arcadeGames ?? [])
     setSmartLists(data?.smartLists ?? [])
+    setPlaylists(data?.playlists ?? [])
     if (applySettings && data?.settings) {
       const merged = {
         ...DEFAULT_SETTINGS,
@@ -1180,7 +1186,7 @@ function App() {
   useEffect(() => {
     if (!loaded) return
     void (async () => {
-      const res = await window.ipcRenderer.invoke('data:save', { items, collections, settings, artists: musicArtists, arcadeGames, smartLists }) as { ok?: boolean; rewrites?: { from: string; to: string }[] } | boolean
+      const res = await window.ipcRenderer.invoke('data:save', { items, collections, settings, artists: musicArtists, arcadeGames, smartLists, playlists }) as { ok?: boolean; rewrites?: { from: string; to: string }[] } | boolean
       // Main-process rename step may have renamed some asset files to match
       // titles. Reflect those rewrites in local state so <img src> resolves
       // to the new filename without a full reload.
@@ -1217,7 +1223,7 @@ function App() {
       setEditions((list) => list.map((e) => ({ ...e, cover: swap(e.cover) ?? e.cover })))
       setBundleContents((list) => list.map((b) => ({ ...b, cover: swap(b.cover) ?? b.cover })))
     })()
-  }, [items, collections, settings, musicArtists, arcadeGames, smartLists, loaded])
+  }, [items, collections, settings, musicArtists, arcadeGames, smartLists, playlists, loaded])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -2475,6 +2481,7 @@ function App() {
     // renders it in the standard Omnio topbar.
     if (activePluginSlug) return pluginPageMeta
     if (specialView === 'calendar') return { icon: <CalendarIcon />, title: 'Release calendar' }
+    if (specialView === 'playlists') return { icon: <span className="page-icon-glyph">♪</span>, title: 'Playlists', count: { n: playlists.length, unit: playlists.length === 1 ? 'playlist' : 'playlists' } }
     if (specialView === 'stats') return { icon: <InsightsIcon />, title: 'Statistics' }
     if (specialView === 'settings') return { icon: <SettingsIcon />, title: 'Settings' }
     if (specialView === 'board') {
@@ -2590,6 +2597,7 @@ function App() {
             specialView === 'stats' ? { kind: 'special', id: 'stats' } :
             specialView === 'settings' ? { kind: 'special', id: 'settings' } :
             specialView === 'arcade' ? { kind: 'arcade' } :
+            specialView === 'playlists' ? { kind: 'special', id: 'playlists' } :
             activePluginSlug ? { kind: 'plugin', slug: activePluginSlug } :
             { kind: 'library', categoryId: activeCategory }
           }
@@ -2603,6 +2611,7 @@ function App() {
           onOpenSearch={() => setSearchOpen(true)}
           onOpenRandomizer={() => setRandomizerOpen(true)}
           onOpenArcade={() => { setSpecialView('arcade'); setActivePluginSlug(null); closePanel(); closeAllDetailViews() }}
+          onOpenPlaylists={() => { setSpecialView('playlists'); setActivePluginSlug(null); closePanel(); closeAllDetailViews() }}
           pluginCounts={pluginCounts}
           visiblePlugins={visiblePlugins}
           onOpenPlugin={(slug) => { setSpecialView('none'); setActivePluginSlug(slug); closePanel(); closeAllDetailViews() }}
@@ -3418,6 +3427,17 @@ function App() {
           {specialView === 'calendar' && (
             <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
               <ReleaseCalendar items={items} onNavigate={navigateToItem} />
+            </Suspense>
+          )}
+
+          {specialView === 'playlists' && (
+            <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
+              <PlaylistsView
+                playlists={playlists}
+                items={items}
+                onChange={setPlaylists}
+                onOpenItem={navigateToItem}
+              />
             </Suspense>
           )}
 
