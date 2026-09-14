@@ -71,6 +71,8 @@ import SmartListsModal from './components/SmartListsModal'
 import type { Playlist } from './types/playlists'
 const PlaylistsView = lazy(() => import('./views/PlaylistsView'))
 import CardContextMenu, { type CardMenuAction } from './components/CardContextMenu'
+import LibraryPickerModal from './components/LibraryPickerModal'
+import PlaylistPickerModal from './components/PlaylistPickerModal'
 import ImageLightbox from './components/ImageLightbox'
 import FirstRunWizard from './FirstRunWizard'
 import Toast from './Toast'
@@ -746,6 +748,9 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [ctxMenu, setCtxMenu] = useState<{ item: AnyItem; x: number; y: number } | null>(null)
+  // Sprint C — modal pickers spawned from the card context menu.
+  const [libraryPickerFor, setLibraryPickerFor] = useState<AnyItem | null>(null)
+  const [playlistPickerFor, setPlaylistPickerFor] = useState<AnyItem | null>(null)
   // Active tab in the tabbed editor prototype. Reset to 'overview' each
   // time the user opens a new item so they always land on the essentials.
   const [editorTab, setEditorTab] = useState<'overview' | 'identity' | 'progress' | 'media' | 'history' | 'related' | 'notes'>('overview')
@@ -2227,7 +2232,6 @@ function App() {
       setItems((prev) => [...prev, copy])
       setToast(`Duplicated as "${copy.title}"`)
     }
-    const targets = CATEGORIES.filter((c) => c.id !== item.categoryId)
     return [
       { label: 'Open', onClick: () => openEditPanel(item) },
       { label: 'Edit', onClick: () => { openEditPanel(item); setTimeout(() => loadItemIntoForm(item), 0); setPanelOpen(true) } },
@@ -2243,15 +2247,8 @@ function App() {
         else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
       } },
       { divider: true, label: '', onClick: () => {} },
-      // Move-to-library submenu flattened: each destination is its own row.
-      // The categoryId change re-slots the item into another JSON on next save.
-      ...targets.slice(0, 4).map((c) => ({
-        label: `Move to ${c.label}`,
-        onClick: () => {
-          setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, categoryId: c.id } : i)))
-          setToast(`Moved to ${c.label}`)
-        },
-      })),
+      { label: 'Move to library…', onClick: () => setLibraryPickerFor(item) },
+      { label: 'Add to playlist…', onClick: () => setPlaylistPickerFor(item) },
       { divider: true, label: '', onClick: () => {} },
       { label: 'Delete…', danger: true, onClick: () => handleDelete(item) },
     ]
@@ -5882,6 +5879,53 @@ function App() {
           y={ctxMenu.y}
           actions={buildCardMenu(ctxMenu.item)}
           onClose={() => setCtxMenu(null)}
+        />
+      )}
+
+      {libraryPickerFor && (
+        <LibraryPickerModal
+          currentCategoryId={libraryPickerFor.categoryId}
+          enabledCategories={settings.enabledCategories}
+          onClose={() => setLibraryPickerFor(null)}
+          onPick={(cid) => {
+            const target = libraryPickerFor
+            const targetLabel = CATEGORIES.find((c) => c.id === cid)?.label ?? cid
+            if (isCategoryId(cid)) {
+              setItems((prev) => prev.map((i) => (i.id === target.id ? { ...i, categoryId: cid } as AnyItem : i)))
+              setToast(`Moved "${target.title}" to ${targetLabel}`)
+            }
+            setLibraryPickerFor(null)
+          }}
+        />
+      )}
+
+      {playlistPickerFor && (
+        <PlaylistPickerModal
+          playlists={playlists}
+          itemCategoryId={playlistPickerFor.categoryId}
+          itemId={playlistPickerFor.id}
+          onClose={() => setPlaylistPickerFor(null)}
+          onPick={(playlistId) => {
+            const it = playlistPickerFor
+            if (!it) return
+            setPlaylists((prev) => prev.map((p) => {
+              if (p.id !== playlistId) return p
+              if (p.entries.some((e) => e.categoryId === it.categoryId && e.itemId === it.id)) return p
+              return { ...p, entries: [...p.entries, { categoryId: it.categoryId, itemId: it.id, addedAt: Date.now() }], updatedAt: Date.now() }
+            }))
+            const pl = playlists.find((p) => p.id === playlistId)
+            if (pl) setToast(`Added to "${pl.name}"`)
+            setPlaylistPickerFor(null)
+          }}
+          onCreate={(name) => {
+            if (!name) return null
+            const id = crypto.randomUUID()
+            const it = playlistPickerFor
+            const entries = it ? [{ categoryId: it.categoryId, itemId: it.id, addedAt: Date.now() }] : []
+            setPlaylists((prev) => [...prev, { id, name, entries, createdAt: Date.now() }])
+            setToast(`Created "${name}"`)
+            return id
+          }}
         />
       )}
 
