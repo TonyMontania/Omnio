@@ -76,12 +76,58 @@
   border-radius: var(--radius-sm);
   cursor: grab;
   user-select: none;
+  /* Suppress the browser's native touch-scroll gesture on the card so
+     a pointer drag from a card isn't stolen by the column's vertical
+     scroll. Vertical scroll still works from empty space inside the
+     column body. */
+  touch-action: none;
   transition: border-color 0.12s, transform 0.12s;
 }
 .kanban-card:hover { border-color: var(--accent); }
 .kanban-card.dragging {
   opacity: 0.4;
   cursor: grabbing;
+}
+
+/* Floating ghost that follows the pointer while a card is being
+   dragged. Rendered as a fixed-position sibling of the board so it
+   can escape the column's overflow-hidden. */
+.kanban-ghost {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  width: 240px;
+  transform: rotate(-1.5deg);
+}
+.kanban-ghost .kanban-card-cover {
+  width: 42px;
+  height: 58px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-family: var(--font-display);
+}
+.kanban-ghost .kanban-card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kanban-ghost .kanban-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.kanban-ghost .kanban-card-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .kanban-card-cover {
   width: 42px;
