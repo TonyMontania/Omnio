@@ -93,29 +93,44 @@ export default function KanbanView({ items, categoryId, onOpen, onSetStatus }: P
   // doesn't drop the gesture. We only add them when a drag has
   // actually started (past the threshold) so idle boards don't pay
   // for a global listener.
+  //
+  // The effect depends ONLY on `draggingId`. Reading fresh callbacks
+  // from refs inside the handlers keeps the effect from tearing down
+  // and reinstalling on every re-render (setGhost fires on every
+  // pointermove — the churn used to swallow the first Esc press
+  // because the keydown listener was momentarily absent between the
+  // cleanup and the reinstall).
+  const colUnderPointRef = useRef(colUnderPoint)
+  const endDragRef = useRef(endDrag)
+  colUnderPointRef.current = colUnderPoint
+  endDragRef.current = endDrag
   useEffect(() => {
     if (!draggingId) return
     const onMove = (e: PointerEvent) => {
       setGhost((g) => (g ? { ...g, x: e.clientX, y: e.clientY } : g))
-      const col = colUnderPoint(e.clientX, e.clientY)
-      setHoverCol(col)
+      setHoverCol(colUnderPointRef.current(e.clientX, e.clientY))
     }
-    const onUp = (e: PointerEvent) => {
-      endDrag(true, e.clientX, e.clientY)
+    const onUp = (e: PointerEvent) => { endDragRef.current(true, e.clientX, e.clientY) }
+    const onCancel = () => { endDragRef.current(false) }
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.stopPropagation()
+      e.preventDefault()
+      endDragRef.current(false)
     }
-    const onCancel = () => { endDrag(false) }
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') endDrag(false) }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onCancel)
-    window.addEventListener('keydown', onEsc)
+    // Capture phase so we run before App.tsx's own Escape handler
+    // (which might close a panel behind the drag if it went first).
+    window.addEventListener('keydown', onEsc, true)
     return () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onCancel)
-      window.removeEventListener('keydown', onEsc)
+      window.removeEventListener('keydown', onEsc, true)
     }
-  }, [draggingId, colUnderPoint, endDrag])
+  }, [draggingId])
 
   if (columns.length === 0) {
     return <p className="hint">This library doesn't have a status enum, so a Kanban view can't be built.</p>
