@@ -68,6 +68,9 @@ import { patchItemStatus, getUniversalStatusOptions } from './utils/statusUniver
 import { applyAutoStatus } from './utils/autoStatus'
 import { matchAction } from './utils/keyboardActions'
 import ShortcutsEditor from './components/ShortcutsEditor'
+import type { LibraryCustomFieldDef } from './types/customFields'
+import LibraryCustomFieldsEditor from './components/LibraryCustomFieldsEditor'
+import LibraryCustomFieldsSection from './components/LibraryCustomFieldsSection'
 import type { SmartList } from './types/smartLists'
 import { matchesSmartList } from './types/smartLists'
 import SmartListsModal from './components/SmartListsModal'
@@ -297,6 +300,11 @@ interface Settings {
   // formatCombo (e.g. "Ctrl+F", "Alt+Shift+K"). Missing entries fall
   // back to the built-in default; a blank string disables the action.
   shortcutOverrides?: Record<string, string>
+  // Sprint D — user-defined library custom-field schema keyed by
+  // categoryId. Each entry is an array of LibraryCustomFieldDef the
+  // item editor renders under a "Custom fields" section for that
+  // library. Missing = no custom fields for that library.
+  libraryCustomFields?: Record<string, LibraryCustomFieldDef[]>
 }
 
 // Small subset of add-panel fields we're willing to prefill for a new
@@ -622,7 +630,7 @@ function App() {
   // `viewingX` slots that used to live one per category — see
   // components/DetailModalRouter.tsx.
   const [viewing, setViewing] = useState<AnyItem | null>(null)
-  const [settingsTab, setSettingsTab] = useState<'appearance' | 'behavior' | 'libraries' | 'cards' | 'shortcuts' | 'data' | 'integrations' | 'maintenance'>('appearance')
+  const [settingsTab, setSettingsTab] = useState<'appearance' | 'behavior' | 'libraries' | 'cards' | 'customFields' | 'shortcuts' | 'data' | 'integrations' | 'maintenance'>('appearance')
   const [welcomeStep, setWelcomeStep] = useState<'libraries' | 'keys' | 'tips'>('libraries')
   const [welcomePicks, setWelcomePicks] = useState<Record<string, boolean>>({})
   const [moviesBoardFilter, setMoviesBoardFilter] = useState<'watched' | 'unwatched'>('watched')
@@ -898,6 +906,10 @@ function App() {
   const [title, setTitle] = useState('')
   const [cover, setCover] = useState('')
   const [notes, setNotes] = useState('')
+  // Sprint D — buffered values for the library's user-defined custom
+  // fields. Reset at every panel open. Keyed by field id, so renaming
+  // a field doesn't strand its value.
+  const [libraryCustomValues, setLibraryCustomValues] = useState<Record<string, string | number | boolean | null>>({})
   const [tags, setTags] = useState<string[]>([])
   const [rating, setRating] = useState(0)
   const [finishedAt, setFinishedAt] = useState('')
@@ -1577,7 +1589,7 @@ function App() {
     setVisualNovelStatus, setVnLength, setVnLengthHours, setVnEngine, setVnOriginalLanguage, setVnLanguages, setVnAliases, setVnCharacters, setVnStaff, setVnScreenshots, setVnCovers, setVnEditions, setVnPublishers, setVnCommunityRating, setVnDevStatus, setVnDescription, setVnReview, setVndbId, setNsfw,
   }), [])
 
-  const resetForm = () => resetFormImpl(formSetters)
+  const resetForm = () => { resetFormImpl(formSetters); setLibraryCustomValues({}) }
 
   const resetListControls = () => { setSearch(''); setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]) }
 
@@ -1745,6 +1757,7 @@ function App() {
     const hltb = (item as { hltbHours?: number }).hltbHours
     setHltbHours(hltb !== undefined ? String(hltb) : '')
     setBasedOnItemId((item as { basedOnItemId?: string }).basedOnItemId ?? '')
+    setLibraryCustomValues(item.libraryCustomFieldValues ?? {})
   }
 
   // When every detail view closes and the list JSX remounts, restore the
@@ -2185,6 +2198,25 @@ function App() {
     // every editor section's props.
     const withBasedOn = (it: AnyItem): AnyItem =>
       basedOnItemId ? ({ ...it, basedOnItemId } as AnyItem) : ({ ...it, basedOnItemId: undefined } as AnyItem)
+    // Attach the buffered library-custom-field values. When the panel
+    // form left the bag empty (nothing set for this item, no custom
+    // fields declared for this library), we omit the property so the
+    // JSON on disk stays tidy.
+    const withLibraryCustom = (it: AnyItem): AnyItem => {
+      const cleaned: Record<string, string | number | boolean | null> = {}
+      let has = false
+      for (const [k, v] of Object.entries(libraryCustomValues)) {
+        if (v === null || v === '' || v === undefined) continue
+        cleaned[k] = v
+        has = true
+      }
+      if (!has) {
+        const { libraryCustomFieldValues: _drop, ...rest } = it
+        void _drop
+        return rest as AnyItem
+      }
+      return { ...it, libraryCustomFieldValues: cleaned }
+    }
     // Sprint D — auto-status transitions. Runs on every save; a no-op
     // when the toggle is off or when the rating/finishedAt signals
     // didn't cross the "user finished this" threshold.
@@ -2195,14 +2227,14 @@ function App() {
     if (editingId) {
       const oldItem = items.find((it) => it.id === editingId)
       const createdAt = oldItem?.createdAt ?? Date.now()
-      const built = withBasedOn(buildItemFromForm(editingId, createdAt))
+      const built = withLibraryCustom(withBasedOn(buildItemFromForm(editingId, createdAt)))
       const withAuto = applyAutoStatus(oldItem ?? null, built, autoStatusOpts)
       const updated = await persistItemImages(withAuto)
       findOrphanedItemAssets(oldItem, updated).forEach(deleteAssetFile)
       setItems((prev) => prev.map((it) => (it.id === editingId ? updated : it)))
       if (viewing && viewing.id === editingId) setViewing(updated)
     } else {
-      const built = withBasedOn(buildItemFromForm(crypto.randomUUID(), Date.now()))
+      const built = withLibraryCustom(withBasedOn(buildItemFromForm(crypto.randomUUID(), Date.now())))
       const withAuto = applyAutoStatus(null, built, autoStatusOpts)
       const created = await persistItemImages(withAuto)
       setItems((prev) => [...prev, created])
@@ -3502,6 +3534,7 @@ function App() {
                 <div className="settings-nav-group-label">Libraries</div>
                 <button className={settingsTab === 'libraries' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('libraries')}><span className="settings-nav-icon">☰</span>Enabled libraries</button>
                 <button className={settingsTab === 'cards' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('cards')}><span className="settings-nav-icon">▦</span>Card fields</button>
+                <button className={settingsTab === 'customFields' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('customFields')}><span className="settings-nav-icon">✎</span>Custom fields</button>
                 <button className={settingsTab === 'shortcuts' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('shortcuts')}><span className="settings-nav-icon">⌨</span>Keyboard shortcuts</button>
                 <div className="settings-nav-group-label">Data</div>
                 <button className={settingsTab === 'data' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('data')}><span className="settings-nav-icon">⌘</span>Backup, import &amp; export</button>
@@ -3876,6 +3909,19 @@ function App() {
                       })}
                     </div>
                   </div>
+                )}
+
+                {settingsTab === 'customFields' && (
+                  <>
+                    <div className="settings-section-title">Custom fields per library</div>
+                    <p className="hint" style={{ marginTop: 0 }}>
+                      Add fields Omnio doesn't ship with — every item in the picked library grows the same extra inputs at the bottom of its editor. Renaming a field keeps existing values; removing a field just hides them (values reappear if you add the field back).
+                    </p>
+                    <LibraryCustomFieldsEditor
+                      fields={settings.libraryCustomFields ?? {}}
+                      onChange={(next) => setSettings((s) => ({ ...s, libraryCustomFields: next }))}
+                    />
+                  </>
                 )}
 
                 {settingsTab === 'shortcuts' && (
@@ -5425,6 +5471,13 @@ function App() {
                       onAdd={(t) => setTags((prev) => prev.includes(t) ? prev : [...prev, t])}
                       onRemove={(i) => setTags((prev) => prev.filter((_, idx) => idx !== i))}
                     />
+
+                    <LibraryCustomFieldsSection
+                      defs={settings.libraryCustomFields?.[activeCategory] ?? []}
+                      values={libraryCustomValues}
+                      onChange={setLibraryCustomValues}
+                    />
+
                     <div className="field-group">
                       <label>Custom fields — your own key/value pairs</label>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

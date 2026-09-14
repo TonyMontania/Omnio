@@ -78,3 +78,83 @@
   display: flex;
   gap: 6px;
 }
+
+/* Sprint D — library-level custom fields editor (Settings pane) */
+.library-custom-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.library-custom-fields-add {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.library-custom-fields-add input { flex: 1; }
+.library-custom-fields-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.library-custom-field {
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.library-custom-field-row {
+  display: grid;
+  grid-template-columns: 1fr 200px auto;
+  gap: 10px;
+  align-items: center;
+}
+.library-custom-field-name { font-weight: 500; font-size: 14px; }
+.library-custom-field-desc { font-size: 12.5px; color: var(--text-dim); }
+.library-custom-field-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.library-custom-field-options label {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.library-custom-field-options textarea {
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+/* Item editor — user-added-fields section rendered inline in the
+   add / edit panel between the tag editor and the free-form
+   key/value block. */
+.library-custom-fields-section {
+  padding: 14px 0;
+  margin: 6px 0;
+  border-top: 1px dashed var(--border-soft);
+  border-bottom: 1px dashed var(--border-soft);
+}
+.library-custom-fields-section h4 {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}

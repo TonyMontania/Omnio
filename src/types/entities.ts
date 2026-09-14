@@ -634,6 +634,11 @@ export interface AnyItem {
   // every detail view; each item can carry its own list independently of the
   // built-in category schema.
   customFields?: CustomField[]
+  // User-defined *library-level* custom fields (see types/customFields.ts).
+  // The schema lives in Settings.libraryCustomFields[categoryId]; each item
+  // stores its own values keyed by field id under this bag. Missing entries
+  // mean the item just hasn't answered that field — never a crash.
+  libraryCustomFieldValues?: Record<string, string | number | boolean | null>
 }
 
 export interface CustomField {
