@@ -1,13 +1,54 @@
 /* Sprint C — Smart lists modal + toolbar chip. */
 
+/* Toolbar chip — smart-list dropdown + inline gear button, styled to
+   sit next to .sort-select and .filters-btn without looking bolted
+   on. Both children share the same 9px vertical padding and border
+   language so the pair reads as a single unified control. */
 .smart-list-toolbar {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.smart-list-toolbar-select {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 9px 10px 9px 12px;
+  cursor: pointer;
+  outline: none;
+  min-width: 140px;
+}
+.smart-list-toolbar-select:focus { color: var(--text); }
+.smart-list-toolbar-manage {
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 0 12px;
+  font-size: 15px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  min-width: 36px;
+  transition: color 0.12s, background 0.12s;
 }
-.smart-list-toolbar .secondary-btn.compact {
-  padding: 6px 10px;
-  font-size: 12px;
+.smart-list-toolbar-manage:hover {
+  color: var(--accent);
+  background: var(--surface);
+}
+/* When a smart list is active, tint the whole chip so the user can
+   see at a glance that the library view is filtered. */
+.smart-list-toolbar.has-active {
+  border-color: var(--accent);
+}
+.smart-list-toolbar.has-active .smart-list-toolbar-select {
+  color: var(--accent);
 }
 
 /* Modal backdrop / shell — mirrors the pattern used elsewhere in the

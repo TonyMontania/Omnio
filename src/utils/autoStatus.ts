@@ -39,8 +39,13 @@ export function applyAutoStatus(prev: AnyItem | null, next: AnyItem, opts: AutoS
 
   switch (next.categoryId) {
     case 'videojuegos': {
+      // Games get bumped to 'played' (not 'completed'). Users reserve
+      // 'completed' for the meaningful "I 100%'d this / got every
+      // achievement" milestone — auto-picking it would trample that.
+      // 'played' means "credits rolled or I stopped, and I have an
+      // opinion now" which is what a rating already signals.
       if (isUnfinishedGame(next.gameStatus)) {
-        patched.gameStatus = 'completed'
+        patched.gameStatus = 'played'
         touched = true
       }
       break

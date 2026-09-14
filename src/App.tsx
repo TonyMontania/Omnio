@@ -3627,12 +3627,12 @@ function App() {
                       </div>
                     </div>
                     <div className="field-group">
-                      <label>Auto-mark as completed when you rate</label>
+                      <label>Auto-mark as finished when you rate</label>
                       <div className="yesno">
                         <button type="button" className={(settings.autoStatusOnRate !== false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoStatusOnRate: true }))}>Yes</button>
                         <button type="button" className={(settings.autoStatusOnRate === false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoStatusOnRate: false }))}>No</button>
                       </div>
-                      <p className="hint">Giving an item a rating (or setting a finished date) bumps its status to "completed" if it was still in backlog / in-progress. Off = every status change is manual.</p>
+                      <p className="hint">Giving an item a rating (or setting a finished date) bumps its status to the "finished" bucket if it was still in backlog / in-progress. Games specifically go to <b>Played</b> — <b>Completed</b> stays reserved for your "I 100%'d it / got every achievement" flag. Every other library goes to Completed / Watched / Read / Listened. Off = every status change is manual.</p>
                     </div>
                     <div className="field-group">
                       <label>Stamp today's date when auto-completing</label>
@@ -4489,9 +4489,9 @@ function App() {
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
-                    <div className="smart-list-toolbar">
+                    <div className={`smart-list-toolbar${activeSmartListId ? ' has-active' : ''}`}>
                       <select
-                        className="sort-select"
+                        className="smart-list-toolbar-select"
                         value={activeSmartListId ?? ''}
                         onChange={(e) => setActiveSmartListId(e.target.value || null)}
                         title="Apply a saved smart list"
@@ -4505,10 +4505,11 @@ function App() {
                       </select>
                       <button
                         type="button"
-                        className="secondary-btn compact"
+                        className="smart-list-toolbar-manage"
                         onClick={() => setSmartListsModalOpen(true)}
                         title="Manage smart lists"
-                      >Manage</button>
+                        aria-label="Manage smart lists"
+                      >⚙</button>
                     </div>
                     <select
                       className="sort-select"
