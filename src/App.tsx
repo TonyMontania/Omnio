@@ -23,6 +23,7 @@ import type {
   AgeRating, RelatedItem, RewatchEntry,
   BandStatus, BandMember, SingleCover, AlbumEdition,
   CustomField, SaveFile, Achievement, Screenshot, ChapterNote, Playthrough, VnEnding,
+  StoreLink, Purchase, DeckCompat, ProtonRating,
 } from './types'
 import type { ArcadeGame } from './types/arcade'
 
@@ -73,6 +74,7 @@ import LibraryCustomFieldsEditor from './components/LibraryCustomFieldsEditor'
 import LibraryCustomFieldsSection from './components/LibraryCustomFieldsSection'
 import PlaythroughsEditor from './components/editors/PlaythroughsEditor'
 import VnEndingsEditor from './components/editors/VnEndingsEditor'
+import GameStoreEditor from './components/editors/GameStoreEditor'
 import type { SmartList } from './types/smartLists'
 import { matchesSmartList } from './types/smartLists'
 import SmartListsModal from './components/SmartListsModal'
@@ -938,6 +940,12 @@ function App() {
   // above: buffered locally, cleared on reset, loaded on edit,
   // patched back in on save.
   const [vnEndings, setVnEndings] = useState<VnEnding[]>([])
+  // Sprint F — Games polish. Store links, purchase log, and two
+  // compat enums live in their own buffered state slots.
+  const [storeLinks, setStoreLinks] = useState<StoreLink[]>([])
+  const [purchases, setPurchases] = useState<Purchase[]>([])
+  const [deckCompat, setDeckCompat] = useState<DeckCompat | undefined>(undefined)
+  const [protonRating, setProtonRating] = useState<ProtonRating | undefined>(undefined)
   const [hasDlc, setHasDlc] = useState(false)
   const [dlcList, setDlcList] = useState<DlcEntry[]>([])
   const [hasAddons, setHasAddons] = useState(false)
@@ -1600,7 +1608,12 @@ function App() {
     setVisualNovelStatus, setVnLength, setVnLengthHours, setVnEngine, setVnOriginalLanguage, setVnLanguages, setVnAliases, setVnCharacters, setVnStaff, setVnScreenshots, setVnCovers, setVnEditions, setVnPublishers, setVnCommunityRating, setVnDevStatus, setVnDescription, setVnReview, setVndbId, setNsfw,
   }), [])
 
-  const resetForm = () => { resetFormImpl(formSetters); setLibraryCustomValues({}); setPlaythroughs([]); setVnEndings([]) }
+  const resetForm = () => {
+    resetFormImpl(formSetters)
+    setLibraryCustomValues({})
+    setPlaythroughs([]); setVnEndings([])
+    setStoreLinks([]); setPurchases([]); setDeckCompat(undefined); setProtonRating(undefined)
+  }
 
   const resetListControls = () => { setSearch(''); setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]) }
 
@@ -1771,6 +1784,10 @@ function App() {
     setLibraryCustomValues(item.libraryCustomFieldValues ?? {})
     setPlaythroughs(item.playthroughs ?? [])
     setVnEndings(item.vnEndings ?? [])
+    setStoreLinks(item.storeLinks ?? [])
+    setPurchases(item.purchases ?? [])
+    setDeckCompat(item.deckCompat)
+    setProtonRating(item.protonRating)
   }
 
   // When every detail view closes and the list JSX remounts, restore the
@@ -2235,6 +2252,25 @@ function App() {
       }
       return { ...it, vnEndings }
     }
+    // Sprint F — Games storefront + purchase log + compat enums.
+    // Everything below the categoryId gate is stripped for non-game
+    // items so a movie or a book never grows a stray store link on
+    // save. Empty arrays / undefined enums drop the property so the
+    // on-disk JSON stays tidy.
+    const withGamePolish = (it: AnyItem): AnyItem => {
+      if (it.categoryId !== 'videojuegos') return it
+      const {
+        storeLinks: _s, purchases: _p, deckCompat: _d, protonRating: _r,
+        ...rest
+      } = it
+      void _s; void _p; void _d; void _r
+      const next = { ...rest } as AnyItem
+      if (storeLinks.length > 0) next.storeLinks = storeLinks
+      if (purchases.length > 0) next.purchases = purchases
+      if (deckCompat) next.deckCompat = deckCompat
+      if (protonRating) next.protonRating = protonRating
+      return next
+    }
     // Attach the buffered library-custom-field values. When the panel
     // form left the bag empty (nothing set for this item, no custom
     // fields declared for this library), we omit the property so the
@@ -2264,14 +2300,14 @@ function App() {
     if (editingId) {
       const oldItem = items.find((it) => it.id === editingId)
       const createdAt = oldItem?.createdAt ?? Date.now()
-      const built = withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(editingId, createdAt)))))
+      const built = withGamePolish(withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(editingId, createdAt))))))
       const withAuto = applyAutoStatus(oldItem ?? null, built, autoStatusOpts)
       const updated = await persistItemImages(withAuto)
       findOrphanedItemAssets(oldItem, updated).forEach(deleteAssetFile)
       setItems((prev) => prev.map((it) => (it.id === editingId ? updated : it)))
       if (viewing && viewing.id === editingId) setViewing(updated)
     } else {
-      const built = withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(crypto.randomUUID(), Date.now())))))
+      const built = withGamePolish(withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(crypto.randomUUID(), Date.now()))))))
       const withAuto = applyAutoStatus(null, built, autoStatusOpts)
       const created = await persistItemImages(withAuto)
       setItems((prev) => [...prev, created])
@@ -5177,6 +5213,18 @@ function App() {
                       <PlaythroughsEditor
                         playthroughs={playthroughs}
                         onChange={setPlaythroughs}
+                      />
+                    )}
+                    {isVideojuegos && (
+                      <GameStoreEditor
+                        storeLinks={storeLinks}
+                        onStoreLinksChange={setStoreLinks}
+                        purchases={purchases}
+                        onPurchasesChange={setPurchases}
+                        deckCompat={deckCompat}
+                        onDeckCompatChange={setDeckCompat}
+                        protonRating={protonRating}
+                        onProtonRatingChange={setProtonRating}
                       />
                     )}
 

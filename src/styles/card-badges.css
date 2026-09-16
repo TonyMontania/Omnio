@@ -27,3 +27,25 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50%      { opacity: 0.35; transform: scale(0.75); }
 }
+
+/* Steam Deck compatibility chip. Colors are semantic — verified is
+   the standard "everything works" green, playable is amber (works
+   with caveats), unsupported is red-adjacent. Unknown never renders
+   so users don't see a blank badge on every un-tracked game. */
+.deck-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+  align-self: flex-start;
+  border: 1px solid transparent;
+  text-transform: capitalize;
+}
+.deck-chip.deck-verified   { color: #2fa06a; background: color-mix(in srgb, #2fa06a 12%, transparent); border-color: color-mix(in srgb, #2fa06a 40%, transparent); }
+.deck-chip.deck-playable   { color: #c88a1c; background: color-mix(in srgb, #c88a1c 12%, transparent); border-color: color-mix(in srgb, #c88a1c 40%, transparent); }
+.deck-chip.deck-unsupported { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }

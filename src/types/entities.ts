@@ -485,6 +485,25 @@ export interface AnyItem {
   // ending a VN offers; the user ticks off which ones they've seen.
   // Purely additive — a VN with no endings tracked shows nothing.
   vnEndings?: VnEnding[]
+  // Sprint F — Games polish. Links to the game's store page across
+  // every storefront the user cares about, so opening "Elden Ring"
+  // in Steam vs GOG is a single click from the detail view. Each
+  // entry keeps its own store label so the icons render correctly.
+  storeLinks?: StoreLink[]
+  // Sprint F — Games polish. Purchase log. One entry per time the
+  // user bought this game — many people own the same game on Steam
+  // AND GOG AND a physical copy; the log captures the shape of that
+  // ownership. Feeds a "total spent" strip in the editor header.
+  purchases?: Purchase[]
+  // Sprint F — Games polish. Steam Deck / SteamOS compatibility as
+  // Valve labels it: Verified, Playable, Unsupported, or Unknown.
+  // Only rendered when set — the field stays out of libraries that
+  // don't care about it.
+  deckCompat?: DeckCompat
+  // Sprint F — Games polish. ProtonDB rating for Linux users:
+  // platinum / gold / silver / bronze / borked. Same "hide when
+  // unset" rule as deckCompat.
+  protonRating?: ProtonRating
   hasDlc?: boolean
   dlcList?: DlcEntry[]
   hasAddons?: boolean
@@ -657,6 +676,37 @@ export interface CustomField {
   key: string
   value: string
 }
+
+// Sprint F — Games polish. One store button on a game's detail view.
+// `store` is a short slug the UI maps to an icon / label. Free-text
+// `note` is optional (e.g. "Bought as a gift", "Family library").
+export type StoreSlug =
+  | 'steam' | 'gog' | 'epic' | 'itch' | 'humble' | 'ubi' | 'ea'
+  | 'battlenet' | 'rockstar' | 'nintendo' | 'playstation' | 'xbox'
+  | 'official' | 'other'
+export interface StoreLink {
+  id: string
+  store: StoreSlug
+  url: string
+  note?: string
+}
+
+// Sprint F — Games polish. One purchase entry. Every field except
+// `id` is optional so the log can capture partial history (a game
+// gifted with no price, or a Steam sale with no exact discount %).
+export interface Purchase {
+  id: string
+  date?: string        // ISO yyyy-mm-dd
+  price?: string       // free-text so "€19.99" and "1999 JPY" both fit
+  currency?: string    // ISO code when the price is numeric
+  storeLabel?: string  // matches a StoreLink.store slug OR a free-text label
+  discount?: string    // "-75%" or "$40 off"
+  note?: string        // "Bought as a birthday gift", "Physical PS5 disc"
+  createdAt: number
+}
+
+export type DeckCompat = 'verified' | 'playable' | 'unsupported' | 'unknown'
+export type ProtonRating = 'platinum' | 'gold' | 'silver' | 'bronze' | 'borked'
 
 // Sprint E — one entry in Item.vnEndings. Ordered list of the VN's
 // endings (or routes, however the user maps their mental model). A

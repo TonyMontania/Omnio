@@ -157,6 +157,14 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
             {item.airingDay ? `Airs ${item.airingDay.slice(0, 3)}` : 'Airing'}
           </p>
         )}
+        {isGame && item.deckCompat && item.deckCompat !== 'unknown' && (
+          <p
+            className={`deck-chip deck-${item.deckCompat}`}
+            title={`Steam Deck: ${item.deckCompat}`}
+          >
+            <span aria-hidden style={{ fontSize: 10 }}>◆</span> Deck: {item.deckCompat}
+          </p>
+        )}
 
         {isMusic ? (
           <>
