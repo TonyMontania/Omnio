@@ -78,7 +78,7 @@ export type BookField = 'title' | 'authors' | 'status' | 'pages' | 'rating' | 't
 // five buckets — the community-averaged hours land in `vnLengthHours`.
 export type VisualNovelStatus = 'plan_to_play' | 'playing' | 'paused' | 'completed' | 'dropped'
 export type VnLength = 'very_short' | 'short' | 'medium' | 'long' | 'very_long'
-export type VnField = 'title' | 'status' | 'length' | 'rating' | 'tags'
+export type VnField = 'title' | 'status' | 'length' | 'year' | 'rating' | 'tags'
 
 // A character in a VN. Role mirrors VNDB's own vocabulary: protagonist
 // (Main Character), main, side, appears. `seiyuu` is the voice actor when

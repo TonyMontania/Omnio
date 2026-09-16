@@ -150,6 +150,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
         {showMangaAuthors && <p className="item-meta">{mangaAuthorsList!.slice(0, 2).join(', ')}</p>}
         {showVnDevs && <p className="item-meta">{item.devs!.slice(0, 2).join(', ')}</p>}
         {vnLength && <p className="item-time">{vnLength}</p>}
+        {isVn && vf!.year && item.releaseYear && <p className="item-time">{item.releaseYear}</p>}
         {showMovieStatus && <p className="item-status">{item.consumed ? 'Watched' : 'Not watched'}</p>}
         {(isAnime || isSeries) && item.airingStatus === 'airing' && (
           <p className="airing-chip" title={item.airingDay ? `New episodes on ${item.airingDay}` : 'Currently airing'}>

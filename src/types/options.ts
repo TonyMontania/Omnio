@@ -441,12 +441,13 @@ export const VN_FIELD_OPTIONS: { value: VnField; label: string }[] = [
   { value: 'title',  label: 'Title' },
   { value: 'status', label: 'Status' },
   { value: 'length', label: 'Length' },
+  { value: 'year',   label: 'Year' },
   { value: 'rating', label: 'Rating' },
   { value: 'tags',   label: 'Tags' },
 ]
 
 export const DEFAULT_VN_FIELDS: Record<VnField, boolean> = {
-  title: true, status: true, length: true, rating: true, tags: true,
+  title: true, status: true, length: true, year: false, rating: true, tags: true,
 }
 
 export const VN_DEV_STATUS_OPTIONS: { value: VnDevStatus; label: string }[] = [

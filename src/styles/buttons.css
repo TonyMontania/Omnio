@@ -1,0 +1,187 @@
+/* Consolidated button language for Omnio.
+   Single file that pins every button family to a shared rhythm — the
+   same vertical padding, the same border weight, the same hover +
+   focus rings — so the app reads as one system regardless of which
+   surface a button sits on (toolbar, editor, settings, modal, list
+   item). Individual class files kept below add semantics (danger,
+   ghost, pill-chip) but never override the base.
+
+   Language:
+     .primary-btn  — accent-filled CTA. Save / Confirm / +Add.
+     .secondary-btn — surface tile with an outline. Supporting actions.
+     .add-btn      — alias of primary. Kept for legacy call-sites.
+     .filters-btn  — same look as .sort-select; row-mate for dropdowns.
+     .pill         — small rounded chip for on/off toggles + tags.
+     .danger-btn   — destructive action; danger accent, ghost look.
+
+   Shared:
+     - padding: 9px 14px (medium); 6px 12px (pill).
+     - border-radius: var(--radius-sm) for rectangular; 999px for pills.
+     - font-size: 13px; font-family: inherit.
+     - transition: 150ms on color / background / border.
+     - :focus-visible ring in accent so keyboard users can see the target.
+     - :disabled: 50% opacity + not-allowed cursor.
+*/
+
+/* ---------- Shared base --------------------------------------- */
+
+.primary-btn,
+.secondary-btn,
+.add-btn,
+.filters-btn,
+.danger-btn,
+.delete-mode-btn {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.2;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.primary-btn:focus-visible,
+.secondary-btn:focus-visible,
+.add-btn:focus-visible,
+.filters-btn:focus-visible,
+.danger-btn:focus-visible,
+.pill:focus-visible,
+.delete-mode-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+}
+
+.primary-btn:disabled,
+.secondary-btn:disabled,
+.add-btn:disabled,
+.filters-btn:disabled,
+.danger-btn:disabled,
+.pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Primary CTA --------------------------------------- */
+
+.primary-btn,
+.add-btn {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #1a1408;
+  font-weight: 600;
+}
+.primary-btn:hover:not(:disabled),
+.add-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+/* ---------- Secondary (outlined) ------------------------------ */
+
+.secondary-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.secondary-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.secondary-btn.danger { color: var(--danger); border-color: var(--border-soft); }
+.secondary-btn.danger:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface-2));
+}
+
+/* ---------- Toolbar row-mates (filter dropdown look) ---------- */
+
+.filters-btn,
+.delete-mode-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.filters-btn:hover:not(:disabled),
+.delete-mode-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.filters-btn.active { border-color: var(--accent); color: var(--accent); }
+.delete-mode-btn:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+.delete-mode-btn.active {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+
+/* ---------- Danger action ------------------------------------- */
+
+.danger-btn {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-weight: 600;
+}
+.danger-btn:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* ---------- Pill (chip toggle) -------------------------------- */
+
+.pill {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-body);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pill:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
+.pill.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); font-weight: 600; }
+.pill.active:hover:not(:disabled) { background: var(--accent-soft); }
+
+/* ---------- Compact modifier ---------------------------------- */
+
+.primary-btn.compact,
+.secondary-btn.compact,
+.danger-btn.compact { padding: 6px 10px; font-size: 12px; }
+
+/* ---------- Icon-only round button --------------------------- */
+
+.icon-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 13px;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.icon-btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border-soft);
+}
+.icon-btn.danger:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
