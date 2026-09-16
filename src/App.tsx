@@ -22,7 +22,7 @@ import type {
   VnCover, VnEdition, VnPublisher, VnDevStatus,
   AgeRating, RelatedItem, RewatchEntry,
   BandStatus, BandMember, SingleCover, AlbumEdition,
-  CustomField, SaveFile, Achievement, Screenshot, ChapterNote,
+  CustomField, SaveFile, Achievement, Screenshot, ChapterNote, Playthrough, VnEnding,
 } from './types'
 import type { ArcadeGame } from './types/arcade'
 
@@ -71,6 +71,8 @@ import ShortcutsEditor from './components/ShortcutsEditor'
 import type { LibraryCustomFieldDef } from './types/customFields'
 import LibraryCustomFieldsEditor from './components/LibraryCustomFieldsEditor'
 import LibraryCustomFieldsSection from './components/LibraryCustomFieldsSection'
+import PlaythroughsEditor from './components/editors/PlaythroughsEditor'
+import VnEndingsEditor from './components/editors/VnEndingsEditor'
 import type { SmartList } from './types/smartLists'
 import { matchesSmartList } from './types/smartLists'
 import SmartListsModal from './components/SmartListsModal'
@@ -927,6 +929,15 @@ function App() {
   const [gameStatus, setGameStatus] = useState<GameStatus>('backlog')
   const [playTime, setPlayTime] = useState('')
   const [hltbHours, setHltbHours] = useState('')
+  // Sprint E — Games polish. Structured playthroughs / runs the user
+  // can log alongside the flat `playTime` string. Loaded from
+  // Item.playthroughs; persisted back through buildItemFromForm's
+  // extra-fields injection in handleSave.
+  const [playthroughs, setPlaythroughs] = useState<Playthrough[]>([])
+  // Sprint E — VN endings tracker. Same shape story as playthroughs
+  // above: buffered locally, cleared on reset, loaded on edit,
+  // patched back in on save.
+  const [vnEndings, setVnEndings] = useState<VnEnding[]>([])
   const [hasDlc, setHasDlc] = useState(false)
   const [dlcList, setDlcList] = useState<DlcEntry[]>([])
   const [hasAddons, setHasAddons] = useState(false)
@@ -1589,7 +1600,7 @@ function App() {
     setVisualNovelStatus, setVnLength, setVnLengthHours, setVnEngine, setVnOriginalLanguage, setVnLanguages, setVnAliases, setVnCharacters, setVnStaff, setVnScreenshots, setVnCovers, setVnEditions, setVnPublishers, setVnCommunityRating, setVnDevStatus, setVnDescription, setVnReview, setVndbId, setNsfw,
   }), [])
 
-  const resetForm = () => { resetFormImpl(formSetters); setLibraryCustomValues({}) }
+  const resetForm = () => { resetFormImpl(formSetters); setLibraryCustomValues({}); setPlaythroughs([]); setVnEndings([]) }
 
   const resetListControls = () => { setSearch(''); setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]) }
 
@@ -1758,6 +1769,8 @@ function App() {
     setHltbHours(hltb !== undefined ? String(hltb) : '')
     setBasedOnItemId((item as { basedOnItemId?: string }).basedOnItemId ?? '')
     setLibraryCustomValues(item.libraryCustomFieldValues ?? {})
+    setPlaythroughs(item.playthroughs ?? [])
+    setVnEndings(item.vnEndings ?? [])
   }
 
   // When every detail view closes and the list JSX remounts, restore the
@@ -2198,6 +2211,30 @@ function App() {
     // every editor section's props.
     const withBasedOn = (it: AnyItem): AnyItem =>
       basedOnItemId ? ({ ...it, basedOnItemId } as AnyItem) : ({ ...it, basedOnItemId: undefined } as AnyItem)
+    // Sprint E — Games only. Attach the buffered playthroughs list;
+    // strip the property entirely when empty so on-disk JSON stays
+    // tidy and non-game items never carry a stray key.
+    const withPlaythroughs = (it: AnyItem): AnyItem => {
+      if (it.categoryId !== 'videojuegos') return it
+      if (playthroughs.length === 0) {
+        const { playthroughs: _drop, ...rest } = it
+        void _drop
+        return rest as AnyItem
+      }
+      return { ...it, playthroughs }
+    }
+    // Sprint E — VN endings. Same tidy-up story: strip the key
+    // entirely when nothing is tracked so on-disk JSON stays clean
+    // and non-VN items never carry the field.
+    const withVnEndings = (it: AnyItem): AnyItem => {
+      if (it.categoryId !== 'visual_novels') return it
+      if (vnEndings.length === 0) {
+        const { vnEndings: _drop, ...rest } = it
+        void _drop
+        return rest as AnyItem
+      }
+      return { ...it, vnEndings }
+    }
     // Attach the buffered library-custom-field values. When the panel
     // form left the bag empty (nothing set for this item, no custom
     // fields declared for this library), we omit the property so the
@@ -2227,14 +2264,14 @@ function App() {
     if (editingId) {
       const oldItem = items.find((it) => it.id === editingId)
       const createdAt = oldItem?.createdAt ?? Date.now()
-      const built = withLibraryCustom(withBasedOn(buildItemFromForm(editingId, createdAt)))
+      const built = withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(editingId, createdAt)))))
       const withAuto = applyAutoStatus(oldItem ?? null, built, autoStatusOpts)
       const updated = await persistItemImages(withAuto)
       findOrphanedItemAssets(oldItem, updated).forEach(deleteAssetFile)
       setItems((prev) => prev.map((it) => (it.id === editingId ? updated : it)))
       if (viewing && viewing.id === editingId) setViewing(updated)
     } else {
-      const built = withLibraryCustom(withBasedOn(buildItemFromForm(crypto.randomUUID(), Date.now())))
+      const built = withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(crypto.randomUUID(), Date.now())))))
       const withAuto = applyAutoStatus(null, built, autoStatusOpts)
       const created = await persistItemImages(withAuto)
       setItems((prev) => [...prev, created])
@@ -5137,6 +5174,13 @@ function App() {
                     )}
 
                     {isVideojuegos && (
+                      <PlaythroughsEditor
+                        playthroughs={playthroughs}
+                        onChange={setPlaythroughs}
+                      />
+                    )}
+
+                    {isVideojuegos && (
                       <GameEditorSection
                         title={title}
                         editingId={editingId}
@@ -5374,6 +5418,13 @@ function App() {
                     vndbId={vndbId} setVndbId={setVndbId}
                     relatedItems={relatedItems} setRelatedItems={setRelatedItems}
                     recommendedItems={recommendedItems} setRecommendedItems={setRecommendedItems}
+                  />
+                )}
+
+                {activeCategory === 'visual_novels' && (
+                  <VnEndingsEditor
+                    endings={vnEndings}
+                    onChange={setVnEndings}
                   />
                 )}
 

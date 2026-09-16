@@ -474,6 +474,17 @@ export interface AnyItem {
   ownership?: Ownership
   gameStatus?: GameStatus
   playTime?: string
+  // Sprint E — structured playthroughs / runs. Each entry captures one
+  // discrete play session (a full campaign run, a NG+ replay, a co-op
+  // buddy playthrough). Different from `playTime` which is a single
+  // total-hours field; this array lets a user log "I beat this three
+  // times: hardcore ranger, mage, and coop with a friend". The card
+  // meta / detail view can sum hours from here when playTime is empty.
+  playthroughs?: Playthrough[]
+  // Sprint E — VN endings tracker. Each entry represents one route /
+  // ending a VN offers; the user ticks off which ones they've seen.
+  // Purely additive — a VN with no endings tracked shows nothing.
+  vnEndings?: VnEnding[]
   hasDlc?: boolean
   dlcList?: DlcEntry[]
   hasAddons?: boolean
@@ -645,4 +656,60 @@ export interface CustomField {
   id: string
   key: string
   value: string
+}
+
+// Sprint E — one entry in Item.vnEndings. Ordered list of the VN's
+// endings (or routes, however the user maps their mental model). A
+// route/ending is "seen" once the user ticks the checkbox; the
+// optional note is for tag-of-truth details ("bad end", "true",
+// "harem — Fate/Stay Night style").
+export interface VnEnding {
+  id: string
+  name: string
+  seen: boolean
+  // Optional route this ending belongs to. Blank means "shared /
+  // common route ending". Rendered as a small heading in the editor.
+  route?: string
+  // Free-text tag ("good", "bad", "true", "normal", "epilogue").
+  kind?: string
+  note?: string
+  seenAt?: string   // ISO yyyy-mm-dd
+  createdAt: number
+}
+
+// Sprint E — one entry in Item.playthroughs. Every field except `id`
+// is optional: the user might log a run with just its hours and a
+// note, or record only the character/build without dates. The editor
+// UI renders every field but never requires more than the id.
+export interface Playthrough {
+  id: string
+  // ISO date strings (yyyy-mm-dd). `finishedAt` is the anchor date
+  // for insights (finished-this-year counts, etc); `startedAt` is
+  // informational only.
+  startedAt?: string
+  finishedAt?: string
+  // Free-text hours as string (matches the parent `playTime` shape so
+  // parseDurationToSeconds can consume either). "12h", "24:30", "80"
+  // — all valid.
+  hours?: string
+  // The character / class / archetype used ("Sorcerer", "Ranger",
+  // "Solo no-death"). Blank when not applicable.
+  character?: string
+  // Difficulty label as the user tracks it ("Very hard", "NG+7",
+  // "Ironman"). Free-text so every game can express its own scale.
+  difficulty?: string
+  // Platform this specific run was played on. Games might replay a
+  // title on PC after starting on console; the array shape mirrors
+  // the parent `platforms` field so aggregation code stays uniform.
+  platform?: Platform
+  // Companion / co-op tag — the friend's tag, guildmate, or "solo".
+  coop?: string
+  // Longer note about the run: mods used, house rules, memorable
+  // moments. Rendered in the editor as a textarea.
+  note?: string
+  // Milestones this playthrough completed — the game's "true ending",
+  // a hidden boss killed, etc. Free-text tags so any milestone the
+  // game surfaces can be captured.
+  achievementsHit?: string[]
+  createdAt: number
 }

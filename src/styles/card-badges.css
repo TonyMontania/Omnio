@@ -1,0 +1,29 @@
+/* Sprint E — small per-library card badges. Kept in one file so
+   every library's card-level polish shares a visual language. */
+
+.airing-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+  align-self: flex-start;
+}
+.airing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: airing-pulse 1.8s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes airing-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.75); }
+}

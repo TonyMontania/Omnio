@@ -1,0 +1,117 @@
+/* Sprint E — VN endings tracker (item editor section). */
+
+.vn-endings-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vn-endings-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.vn-endings-head label { flex: 1; }
+.vn-endings-count {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.vn-endings-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.vn-endings-group {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.vn-endings-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.vn-endings-group-head h4 {
+  margin: 0;
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 600;
+}
+.vn-endings-group-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.vn-endings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vn-ending {
+  display: grid;
+  grid-template-columns: 26px 1.4fr 1fr 1fr 130px 30px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  transition: opacity 0.12s;
+}
+.vn-ending.seen { opacity: 0.75; }
+.vn-ending.seen .vn-ending-name { text-decoration: line-through; text-decoration-thickness: 1px; }
+.vn-ending-check { display: flex; align-items: center; justify-content: center; }
+.vn-ending-check input { width: 16px; height: 16px; cursor: pointer; }
+.vn-ending input {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  color: var(--text);
+  font-size: 12.5px;
+  min-width: 0;
+}
+.vn-ending-remove {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text-dim);
+  font-size: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.vn-ending-remove:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+@media (max-width: 900px) {
+  .vn-ending {
+    grid-template-columns: 26px 1fr 30px;
+    grid-template-rows: auto auto auto;
+  }
+  .vn-ending-route,
+  .vn-ending-kind,
+  .vn-ending-date {
+    grid-column: 2 / 3;
+  }
+}

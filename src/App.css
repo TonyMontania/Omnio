@@ -18,6 +18,9 @@
 @import './styles/smart-lists.css';   /* Smart lists modal + toolbar chip */
 @import './styles/playlists.css';     /* Cross-library playlists hub + item picker */
 @import './styles/shortcuts.css';     /* Keyboard shortcut editor inside Settings */
+@import './styles/playthroughs.css';  /* Games — structured playthroughs / runs editor */
+@import './styles/card-badges.css';   /* Per-library card-level polish (airing chip, etc) */
+@import './styles/vn-endings.css';    /* VN — routes / endings tracker */
 @import './styles/utilities.css';     /* Ctrl+K search, backups, duplicates, bulk actions, selection state */
 @import './styles/topnav.css';        /* prototype: top-nav layout (Option A) */
 @import './styles/sidebar.css';       /* persistent left sidebar (restored) */
