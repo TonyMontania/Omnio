@@ -165,6 +165,18 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
             <span aria-hidden style={{ fontSize: 10 }}>◆</span> Deck: {item.deckCompat}
           </p>
         )}
+        {isMovie && (() => {
+          const explicit = parseInt(item.timesWatched ?? '', 10)
+          const logged = item.viewings?.length ?? 0
+          const total = Number.isFinite(explicit) ? Math.max(explicit, logged) : logged
+          if (total <= 1) return null
+          return <p className="movie-times-chip" title={`${total} viewings`}>× {total} watched</p>
+        })()}
+        {isManga && item.bookmarkChapter && (
+          <p className="manga-bookmark-chip" title={item.bookmarkNote || `Bookmark at ${item.bookmarkChapter}`}>
+            ⌘ Ch. {item.bookmarkChapter}
+          </p>
+        )}
 
         {isMusic ? (
           <>

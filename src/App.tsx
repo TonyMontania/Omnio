@@ -24,6 +24,7 @@ import type {
   BandStatus, BandMember, SingleCover, AlbumEdition,
   CustomField, SaveFile, Achievement, Screenshot, ChapterNote, Playthrough, VnEnding,
   StoreLink, Purchase, DeckCompat, ProtonRating,
+  MovieViewing, BookHighlight,
 } from './types'
 import type { ArcadeGame } from './types/arcade'
 
@@ -75,6 +76,8 @@ import LibraryCustomFieldsSection from './components/LibraryCustomFieldsSection'
 import PlaythroughsEditor from './components/editors/PlaythroughsEditor'
 import VnEndingsEditor from './components/editors/VnEndingsEditor'
 import GameStoreEditor from './components/editors/GameStoreEditor'
+import MovieViewingsEditor from './components/editors/MovieViewingsEditor'
+import BookHighlightsEditor from './components/editors/BookHighlightsEditor'
 import type { SmartList } from './types/smartLists'
 import { matchesSmartList } from './types/smartLists'
 import SmartListsModal from './components/SmartListsModal'
@@ -946,6 +949,12 @@ function App() {
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [deckCompat, setDeckCompat] = useState<DeckCompat | undefined>(undefined)
   const [protonRating, setProtonRating] = useState<ProtonRating | undefined>(undefined)
+  // Sprint E finish — per-library polish buffers.
+  const [viewings, setViewings] = useState<MovieViewing[]>([])
+  const [bookHighlights, setBookHighlights] = useState<BookHighlight[]>([])
+  const [bookmarkChapter, setBookmarkChapter] = useState('')
+  const [bookmarkNote, setBookmarkNote] = useState('')
+  const [listeningNote, setListeningNote] = useState('')
   const [hasDlc, setHasDlc] = useState(false)
   const [dlcList, setDlcList] = useState<DlcEntry[]>([])
   const [hasAddons, setHasAddons] = useState(false)
@@ -1613,6 +1622,8 @@ function App() {
     setLibraryCustomValues({})
     setPlaythroughs([]); setVnEndings([])
     setStoreLinks([]); setPurchases([]); setDeckCompat(undefined); setProtonRating(undefined)
+    setViewings([]); setBookHighlights([])
+    setBookmarkChapter(''); setBookmarkNote(''); setListeningNote('')
   }
 
   const resetListControls = () => { setSearch(''); setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]) }
@@ -1788,6 +1799,11 @@ function App() {
     setPurchases(item.purchases ?? [])
     setDeckCompat(item.deckCompat)
     setProtonRating(item.protonRating)
+    setViewings(item.viewings ?? [])
+    setBookHighlights(item.bookHighlights ?? [])
+    setBookmarkChapter(item.bookmarkChapter ?? '')
+    setBookmarkNote(item.bookmarkNote ?? '')
+    setListeningNote(item.listeningNote ?? '')
   }
 
   // When every detail view closes and the list JSX remounts, restore the
@@ -2271,6 +2287,36 @@ function App() {
       if (protonRating) next.protonRating = protonRating
       return next
     }
+    // Sprint E finish — per-library polish. Each block is gated by
+    // categoryId so a movie's viewing log never lands on a book, and
+    // each field is stripped when empty so JSON stays tidy.
+    const withEfinishPolish = (it: AnyItem): AnyItem => {
+      let next = it
+      if (it.categoryId === 'peliculas') {
+        const { viewings: _v, ...rest } = next
+        void _v
+        next = viewings.length > 0 ? { ...rest, viewings } as AnyItem : rest as AnyItem
+      }
+      if (it.categoryId === 'libros') {
+        const { bookHighlights: _h, ...rest } = next
+        void _h
+        next = bookHighlights.length > 0 ? { ...rest, bookHighlights } as AnyItem : rest as AnyItem
+      }
+      if (it.categoryId === 'manga' || it.categoryId === 'manhwa' || it.categoryId === 'manhua' || it.categoryId === 'comics_west') {
+        const { bookmarkChapter: _c, bookmarkNote: _n, ...rest } = next
+        void _c; void _n
+        const patched = { ...rest } as AnyItem
+        if (bookmarkChapter.trim()) patched.bookmarkChapter = bookmarkChapter.trim()
+        if (bookmarkNote.trim()) patched.bookmarkNote = bookmarkNote.trim()
+        next = patched
+      }
+      if (it.categoryId === 'musica') {
+        const { listeningNote: _l, ...rest } = next
+        void _l
+        next = listeningNote.trim() ? { ...rest, listeningNote: listeningNote.trim() } as AnyItem : rest as AnyItem
+      }
+      return next
+    }
     // Attach the buffered library-custom-field values. When the panel
     // form left the bag empty (nothing set for this item, no custom
     // fields declared for this library), we omit the property so the
@@ -2300,14 +2346,14 @@ function App() {
     if (editingId) {
       const oldItem = items.find((it) => it.id === editingId)
       const createdAt = oldItem?.createdAt ?? Date.now()
-      const built = withGamePolish(withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(editingId, createdAt))))))
+      const built = withEfinishPolish(withGamePolish(withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(editingId, createdAt)))))))
       const withAuto = applyAutoStatus(oldItem ?? null, built, autoStatusOpts)
       const updated = await persistItemImages(withAuto)
       findOrphanedItemAssets(oldItem, updated).forEach(deleteAssetFile)
       setItems((prev) => prev.map((it) => (it.id === editingId ? updated : it)))
       if (viewing && viewing.id === editingId) setViewing(updated)
     } else {
-      const built = withGamePolish(withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(crypto.randomUUID(), Date.now()))))))
+      const built = withEfinishPolish(withGamePolish(withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(crypto.randomUUID(), Date.now())))))))
       const withAuto = applyAutoStatus(null, built, autoStatusOpts)
       const created = await persistItemImages(withAuto)
       setItems((prev) => [...prev, created])
@@ -5303,6 +5349,13 @@ function App() {
                       />
                     )}
 
+                    {activeCategory === 'peliculas' && (
+                      <MovieViewingsEditor
+                        viewings={viewings}
+                        onChange={setViewings}
+                      />
+                    )}
+
                     {isSeriesLike && (
                       <SeriesEditorSection
                         editingId={editingId}
@@ -5427,6 +5480,25 @@ function App() {
                   />
                 )}
 
+                {isManga && (
+                  <div className="field-group manga-bookmark">
+                    <label>Bookmark</label>
+                    <p className="hint">Where you left off — a chapter cursor plus a short note so you can pick right back up next time.</p>
+                    <div className="manga-bookmark-row">
+                      <input
+                        placeholder="Chapter (e.g. 47, 47.5, Vol 8 Ch 2)"
+                        value={bookmarkChapter}
+                        onChange={(e) => setBookmarkChapter(e.target.value)}
+                      />
+                      <input
+                        placeholder="Note — last panel of the arc, cliffhanger, page number…"
+                        value={bookmarkNote}
+                        onChange={(e) => setBookmarkNote(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {activeCategory === 'visual_novels' && (
                   <VisualNovelEditorSection
                     editingId={editingId}
@@ -5507,6 +5579,13 @@ function App() {
                   />
                 )}
 
+                {activeCategory === 'libros' && (
+                  <BookHighlightsEditor
+                    highlights={bookHighlights}
+                    onChange={setBookHighlights}
+                  />
+                )}
+
                     {activeCategory === 'musica' && (
                       <MusicEditorSection
                         title={title}
@@ -5541,6 +5620,19 @@ function App() {
                         recommendedItems={recommendedItems} setRecommendedItems={setRecommendedItems}
                         yearHandler={yearHandler}
                       />
+                    )}
+
+                    {activeCategory === 'musica' && (
+                      <div className="field-group listening-note">
+                        <label>Listening note</label>
+                        <p className="hint">A quick anecdote — where you were the first time you heard it, what mood it belongs to, a friend who put you on. Different from Review; this one is for the memory.</p>
+                        <textarea
+                          rows={3}
+                          value={listeningNote}
+                          onChange={(e) => setListeningNote(e.target.value)}
+                          placeholder="First time I heard this was at Sam's beach house 2022…"
+                        />
+                      </div>
                     )}
 
                     <div className="form-section-header" data-belongs-to="notes">

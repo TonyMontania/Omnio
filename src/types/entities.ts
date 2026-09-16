@@ -504,6 +504,24 @@ export interface AnyItem {
   // platinum / gold / silver / bronze / borked. Same "hide when
   // unset" rule as deckCompat.
   protonRating?: ProtonRating
+  // Sprint E finish — Movies. Structured viewing log: each row is
+  // one time the user watched this movie, with format, date,
+  // companions and a note. Separate from the free-text `rewatches`
+  // used elsewhere; this one is Movie-only and typed.
+  viewings?: MovieViewing[]
+  // Sprint E finish — Books. Kindle-style highlights list — page
+  // reference, quoted text, and an optional personal note.
+  bookHighlights?: BookHighlight[]
+  // Sprint E finish — Manga family. Where the reader left off:
+  // the chapter cursor + a short note ("last panel of the arc
+  // before the timeskip"). Rendered as a small block in the editor
+  // and a chip on the card when set.
+  bookmarkChapter?: string
+  bookmarkNote?: string
+  // Sprint E finish — Music. Freeform personal note about the
+  // album / track / concert — anecdote-friendly, not a review.
+  // "First time I heard this was at Sam's beach house 2022".
+  listeningNote?: string
   hasDlc?: boolean
   dlcList?: DlcEntry[]
   hasAddons?: boolean
@@ -707,6 +725,28 @@ export interface Purchase {
 
 export type DeckCompat = 'verified' | 'playable' | 'unsupported' | 'unknown'
 export type ProtonRating = 'platinum' | 'gold' | 'silver' | 'bronze' | 'borked'
+
+// Sprint E finish — Movies. One watching session.
+export type MovieFormat = 'theater' | 'streaming' | 'bluray' | 'dvd' | 'download' | 'other'
+export interface MovieViewing {
+  id: string
+  date?: string            // ISO yyyy-mm-dd
+  format?: MovieFormat
+  location?: string        // theater name, streaming service, room in the house
+  companions?: string      // "with @friend / family / solo"
+  note?: string
+  createdAt: number
+}
+
+// Sprint E finish — Books. One highlight / quote captured while reading.
+export interface BookHighlight {
+  id: string
+  page?: string            // free-text so "vii", "epilogue", "page 240" all fit
+  text: string             // the quoted passage
+  note?: string            // personal reflection on it
+  capturedAt?: string      // ISO yyyy-mm-dd
+  createdAt: number
+}
 
 // Sprint E — one entry in Item.vnEndings. Ordered list of the VN's
 // endings (or routes, however the user maps their mental model). A
