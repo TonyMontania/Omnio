@@ -286,7 +286,14 @@ export function getCategoryLine(item: Item): string | null {
       return `p. ${item.pagesRead}${item.totalPages ? `/${item.totalPages}` : ''}`
     }
     case 'visual_novels': {
-      const parts = [item.releaseYear, item.playTime, item.vnLengthHours ? `~${item.vnLengthHours}h avg` : null].filter(Boolean)
+      // Length-only line — anything about how long the VN takes to read.
+      // `releaseYear` used to sit at the front of this string, but the
+      // card's "Length" field toggle triggers both this line AND the
+      // vnLength label ("Short (2-10h)"). With releaseYear included,
+      // a VN with only its year set rendered as a phantom "2016"
+      // under the Length toggle — confusing the year with the length.
+      // Year is not length; keep it out of this line entirely.
+      const parts = [item.playTime, item.vnLengthHours ? `~${item.vnLengthHours}h avg` : null].filter(Boolean)
       return parts.length ? parts.join(' · ') : null
     }
     default:
