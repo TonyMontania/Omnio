@@ -151,6 +151,55 @@ pub async fn item_export_json(
     PathResult::Ok { ok: true, path: target.display().to_string() }
 }
 
+// -- library:export-text ---------------------------------------------
+//
+// Sprint G — generic "save this string to a file the user picks"
+// handler. Renderer sends the file body verbatim + a suggested
+// filename + a filter label (e.g. "CSV", "HTML"). Powers the CSV
+// and multi-item HTML exports without needing one Tauri command per
+// format. Mirrors the item_export_json shape (same PathResult),
+// same sanitize + fallback rules.
+#[tauri::command]
+pub async fn library_export_text(
+    app: AppHandle,
+    body: String,
+    suggested_name: String,
+    filter_label: String,
+    extension: String,
+) -> PathResult {
+    let safe = {
+        let s = sanitize_asset_name(&suggested_name);
+        if s.is_empty() { "omnio-export".to_string() } else { s }
+    };
+    let default_name = format!("{safe}.{extension}");
+
+    let (tx, rx) = oneshot::channel::<Option<FilePath>>();
+    app.dialog()
+        .file()
+        .set_title(&format!("Export as {filter_label}"))
+        .set_file_name(&default_name)
+        .add_filter(&filter_label, &[extension.as_str()])
+        .save_file(move |picked| {
+            let _ = tx.send(picked);
+        });
+
+    let picked = match rx.await {
+        Ok(v) => v,
+        Err(_) => return PathResult::Err { ok: false, error: "dialog dropped".into() },
+    };
+    let Some(file_path) = picked else {
+        return PathResult::Canceled { ok: false, canceled: true };
+    };
+    let Some(target) = file_path_to_pathbuf(&file_path) else {
+        return PathResult::Err { ok: false, error: "unsupported destination path".into() };
+    };
+
+    if let Err(e) = tokio::fs::write(&target, body.as_bytes()).await {
+        return PathResult::Err { ok: false, error: e.to_string() };
+    }
+    PathResult::Ok { ok: true, path: target.display().to_string() }
+}
+
 // -- dialog:pick-directory -------------------------------------------
 //
 // Original: `electron/handlers/system.ts` line 56. Returns the picked

@@ -183,6 +183,8 @@ export type IpcContract = {
     { args: [targetDir: string, htmlContent: string]; result: { ok: true; path: string } | { ok: false; error: string } }
   'export:csv':
     { args: [targetDir: string, files: Record<string, string>]; result: { ok: true; path: string; count: number } | { ok: false; error: string } }
+  'library:export-text':
+    { args: [body: string, suggestedName: string, filterLabel: string, extension: string]; result: ItemExportResult }
 
   // -- handlers/updates.ts --
   'updates:check':

@@ -64,6 +64,7 @@ fn main() {
             handlers::system::proxy_apply,
             handlers::system::cache_clear_searches,
             handlers::system::item_export_json,
+            handlers::system::library_export_text,
             handlers::system::dialog_pick_directory,
             handlers::system::export_site,
             handlers::system::export_csv,

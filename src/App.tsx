@@ -135,7 +135,7 @@ const DiscographyChecker = lazy(() => import('./DiscographyChecker'))
 const LocalInstallScanner = lazy(() => import('./LocalInstallScanner'))
 import { BasedOnPicker } from './components/BasedOn'
 import { buildStaticSiteHtml } from './exportSite'
-import { buildCsvExports } from './CsvExporter'
+import { buildCsvExports, buildSingleCsv } from './CsvExporter'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
   // ChevronIcon removed — no more collapsible library groups.
@@ -4712,6 +4712,39 @@ function App() {
                     >
                       {deleteMode ? '← Exit delete' : '✕ Delete'}
                     </button>
+                    {/* Sprint G — quick export of the current view. Downloads
+                        only what's visible after search / tags / smart list
+                        filtering, so a saved smart list becomes a shareable
+                        spreadsheet in two clicks. */}
+                    <select
+                      className="sort-select"
+                      value=""
+                      onChange={async (e) => {
+                        const kind = e.target.value
+                        e.currentTarget.value = ''
+                        if (!kind || visibleItems.length === 0) return
+                        const activeList = activeSmartListId ? smartLists.find((l) => l.id === activeSmartListId) : null
+                        const stem = activeList
+                          ? `omnio-${activeList.name.replace(/\s+/g, '-')}`
+                          : `omnio-${activeCategory}`
+                        if (kind === 'csv') {
+                          const body = buildSingleCsv(visibleItems as Item[])
+                          const r = await invoke('library:export-text', body, stem, 'CSV', 'csv')
+                          if (r.ok) setToast(`Exported ${visibleItems.length} row${visibleItems.length === 1 ? '' : 's'} to ${r.path}`)
+                          else if (!r.canceled) setToast(`Export failed — ${r.error ?? 'unknown'}`)
+                        } else if (kind === 'json') {
+                          const body = JSON.stringify(visibleItems, null, 2)
+                          const r = await invoke('library:export-text', body, stem, 'JSON', 'json')
+                          if (r.ok) setToast(`Exported ${visibleItems.length} item${visibleItems.length === 1 ? '' : 's'} to ${r.path}`)
+                          else if (!r.canceled) setToast(`Export failed — ${r.error ?? 'unknown'}`)
+                        }
+                      }}
+                      title="Export the items currently on screen"
+                    >
+                      <option value="">↓ Export shown…</option>
+                      <option value="csv">As CSV ({visibleItems.length})</option>
+                      <option value="json">As JSON ({visibleItems.length})</option>
+                    </select>
                   </div>
 
                   <div className="content-scroll">

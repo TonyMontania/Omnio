@@ -18,6 +18,7 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'dialog:pick-directory': ['title'],
   'export:site': ['targetDir', 'htmlContent'],
   'export:csv': ['targetDir', 'files'],
+  'library:export-text': ['body', 'suggestedName', 'filterLabel', 'extension'],
 
   // -- storage -------------------------------------------------------
   'storage:root': [],
