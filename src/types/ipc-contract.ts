@@ -189,6 +189,14 @@ export type IpcContract = {
     { args: [targetPath: string, body: string, overwrite: boolean]; result: ItemExportResult }
   'system:reveal':
     { args: [path: string]; result: SimpleResult }
+  'fs:list-dir':
+    { args: [path: string, includeHidden: boolean]; result: { ok: true; entries: { name: string; isDir: boolean; size: number }[] } | { ok: false; error: string } }
+  'fs:common-locations':
+    { args: []; result: { name: string; path: string }[] }
+  'fs:path-info':
+    { args: [path: string]; result: { exists: boolean; isDir: boolean; canonical: string; parent: string | null } }
+  'fs:mkdir':
+    { args: [path: string]; result: SimpleResult }
 
   // -- handlers/updates.ts --
   'updates:check':

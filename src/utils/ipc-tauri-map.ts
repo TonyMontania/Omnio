@@ -21,6 +21,10 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'library:export-text': ['body', 'suggestedName', 'filterLabel', 'extension'],
   'library:save-text-to': ['targetPath', 'body', 'overwrite'],
   'system:reveal': ['path'],
+  'fs:list-dir': ['path', 'includeHidden'],
+  'fs:common-locations': [],
+  'fs:path-info': ['path'],
+  'fs:mkdir': ['path'],
 
   // -- storage -------------------------------------------------------
   'storage:root': [],

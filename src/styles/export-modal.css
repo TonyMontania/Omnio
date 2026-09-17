@@ -3,6 +3,45 @@
 .modal.export-modal {
   width: min(560px, 100%);
 }
+/* Header — flex row so the ✕ sits opposite the title. No generic
+   .modal-header rule exists app-wide (older modals scope their own),
+   so we scope it here too. */
+.export-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.export-modal .modal-header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.export-modal .modal-close {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  padding: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.export-modal .modal-close:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border-soft);
+}
 .export-modal-body {
   padding: 16px 20px;
   display: flex;

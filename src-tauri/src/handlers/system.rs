@@ -278,6 +278,183 @@ pub async fn system_reveal(path: String) -> SimpleResult {
     }
 }
 
+// -- fs:list-dir -----------------------------------------------------
+//
+// In-app file browser plumbing. Reads a directory and returns a
+// name-sorted list of entries — folders first, then files, both
+// case-insensitive alphabetical. Every entry carries whether it's
+// a directory and its size in bytes (0 for directories). Hidden
+// items (starting with a dot on Unix or with the Windows hidden
+// attribute) are elided unless `include_hidden` is true.
+//
+// Errors bubble up as { ok: false, error } instead of panicking so
+// the renderer can render an inline "cannot read this folder" state
+// (permission denied on a system directory, missing removable drive)
+// without needing a global error boundary.
+#[derive(serde::Serialize)]
+pub struct DirEntryOut {
+    pub name: String,
+    pub is_dir: bool,
+    pub size: u64,
+}
+
+#[derive(serde::Serialize)]
+#[serde(untagged)]
+pub enum ListDirResult {
+    Ok { ok: bool, entries: Vec<DirEntryOut> },
+    Err { ok: bool, error: String },
+}
+
+#[tauri::command]
+pub async fn fs_list_dir(path: String, include_hidden: bool) -> ListDirResult {
+    let target = std::path::PathBuf::from(&path);
+    let mut rd = match tokio::fs::read_dir(&target).await {
+        Ok(v) => v,
+        Err(e) => return ListDirResult::Err { ok: false, error: e.to_string() },
+    };
+    let mut entries: Vec<DirEntryOut> = Vec::new();
+    loop {
+        let next = match rd.next_entry().await {
+            Ok(v) => v,
+            Err(_) => break,
+        };
+        let Some(entry) = next else { break; };
+        let name = entry.file_name().to_string_lossy().to_string();
+        // Skip Unix dotfiles unless explicitly asked. Windows-side we
+        // rely on the hidden attribute check below.
+        if !include_hidden && name.starts_with('.') {
+            continue;
+        }
+        let meta = match entry.metadata().await {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::fs::MetadataExt;
+            const FILE_ATTRIBUTE_HIDDEN: u32 = 0x00000002;
+            if !include_hidden && (meta.file_attributes() & FILE_ATTRIBUTE_HIDDEN) != 0 {
+                continue;
+            }
+        }
+        let is_dir = meta.is_dir();
+        entries.push(DirEntryOut {
+            name,
+            is_dir,
+            size: if is_dir { 0 } else { meta.len() },
+        });
+    }
+    entries.sort_by(|a, b| {
+        match (a.is_dir, b.is_dir) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+        }
+    });
+    ListDirResult::Ok { ok: true, entries }
+}
+
+// -- fs:mkdir --------------------------------------------------------
+//
+// Create a directory (and any missing parents) at the given path.
+// Used by the in-app file picker's "New folder" affordance so the
+// user can spin off a fresh subdirectory without leaving the picker.
+#[tauri::command]
+pub async fn fs_mkdir(path: String) -> SimpleResult {
+    let target = std::path::PathBuf::from(&path);
+    match tokio::fs::create_dir_all(&target).await {
+        Ok(()) => SimpleResult::ok(),
+        Err(e) => SimpleResult::err(e.to_string()),
+    }
+}
+
+// -- fs:common-locations ---------------------------------------------
+//
+// Bundle of well-known folders the in-app picker's sidebar highlights
+// so the user doesn't have to type a full path to reach their Home /
+// Desktop / Downloads. Missing folders are omitted (a fresh Linux
+// container without a Desktop still gets a working sidebar).
+#[derive(serde::Serialize)]
+pub struct CommonLocation {
+    pub name: String,
+    pub path: String,
+}
+
+#[tauri::command]
+pub async fn fs_common_locations() -> Vec<CommonLocation> {
+    let mut out: Vec<CommonLocation> = Vec::new();
+    let push = |out: &mut Vec<CommonLocation>, name: &str, p: Option<std::path::PathBuf>| {
+        if let Some(p) = p {
+            if p.exists() {
+                out.push(CommonLocation {
+                    name: name.to_string(),
+                    path: p.display().to_string(),
+                });
+            }
+        }
+    };
+    push(&mut out, "Home", dirs::home_dir());
+    push(&mut out, "Desktop", dirs::desktop_dir());
+    push(&mut out, "Documents", dirs::document_dir());
+    push(&mut out, "Downloads", dirs::download_dir());
+    push(&mut out, "Pictures", dirs::picture_dir());
+    push(&mut out, "Music", dirs::audio_dir());
+    push(&mut out, "Videos", dirs::video_dir());
+    #[cfg(target_os = "windows")]
+    {
+        // Enumerate top-level drive roots so the user can hop between
+        // C:\ and D:\ without typing.
+        for letter in b'A'..=b'Z' {
+            let root = format!("{}:\\", letter as char);
+            let path = std::path::PathBuf::from(&root);
+            if path.exists() {
+                out.push(CommonLocation { name: format!("{}:", letter as char), path: root });
+            }
+        }
+    }
+    out
+}
+
+// -- fs:path-info ----------------------------------------------------
+//
+// Renderer helper — resolve a raw string into a canonical absolute
+// path (walking .., ~ and env vars where possible), report whether
+// it exists, and report whether it's a directory or a file. Used by
+// the picker's breadcrumb input so typing a partial path gives
+// live feedback.
+#[derive(serde::Serialize)]
+pub struct PathInfoOut {
+    pub exists: bool,
+    pub is_dir: bool,
+    pub canonical: String,
+    pub parent: Option<String>,
+}
+
+#[tauri::command]
+pub async fn fs_path_info(path: String) -> PathInfoOut {
+    let raw = std::path::PathBuf::from(&path);
+    let expanded = if path.starts_with('~') {
+        if let Some(home) = dirs::home_dir() {
+            let rest = path.trim_start_matches('~').trim_start_matches(['/', '\\']);
+            home.join(rest)
+        } else {
+            raw.clone()
+        }
+    } else {
+        raw.clone()
+    };
+    let canonical = tokio::fs::canonicalize(&expanded).await.ok().unwrap_or(expanded.clone());
+    let exists = canonical.exists();
+    let is_dir = canonical.is_dir();
+    let parent = canonical.parent().map(|p| p.display().to_string());
+    PathInfoOut {
+        exists,
+        is_dir,
+        canonical: canonical.display().to_string(),
+        parent,
+    }
+}
+
 // -- dialog:pick-directory -------------------------------------------
 //
 // Original: `electron/handlers/system.ts` line 56. Returns the picked

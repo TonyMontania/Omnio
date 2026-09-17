@@ -67,6 +67,10 @@ mime_guess = "2"
 # `omnio-asset://games/cover/Metro%202033.jpg` → `games/cover/Metro 2033.jpg`.
 urlencoding = "2"
 
+# Cross-platform "well-known" folders (Home / Desktop / Downloads / …)
+# used by fs_common_locations for the in-app file picker's sidebar.
+dirs = "5"
+
 [features]
 # Only enabled by the release bundle build to lock down webview
 # security; matches Tauri's default template.

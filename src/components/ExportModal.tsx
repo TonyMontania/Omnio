@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '../utils/ipc'
+import FilePicker from './FilePicker'
 
 interface Props {
   open: boolean
@@ -49,6 +50,7 @@ export default function ExportModal({
   const [busy, setBusy] = useState(false)
   const [existsPrompt, setExistsPrompt] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -89,7 +91,14 @@ export default function ExportModal({
     await doSaveTo(targetPath, false)
   }
 
-  const onSaveElsewhere = async () => {
+  const onSaveElsewhere = () => setPickerOpen(true)
+
+  const onPickerPickFolder = async (finalPath: string) => {
+    setPickerOpen(false)
+    await doSaveTo(finalPath, false)
+  }
+
+  const onSaveViaNativeDialog = async () => {
     setBusy(true)
     setErrorMsg(null)
     try {
@@ -110,7 +119,7 @@ export default function ExportModal({
       <div className="modal export-modal" onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
           <h2>Export</h2>
-          <button className="modal-close icon-btn" onClick={onClose} disabled={busy}>✕</button>
+          <button className="modal-close" onClick={onClose} disabled={busy} title="Close" aria-label="Close">✕</button>
         </header>
 
         <div className="export-modal-body">
@@ -169,12 +178,24 @@ export default function ExportModal({
         <div className="export-modal-actions">
           <button className="secondary-btn" onClick={onClose} disabled={busy}>Cancel</button>
           <div style={{ flex: 1 }} />
-          <button className="secondary-btn" onClick={onSaveElsewhere} disabled={busy}>Save elsewhere…</button>
+          <button className="secondary-btn" onClick={onSaveElsewhere} disabled={busy} title="Browse folders in an in-app picker">Save elsewhere…</button>
+          <button className="secondary-btn" onClick={onSaveViaNativeDialog} disabled={busy} title="Use the OS Save dialog">Native dialog…</button>
           <button className="primary-btn" onClick={onSave} disabled={busy || !exportFolder || !filename.trim()}>
             {busy ? 'Saving…' : 'Save'}
           </button>
         </div>
       </div>
+
+      <FilePicker
+        open={pickerOpen}
+        title="Save export"
+        mode="save"
+        initialPath={exportFolder}
+        suggestedFilename={safeName(filename)}
+        extension={extension}
+        onCancel={() => setPickerOpen(false)}
+        onPickFolder={onPickerPickFolder}
+      />
     </div>
   )
 }
