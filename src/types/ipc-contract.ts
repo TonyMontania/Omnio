@@ -185,6 +185,10 @@ export type IpcContract = {
     { args: [targetDir: string, files: Record<string, string>]; result: { ok: true; path: string; count: number } | { ok: false; error: string } }
   'library:export-text':
     { args: [body: string, suggestedName: string, filterLabel: string, extension: string]; result: ItemExportResult }
+  'library:save-text-to':
+    { args: [targetPath: string, body: string, overwrite: boolean]; result: ItemExportResult }
+  'system:reveal':
+    { args: [path: string]; result: SimpleResult }
 
   // -- handlers/updates.ts --
   'updates:check':

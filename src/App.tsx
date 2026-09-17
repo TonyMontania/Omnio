@@ -73,6 +73,7 @@ import ShortcutsEditor from './components/ShortcutsEditor'
 import type { LibraryCustomFieldDef } from './types/customFields'
 import LibraryCustomFieldsEditor from './components/LibraryCustomFieldsEditor'
 import LibraryCustomFieldsSection from './components/LibraryCustomFieldsSection'
+import ExportModal from './components/ExportModal'
 import PlaythroughsEditor from './components/editors/PlaythroughsEditor'
 import VnEndingsEditor from './components/editors/VnEndingsEditor'
 import GameStoreEditor from './components/editors/GameStoreEditor'
@@ -312,6 +313,11 @@ interface Settings {
   // item editor renders under a "Custom fields" section for that
   // library. Missing = no custom fields for that library.
   libraryCustomFields?: Record<string, LibraryCustomFieldDef[]>
+  // Sprint G polish — default destination for the in-app export modal.
+  // Picked once via a native dialog (Settings → Data → Export folder)
+  // and reused on every subsequent export. Missing = the export modal
+  // asks the OS dialog per export, same as before.
+  exportFolder?: string
 }
 
 // Small subset of add-panel fields we're willing to prefill for a new
@@ -553,6 +559,11 @@ function App() {
   const [smartLists, setSmartLists] = useState<SmartList[]>([])
   const [activeSmartListId, setActiveSmartListId] = useState<string | null>(null)
   const [smartListsModalOpen, setSmartListsModalOpen] = useState(false)
+  // Sprint G polish — in-app export modal state.
+  const [exportModal, setExportModal] = useState<
+    | null
+    | { body: string; suggestedName: string; extension: string; filterLabel: string }
+  >(null)
   // Sprint C — cross-library ordered lists.
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   // Locally-installed plugin (git-ignored overlay under
@@ -4105,6 +4116,21 @@ function App() {
                       </p>
                     </div>
                     <div className="field-group">
+                      <label>Default export folder</label>
+                      <div className="settings-actions">
+                        <button type="button" className="secondary-btn" onClick={async () => {
+                          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Pick your default export folder')
+                          if (dir) setSettings((s) => ({ ...s, exportFolder: dir }))
+                        }}>{settings.exportFolder ? 'Change folder…' : 'Pick folder…'}</button>
+                        {settings.exportFolder && (
+                          <button type="button" className="secondary-btn" onClick={() => setSettings((s) => ({ ...s, exportFolder: undefined }))}>Clear</button>
+                        )}
+                      </div>
+                      {settings.exportFolder && <p className="hint" style={{ marginTop: 4 }}><code>{settings.exportFolder}</code></p>}
+                      <p className="hint">When set, the "Export shown" toolbar dropdown skips the OS "Save as…" dialog and drops the file straight into this folder through an in-app modal. "Save elsewhere…" inside that modal still opens the native picker if you want a one-off destination.</p>
+                    </div>
+
+                    <div className="field-group">
                       <label>Automatic snapshots</label>
                       <BackupList
                         onRestore={(file) => askConfirm(
@@ -4719,7 +4745,7 @@ function App() {
                     <select
                       className="sort-select"
                       value=""
-                      onChange={async (e) => {
+                      onChange={(e) => {
                         const kind = e.target.value
                         e.currentTarget.value = ''
                         if (!kind || visibleItems.length === 0) return
@@ -4728,15 +4754,19 @@ function App() {
                           ? `omnio-${activeList.name.replace(/\s+/g, '-')}`
                           : `omnio-${activeCategory}`
                         if (kind === 'csv') {
-                          const body = buildSingleCsv(visibleItems as Item[])
-                          const r = await invoke('library:export-text', body, stem, 'CSV', 'csv')
-                          if (r.ok) setToast(`Exported ${visibleItems.length} row${visibleItems.length === 1 ? '' : 's'} to ${r.path}`)
-                          else if (!r.canceled) setToast(`Export failed — ${r.error ?? 'unknown'}`)
+                          setExportModal({
+                            body: buildSingleCsv(visibleItems as Item[]),
+                            suggestedName: stem,
+                            extension: 'csv',
+                            filterLabel: 'CSV',
+                          })
                         } else if (kind === 'json') {
-                          const body = JSON.stringify(visibleItems, null, 2)
-                          const r = await invoke('library:export-text', body, stem, 'JSON', 'json')
-                          if (r.ok) setToast(`Exported ${visibleItems.length} item${visibleItems.length === 1 ? '' : 's'} to ${r.path}`)
-                          else if (!r.canceled) setToast(`Export failed — ${r.error ?? 'unknown'}`)
+                          setExportModal({
+                            body: JSON.stringify(visibleItems, null, 2),
+                            suggestedName: stem,
+                            extension: 'json',
+                            filterLabel: 'JSON',
+                          })
                         }
                       }}
                       title="Export the items currently on screen"
@@ -6732,6 +6762,19 @@ function App() {
       )}
 
       {toast && <Toast message={toast} />}
+
+      <ExportModal
+        open={!!exportModal}
+        body={exportModal?.body ?? ''}
+        suggestedName={exportModal?.suggestedName ?? ''}
+        extension={exportModal?.extension ?? 'txt'}
+        filterLabel={exportModal?.filterLabel ?? 'File'}
+        exportFolder={settings.exportFolder}
+        onClose={() => setExportModal(null)}
+        onSaved={(path) => {
+          setToast(`Saved to ${path}`)
+        }}
+      />
 
       <SmartListsModal
         open={smartListsModalOpen}

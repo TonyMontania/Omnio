@@ -200,6 +200,84 @@ pub async fn library_export_text(
     PathResult::Ok { ok: true, path: target.display().to_string() }
 }
 
+// -- library:save-text-to --------------------------------------------
+//
+// Sprint G polish — write a UTF-8 blob to a specific path the
+// renderer already knows (no OS save dialog). Powers the in-app
+// export modal: the modal builds `<exportFolder>/<filename>.<ext>`
+// itself, then hands us the finished path so the write feels like
+// a native app action instead of a Windows Save-As window.
+//
+// Safety: the write refuses to overwrite an existing file unless
+// the caller sets `overwrite: true`. Callers ask the user first
+// through the in-app confirm dialog.
+#[tauri::command]
+pub async fn library_save_text_to(
+    target_path: String,
+    body: String,
+    overwrite: bool,
+) -> PathResult {
+    let target = std::path::PathBuf::from(&target_path);
+    // Parent must exist. We create the parent chain here (mkdir -p)
+    // so a user's chosen "Omnio Exports" folder can grow subfolders
+    // ("games/", "movies/") without an explicit provisioning step.
+    if let Some(parent) = target.parent() {
+        if !parent.as_os_str().is_empty() {
+            if let Err(e) = tokio::fs::create_dir_all(parent).await {
+                return PathResult::Err { ok: false, error: format!("mkdir parent: {e}") };
+            }
+        }
+    }
+    if !overwrite {
+        if let Ok(true) = tokio::fs::try_exists(&target).await {
+            return PathResult::Err { ok: false, error: "exists".into() };
+        }
+    }
+    if let Err(e) = tokio::fs::write(&target, body.as_bytes()).await {
+        return PathResult::Err { ok: false, error: e.to_string() };
+    }
+    PathResult::Ok { ok: true, path: target.display().to_string() }
+}
+
+// -- system:reveal ---------------------------------------------------
+//
+// Open the OS file explorer at the given path so a "Reveal in
+// Explorer" affordance can follow a successful export. Best-effort:
+// falls back to opening the parent directory when the shell APIs
+// can't highlight the file itself.
+#[tauri::command]
+pub async fn system_reveal(path: String) -> SimpleResult {
+    let target = std::path::PathBuf::from(&path);
+    #[cfg(target_os = "windows")]
+    {
+        // /select, highlights the file inside its folder.
+        let _ = std::process::Command::new("explorer")
+            .arg("/select,")
+            .arg(&target)
+            .spawn();
+        return SimpleResult::ok();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open")
+            .arg("-R")
+            .arg(&target)
+            .spawn();
+        return SimpleResult::ok();
+    }
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        // Linux — try xdg-open on the parent so the folder opens even
+        // if the FM can't select individual files.
+        let parent = target.parent().map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::path::PathBuf::from("."));
+        let _ = std::process::Command::new("xdg-open")
+            .arg(parent)
+            .spawn();
+        SimpleResult::ok()
+    }
+}
+
 // -- dialog:pick-directory -------------------------------------------
 //
 // Original: `electron/handlers/system.ts` line 56. Returns the picked

@@ -65,6 +65,8 @@ fn main() {
             handlers::system::cache_clear_searches,
             handlers::system::item_export_json,
             handlers::system::library_export_text,
+            handlers::system::library_save_text_to,
+            handlers::system::system_reveal,
             handlers::system::dialog_pick_directory,
             handlers::system::export_site,
             handlers::system::export_csv,

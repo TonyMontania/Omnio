@@ -19,6 +19,8 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'export:site': ['targetDir', 'htmlContent'],
   'export:csv': ['targetDir', 'files'],
   'library:export-text': ['body', 'suggestedName', 'filterLabel', 'extension'],
+  'library:save-text-to': ['targetPath', 'body', 'overwrite'],
+  'system:reveal': ['path'],
 
   // -- storage -------------------------------------------------------
   'storage:root': [],
