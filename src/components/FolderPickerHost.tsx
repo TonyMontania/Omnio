@@ -13,14 +13,30 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import FilePicker from './FilePicker'
 
-interface PendingRequest {
+interface PendingFolder {
+  kind: 'folder'
   title: string
   initialPath?: string
   resolve: (path: string | null) => void
 }
+interface PendingSave {
+  kind: 'save'
+  title: string
+  initialPath?: string
+  suggestedFilename: string
+  extension: string
+  resolve: (path: string | null) => void
+}
+type Pending = PendingFolder | PendingSave
 
 interface Ctx {
   pickFolder: (title: string, initialPath?: string) => Promise<string | null>
+  pickSaveFile: (
+    title: string,
+    suggestedFilename: string,
+    extension: string,
+    initialPath?: string,
+  ) => Promise<string | null>
 }
 
 const FolderPickerContext = createContext<Ctx | null>(null)
@@ -32,18 +48,30 @@ export function useFolderPicker(): Ctx {
 }
 
 export default function FolderPickerHost({ children }: { children: React.ReactNode }) {
-  const [pending, setPending] = useState<PendingRequest | null>(null)
-  const pendingRef = useRef<PendingRequest | null>(null)
+  const [pending, setPending] = useState<Pending | null>(null)
+  const pendingRef = useRef<Pending | null>(null)
+
+  const openWith = <T extends Pending>(req: T) => {
+    const prev = pendingRef.current
+    if (prev) prev.resolve(null)
+    pendingRef.current = req
+    setPending(req)
+  }
 
   const pickFolder = useCallback((title: string, initialPath?: string) => {
     return new Promise<string | null>((resolve) => {
-      // If a picker is already open, resolve the previous one as null
-      // so a re-invocation doesn't leak a hanging promise.
-      const prev = pendingRef.current
-      if (prev) prev.resolve(null)
-      const req: PendingRequest = { title, initialPath, resolve }
-      pendingRef.current = req
-      setPending(req)
+      openWith({ kind: 'folder', title, initialPath, resolve })
+    })
+  }, [])
+
+  const pickSaveFile = useCallback((
+    title: string,
+    suggestedFilename: string,
+    extension: string,
+    initialPath?: string,
+  ) => {
+    return new Promise<string | null>((resolve) => {
+      openWith({ kind: 'save', title, initialPath, suggestedFilename, extension, resolve })
     })
   }, [])
 
@@ -55,13 +83,15 @@ export default function FolderPickerHost({ children }: { children: React.ReactNo
   }, [])
 
   return (
-    <FolderPickerContext.Provider value={{ pickFolder }}>
+    <FolderPickerContext.Provider value={{ pickFolder, pickSaveFile }}>
       {children}
       <FilePicker
         open={!!pending}
         title={pending?.title ?? ''}
-        mode="folder"
+        mode={pending?.kind === 'save' ? 'save' : 'folder'}
         initialPath={pending?.initialPath}
+        suggestedFilename={pending?.kind === 'save' ? pending.suggestedFilename : undefined}
+        extension={pending?.kind === 'save' ? pending.extension : undefined}
         onCancel={() => finish(null)}
         onPickFolder={(path) => finish(path)}
       />

@@ -73,8 +73,8 @@ import ShortcutsEditor from './components/ShortcutsEditor'
 import type { LibraryCustomFieldDef } from './types/customFields'
 import LibraryCustomFieldsEditor from './components/LibraryCustomFieldsEditor'
 import LibraryCustomFieldsSection from './components/LibraryCustomFieldsSection'
-import ExportModal from './components/ExportModal'
 import { useFolderPicker } from './components/FolderPickerHost'
+import { parentOf } from './utils/paths'
 import PlaythroughsEditor from './components/editors/PlaythroughsEditor'
 import VnEndingsEditor from './components/editors/VnEndingsEditor'
 import GameStoreEditor from './components/editors/GameStoreEditor'
@@ -314,11 +314,12 @@ interface Settings {
   // item editor renders under a "Custom fields" section for that
   // library. Missing = no custom fields for that library.
   libraryCustomFields?: Record<string, LibraryCustomFieldDef[]>
-  // Sprint G polish — default destination for the in-app export modal.
-  // Picked once via a native dialog (Settings → Data → Export folder)
-  // and reused on every subsequent export. Missing = the export modal
-  // asks the OS dialog per export, same as before.
-  exportFolder?: string
+  // Sprint G polish — last folder the user actually saved an export
+  // to. Auto-updates on every successful save so the next picker opens
+  // where the previous one left off; no explicit "set default folder"
+  // step. Missing = no export has been saved yet, the picker opens at
+  // the OS-provided Home folder.
+  lastExportFolder?: string
 }
 
 // Small subset of add-panel fields we're willing to prefill for a new
@@ -532,7 +533,7 @@ function App() {
   // In-app folder picker. Replaces every `dialog:pick-directory` call
   // so folder selection uses the same visual language as the rest of
   // Omnio instead of dropping the user into Windows Explorer.
-  const { pickFolder } = useFolderPicker()
+  const { pickFolder, pickSaveFile } = useFolderPicker()
   const [activeCategory, setActiveCategory] = useState<CategoryId>(CATEGORIES[0].id)
   // App-level items state stays on the loose `AnyItem` bag so the
   // dozens of generic mappers / bulk ops inside App.tsx keep compiling
@@ -564,11 +565,44 @@ function App() {
   const [smartLists, setSmartLists] = useState<SmartList[]>([])
   const [activeSmartListId, setActiveSmartListId] = useState<string | null>(null)
   const [smartListsModalOpen, setSmartListsModalOpen] = useState(false)
-  // Sprint G polish — in-app export modal state.
-  const [exportModal, setExportModal] = useState<
-    | null
-    | { body: string; suggestedName: string; extension: string; filterLabel: string }
-  >(null)
+  // Sprint G polish — direct in-app save through the FilePicker.
+  // No intermediate modal, no default-folder setting: the picker
+  // opens at settings.lastExportFolder (the last folder the user
+  // successfully saved to) and we update that field on every save.
+  const saveExportInApp = async (
+    body: string,
+    suggestedName: string,
+    extension: string,
+    filterLabel: string,
+  ) => {
+    const chosen = await pickSaveFile(
+      `Save ${filterLabel}`,
+      suggestedName,
+      extension,
+      settings.lastExportFolder,
+    )
+    if (!chosen) return
+    let r = await invoke('library:save-text-to', chosen, body, false)
+    if (!r.ok && (r as { ok: false; error: string }).error === 'exists') {
+      const overwrite = await new Promise<boolean>((resolve) => {
+        askConfirm(
+          `A file with that name already exists at:\n${chosen}\n\nOverwrite it?`,
+          () => resolve(true),
+          false,
+          () => resolve(false),
+        )
+      })
+      if (!overwrite) return
+      r = await invoke('library:save-text-to', chosen, body, true)
+    }
+    if (r.ok) {
+      setToast(`Saved to ${r.path}`)
+      const parent = parentOf(r.path)
+      if (parent) setSettings((s) => ({ ...s, lastExportFolder: parent }))
+    } else {
+      setToast(`Export failed — ${(r as { ok: false; error: string }).error}`)
+    }
+  }
   // Sprint C — cross-library ordered lists.
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   // Locally-installed plugin (git-ignored overlay under
@@ -921,10 +955,10 @@ function App() {
   const skipHistoryRef = useRef(false)
   const prevSnapRef = useRef<HistorySnap | null>(null)
 
-  const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void; suppressible?: boolean } | null>(null)
+  const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void; onCancel?: () => void; suppressible?: boolean } | null>(null)
   const [dontAskAgain, setDontAskAgain] = useState(false)
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
-  const askConfirm = (message: string, onConfirm: () => void, suppressible = false) => { setDontAskAgain(false); setConfirmState({ message, onConfirm, suppressible }) }
+  const askConfirm = (message: string, onConfirm: () => void, suppressible = false, onCancel?: () => void) => { setDontAskAgain(false); setConfirmState({ message, onConfirm, onCancel, suppressible }) }
 
   const [title, setTitle] = useState('')
   const [cover, setCover] = useState('')
@@ -1375,7 +1409,7 @@ function App() {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (alertMsg) setAlertMsg(null)
-      else if (confirmState) setConfirmState(null)
+      else if (confirmState) { confirmState.onCancel?.(); setConfirmState(null) }
       else if (artistPanelOpen) closeArtistPanel()
       else if (panelOpen) closePanel()
       else if (viewing) setViewing(null)
@@ -2424,19 +2458,19 @@ function App() {
       { label: 'Open', onClick: () => openEditPanel(item) },
       { label: 'Edit', onClick: () => { openEditPanel(item); setTimeout(() => loadItemIntoForm(item), 0); setPanelOpen(true) } },
       { label: 'Duplicate', onClick: dup },
-      { label: 'Export as JSON…', onClick: () => setExportModal({
-        body: JSON.stringify(item, null, 2),
-        suggestedName: `${item.title.replace(/[/\\:*?"<>|\r\n]+/g, '_').replace(/\s+/g, ' ').trim() || 'item'}`,
-        extension: 'json',
-        filterLabel: 'JSON',
-      }) },
+      { label: 'Export as JSON…', onClick: () => void saveExportInApp(
+        JSON.stringify(item, null, 2),
+        item.title.replace(/[/\\:*?"<>|\r\n]+/g, '_').replace(/\s+/g, ' ').trim() || 'item',
+        'json',
+        'JSON',
+      ) },
       { label: 'Export as HTML…', onClick: async () => {
-        const dir = await pickFolder('Choose where to export the item', settings.exportFolder)
+        const dir = await pickFolder('Choose where to export the item', settings.lastExportFolder)
         if (!dir) return
         const artistsForItem = item.categoryId === 'musica' ? musicArtists : []
         const html = buildStaticSiteHtml([item], artistsForItem, item.title)
         const r = await window.ipcRenderer.invoke('export:site', dir, html)
-        if (r?.ok) setToast(`Exported to ${r.path}`)
+        if (r?.ok) { setToast(`Exported to ${r.path}`); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
         else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
       } },
       { divider: true, label: '', onClick: () => {} },
@@ -4126,21 +4160,6 @@ function App() {
                       </p>
                     </div>
                     <div className="field-group">
-                      <label>Default export folder</label>
-                      <div className="settings-actions">
-                        <button type="button" className="secondary-btn" onClick={async () => {
-                          const dir = await pickFolder('Pick your default export folder', settings.exportFolder)
-                          if (dir) setSettings((s) => ({ ...s, exportFolder: dir }))
-                        }}>{settings.exportFolder ? 'Change folder…' : 'Pick folder…'}</button>
-                        {settings.exportFolder && (
-                          <button type="button" className="secondary-btn" onClick={() => setSettings((s) => ({ ...s, exportFolder: undefined }))}>Clear</button>
-                        )}
-                      </div>
-                      {settings.exportFolder && <p className="hint" style={{ marginTop: 4 }}><code>{settings.exportFolder}</code></p>}
-                      <p className="hint">When set, the "Export shown" toolbar dropdown skips the OS "Save as…" dialog and drops the file straight into this folder through an in-app modal. "Save elsewhere…" inside that modal still opens the native picker if you want a one-off destination.</p>
-                    </div>
-
-                    <div className="field-group">
                       <label>Automatic snapshots</label>
                       <BackupList
                         onRestore={(file) => askConfirm(
@@ -4217,7 +4236,7 @@ function App() {
                           ))}
                         </select>
                         <button type="button" className="secondary-btn" disabled={exporting} onClick={async () => {
-                          const dir = await pickFolder('Choose where to export your Omnio site', settings.exportFolder)
+                          const dir = await pickFolder('Choose where to export your Omnio site', settings.lastExportFolder)
                           if (!dir) return
                           setExporting(true)
                           const scopedItems = exportScope === 'all' ? items : items.filter((i) => i.categoryId === exportScope)
@@ -4226,11 +4245,11 @@ function App() {
                           const html = buildStaticSiteHtml(scopedItems, scopedArtists, scopeLabel)
                           const r = await window.ipcRenderer.invoke('export:site', dir, html)
                           setExporting(false)
-                          if (r?.ok) setToast(`Exported to ${r.path}`)
+                          if (r?.ok) { setToast(`Exported to ${r.path}`); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
                           else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
                         }}>{exporting ? 'Exporting…' : 'Export as HTML'}</button>
                         <button type="button" className="secondary-btn" disabled={exporting} onClick={async () => {
-                          const dir = await pickFolder('Choose where to save the CSV files', settings.exportFolder)
+                          const dir = await pickFolder('Choose where to save the CSV files', settings.lastExportFolder)
                           if (!dir) return
                           setExporting(true)
                           const scopedItems = exportScope === 'all' ? items : items.filter((i) => i.categoryId === exportScope)
@@ -4240,7 +4259,7 @@ function App() {
                           if (fileCount === 0) { setExporting(false); setToast('Nothing to export'); return }
                           const r = await window.ipcRenderer.invoke('export:csv', dir, files)
                           setExporting(false)
-                          if (r?.ok) setToast(`Wrote ${r.count} CSV file${r.count === 1 ? '' : 's'} to ${r.path}`)
+                          if (r?.ok) { setToast(`Wrote ${r.count} CSV file${r.count === 1 ? '' : 's'} to ${r.path}`); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
                           else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
                         }}>Export as CSV</button>
                       </div>
@@ -4764,19 +4783,9 @@ function App() {
                           ? `omnio-${activeList.name.replace(/\s+/g, '-')}`
                           : `omnio-${activeCategory}`
                         if (kind === 'csv') {
-                          setExportModal({
-                            body: buildSingleCsv(visibleItems as Item[]),
-                            suggestedName: stem,
-                            extension: 'csv',
-                            filterLabel: 'CSV',
-                          })
+                          void saveExportInApp(buildSingleCsv(visibleItems as Item[]), stem, 'csv', 'CSV')
                         } else if (kind === 'json') {
-                          setExportModal({
-                            body: JSON.stringify(visibleItems, null, 2),
-                            suggestedName: stem,
-                            extension: 'json',
-                            filterLabel: 'JSON',
-                          })
+                          void saveExportInApp(JSON.stringify(visibleItems, null, 2), stem, 'json', 'JSON')
                         }
                       }}
                       title="Export the items currently on screen"
@@ -5959,7 +5968,7 @@ function App() {
               </label>
             )}
             <div className="modal-actions">
-              <button className="ghost" onClick={() => setConfirmState(null)}>Cancel</button>
+              <button className="ghost" onClick={() => { confirmState.onCancel?.(); setConfirmState(null) }}>Cancel</button>
               <button className="danger-solid" onClick={() => { if (confirmState.suppressible && dontAskAgain) setSettings((s) => ({ ...s, confirmDelete: false })); confirmState.onConfirm(); setConfirmState(null) }}>Confirm</button>
             </div>
           </div>
@@ -6426,13 +6435,13 @@ function App() {
         onExportHtml={async () => {
           const picked = items.filter((i) => selectedIds.has(i.id))
           if (picked.length === 0) return
-          const dir = await pickFolder('Choose where to export the selection', settings.exportFolder)
+          const dir = await pickFolder('Choose where to export the selection', settings.lastExportFolder)
           if (!dir) return
           const includesMusic = picked.some((i) => i.categoryId === 'musica')
           const scopedArtists = includesMusic ? musicArtists : []
           const html = buildStaticSiteHtml(picked, scopedArtists, `Omnio selection (${picked.length} items)`)
           const r = await window.ipcRenderer.invoke('export:site', dir, html)
-          if (r?.ok) setToast(`Exported ${picked.length} items to ${r.path}`)
+          if (r?.ok) { setToast(`Exported ${picked.length} items to ${r.path}`); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
           else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
         }}
       />
@@ -6772,19 +6781,6 @@ function App() {
       )}
 
       {toast && <Toast message={toast} />}
-
-      <ExportModal
-        open={!!exportModal}
-        body={exportModal?.body ?? ''}
-        suggestedName={exportModal?.suggestedName ?? ''}
-        extension={exportModal?.extension ?? 'txt'}
-        filterLabel={exportModal?.filterLabel ?? 'File'}
-        exportFolder={settings.exportFolder}
-        onClose={() => setExportModal(null)}
-        onSaved={(path) => {
-          setToast(`Saved to ${path}`)
-        }}
-      />
 
       <SmartListsModal
         open={smartListsModalOpen}
