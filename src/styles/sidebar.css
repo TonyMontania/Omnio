@@ -99,6 +99,15 @@
   background: var(--accent-soft);
   color: var(--accent);
 }
+/* Sprint H — highlighted state while a card is being dragged over
+   a library entry. Uses a dashed accent border so it reads as
+   "release here" without hijacking the active-tab colour. */
+.sidebar-item.drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
 .sidebar-icon {
   display: inline-flex;
   color: currentColor;

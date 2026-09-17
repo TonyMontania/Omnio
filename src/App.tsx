@@ -533,7 +533,7 @@ function App() {
   // In-app folder picker. Replaces every `dialog:pick-directory` call
   // so folder selection uses the same visual language as the rest of
   // Omnio instead of dropping the user into Windows Explorer.
-  const { pickFolder, pickSaveFile } = useFolderPicker()
+  const { pickFolder, pickSaveFile, pickOpenFile } = useFolderPicker()
   const [activeCategory, setActiveCategory] = useState<CategoryId>(CATEGORIES[0].id)
   // App-level items state stays on the loose `AnyItem` bag so the
   // dozens of generic mappers / bulk ops inside App.tsx keep compiling
@@ -2589,7 +2589,32 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
+  // Sprint H — import backup through the in-app FilePicker instead of
+  // an OS file input. The legacy handler (kept below as a fallback
+  // for older callers) accepts a File object; this one takes the
+  // path picked by pickOpenFile and reads the text through the
+  // Rust fs:read-text-file command.
+  const handleImportBackup = async () => {
+    const path = await pickOpenFile('Choose an Omnio backup', 'json', settings.lastExportFolder)
+    if (!path) return
+    const r = await invoke('fs:read-text-file', path)
+    if (!r.ok) { setAlertMsg(`Could not read that file — ${r.error}`); return }
+    try {
+      const parsed = JSON.parse(r.text)
+      askConfirm('This replaces all current data with the imported file. Continue?', () => {
+        if (parsed.items) setItems(parsed.items)
+        if (parsed.collections) setCollections(parsed.collections)
+        if (parsed.settings) setSettings(parsed.settings)
+        if (parsed.artists) setMusicArtists(parsed.artists)
+        if (parsed.customOrders) setCustomOrders(parsed.customOrders)
+      })
+    } catch {
+      setAlertMsg('That file is not a valid Omnio backup.')
+    }
+  }
   const handleImportFile = (e: ChangeEvent<HTMLInputElement>) => {
+    // Legacy OS-input flow, kept as a fallback for the hidden <input>
+    // that never got removed. New buttons should call handleImportBackup.
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
@@ -2836,6 +2861,13 @@ function App() {
           onOpenRandomizer={() => setRandomizerOpen(true)}
           onOpenArcade={() => { setSpecialView('arcade'); setActivePluginSlug(null); closePanel(); closeAllDetailViews() }}
           onOpenPlaylists={() => { setSpecialView('playlists'); setActivePluginSlug(null); closePanel(); closeAllDetailViews() }}
+          onDropItemOnLibrary={(itemId, targetCat) => {
+            const it = items.find((x) => x.id === itemId)
+            if (!it || it.categoryId === targetCat || !isCategoryId(targetCat)) return
+            setItems((prev) => prev.map((x) => (x.id === itemId ? { ...x, categoryId: targetCat } as AnyItem : x)))
+            const label = CATEGORIES.find((c) => c.id === targetCat)?.label ?? targetCat
+            setToast(`Moved "${it.title}" to ${label}`)
+          }}
           pluginCounts={pluginCounts}
           visiblePlugins={visiblePlugins}
           onOpenPlugin={(slug) => { setSpecialView('none'); setActivePluginSlug(slug); closePanel(); closeAllDetailViews() }}
@@ -4115,7 +4147,7 @@ function App() {
                       <label>Manual backup</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={handleExport}>⬇ Export backup</button>
-                        <button type="button" className="secondary-btn" onClick={() => importInputRef.current?.click()}>⬆ Import backup</button>
+                        <button type="button" className="secondary-btn" onClick={handleImportBackup}>⬆ Import backup</button>
                         <button type="button" className="secondary-btn" onClick={async () => {
                           const dir = await pickFolder('Pick the assets folder from your other Omnio install')
                           if (!dir) return
@@ -4844,30 +4876,37 @@ function App() {
                               </div>
                             )
                           )}
-                          {visibleItems.map((item) => (
-                            <ItemCard
-                              key={item.id}
-                              item={item}
-                              layout={layout as 'list' | 'grid' | 'compact'}
-                              onOpen={openEditPanel}
-                              onDelete={handleDelete} onToggleFavorite={toggleItemFavorite}
-                              onToggleSelect={toggleSelect}
-                              selected={selectedIds.has(item.id)}
-                              selectionActive={selectedIds.size > 0}
-                              draggableEnabled={sortBy === 'custom'}
-                              onDragStartItem={setDraggedId}
-                              onDropItem={activeCollection ? handleReorder : handleReorderCategory}
-                              gameFields={settings.gameFields}
-                              musicFields={settings.musicFields}
-                              mangaFields={settings.mangaFields}
-                              movieFields={settings.movieFields}
-                              animeFields={settings.animeFields}
-                              seriesFields={settings.seriesFields}
-                              bookFields={settings.bookFields}
-                              vnFields={settings.vnFields}
-                              onContextMenu={(it, x, y) => setCtxMenu({ item: it, x, y })}
-                            />
-                          ))}
+                          {visibleItems.map((item) => {
+                            const libraryCustomFields = settings.libraryCustomFields?.[item.categoryId] ?? []
+                            const libraryCustomFieldsShown: Record<string, boolean> = {}
+                            for (const f of libraryCustomFields) if (f.showOnCard) libraryCustomFieldsShown[f.id] = true
+                            return (
+                              <ItemCard
+                                key={item.id}
+                                item={item}
+                                layout={layout as 'list' | 'grid' | 'compact'}
+                                onOpen={openEditPanel}
+                                onDelete={handleDelete} onToggleFavorite={toggleItemFavorite}
+                                onToggleSelect={toggleSelect}
+                                selected={selectedIds.has(item.id)}
+                                selectionActive={selectedIds.size > 0}
+                                draggableEnabled={sortBy === 'custom'}
+                                onDragStartItem={setDraggedId}
+                                onDropItem={activeCollection ? handleReorder : handleReorderCategory}
+                                gameFields={settings.gameFields}
+                                musicFields={settings.musicFields}
+                                mangaFields={settings.mangaFields}
+                                movieFields={settings.movieFields}
+                                animeFields={settings.animeFields}
+                                seriesFields={settings.seriesFields}
+                                bookFields={settings.bookFields}
+                                vnFields={settings.vnFields}
+                                libraryCustomFields={libraryCustomFields}
+                                libraryCustomFieldsShown={libraryCustomFieldsShown}
+                                onContextMenu={(it, x, y) => setCtxMenu({ item: it, x, y })}
+                              />
+                            )
+                          })}
                         </div>
                       )
                     }

@@ -354,6 +354,31 @@ pub async fn fs_list_dir(path: String, include_hidden: bool) -> ListDirResult {
     ListDirResult::Ok { ok: true, entries }
 }
 
+// -- fs:read-text-file -----------------------------------------------
+//
+// Read a text file from disk and return its UTF-8 contents. Used by
+// the in-app file picker's "open" mode when the caller wants the
+// text of the picked file (import a CSV, an XML, a JSON dump) —
+// same round-trip as the OS <input type="file">' FileReader read
+// but through the app-styled picker instead of the OS dialog.
+//
+// Errors bubble as { ok: false, error } so the caller can inline a
+// friendly "could not read this file" message.
+#[derive(serde::Serialize)]
+#[serde(untagged)]
+pub enum ReadTextResult {
+    Ok { ok: bool, text: String },
+    Err { ok: bool, error: String },
+}
+
+#[tauri::command]
+pub async fn fs_read_text_file(path: String) -> ReadTextResult {
+    match tokio::fs::read_to_string(&path).await {
+        Ok(text) => ReadTextResult::Ok { ok: true, text },
+        Err(e) => ReadTextResult::Err { ok: false, error: e.to_string() },
+    }
+}
+
 // -- fs:mkdir --------------------------------------------------------
 //
 // Create a directory (and any missing parents) at the given path.

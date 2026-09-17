@@ -31,16 +31,28 @@ export interface SmartList {
   // 'all' spans every library. A CategoryId string scopes to one.
   categoryId: string
   rules: SmartListRule[]
+  // How the rules are combined. 'and' (default when missing) requires
+  // every rule; 'or' matches when at least one rule fires. Rules are
+  // flat — no nested groups in v1 — so "A and (B or C)" isn't
+  // expressible without splitting into two smart lists. Trade-off:
+  // keeps the editor UI legible.
+  mode?: 'and' | 'or'
   createdAt: number
   updatedAt?: number
 }
 
-// True when the item satisfies every rule of `list`. An empty rule set
-// matches everything in scope — that's on purpose: a freshly-created
-// list with no rules yet just shows "everything in this library" as a
-// starting point.
+// True when the item satisfies the list's rules under its combining
+// mode. An empty rule set always matches — a freshly-created list
+// shows "everything in scope" as a starting point.
 export function matchesSmartList(item: AnyItem, list: SmartList): boolean {
   if (list.categoryId !== 'all' && item.categoryId !== list.categoryId) return false
+  if (list.rules.length === 0) return true
+  if ((list.mode ?? 'and') === 'or') {
+    for (const r of list.rules) {
+      if (matchesRule(item, r)) return true
+    }
+    return false
+  }
   for (const r of list.rules) {
     if (!matchesRule(item, r)) return false
   }

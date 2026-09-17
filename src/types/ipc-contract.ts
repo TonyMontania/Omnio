@@ -197,6 +197,8 @@ export type IpcContract = {
     { args: [path: string]; result: { exists: boolean; isDir: boolean; canonical: string; parent: string | null } }
   'fs:mkdir':
     { args: [path: string]; result: SimpleResult }
+  'fs:read-text-file':
+    { args: [path: string]; result: { ok: true; text: string } | { ok: false; error: string } }
 
   // -- handlers/updates.ts --
   'updates:check':

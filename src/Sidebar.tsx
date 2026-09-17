@@ -7,7 +7,13 @@ import type { CategoryId } from './types/items'
 import {
   CategoryIcon, HomeIcon, CalendarIcon, InsightsIcon, SettingsIcon, DiceIcon,
 } from './icons'
+import { useState } from 'react'
 import type { PluginDef } from './plugins/registry'
+
+// Sprint H — MIME-ish payload for the drag-to-sidebar move gesture.
+// Cards set this on dragstart; sidebar library entries listen for it.
+// Kept as a const so a typo can't split source and target apart.
+export const OMNIO_ITEM_DRAG_TYPE = 'application/x-omnio-item'
 
 // Visual Novels used to live in the "Extras" bucket, split off from
 // the other libraries in the sidebar. Tony wanted it treated as a
@@ -41,6 +47,9 @@ interface Props {
   onOpenRandomizer?: () => void
   onOpenArcade: () => void
   onOpenPlaylists?: () => void
+  // Sprint H — a card was dropped onto a library entry. Consumer
+  // moves the item to that library (rewrites categoryId).
+  onDropItemOnLibrary?: (itemId: string, categoryId: string) => void
   pluginCounts?: Record<string, number>
   onOpenPlugin?: (slug: string) => void
   visiblePlugins?: PluginDef[]
@@ -58,9 +67,32 @@ export default function Sidebar(props: Props) {
     items, enabledCategories, arcadeEnabled, active, collapsed, onToggleCollapsed,
     onOpenHome, onOpenLibrary, onOpenCalendar, onOpenStats, onOpenSettings, onOpenSearch, onOpenRandomizer, onOpenArcade,
     onOpenPlaylists,
+    onDropItemOnLibrary,
     pluginCounts, onOpenPlugin, visiblePlugins,
   } = props
   const arcadeOn = arcadeEnabled !== false
+
+  // Sprint H — which library entry is currently being hovered by a
+  // card drag. Rendered as a soft accent-tinted highlight so the
+  // user sees what they're about to hit before they let go.
+  const [dropHoverCat, setDropHoverCat] = useState<string | null>(null)
+  const canAcceptDrop = (e: React.DragEvent) => onDropItemOnLibrary && e.dataTransfer.types.includes(OMNIO_ITEM_DRAG_TYPE)
+  const onLibraryDragOver = (e: React.DragEvent, catId: string) => {
+    if (!canAcceptDrop(e)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dropHoverCat !== catId) setDropHoverCat(catId)
+  }
+  const onLibraryDrop = (e: React.DragEvent, catId: string) => {
+    if (!canAcceptDrop(e)) return
+    e.preventDefault()
+    const id = e.dataTransfer.getData(OMNIO_ITEM_DRAG_TYPE)
+    if (id) onDropItemOnLibrary?.(id, catId)
+    setDropHoverCat(null)
+  }
+  const onLibraryDragLeave = (catId: string) => {
+    setDropHoverCat((c) => c === catId ? null : c)
+  }
 
   const enabledCats = CATEGORIES.filter((c) => !enabledCategories || enabledCategories.includes(c.id))
   const cats = enabledCats.filter((c) => !EXTRA_CATEGORY_IDS.has(c.id))
@@ -112,12 +144,19 @@ export default function Sidebar(props: Props) {
           {!collapsed && <span className="sidebar-section-title">Libraries</span>}
           {cats.map((c) => {
             const n = items.filter((i) => i.categoryId === c.id).length
+            const dropping = dropHoverCat === c.id
             return (
               <button
                 key={c.id}
                 type="button"
-                className={isActiveLibrary(active, c.id) ? 'sidebar-item active' : 'sidebar-item'}
+                className={
+                  (isActiveLibrary(active, c.id) ? 'sidebar-item active' : 'sidebar-item') +
+                  (dropping ? ' drop-target' : '')
+                }
                 onClick={() => onOpenLibrary(c.id)}
+                onDragOver={(e) => onLibraryDragOver(e, c.id)}
+                onDrop={(e) => onLibraryDrop(e, c.id)}
+                onDragLeave={() => onLibraryDragLeave(c.id)}
                 title={`${c.label} — ${n} ${n === 1 ? 'item' : 'items'}`}
               >
                 <span className="sidebar-icon"><CategoryIcon id={c.id} /></span>
@@ -152,12 +191,19 @@ export default function Sidebar(props: Props) {
           )}
           {extraCats.map((c) => {
             const n = items.filter((i) => i.categoryId === c.id).length
+            const dropping = dropHoverCat === c.id
             return (
               <button
                 key={c.id}
                 type="button"
-                className={isActiveLibrary(active, c.id) ? 'sidebar-item active' : 'sidebar-item'}
+                className={
+                  (isActiveLibrary(active, c.id) ? 'sidebar-item active' : 'sidebar-item') +
+                  (dropping ? ' drop-target' : '')
+                }
                 onClick={() => onOpenLibrary(c.id)}
+                onDragOver={(e) => onLibraryDragOver(e, c.id)}
+                onDrop={(e) => onLibraryDrop(e, c.id)}
+                onDragLeave={() => onLibraryDragLeave(c.id)}
                 title={`${c.label} — ${n} ${n === 1 ? 'item' : 'items'}`}
               >
                 <span className="sidebar-icon"><CategoryIcon id={c.id} /></span>

@@ -27,7 +27,14 @@ interface PendingSave {
   extension: string
   resolve: (path: string | null) => void
 }
-type Pending = PendingFolder | PendingSave
+interface PendingOpen {
+  kind: 'open'
+  title: string
+  initialPath?: string
+  extension?: string
+  resolve: (path: string | null) => void
+}
+type Pending = PendingFolder | PendingSave | PendingOpen
 
 interface Ctx {
   pickFolder: (title: string, initialPath?: string) => Promise<string | null>
@@ -35,6 +42,11 @@ interface Ctx {
     title: string,
     suggestedFilename: string,
     extension: string,
+    initialPath?: string,
+  ) => Promise<string | null>
+  pickOpenFile: (
+    title: string,
+    extension?: string,
     initialPath?: string,
   ) => Promise<string | null>
 }
@@ -75,6 +87,16 @@ export default function FolderPickerHost({ children }: { children: React.ReactNo
     })
   }, [])
 
+  const pickOpenFile = useCallback((
+    title: string,
+    extension?: string,
+    initialPath?: string,
+  ) => {
+    return new Promise<string | null>((resolve) => {
+      openWith({ kind: 'open', title, extension, initialPath, resolve })
+    })
+  }, [])
+
   const finish = useCallback((result: string | null) => {
     const req = pendingRef.current
     if (req) req.resolve(result)
@@ -83,17 +105,22 @@ export default function FolderPickerHost({ children }: { children: React.ReactNo
   }, [])
 
   return (
-    <FolderPickerContext.Provider value={{ pickFolder, pickSaveFile }}>
+    <FolderPickerContext.Provider value={{ pickFolder, pickSaveFile, pickOpenFile }}>
       {children}
       <FilePicker
         open={!!pending}
         title={pending?.title ?? ''}
-        mode={pending?.kind === 'save' ? 'save' : 'folder'}
+        mode={pending?.kind === 'save' ? 'save' : pending?.kind === 'open' ? 'open' : 'folder'}
         initialPath={pending?.initialPath}
         suggestedFilename={pending?.kind === 'save' ? pending.suggestedFilename : undefined}
-        extension={pending?.kind === 'save' ? pending.extension : undefined}
+        extension={
+          pending?.kind === 'save' ? pending.extension :
+          pending?.kind === 'open' ? pending.extension :
+          undefined
+        }
         onCancel={() => finish(null)}
         onPickFolder={(path) => finish(path)}
+        onPickFile={(path) => finish(path)}
       />
     </FolderPickerContext.Provider>
   )

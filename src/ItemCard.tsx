@@ -3,6 +3,9 @@ import { getGameStatus, getCategoryLine, getMusicTypeLabel, getMangaStatus, isMa
 import { useLongPress } from './utils/useLongPress'
 import { GameStatusIcon, MangaStatusIcon, AnimeStatusIcon } from './icons'
 import type { AnyItem, GameField, MusicField, MangaField, MovieField, AnimeField, SeriesField, BookField, VnField, MangaStatus } from './types'
+import type { LibraryCustomFieldDef } from './types/customFields'
+import { displayLibraryCustomValue } from './types/customFields'
+import { OMNIO_ITEM_DRAG_TYPE } from './Sidebar'
 
 interface Props {
   item: AnyItem
@@ -25,9 +28,15 @@ interface Props {
   seriesFields?: Record<SeriesField, boolean>
   bookFields?: Record<BookField, boolean>
   vnFields?: Record<VnField, boolean>
+  // Sprint H — library-level custom fields declared in Settings +
+  // per-field on/off flags picked by the user for the card view.
+  // Only the flagged fields render on the card, everything else stays
+  // in the editor as before.
+  libraryCustomFields?: LibraryCustomFieldDef[]
+  libraryCustomFieldsShown?: Record<string, boolean>
 }
 
-export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavorite, onContextMenu, onToggleSelect, selected, selectionActive, draggableEnabled, onDragStartItem, onDropItem, gameFields, musicFields, mangaFields, movieFields, animeFields, seriesFields, bookFields, vnFields }: Props) {
+export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavorite, onContextMenu, onToggleSelect, selected, selectionActive, draggableEnabled, onDragStartItem, onDropItem, gameFields, musicFields, mangaFields, movieFields, animeFields, seriesFields, bookFields, vnFields, libraryCustomFields, libraryCustomFieldsShown }: Props) {
   const handleContextMenu = (e: React.MouseEvent) => {
     if (!onContextMenu) return
     e.preventDefault()
@@ -83,9 +92,23 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
 
   const line = getCategoryLine(item)
 
+  // Cards are ALWAYS draggable so a user can drag them onto a
+  // sidebar library entry (Sprint H — cross-library move). The
+  // existing per-collection reorder gesture is still gated by
+  // `draggableEnabled`: when true, the drag also stashes the id for
+  // the per-card onDrop reorder handler; when false, only the
+  // sidebar payload is set so cards can't accidentally drop onto
+  // each other in the middle of a non-reorderable sort.
   const dragProps = {
-    draggable: draggableEnabled,
-    onDragStart: () => onDragStartItem?.(item.id),
+    draggable: true,
+    onDragStart: (e: DragEvent) => {
+      // Sidebar drop target uses this custom MIME so unrelated
+      // dragovers (a random file drag from the OS onto a card) can
+      // be ignored.
+      e.dataTransfer.setData(OMNIO_ITEM_DRAG_TYPE, item.id)
+      e.dataTransfer.effectAllowed = 'move'
+      onDragStartItem?.(item.id)
+    },
     onDragOver: (e: DragEvent) => draggableEnabled && e.preventDefault(),
     onDrop: () => onDropItem?.(item.id),
   }
@@ -201,6 +224,21 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
         {showTags && item.tags && item.tags.length > 0 && (
           <div className="card-tags">
             {item.tags.map((t) => <span key={t} className="card-tag">{t}</span>)}
+          </div>
+        )}
+        {libraryCustomFields && libraryCustomFields.length > 0 && libraryCustomFieldsShown && (
+          <div className="card-custom-fields">
+            {libraryCustomFields.map((def) => {
+              if (!libraryCustomFieldsShown[def.id]) return null
+              const v = item.libraryCustomFieldValues?.[def.id]
+              if (v == null || v === '') return null
+              return (
+                <span key={def.id} className="card-custom-field" title={`${def.name}: ${displayLibraryCustomValue(def, v)}`}>
+                  <span className="card-custom-field-key">{def.name}</span>
+                  <span className="card-custom-field-val">{displayLibraryCustomValue(def, v)}</span>
+                </span>
+              )
+            })}
           </div>
         )}
       </div>

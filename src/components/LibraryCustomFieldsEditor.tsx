@@ -114,6 +114,14 @@ export default function LibraryCustomFieldsEditor({ fields, onChange }: Props) {
                 value={def.description ?? ''}
                 onChange={(e) => patch(def.id, (d) => ({ ...d, description: e.target.value || undefined }))}
               />
+              <label className="library-custom-field-show-on-card">
+                <input
+                  type="checkbox"
+                  checked={!!def.showOnCard}
+                  onChange={(e) => patch(def.id, (d) => ({ ...d, showOnCard: e.target.checked || undefined }))}
+                />
+                <span>Show as a chip on the item card</span>
+              </label>
               {def.kind === 'select' && (
                 <div className="library-custom-field-options">
                   <label>Options (one per line)</label>

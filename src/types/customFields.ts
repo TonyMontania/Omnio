@@ -25,6 +25,10 @@ export interface LibraryCustomFieldDef {
   options?: string[]
   // Optional short helper the editor shows under the input.
   description?: string
+  // Sprint H — when true, the field value renders as a small chip on
+  // the item card (in addition to the editor). Off by default so the
+  // card doesn't grow noisy the moment a user adds their first field.
+  showOnCard?: boolean
   createdAt: number
 }
 

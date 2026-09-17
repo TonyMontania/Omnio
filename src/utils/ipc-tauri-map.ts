@@ -25,6 +25,7 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'fs:common-locations': [],
   'fs:path-info': ['path'],
   'fs:mkdir': ['path'],
+  'fs:read-text-file': ['path'],
 
   // -- storage -------------------------------------------------------
   'storage:root': [],

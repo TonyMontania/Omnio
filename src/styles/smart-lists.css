@@ -170,8 +170,15 @@
 .smart-lists-rules-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.smart-lists-rules-header > span:first-child { flex: 0 0 auto; }
+.smart-lists-mode-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
 }
 .smart-lists-rules-header span {
   color: var(--text-dim);

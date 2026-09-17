@@ -174,6 +174,18 @@ export default function SmartListsModal({ open, smartLists, onClose, onSave, onD
                 <div className="smart-lists-rules">
                   <div className="smart-lists-rules-header">
                     <span>Rules</span>
+                    <div className="smart-lists-mode-toggle" title="How to combine the rules">
+                      <button
+                        type="button"
+                        className={(activeDraft.mode ?? 'and') === 'and' ? 'pill active' : 'pill'}
+                        onClick={() => patch({ mode: 'and' })}
+                      >Match ALL (AND)</button>
+                      <button
+                        type="button"
+                        className={activeDraft.mode === 'or' ? 'pill active' : 'pill'}
+                        onClick={() => patch({ mode: 'or' })}
+                      >Match ANY (OR)</button>
+                    </div>
                     <select
                       value=""
                       onChange={(e) => {
