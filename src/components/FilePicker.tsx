@@ -24,12 +24,14 @@ interface DirEntry { name: string; isDir: boolean; size: number }
 interface Props {
   open: boolean
   title: string
-  mode: 'save' | 'open'
+  mode: 'save' | 'open' | 'folder'
   initialPath?: string
   suggestedFilename?: string   // save mode only
   extension?: string           // no dot; save mode filters shown files by it too
   onCancel: () => void
-  onPickFolder?: (folderPath: string) => void   // save mode: fired with the resolved path
+  // save mode: fired with the resolved `<folder>/<name>.<ext>`
+  // folder mode: fired with the current directory path
+  onPickFolder?: (folderPath: string) => void
   onPickFile?: (filePath: string) => void       // open mode
 }
 
@@ -149,6 +151,7 @@ export default function FilePicker({
   if (!open) return null
 
   const canSave = mode === 'save' && !!cwd && !!filename.trim() && !busy
+  const canPickFolder = mode === 'folder' && !!cwd && !busy
   const finalPath = mode === 'save' && cwd && filename.trim()
     ? joinPath(cwd, `${safeFilename(filename)}.${extension ?? 'txt'}`)
     : ''
@@ -290,6 +293,14 @@ export default function FilePicker({
               onClick={() => onPickFolder?.(finalPath)}
               disabled={!canSave}
             >Save</button>
+          )}
+          {mode === 'folder' && (
+            <button
+              type="button"
+              className="primary-btn"
+              onClick={() => onPickFolder?.(cwd)}
+              disabled={!canPickFolder}
+            >Select this folder</button>
           )}
         </div>
       </div>

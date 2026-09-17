@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import { installIpcShim } from './utils/ipc-shim'
+import FolderPickerHost from './components/FolderPickerHost'
 
 // Install the Tauri IPC shim BEFORE React mounts so any
 // `window.ipcRenderer.*` call from a child component finds a working
@@ -12,7 +13,9 @@ async function boot() {
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <App />
+      <FolderPickerHost>
+        <App />
+      </FolderPickerHost>
     </React.StrictMode>,
   )
 

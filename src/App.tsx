@@ -74,6 +74,7 @@ import type { LibraryCustomFieldDef } from './types/customFields'
 import LibraryCustomFieldsEditor from './components/LibraryCustomFieldsEditor'
 import LibraryCustomFieldsSection from './components/LibraryCustomFieldsSection'
 import ExportModal from './components/ExportModal'
+import { useFolderPicker } from './components/FolderPickerHost'
 import PlaythroughsEditor from './components/editors/PlaythroughsEditor'
 import VnEndingsEditor from './components/editors/VnEndingsEditor'
 import GameStoreEditor from './components/editors/GameStoreEditor'
@@ -146,7 +147,7 @@ import {
 // Editors and pickers used inside detail modals and the toolbar
 import DistChart from './insights/DistChart'
 import Heatmap from './insights/Heatmap'
-import { pickImageToDataUrl, imageDropHandlers, assetBasename, exportItemAsJson } from './utils/files'
+import { pickImageToDataUrl, imageDropHandlers, assetBasename } from './utils/files'
 import { expandTagSelection } from './utils/tags'
 // Fetcher registry — panel iterates `getFetchersFor(activeCategory)`
 // and a single `activeFetcher: string | null` state drives which modal
@@ -528,6 +529,10 @@ function filterAndSort<T extends AnyItem>(list: T[], search: string, filterTags:
 
 
 function App() {
+  // In-app folder picker. Replaces every `dialog:pick-directory` call
+  // so folder selection uses the same visual language as the rest of
+  // Omnio instead of dropping the user into Windows Explorer.
+  const { pickFolder } = useFolderPicker()
   const [activeCategory, setActiveCategory] = useState<CategoryId>(CATEGORIES[0].id)
   // App-level items state stays on the loose `AnyItem` bag so the
   // dozens of generic mappers / bulk ops inside App.tsx keep compiling
@@ -2419,9 +2424,14 @@ function App() {
       { label: 'Open', onClick: () => openEditPanel(item) },
       { label: 'Edit', onClick: () => { openEditPanel(item); setTimeout(() => loadItemIntoForm(item), 0); setPanelOpen(true) } },
       { label: 'Duplicate', onClick: dup },
-      { label: 'Export as JSON…', onClick: () => exportItemAsJson(item as unknown as Record<string, unknown>, item.title) },
+      { label: 'Export as JSON…', onClick: () => setExportModal({
+        body: JSON.stringify(item, null, 2),
+        suggestedName: `${item.title.replace(/[/\\:*?"<>|\r\n]+/g, '_').replace(/\s+/g, ' ').trim() || 'item'}`,
+        extension: 'json',
+        filterLabel: 'JSON',
+      }) },
       { label: 'Export as HTML…', onClick: async () => {
-        const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Choose where to export the item')
+        const dir = await pickFolder('Choose where to export the item', settings.exportFolder)
         if (!dir) return
         const artistsForItem = item.categoryId === 'musica' ? musicArtists : []
         const html = buildStaticSiteHtml([item], artistsForItem, item.title)
@@ -4073,7 +4083,7 @@ function App() {
                         <button type="button" className="secondary-btn" onClick={handleExport}>⬇ Export backup</button>
                         <button type="button" className="secondary-btn" onClick={() => importInputRef.current?.click()}>⬆ Import backup</button>
                         <button type="button" className="secondary-btn" onClick={async () => {
-                          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Pick the assets folder from your other Omnio install')
+                          const dir = await pickFolder('Pick the assets folder from your other Omnio install')
                           if (!dir) return
                           const r = await window.ipcRenderer.invoke('storage:import-assets-from', dir) as { ok: boolean; copied?: number; error?: string }
                           if (r?.ok) setToast(`Copied ${r.copied ?? 0} asset files into this install`)
@@ -4101,7 +4111,7 @@ function App() {
                           <label>Destination folder</label>
                           <div className="settings-actions">
                             <button type="button" className="secondary-btn" onClick={async () => {
-                              const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Pick a folder for automatic backups')
+                              const dir = await pickFolder('Pick a folder for automatic backups', settings.autoBackupTarget)
                               if (dir) setSettings((s) => ({ ...s, autoBackupTarget: dir }))
                             }}>{settings.autoBackupTarget ? 'Change folder…' : 'Pick folder…'}</button>
                             {settings.autoBackupTarget && (
@@ -4119,7 +4129,7 @@ function App() {
                       <label>Default export folder</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={async () => {
-                          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Pick your default export folder')
+                          const dir = await pickFolder('Pick your default export folder', settings.exportFolder)
                           if (dir) setSettings((s) => ({ ...s, exportFolder: dir }))
                         }}>{settings.exportFolder ? 'Change folder…' : 'Pick folder…'}</button>
                         {settings.exportFolder && (
@@ -4147,7 +4157,7 @@ function App() {
                       <label>Remote backup</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={async () => {
-                          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Choose a folder inside Dropbox / OneDrive / Drive')
+                          const dir = await pickFolder('Choose a folder inside Dropbox / OneDrive / Drive')
                           if (!dir) return
                           const r = await window.ipcRenderer.invoke('storage:copy-data-to', dir)
                           if (r?.ok) setToast(`Copied ${r.files} files to ${r.path}`)
@@ -4207,7 +4217,7 @@ function App() {
                           ))}
                         </select>
                         <button type="button" className="secondary-btn" disabled={exporting} onClick={async () => {
-                          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Choose where to export your Omnio site')
+                          const dir = await pickFolder('Choose where to export your Omnio site', settings.exportFolder)
                           if (!dir) return
                           setExporting(true)
                           const scopedItems = exportScope === 'all' ? items : items.filter((i) => i.categoryId === exportScope)
@@ -4220,7 +4230,7 @@ function App() {
                           else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
                         }}>{exporting ? 'Exporting…' : 'Export as HTML'}</button>
                         <button type="button" className="secondary-btn" disabled={exporting} onClick={async () => {
-                          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Choose where to save the CSV files')
+                          const dir = await pickFolder('Choose where to save the CSV files', settings.exportFolder)
                           if (!dir) return
                           setExporting(true)
                           const scopedItems = exportScope === 'all' ? items : items.filter((i) => i.categoryId === exportScope)
@@ -6416,7 +6426,7 @@ function App() {
         onExportHtml={async () => {
           const picked = items.filter((i) => selectedIds.has(i.id))
           if (picked.length === 0) return
-          const dir = await window.ipcRenderer.invoke('dialog:pick-directory', 'Choose where to export the selection')
+          const dir = await pickFolder('Choose where to export the selection', settings.exportFolder)
           if (!dir) return
           const includesMusic = picked.some((i) => i.categoryId === 'musica')
           const scopedArtists = includesMusic ? musicArtists : []
