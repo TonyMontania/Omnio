@@ -225,7 +225,17 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
         | { ok: false; error: string }
       if (!res.ok) { setError(res.error); setBusy(false); return }
       const parsed = parseAnidbXml(res.data, aid)
-      if (!parsed) { setError('Could not parse AniDB response. The AID might not exist yet or the API returned an unexpected shape.'); setBusy(false); return }
+      if (!parsed) {
+        // Surface what AniDB actually sent so the user can tell a
+        // rate-limit / banned-client / maintenance-page situation
+        // apart from a genuine "no such AID". `res.data` is the raw
+        // XML string; strip whitespace and cap at 250 chars so the
+        // error doesn't blow the modal open.
+        const preview = res.data.trim().replace(/\s+/g, ' ').slice(0, 250)
+        setError(`Could not parse AniDB response. First bytes of what AniDB sent back:\n\n${preview || '(empty response)'}\n\nCommon causes: newly-registered clients can take up to ~15 min to activate; API=UDP instead of HTTP on the client; wrong client version; rate limit exceeded ("banned" for ~24h).`)
+        setBusy(false)
+        return
+      }
       setResult(parsed)
     } catch (e) {
       setError((e as Error).message)
@@ -323,7 +333,7 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
             </button>
           </div>
 
-          {error && <p className="save-files-error">{error}</p>}
+          {error && <pre className="save-files-error" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', margin: 0 }}>{error}</pre>}
 
           {result && (
             <div className="anidb-result">
