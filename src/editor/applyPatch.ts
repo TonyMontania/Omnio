@@ -146,6 +146,10 @@ export const PATCH_ROUTES: PatchRoute[] = [
   defined('endYear', (v, s) => s.setEndYear(v ?? '')),
   defined('hasSeasons', (v, s) => s.setHasSeasons(v ?? false)),
   truthy('seasons', (v, s) => s.setSeasons(v)),
+  // Anime / Series individual episode list — Sprint H, hooked so
+  // AniDB's <episodes> block auto-fills the item's Episodes section.
+  defined('hasEpisodes', (v, s) => s.setHasEpisodes(v ?? false)),
+  truthy('episodes', (v, s) => s.setEpisodes(v)),
 
   // -- Music (MusicBrainz) -------------------------------------------
   defined('artist', (v, s) => s.setArtist(v ?? '')),

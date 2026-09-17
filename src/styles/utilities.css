@@ -1628,6 +1628,44 @@
   font-size: 10.5px;
   letter-spacing: 0.03em;
 }
+.anidb-episodes-scope {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.anidb-episodes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.anidb-episodes-head > span:first-child {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.anidb-episodes-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.anidb-episodes-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 12.5px;
+  cursor: pointer;
+  user-select: none;
+}
+.anidb-episodes-options input { cursor: pointer; }
 .anidb-desc {
   margin: 4px 0 0;
   font-size: 12.5px;

@@ -14,7 +14,7 @@
 // visually locks with a spinner so the user can't queue five fast clicks.
 
 import { useState } from 'react'
-import type { Item, AnimeFormat, AiringStatus } from './types'
+import type { Item, AnimeFormat, AiringStatus, Episode } from './types'
 import { assetBasename, downloadImageAsset } from './utils/files'
 
 interface Props {
@@ -28,6 +28,21 @@ interface Props {
 type ParsedTitle = { text: string; type?: string; lang?: string }
 type ParsedTag = { name: string; weight: number }
 
+// One episode as returned by AniDB, before mapping to Omnio's Episode
+// shape. `numeric` is the numeric portion of `<epno>` (AniDB prefixes
+// specials with 'S' — "S1", "S2" — and credits with 'C', 'T', 'P').
+// `type` tells us which of those buckets the episode falls in so the
+// user can opt to skip specials on apply.
+type ParsedEpisode = {
+  epno: string
+  numeric: string
+  type: 'regular' | 'special' | 'other'
+  title?: string
+  airdate?: string
+  length?: string
+  rating?: string
+}
+
 type ParsedAnime = {
   aid: string
   mainTitle: string
@@ -39,6 +54,7 @@ type ParsedAnime = {
   description?: string
   studios: string[]
   tags: ParsedTag[]
+  episodes: ParsedEpisode[]
   pictureUrl?: string
   siteUrl: string
 }
@@ -128,6 +144,49 @@ function parseAnidbXml(xml: string, aid: string): ParsedAnime | null {
     .filter((t) => t.name && t.weight >= 300)
     .sort((a, b) => b.weight - a.weight)
     .slice(0, 15)
+  // Episodes. AniDB tags <epno> with a `type` attribute:
+  //   1 = regular  (1, 2, 3, ...)
+  //   2 = special  ("S1", "S2", ...)
+  //   3 = credits, 4 = trailer, 5 = parody, 6 = other
+  // We normalise to three buckets so the apply step can offer
+  // "regular only" vs "everything" without re-parsing.
+  // Titles inside an <episode> come in multiple languages; we pick
+  // English first, then Romaji (x-jat), then whatever else we find.
+  const bucketOf = (t: string | null): 'regular' | 'special' | 'other' => {
+    if (t === '1' || t === null) return 'regular'
+    if (t === '2') return 'special'
+    return 'other'
+  }
+  const pickEpisodeTitle = (ep: Element): string | undefined => {
+    const nodes = Array.from(ep.querySelectorAll('title'))
+    const byLang = (l: string) => nodes.find((n) => (n.getAttribute('xml:lang') ?? n.getAttribute('lang')) === l)
+    return (byLang('en') ?? byLang('x-jat') ?? nodes[0])?.textContent?.trim() || undefined
+  }
+  const episodes: ParsedEpisode[] = Array.from(anime.querySelectorAll('episodes > episode'))
+    .map((ep) => {
+      const epnoNode = ep.querySelector('epno')
+      const epno = epnoNode?.textContent?.trim() ?? ''
+      const type = bucketOf(epnoNode?.getAttribute('type') ?? null)
+      const numeric = epno.replace(/[^0-9.]/g, '')
+      return {
+        epno,
+        numeric,
+        type,
+        title: pickEpisodeTitle(ep),
+        airdate: ep.querySelector('airdate')?.textContent?.trim() || undefined,
+        length: ep.querySelector('length')?.textContent?.trim() || undefined,
+        rating: ep.querySelector('rating')?.textContent?.trim() || undefined,
+      } as ParsedEpisode
+    })
+    .filter((e) => e.epno.length > 0)
+    // Regular episodes first, then specials, then others; each
+    // group in ascending numeric order.
+    .sort((a, b) => {
+      const rank = (t: ParsedEpisode['type']) => t === 'regular' ? 0 : t === 'special' ? 1 : 2
+      const dr = rank(a.type) - rank(b.type)
+      if (dr !== 0) return dr
+      return parseFloat(a.numeric || '0') - parseFloat(b.numeric || '0')
+    })
   return {
     aid,
     mainTitle: main.text,
@@ -139,6 +198,7 @@ function parseAnidbXml(xml: string, aid: string): ParsedAnime | null {
     description,
     studios,
     tags,
+    episodes,
     pictureUrl: picture ? `https://cdn-eu.anidb.net/images/main/${picture}` : undefined,
     siteUrl: `https://anidb.net/anime/${aid}`,
   }
@@ -149,6 +209,9 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<ParsedAnime | null>(null)
+  // How much of AniDB's episode listing to import. Regulars are what
+  // most trackers care about; specials + OP/ED credits are opt-in.
+  const [episodeScope, setEpisodeScope] = useState<'none' | 'regular' | 'regular_specials' | 'all'>('regular')
 
   const fetchOne = async () => {
     const aid = extractAid(input)
@@ -173,6 +236,22 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
 
   const apply = async () => {
     if (!result) return
+    // Build the Episode[] to attach, gated by the user's chosen scope.
+    // Regular / specials / others are already grouped and sorted by
+    // parseAnidbXml so the resulting order matches what AniDB shows.
+    const includeType = (t: ParsedEpisode['type']) => {
+      if (episodeScope === 'none') return false
+      if (episodeScope === 'regular') return t === 'regular'
+      if (episodeScope === 'regular_specials') return t === 'regular' || t === 'special'
+      return true
+    }
+    const episodesForItem: Episode[] | undefined = episodeScope === 'none' || result.episodes.length === 0
+      ? undefined
+      : result.episodes.filter((e) => includeType(e.type)).map((e) => ({
+          id: crypto.randomUUID(),
+          number: e.epno,
+          title: e.title,
+        }))
     const patch: Partial<Item> = {
       title: result.mainTitle,
       alternativeTitles: result.altTitles.length > 0 ? result.altTitles : undefined,
@@ -184,6 +263,8 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
       animeDescription: result.description,
       studios: result.studios.length > 0 ? result.studios : undefined,
       genres: result.tags.length > 0 ? result.tags.map((t) => t.name) : undefined,
+      hasEpisodes: episodesForItem && episodesForItem.length > 0 ? true : undefined,
+      episodes: episodesForItem,
     }
     // Download the cover into assets/ so it stays local (matches every other
     // fetcher). AniDB's image CDN is `https://cdn-eu.anidb.net/images/main/{file}`
@@ -269,6 +350,30 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
                     </div>
                   )}
                   {result.description && <p className="anidb-desc">{result.description.slice(0, 320)}{result.description.length > 320 && '…'}</p>}
+                  {result.episodes.length > 0 && (() => {
+                    const nRegular = result.episodes.filter((e) => e.type === 'regular').length
+                    const nSpecial = result.episodes.filter((e) => e.type === 'special').length
+                    const nOther = result.episodes.filter((e) => e.type === 'other').length
+                    return (
+                      <div className="anidb-episodes-scope">
+                        <div className="anidb-episodes-head">
+                          <span>Episode list</span>
+                          <span className="hint" style={{ fontSize: 11.5 }}>
+                            {nRegular} regular
+                            {nSpecial > 0 && ` · ${nSpecial} special`}
+                            {nOther > 0 && ` · ${nOther} other`}
+                          </span>
+                        </div>
+                        <div className="anidb-episodes-options">
+                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'none'} onChange={() => setEpisodeScope('none')} /> Don't add episodes</label>
+                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'regular'} onChange={() => setEpisodeScope('regular')} /> Regular only ({nRegular})</label>
+                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'regular_specials'} onChange={() => setEpisodeScope('regular_specials')} /> Regular + specials ({nRegular + nSpecial})</label>
+                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'all'} onChange={() => setEpisodeScope('all')} /> Everything ({result.episodes.length})</label>
+                        </div>
+                        <p className="hint" style={{ marginTop: 4, fontSize: 11.5 }}>Applies to the item's <b>Episodes</b> section — replaces any existing list. Number, title (English → Romaji → first available) and order are copied from AniDB.</p>
+                      </div>
+                    )
+                  })()}
                   <a className="pcgw-link" href={result.siteUrl} target="_blank" rel="noopener noreferrer">Open on AniDB ↗</a>
                 </div>
               </div>
