@@ -25,6 +25,7 @@
 @import './styles/e-finish.css';      /* Sprint E finish — movie viewings, book highlights, manga bookmark, music note */
 @import './styles/buttons.css';       /* Unified button language (primary / secondary / filters / pill / danger / icon) — MUST load AFTER the older per-domain button rules so the normalised values win */
 @import './styles/file-picker.css';   /* In-app file browser (sidebar + list + save bar) */
+@import './styles/api-guide.css';     /* API registration walkthrough modals (AniDB / IGDB / TMDb / SGDB / ComicVine) */
 @import './styles/utilities.css';     /* Ctrl+K search, backups, duplicates, bulk actions, selection state */
 @import './styles/topnav.css';        /* prototype: top-nav layout (Option A) */
 @import './styles/sidebar.css';       /* persistent left sidebar (restored) */

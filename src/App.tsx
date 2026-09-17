@@ -74,6 +74,8 @@ import type { LibraryCustomFieldDef } from './types/customFields'
 import LibraryCustomFieldsEditor from './components/LibraryCustomFieldsEditor'
 import LibraryCustomFieldsSection from './components/LibraryCustomFieldsSection'
 import { useFolderPicker } from './components/FolderPickerHost'
+import ApiRegistrationGuide from './components/ApiRegistrationGuide'
+import type { ApiGuideId } from './components/ApiRegistrationGuide'
 import { parentOf } from './utils/paths'
 import PlaythroughsEditor from './components/editors/PlaythroughsEditor'
 import VnEndingsEditor from './components/editors/VnEndingsEditor'
@@ -565,6 +567,9 @@ function App() {
   const [smartLists, setSmartLists] = useState<SmartList[]>([])
   const [activeSmartListId, setActiveSmartListId] = useState<string | null>(null)
   const [smartListsModalOpen, setSmartListsModalOpen] = useState(false)
+  // Settings → Integrations · API keys — which service guide is open.
+  // Missing = no modal. Set by the "?" button next to each key field.
+  const [apiGuide, setApiGuide] = useState<ApiGuideId | null>(null)
   // Sprint G polish — direct in-app save through the FilePicker.
   // No intermediate modal, no default-folder setting: the picker
   // opens at settings.lastExportFolder (the last folder the user
@@ -4321,7 +4326,10 @@ function App() {
                     <div className="settings-section-title">Integrations · API keys</div>
                     {/* Sorted alphabetically by service name so users can scan the list. */}
                     <div className="field-group">
-                      <label>AniDB client name (Anime · Donghua)</label>
+                      <label className="api-key-label">
+                        <span>AniDB client name (Anime · Donghua)</span>
+                        <button type="button" className="api-key-help" onClick={() => setApiGuide('anidb')} title="How to fill the AniDB form">? How to fill</button>
+                      </label>
                       <input
                         type="text"
                         placeholder="e.g. omnio"
@@ -4334,7 +4342,10 @@ function App() {
                       </p>
                     </div>
                     <div className="field-group">
-                      <label>ComicVine (Western Comics)</label>
+                      <label className="api-key-label">
+                        <span>ComicVine (Western Comics)</span>
+                        <button type="button" className="api-key-help" onClick={() => setApiGuide('comicvine')} title="Where to get the ComicVine key">? How to fill</button>
+                      </label>
                       <input
                         type="password"
                         placeholder="Paste your ComicVine key…"
@@ -4344,7 +4355,10 @@ function App() {
                       <p className="hint">Free key at <code>comicvine.gamespot.com/api/</code> — Marvel, DC, Image, indies.</p>
                     </div>
                     <div className="field-group">
-                      <label>IGDB (Games — full metadata) — Twitch Client ID + Secret</label>
+                      <label className="api-key-label">
+                        <span>IGDB (Games — full metadata) — Twitch Client ID + Secret</span>
+                        <button type="button" className="api-key-help" onClick={() => setApiGuide('igdb')} title="How to register a Twitch app for IGDB">? How to fill</button>
+                      </label>
                       <input
                         type="text"
                         placeholder="Client ID"
@@ -4361,7 +4375,10 @@ function App() {
                       <p className="hint">Free Twitch app at <code>dev.twitch.tv/console/apps</code> (Application Integration, any localhost redirect).</p>
                     </div>
                     <div className="field-group">
-                      <label>SteamGridDB (Games — covers / banners / logos)</label>
+                      <label className="api-key-label">
+                        <span>SteamGridDB (Games — covers / banners / logos)</span>
+                        <button type="button" className="api-key-help" onClick={() => setApiGuide('sgdb')} title="Where to get the SteamGridDB key">? How to fill</button>
+                      </label>
                       <input
                         type="password"
                         placeholder="Paste your SteamGridDB key…"
@@ -4371,7 +4388,10 @@ function App() {
                       <p className="hint">Free key at <code>steamgriddb.com/profile/preferences/api</code>.</p>
                     </div>
                     <div className="field-group">
-                      <label>TMDb (Movies + Series)</label>
+                      <label className="api-key-label">
+                        <span>TMDb (Movies + Series)</span>
+                        <button type="button" className="api-key-help" onClick={() => setApiGuide('tmdb')} title="How to fill the TMDb v3 API form">? How to fill</button>
+                      </label>
                       <input
                         type="password"
                         placeholder="Paste your TMDb v3 API key…"
@@ -6820,6 +6840,8 @@ function App() {
       )}
 
       {toast && <Toast message={toast} />}
+
+      {apiGuide && <ApiRegistrationGuide guideId={apiGuide} onClose={() => setApiGuide(null)} />}
 
       <SmartListsModal
         open={smartListsModalOpen}
