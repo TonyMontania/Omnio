@@ -152,6 +152,24 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
                 <div className="pills"><span className="pill static">Finished: {item.finishedAt}</span></div>
               </div>
             )}
+            {item.deckCompat && item.deckCompat !== 'unknown' && (
+              <div className="field-group">
+                <label>Steam Deck</label>
+                <div className="pills">
+                  <span className={`pill static deck-chip deck-${item.deckCompat}`} style={{ textTransform: 'capitalize' }}>
+                    ◆ {item.deckCompat}
+                  </span>
+                </div>
+              </div>
+            )}
+            {item.protonRating && (
+              <div className="field-group">
+                <label>ProtonDB</label>
+                <div className="pills">
+                  <span className="pill static" style={{ textTransform: 'capitalize' }}>{item.protonRating}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {item.bundleContents && item.bundleContents.length > 0 && (
@@ -286,6 +304,93 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
                   )
                 })}
               </ul>
+            </div>
+          )}
+
+          {item.playthroughs && item.playthroughs.length > 0 && (() => {
+            const totalSeconds = item.playthroughs!.reduce((sum, p) => {
+              const raw = p.hours ?? ''
+              const m = raw.match(/^(\d+(?:\.\d+)?)\s*h/i) || raw.match(/^(\d+(?:\.\d+)?)$/) || raw.match(/^(\d+):(\d+)$/)
+              if (!m) return sum
+              if (m.length === 3 && m[2] !== undefined) return sum + (parseInt(m[1], 10) * 3600 + parseInt(m[2], 10) * 60)
+              return sum + Math.round(parseFloat(m[1]) * 3600)
+            }, 0)
+            const totalHours = totalSeconds > 0 ? (totalSeconds / 3600).toFixed(1) : null
+            return (
+              <div className="field-group">
+                <label>Playthroughs · {item.playthroughs!.length} run{item.playthroughs!.length === 1 ? '' : 's'}{totalHours ? ` · ${totalHours}h` : ''}</label>
+                <ul className="detail-playthroughs">
+                  {item.playthroughs!.map((p, i) => {
+                    const summary = [p.character, p.difficulty, p.platform].filter(Boolean).join(' · ')
+                    return (
+                      <li key={p.id} className="detail-playthrough">
+                        <div className="detail-playthrough-head">
+                          <span className="detail-playthrough-num">#{i + 1}</span>
+                          <span className="detail-playthrough-summary">{summary || 'Run'}</span>
+                          {p.hours && <span className="detail-playthrough-hours">{p.hours}</span>}
+                          {p.finishedAt && <span className="detail-playthrough-date">Finished {p.finishedAt}</span>}
+                          {!p.finishedAt && p.startedAt && <span className="detail-playthrough-date">Started {p.startedAt}</span>}
+                        </div>
+                        {p.coop && <div className="detail-playthrough-meta">Co-op / solo: {p.coop}</div>}
+                        {p.achievementsHit && p.achievementsHit.length > 0 && (
+                          <div className="detail-playthrough-meta">Milestones: {p.achievementsHit.join(', ')}</div>
+                        )}
+                        {p.note && <p className="detail-playthrough-note">{p.note}</p>}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )
+          })()}
+
+          {item.storeLinks && item.storeLinks.length > 0 && (
+            <div className="field-group">
+              <label>Store links</label>
+              <div className="detail-store-links">
+                {item.storeLinks.map((s) => (
+                  <a
+                    key={s.id}
+                    className="pill static detail-store-link"
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={s.note || undefined}
+                  >
+                    ↗ {s.store}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {item.purchases && item.purchases.length > 0 && (
+            <div className="field-group">
+              <label>Purchase log · {item.purchases.length} entr{item.purchases.length === 1 ? 'y' : 'ies'}</label>
+              <table className="track-table detail-purchase-table">
+                <thead>
+                  <tr>
+                    <th className="col-num">Date</th>
+                    <th className="col-title">Store</th>
+                    <th className="col-length">Price</th>
+                    <th className="col-length">Discount</th>
+                    <th>Note</th>
+                    <th className="col-spacer"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {item.purchases.map((p) => (
+                    <tr key={p.id}>
+                      <td className="col-num">{p.date ?? '—'}</td>
+                      <td className="col-title">{p.storeLabel ?? '—'}</td>
+                      <td className="col-length">{p.price ? `${p.price}${p.currency ? ` ${p.currency}` : ''}` : '—'}</td>
+                      <td className="col-length">{p.discount ?? ''}</td>
+                      <td>{p.note ?? ''}</td>
+                      <td className="col-spacer"></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 

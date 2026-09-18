@@ -57,43 +57,64 @@
   margin-bottom: 20px;
 }
 
-/* Section labels (STATUS / GENRES / EPISODES / etc). Typography-only
-   treatment — a subtle accent tint on the mono-caps text with a
-   tighter tracking. Enough weight to read as a heading, nothing
-   drawn under it. */
-.game-modal-body .field-group > label,
-.game-modal-extra .field-group > label {
-  color: color-mix(in srgb, var(--accent) 65%, var(--text-dim));
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 600;
-  display: inline-block;
-}
-/* Nuke the accent underline from the previous polish pass in case
-   any other module tried to re-apply it. */
+/* Section labels — the accent-tinted mono-caps treatment now lives
+   in forms.css so editor and detail views share it. We keep this
+   here only to nuke the older ::after underline in case any user
+   theme or plugin still tries to render it. */
 .game-modal-body .field-group > label::after,
 .game-modal-extra .field-group > label::after {
   content: none;
 }
 
-/* Meta pill row — status / airing / format / season / demographic
-   pills. Slightly stronger contrast so the row reads as a chip bar
-   rather than washed-out text. */
-.game-modal-info .pill.static {
+/* Chip family — every read-only chip rendered in a detail modal
+   ("Completed" status, "TV" format, "Fall 2012" season, "PC" platform,
+   "Physical" ownership, "Source: Game", genre / mood / demographic
+   tags…). Previously .pill.static, .badge.status-badge and
+   .badge.group-badge all rendered slightly different (different
+   padding, border-radius, weight) even though they represent the
+   same UI concept. This unifies them under one visual language:
+   pill-shaped, accent-tinted background, subtle border, hover
+   brightens the border. Doesn't override the per-status text
+   colour on .status-badge so "Completed" stays yellow, "Dropped"
+   stays red — only the shape / padding / border unify. */
+.game-modal-body .pill.static,
+.game-modal-body .badge.status-badge,
+.game-modal-body .badge.group-badge,
+.game-modal-extra .pill.static,
+.game-modal-extra .badge.status-badge,
+.game-modal-extra .badge.group-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  line-height: 1.35;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
   background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
-  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
   color: var(--text);
+  transition: background 0.16s, color 0.16s, border-color 0.16s;
 }
-.game-modal-info .pill.static:hover {
+.game-modal-body .pill.static:hover,
+.game-modal-body .badge.group-badge:hover,
+.game-modal-extra .pill.static:hover,
+.game-modal-extra .badge.group-badge:hover {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+/* Status badges keep their per-status text colour (yellow for
+   completed, blue for playing, red for dropped, …) — only the
+   shape unifies with the rest. */
+.game-modal-body .badge.status-badge,
+.game-modal-extra .badge.status-badge {
+  color: inherit;
 }
 
 /* Stats row (Episodes / Ep. duration / Total runtime / Rating / …
-   inside .game-modal-extra > .dlc-addons-row.wrap-4). Make the
-   value pop by shifting its typography to display-family with a
-   slightly bigger size. */
+   inside .game-modal-extra > .dlc-addons-row.wrap-4). Shift its
+   pill typography to display-family so the value (25 min, 16h,
+   Fall 2012) reads as a headline stat, not a chip. */
 .game-modal-extra .dlc-addons-row .field-group .pills .pill.static {
   padding: 6px 14px;
   font-family: var(--font-display);
@@ -104,6 +125,121 @@
   border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
   letter-spacing: -0.005em;
 }
+
+/* Eroge plugin detail view. Different HTML shape (`.er-detail-*`
+   instead of `.game-modal-*`) but same chip family, cover, and
+   description concept — so it gets the same polish, scoped
+   separately. */
+.er-detail-cover {
+  box-shadow:
+    0 20px 40px -6px rgba(0, 0, 0, 0.55),
+    0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.er-detail-cover:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow:
+    0 26px 46px -6px rgba(0, 0, 0, 0.6),
+    0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.er-detail-desc {
+  max-width: 78ch;
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--text);
+  line-height: 1.65;
+}
+.er-detail-title { letter-spacing: -0.015em; line-height: 1.1; }
+.er-tag,
+.er-coll-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  line-height: 1.35;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+  color: var(--text);
+  transition: background 0.16s, color 0.16s, border-color 0.16s;
+}
+.er-tag:hover, .er-coll-chip:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* Game detail — Sprint E/F sections rendered read-only.
+   Playthroughs, store links and purchase log used to be
+   edit-only; now they read as their own blocks in the detail
+   view with mono-caps titles like the rest of the page. */
+.detail-playthroughs {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.detail-playthrough {
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+.detail-playthrough-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+.detail-playthrough-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.detail-playthrough-summary { font-weight: 600; flex: 1; }
+.detail-playthrough-hours {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+.detail-playthrough-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.detail-playthrough-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.detail-playthrough-note {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.detail-store-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.detail-store-link {
+  text-decoration: none;
+  text-transform: capitalize;
+}
+
+.detail-purchase-table { margin-top: 6px; }
 
 /* Episode / chapter / track tables — zebra striping and a subtle
    hover so a 40-row list stays legible. */

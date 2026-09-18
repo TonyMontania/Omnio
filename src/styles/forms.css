@@ -93,9 +93,13 @@ select:-webkit-autofill {
 .field-group label {
   font-family: var(--font-mono);
   font-size: 10.5px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-faint);
+  font-weight: 600;
+  /* Warm accent-tinted grey — same treatment the detail views got
+     from detail-polish.css so editor sections and detail sections
+     read as one design system. */
+  color: color-mix(in srgb, var(--accent) 65%, var(--text-dim));
 }
 
 .field-row { display: flex; gap: 10px; width: 100%; }

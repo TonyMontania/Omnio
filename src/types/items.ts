@@ -154,6 +154,13 @@ export interface GameFields {
   bundleContents?: BundleGame[]
   pcgwPage?: string
   originalWorkId?: string
+  // Sprint E — structured playthroughs / runs (see entities.ts).
+  playthroughs?: import('./entities').Playthrough[]
+  // Sprint F — store links, purchase log, compat flags.
+  storeLinks?: import('./entities').StoreLink[]
+  purchases?: import('./entities').Purchase[]
+  deckCompat?: import('./entities').DeckCompat
+  protonRating?: import('./entities').ProtonRating
 }
 
 export interface MusicFields {
