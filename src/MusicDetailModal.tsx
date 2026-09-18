@@ -89,7 +89,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
             {albumLike && item.genres && item.genres.length > 0 && (
               <div className="field-group">
                 <label>Genres</label>
-                <div className="pills">{item.genres.map((g) => <span key={g} className="pill static">{g}</span>)}</div>
+                <div className="card-tags">{item.genres.map((g) => <span key={g} className="card-tag">{g}</span>)}</div>
               </div>
             )}
             <div className="field-group">
@@ -185,9 +185,8 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
 
         const renderRow = (t: typeof item.tracks[0]) => (
           <tr key={t.id}>
-            <td className="col-fav">{t.favorite ? <span className="track-fav-star">★</span> : null}</td>
             <td className="col-num">{t.number}</td>
-            <td className="col-title">{t.name}</td>
+            <td className="col-title">{t.favorite && <span className="track-fav-star" aria-label="Favourite">★ </span>}{t.name}</td>
             <td className="col-artist">
               {(() => {
                 const raw = t.artist?.trim()
@@ -238,7 +237,6 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
                 <table className="track-table">
                   <thead>
                     <tr>
-                      <th className="col-fav"></th>
                       <th className="col-num">#</th>
                       <th className="col-title">Title</th>
                       <th className="col-artist">Artist</th>

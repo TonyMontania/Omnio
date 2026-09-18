@@ -76,13 +76,25 @@
    pill-shaped, accent-tinted background, subtle border, hover
    brightens the border. Doesn't override the per-status text
    colour on .status-badge so "Completed" stays yellow, "Dropped"
-   stays red — only the shape / padding / border unify. */
+   stays red — only the shape / padding / border unify.
+
+   Scope covers every detail-modal container: .game-modal-* (games,
+   anime, series, manga, books, VN, movies) and .music-modal-*
+   (albums / singles / concerts). Genres and other tag lists that
+   opted into the neutral `.card-tag` treatment fall outside these
+   selectors and stay neutral like the VN tag pattern. */
 .game-modal-body .pill.static,
 .game-modal-body .badge.status-badge,
 .game-modal-body .badge.group-badge,
 .game-modal-extra .pill.static,
 .game-modal-extra .badge.status-badge,
-.game-modal-extra .badge.group-badge {
+.game-modal-extra .badge.group-badge,
+.music-modal-info .pill.static,
+.music-modal-info .badge.status-badge,
+.music-modal-info .badge.group-badge,
+.music-modal-main .pill.static,
+.music-modal-main .badge.status-badge,
+.music-modal-main .badge.group-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -100,14 +112,20 @@
 .game-modal-body .pill.static:hover,
 .game-modal-body .badge.group-badge:hover,
 .game-modal-extra .pill.static:hover,
-.game-modal-extra .badge.group-badge:hover {
+.game-modal-extra .badge.group-badge:hover,
+.music-modal-info .pill.static:hover,
+.music-modal-info .badge.group-badge:hover,
+.music-modal-main .pill.static:hover,
+.music-modal-main .badge.group-badge:hover {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 /* Status badges keep their per-status text colour (yellow for
    completed, blue for playing, red for dropped, …) — only the
    shape unifies with the rest. */
 .game-modal-body .badge.status-badge,
-.game-modal-extra .badge.status-badge {
+.game-modal-extra .badge.status-badge,
+.music-modal-info .badge.status-badge,
+.music-modal-main .badge.status-badge {
   color: inherit;
 }
 

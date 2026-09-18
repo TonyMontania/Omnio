@@ -101,7 +101,7 @@ export default function MovieDetailModal({ item, groups, allMovies, allItems, on
             {item.genres && item.genres.length > 0 && (
               <div className="field-group">
                 <label>Genres</label>
-                <div className="pills">{item.genres.map((g) => <span key={g} className="pill static">{g}</span>)}</div>
+                <div className="card-tags">{item.genres.map((g) => <span key={g} className="card-tag">{g}</span>)}</div>
               </div>
             )}
             {item.tags && item.tags.length > 0 && (
