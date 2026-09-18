@@ -22,7 +22,10 @@ src-tauri/gen/
 
 # User data — never commit anyone's actual library
 data.json
-assets/
+# Only ignore the root-level assets/ folder (user covers, banners,
+# save files, screenshots). Bundled UI assets live under src/assets/
+# and MUST ship with the source.
+/assets/
 
 # Local backup dirs left by the refactor work
 src.backup*
