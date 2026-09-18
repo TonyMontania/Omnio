@@ -4,7 +4,7 @@ All notable changes to Omnio are documented in this file. Format loosely follows
 
 Each `## v<version>` section becomes the body of that tag's [GitHub Release](https://github.com/TonyMontania/Omnio/releases) — the release workflow reads this file and passes the matching section to `tauri-action`, so patch notes stay authored here (versioned in git, reviewable in PRs) instead of in a separate release form.
 
-## Unreleased
+## v0.5.3 — 2026-09-18
 
 ### Added
 
