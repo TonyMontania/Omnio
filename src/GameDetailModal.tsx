@@ -14,6 +14,17 @@ import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
 import { BasedOnDisplay } from './components/BasedOn'
 import DetailNotes from './components/detail/DetailNotes'
+import ServiceLogo, { type ServiceName } from './components/ServiceLogo'
+
+// Store slug (as saved on the Item) → ServiceLogo service key. Both
+// enums overlap almost 1:1; only `official` and `other` map to null
+// so the link renders with a neutral chevron icon instead of a badge.
+const STORE_SLUG_TO_LOGO: Record<string, ServiceName | null> = {
+  steam: 'steam', gog: 'gog', epic: 'epic', itch: 'itch',
+  humble: 'humble', ubi: 'ubi', ea: 'ea', battlenet: 'battlenet',
+  rockstar: 'rockstar', nintendo: 'nintendo', playstation: 'playstation',
+  xbox: 'xbox', official: null, other: null,
+}
 
 interface Props {
   item: GameItem
@@ -348,18 +359,22 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             <div className="field-group">
               <label>Store links</label>
               <div className="detail-store-links">
-                {item.storeLinks.map((s) => (
-                  <a
-                    key={s.id}
-                    className="pill static detail-store-link"
-                    href={s.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={s.note || undefined}
-                  >
-                    ↗ {s.store}
-                  </a>
-                ))}
+                {item.storeLinks.map((s) => {
+                  const logoService = STORE_SLUG_TO_LOGO[s.store] ?? null
+                  return (
+                    <a
+                      key={s.id}
+                      className="pill static detail-store-link"
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={s.note || undefined}
+                    >
+                      {logoService ? <ServiceLogo service={logoService} size={16} /> : <span aria-hidden>↗</span>}
+                      <span>{s.store}</span>
+                    </a>
+                  )
+                })}
               </div>
             </div>
           )}

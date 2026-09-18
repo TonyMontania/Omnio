@@ -34,10 +34,25 @@ import musicbrainz from '../assets/service-logos/musicbrainz.svg'
 import itch from '../assets/service-logos/itchdotio.svg'
 import notion from '../assets/service-logos/notion.svg'
 import amazon from '../assets/service-logos/amazon.svg'
+import humble from '../assets/service-logos/humblebundle.svg'
+import playstation from '../assets/service-logos/playstation.svg'
+import xbox from '../assets/service-logos/xbox.svg'
+import nintendo from '../assets/service-logos/nintendoswitch.svg'
+import ubi from '../assets/service-logos/ubisoft.svg'
+import ea from '../assets/service-logos/ea.svg'
+import battlenet from '../assets/service-logos/battledotnet.svg'
+import rockstar from '../assets/service-logos/rockstargames.svg'
+import goodreadsSvg from '../assets/service-logos/goodreads.svg'
+// Eroge-specific brand marks pulled directly from each site — PNGs
+// because their sites don't publish SVGs. Bundled locally so the
+// plugin's link row shows real logos instead of stylised typography.
+import f95Png from '../assets/service-logos/f95zone.png'
+import dlsitePng from '../assets/service-logos/dlsite.png'
 
 export type ServiceName =
   | 'mal' | 'anilist' | 'kitsu'
-  | 'steam' | 'gog' | 'epic'
+  | 'steam' | 'gog' | 'epic' | 'humble' | 'ubi' | 'ea'
+  | 'battlenet' | 'rockstar' | 'nintendo' | 'playstation' | 'xbox'
   | 'letterboxd' | 'imdb' | 'tmdb' | 'trakt' | 'serializd'
   | 'goodreads' | 'storygraph' | 'kindle'
   | 'spotify' | 'lastfm' | 'discogs' | 'rym' | 'musicbrainz'
@@ -50,7 +65,7 @@ export type ServiceName =
 // colour (used as the badge background). The SVG is rendered white
 // via a filter so any glyph — dark or coloured on the original —
 // renders as a crisp mark on the brand-tinted square.
-const WITH_ASSET: Partial<Record<ServiceName, { src: string; bg: string }>> = {
+const WITH_ASSET: Partial<Record<ServiceName, { src: string; bg: string; noInvert?: boolean }>> = {
   mal:         { src: mal,        bg: '#2e51a2' },
   anilist:     { src: anilist,    bg: '#02a9ff' },
   kitsu:       { src: kitsu,      bg: '#f75239' },
@@ -68,6 +83,17 @@ const WITH_ASSET: Partial<Record<ServiceName, { src: string; bg: string }>> = {
   itch:        { src: itch,       bg: '#fa5c5c' },
   notion:      { src: notion,     bg: '#ffffff' },
   kindle:      { src: amazon,     bg: '#232f3e' },
+  humble:      { src: humble,     bg: '#cd212a' },
+  playstation: { src: playstation, bg: '#003791' },
+  xbox:        { src: xbox,       bg: '#107c10' },
+  nintendo:    { src: nintendo,   bg: '#e60012' },
+  ubi:         { src: ubi,        bg: '#000000' },
+  ea:          { src: ea,         bg: '#ff4747' },
+  battlenet:   { src: battlenet,  bg: '#00aeff' },
+  rockstar:    { src: rockstar,   bg: '#fca90d' },
+  goodreads:   { src: goodreadsSvg, bg: '#553b08' },
+  f95:         { src: f95Png,     bg: '#131a24', noInvert: true },
+  dlsite:      { src: dlsitePng,  bg: '#ffffff', noInvert: true },
 }
 
 interface Props {
@@ -79,11 +105,12 @@ interface Props {
 export default function ServiceLogo({ service, size = 18, style }: Props) {
   const asset = WITH_ASSET[service]
   if (asset) {
-    // Notion's mark is dark on white, so we DON'T invert it — the
-    // white background stands on its own. Everything else gets
-    // the invert-to-white treatment so brand colours show through
-    // as the badge background.
-    const invert = service !== 'notion'
+    // Most simpleicons SVGs are single-colour black glyphs — invert
+    // them to white so they read on the brand-tinted background.
+    // Real-brand PNGs (F95, DLsite) already carry their own colours
+    // and should render as-is: `noInvert` opts them out. Notion also
+    // stays un-inverted because its mark is dark-on-white by design.
+    const invert = !asset.noInvert && service !== 'notion'
     return (
       <span
         style={{
@@ -141,10 +168,6 @@ export default function ServiceLogo({ service, size = 18, style }: Props) {
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#0072b0" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="14" fill="#fff">C</text></svg>
     case 'csv':
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#1e7d3a" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">CSV</text></svg>
-    case 'f95':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#131a24" /><text x="16" y="21" textAnchor="middle" fontFamily="Verdana, sans-serif" fontWeight="900" fontSize="13" fill="#ec2b3f" letterSpacing="-0.5">F95</text></svg>
-    case 'dlsite':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#fff" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="14" fill="#0064c8">DL</text></svg>
     case 'ryuugames':
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#0e5c2e" /><text x="16" y="24" textAnchor="middle" fontFamily="'Yu Mincho', 'MS Mincho', serif" fontWeight="700" fontSize="20" fill="#fff">龍</text></svg>
     default:

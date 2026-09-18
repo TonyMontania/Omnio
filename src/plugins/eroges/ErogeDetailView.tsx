@@ -4,6 +4,7 @@ import { assetUrl, savesList, savesAdd, savesDelete, savesOpenFolder, savesRevea
 import type { SaveInfo } from './ipc'
 import { f95CheckVersion } from './f95Api'
 import { engineClass } from './constants'
+import ServiceLogo from '../../components/ServiceLogo'
 
 interface Props {
   game: ErogeItem
@@ -181,65 +182,31 @@ export default function ErogeDetailView({ game, collections, f95Cookie, onEdit, 
         <div className="er-links">
           {game.link && (
             <a href={game.link} target="_blank" rel="noreferrer" className="er-link">
-              <span className="er-link-icon" title="F95Zone" aria-hidden="true">
-                <svg viewBox="0 0 32 32" width="22" height="22">
-                  <rect width="32" height="32" rx="6" fill="#131a24" />
-                  <text x="16" y="21" textAnchor="middle" fontFamily="Verdana, sans-serif" fontWeight="900" fontSize="13" fill="#ec2b3f" letterSpacing="-0.5">F95</text>
-                </svg>
-              </span>
+              <span className="er-link-icon" title="F95Zone" aria-hidden="true"><ServiceLogo service="f95" size={22} /></span>
               <span className="er-link-url">{game.link}</span>
             </a>
           )}
           {game.dlsiteUrl && (
             <a href={game.dlsiteUrl} target="_blank" rel="noreferrer" className="er-link">
-              <span className="er-link-icon" title="DLsite" aria-hidden="true">
-                <svg viewBox="0 0 32 32" width="22" height="22">
-                  <rect width="32" height="32" rx="6" fill="#ffffff" />
-                  <text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="14" fill="#0064c8">DL</text>
-                </svg>
-              </span>
+              <span className="er-link-icon" title="DLsite" aria-hidden="true"><ServiceLogo service="dlsite" size={22} /></span>
               <span className="er-link-url">{game.dlsiteUrl}</span>
             </a>
           )}
           {game.steamUrl && (
             <a href={game.steamUrl} target="_blank" rel="noreferrer" className="er-link">
-              <span className="er-link-icon" title="Steam" aria-hidden="true">
-                <svg viewBox="0 0 32 32" width="22" height="22">
-                  <defs>
-                    <radialGradient id="er-steam-bg" cx="0.3" cy="0.35" r="0.9">
-                      <stop offset="0" stopColor="#4b6d90" />
-                      <stop offset="1" stopColor="#122236" />
-                    </radialGradient>
-                  </defs>
-                  <rect width="32" height="32" rx="16" fill="url(#er-steam-bg)" />
-                  <circle cx="20.5" cy="12" r="4.6" fill="none" stroke="#e6ecf2" strokeWidth="1.6" />
-                  <circle cx="20.5" cy="12" r="1.8" fill="#e6ecf2" />
-                  <circle cx="12" cy="20.5" r="3.4" fill="none" stroke="#e6ecf2" strokeWidth="1.6" />
-                  <line x1="12" y1="20.5" x2="20.5" y2="12" stroke="#e6ecf2" strokeWidth="1.2" />
-                </svg>
-              </span>
+              <span className="er-link-icon" title="Steam" aria-hidden="true"><ServiceLogo service="steam" size={22} /></span>
               <span className="er-link-url">{game.steamUrl}</span>
             </a>
           )}
           {game.itchUrl && (
             <a href={game.itchUrl} target="_blank" rel="noreferrer" className="er-link">
-              <span className="er-link-icon" title="itch.io" aria-hidden="true">
-                <svg viewBox="0 0 32 32" width="22" height="22">
-                  <rect width="32" height="32" rx="6" fill="#fa5c5c" />
-                  <text x="16" y="21" textAnchor="middle" fontFamily="'Lato', 'Segoe UI', sans-serif" fontWeight="900" fontSize="12" fill="#ffffff" letterSpacing="-0.5">itch</text>
-                </svg>
-              </span>
+              <span className="er-link-icon" title="itch.io" aria-hidden="true"><ServiceLogo service="itch" size={22} /></span>
               <span className="er-link-url">{game.itchUrl}</span>
             </a>
           )}
           {game.ryuugamesUrl && (
             <a href={game.ryuugamesUrl} target="_blank" rel="noreferrer" className="er-link">
-              <span className="er-link-icon" title="Ryuugames" aria-hidden="true">
-                <svg viewBox="0 0 32 32" width="22" height="22">
-                  <rect width="32" height="32" rx="6" fill="#0e5c2e" />
-                  <text x="16" y="24" textAnchor="middle" fontFamily="'Yu Mincho', 'MS Mincho', serif" fontWeight="700" fontSize="20" fill="#ffffff">龍</text>
-                </svg>
-              </span>
+              <span className="er-link-icon" title="Ryuugames" aria-hidden="true"><ServiceLogo service="ryuugames" size={22} /></span>
               <span className="er-link-url">{game.ryuugamesUrl}</span>
             </a>
           )}
