@@ -456,12 +456,15 @@ select:-webkit-autofill {
 }
 .band-member-top { display: flex; gap: 8px; align-items: center; }
 .band-member-status {
-  min-width: 140px;
+  flex: 0 0 auto;
+  width: 150px;
   font-size: 12px;
   padding: 5px 8px;
 }
 .band-member-name {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
   padding: 7px 9px;
   background: var(--surface);
   border: 1px solid var(--border);
