@@ -77,6 +77,7 @@ import LibraryCustomFieldsSection from './components/LibraryCustomFieldsSection'
 import { useFolderPicker } from './components/FolderPickerHost'
 import ApiRegistrationGuide from './components/ApiRegistrationGuide'
 import type { ApiGuideId } from './components/ApiRegistrationGuide'
+import ServiceLogo from './components/ServiceLogo'
 import { parentOf } from './utils/paths'
 import PlaythroughsEditor from './components/editors/PlaythroughsEditor'
 import VnEndingsEditor from './components/editors/VnEndingsEditor'
@@ -4230,37 +4231,37 @@ function App() {
                     <div className="field-group">
                       <label>Import from other trackers</label>
                       <div className="settings-actions">
-                        <button type="button" className="secondary-btn" onClick={() => setMalOpen(true)}>Import MAL / AniList XML</button>
-                        <button type="button" className="secondary-btn" onClick={() => setGenericImportOpen(true)}>Import Excel / CSV / Notion / TXT</button>
-                        <button type="button" className="secondary-btn" onClick={() => setSteamOpen(true)}>Import from Steam profile</button>
-                        <button type="button" className="secondary-btn" onClick={() => setLetterboxdOpen(true)}>Import from Letterboxd</button>
-                        <button type="button" className="secondary-btn" onClick={() => setBackloggdOpen(true)}>Import from Backloggd</button>
-                        <button type="button" className="secondary-btn" onClick={() => setSerializdOpen(true)}>Import from Serializd</button>
-                        <button type="button" className="secondary-btn" onClick={() => setSpotifyOpen(true)}>Import Spotify library</button>
-                        <button type="button" className="secondary-btn" onClick={() => setHighlightsImportOpen(true)}>Import Kindle highlights</button>
-                        <button type="button" className="secondary-btn" onClick={() => setLastfmImportOpen(true)}>Import Last.fm scrobbles</button>
-                        <button type="button" className="secondary-btn" onClick={() => setTraktImportOpen(true)}>Import from Trakt.tv</button>
-                        <button type="button" className="secondary-btn" onClick={() => setDiscogsImportOpen(true)}>Import Discogs collection</button>
-                        <button type="button" className="secondary-btn" onClick={() => setStoryGraphOpen(true)}>Import from StoryGraph</button>
-                        <button type="button" className="secondary-btn" onClick={() => setImdbOpen(true)}>Import from IMDb</button>
-                        <button type="button" className="secondary-btn" onClick={() => setRymOpen(true)}>Import from RateYourMusic</button>
-                        <button type="button" className="secondary-btn" onClick={() => setHltbOpen(true)}>Import HowLongToBeat times</button>
-                        <button type="button" className="secondary-btn" onClick={() => setDiscographyCheckerOpen(true)}>Check music discography completion</button>
-                        <button type="button" className="secondary-btn" onClick={() => setInstallScanOpen(true)}>Detect installed games (Steam / GOG / Epic)</button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setMalOpen(true)}><ServiceLogo service="mal" /><span>MAL / AniList XML</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setGenericImportOpen(true)}><ServiceLogo service="csv" /><span>Excel / CSV / Notion / TXT</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setSteamOpen(true)}><ServiceLogo service="steam" /><span>Steam profile</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setLetterboxdOpen(true)}><ServiceLogo service="letterboxd" /><span>Letterboxd</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setBackloggdOpen(true)}><ServiceLogo service="backloggd" /><span>Backloggd</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setSerializdOpen(true)}><ServiceLogo service="serializd" /><span>Serializd</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setSpotifyOpen(true)}><ServiceLogo service="spotify" /><span>Spotify library</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setHighlightsImportOpen(true)}><ServiceLogo service="kindle" /><span>Kindle highlights</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setLastfmImportOpen(true)}><ServiceLogo service="lastfm" /><span>Last.fm scrobbles</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setTraktImportOpen(true)}><ServiceLogo service="trakt" /><span>Trakt.tv</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setDiscogsImportOpen(true)}><ServiceLogo service="discogs" /><span>Discogs collection</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setStoryGraphOpen(true)}><ServiceLogo service="storygraph" /><span>StoryGraph</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setImdbOpen(true)}><ServiceLogo service="imdb" /><span>IMDb</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setRymOpen(true)}><ServiceLogo service="rym" /><span>RateYourMusic</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setHltbOpen(true)}><ServiceLogo service="hltb" /><span>HowLongToBeat times</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setDiscographyCheckerOpen(true)}><ServiceLogo service="musicbrainz" /><span>Music discography check</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setInstallScanOpen(true)}><ServiceLogo service="steam" /><span>Installed games (Steam / GOG / Epic)</span></button>
                       </div>
                       <p className="hint">Steam import reads a public profile via the community XML endpoint — no API key. Letterboxd accepts the CSVs from your account export (Settings → Data → Export on letterboxd.com). Kindle highlights import parses <code>My Clippings.txt</code> from your Kindle's <code>documents/</code> folder and attaches each highlight to a matching book (or creates one). Playtime and status pre-fill; open each item afterwards to fetch cover + metadata via IGDB or SteamGridDB / TMDb.</p>
                     </div>
                     <div className="field-group">
                       <label>Export to other trackers</label>
                       <div className="settings-actions">
-                        <button type="button" className="secondary-btn" onClick={async () => {
+                        <button type="button" className="secondary-btn importer-btn" onClick={async () => {
                           const { buildAnimeMalXml, downloadBlob } = await import('./MalExporter')
                           downloadBlob('omnio-anime.xml', 'application/xml', buildAnimeMalXml(items))
-                        }}>⬇ Export Anime (MAL XML)</button>
-                        <button type="button" className="secondary-btn" onClick={async () => {
+                        }}><ServiceLogo service="mal" /><span>Export Anime (MAL XML)</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={async () => {
                           const { buildMangaMalXml, downloadBlob } = await import('./MalExporter')
                           downloadBlob('omnio-manga.xml', 'application/xml', buildMangaMalXml(items))
-                        }}>⬇ Export Manga (MAL XML)</button>
+                        }}><ServiceLogo service="mal" /><span>Export Manga (MAL XML)</span></button>
                       </div>
                       <p className="hint">Bulk-load titles from other places. MAL/AniList uses the XML export; the generic importer takes an .xlsx, .csv (including Notion database exports), .tsv or .txt file with one title per line.</p>
                     </div>

@@ -158,6 +158,20 @@
 .secondary-btn.compact,
 .danger-btn.compact { padding: 6px 10px; font-size: 12px; }
 
+/* ---------- Importer button with a service logo ------------- */
+
+.importer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+}
+.importer-btn svg {
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+.importer-btn span { line-height: 1.2; }
+
 /* ---------- Icon-only round button --------------------------- */
 
 .icon-btn {
