@@ -209,6 +209,12 @@ export default function AnimeDetailModal({ item, groups, allAnime, onClose, onEd
               }
             }
             const hasPrefixes = item.episodes.some((e) => /^[a-z]/i.test(e.number))
+            // Sprint I — only render the AniDB metadata columns when
+            // at least one episode has data for them, so a hand-added
+            // list without dates doesn't grow two empty columns.
+            const hasAirdate = item.episodes.some((e) => e.airdate)
+            const hasLength = item.episodes.some((e) => e.length)
+            const cols = 6 + (hasAirdate ? 1 : 0) + (hasLength ? 1 : 0)
             const rows: React.ReactNode[] = []
             let lastGroup: string | undefined | null = null
             for (const ep of item.episodes) {
@@ -216,7 +222,7 @@ export default function AnimeDetailModal({ item, groups, allAnime, onClose, onEd
               if (g && g !== lastGroup) {
                 rows.push(
                   <tr key={`__g-${g}-${ep.id}`} className="track-group-row">
-                    <td colSpan={6}>{g}</td>
+                    <td colSpan={cols}>{g}</td>
                   </tr>
                 )
                 lastGroup = g
@@ -227,6 +233,8 @@ export default function AnimeDetailModal({ item, groups, allAnime, onClose, onEd
                 <tr key={ep.id} className={ep.watched ? 'ep-watched' : ''}>
                   <td className="col-num" title={tooltipFor(ep.number)}>{ep.number}</td>
                   <td className="col-title">{ep.title ?? '—'}</td>
+                  {hasAirdate && <td className="col-airdate">{ep.airdate ?? ''}</td>}
+                  {hasLength && <td className="col-length">{ep.length ? `${ep.length}m` : ''}</td>}
                   <td className="col-listened">{ep.watched ? '✓' : ''}</td>
                   <td className="col-rating">{ep.rating ? `★ ${ep.rating}` : ''}</td>
                   <td className="col-fav">{ep.filler ? 'F' : ''}</td>
@@ -253,6 +261,8 @@ export default function AnimeDetailModal({ item, groups, allAnime, onClose, onEd
                     <tr>
                       <th className="col-num">#</th>
                       <th className="col-title">Title</th>
+                      {hasAirdate && <th className="col-airdate">Air date</th>}
+                      {hasLength && <th className="col-length">Length</th>}
                       <th className="col-listened">✓</th>
                       <th className="col-rating">Rating</th>
                       <th className="col-fav">Filler</th>

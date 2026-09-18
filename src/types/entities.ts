@@ -285,6 +285,12 @@ export interface Episode {
   rating?: number
   notes?: string
   filler?: boolean
+  // Sprint I — populated by the AniDB fetcher's episode list import.
+  // `airdate` is an ISO yyyy-mm-dd; `length` is a free-text minutes
+  // string (AniDB emits "25", we don't parse it further so odd values
+  // like "24-26" survive round-trip).
+  airdate?: string
+  length?: string
 }
 
 export interface Season {

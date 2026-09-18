@@ -16,6 +16,8 @@ export interface UnitLike {
   done?: boolean
   filler?: boolean
   scanlator?: string
+  airdate?: string
+  length?: string
 }
 
 export interface UnitListConfig {
@@ -35,6 +37,10 @@ export interface UnitListConfig {
   // Endings / Trailers / Parody / Other blocks when AniDB's dump
   // fills in prefix-tagged episodes.
   numberGroup?: (number: string) => string | undefined
+  // Sprint I — optional AniDB metadata columns. Populated by the
+  // AniDB fetcher; empty when the user added the episode by hand.
+  showAirdate?: boolean
+  showLength?: boolean
 }
 
 export function UnitListEditor({
@@ -44,7 +50,7 @@ export function UnitListEditor({
   config: UnitListConfig
   onAdd: (u: { number: string; title?: string }) => void
   onRemove: (id: string) => void
-  onUpdate: (id: string, patch: { title?: string; scanlator?: string }) => void
+  onUpdate: (id: string, patch: { title?: string; scanlator?: string; airdate?: string; length?: string }) => void
   onToggleDone: (id: string) => void
   onToggleFiller?: (id: string) => void
   onRatingChange: (id: string, r: number) => void
@@ -83,6 +89,8 @@ export function UnitListEditor({
             <tr>
               <th className="col-num">#</th>
               <th className="col-title">Title</th>
+              {config.showAirdate && <th className="col-airdate">Air date</th>}
+              {config.showLength && <th className="col-length">Length</th>}
               <th className="col-listened">{config.doneLabel}</th>
               <th className="col-rating">Rating</th>
               {config.showFiller && <th className="col-fav">Filler</th>}
@@ -97,6 +105,8 @@ export function UnitListEditor({
               // <td colSpan> so a header spans the entire row width
               // regardless of which optional columns are on.
               let cols = 5   // #, title, done, rating, remove
+              if (config.showAirdate) cols++
+              if (config.showLength) cols++
               if (config.showFiller) cols++
               if (config.showScanlator) cols++
               cols++   // col-spacer
@@ -118,6 +128,16 @@ export function UnitListEditor({
                   <tr key={u.id}>
                     <td className="col-num" title={config.numberTooltip?.(u.number)}>{u.number}</td>
                     <td className="col-title"><input className="track-artist-cell" value={u.title ?? ''} onChange={(e) => onUpdate(u.id, { title: e.target.value })} placeholder="—" /></td>
+                    {config.showAirdate && (
+                      <td className="col-airdate">
+                        <input className="track-artist-cell" type="date" value={u.airdate ?? ''} onChange={(e) => onUpdate(u.id, { airdate: e.target.value })} />
+                      </td>
+                    )}
+                    {config.showLength && (
+                      <td className="col-length">
+                        <input className="track-artist-cell" value={u.length ?? ''} placeholder="—" onChange={(e) => onUpdate(u.id, { length: e.target.value })} />
+                      </td>
+                    )}
                     <td className="col-listened">
                       <button type="button" className={u.done ? 'track-listened-check active' : 'track-listened-check'} onClick={() => onToggleDone(u.id)}>{u.done ? '✓' : ''}</button>
                     </td>

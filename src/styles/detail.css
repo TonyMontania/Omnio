@@ -317,6 +317,11 @@
 .col-num { width: 48px; }
 .col-artist { width: 220px; }
 .col-duration { width: 72px; }
+.col-airdate { width: 112px; }
+.col-length { width: 64px; text-align: right; }
+.col-airdate input[type="date"] { min-width: 0; width: 100%; padding: 3px 6px; background: transparent; border: 1px solid transparent; color: var(--text); border-radius: 3px; font-size: 12px; font-family: var(--font-mono); }
+.col-airdate input[type="date"]:hover, .col-airdate input[type="date"]:focus { border-color: var(--border-soft); background: var(--surface-2); }
+.col-length input { text-align: right; }
 .col-rating { width: 100px; }
 .col-remove { width: 30px; }
 /* col-title has no explicit width — with table-layout:fixed + width:100%

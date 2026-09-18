@@ -70,6 +70,25 @@ function extractAid(raw: string): string | null {
   return m ? m[1] : null
 }
 
+// AniDB peppers descriptions with in-line references to their own DB
+// (`http://anidb.net/cr1283 [Capcom]`, `http://anidb.net/ch46710
+// [Hokaze Kon]`, etc). Users don't get to click those — they're
+// AniDB-only ids — and the trailing bracket-label reads much better
+// on its own. Strip the URL and keep the label so the Description
+// field renders as prose. Handles both http:// and https:// and both
+// short (cr / ch / co / fi) and long (creator / character) codes.
+function cleanAnidbDescription(text: string): string {
+  return text
+    // "http://anidb.net/foo123 [Label]" → "Label"
+    .replace(/https?:\/\/anidb\.net\/[a-z]+\d+\s*\[([^\]]+)\]/gi, '$1')
+    // Any leftover bare AniDB URL — no label — gets dropped entirely.
+    .replace(/https?:\/\/anidb\.net\/\S+/gi, '')
+    // Collapse the "  ." / " ," style whitespace that removals leave.
+    .replace(/\s+([,.;:])/g, '$1')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim()
+}
+
 // AniDB's type strings ("TV Series", "Movie", "OVA", "TV Special", "Web"…)
 // map onto Omnio's AnimeFormat enum with a couple of judgment calls.
 function toAnimeFormat(type: string | undefined): AnimeFormat | undefined {
@@ -125,7 +144,8 @@ function parseAnidbXml(xml: string, aid: string): ParsedAnime | null {
   const episodeCount = anime.querySelector('episodecount')?.textContent?.trim()
   const startDate = anime.querySelector('startdate')?.textContent?.trim()
   const endDate = anime.querySelector('enddate')?.textContent?.trim()
-  const description = anime.querySelector('description')?.textContent?.trim()
+  const rawDescription = anime.querySelector('description')?.textContent?.trim()
+  const description = rawDescription ? cleanAnidbDescription(rawDescription) : undefined
   const picture = anime.querySelector('picture')?.textContent?.trim()
   // AniDB stores studios as creators with type="Animation Work". Directors,
   // character designers etc. all live in the same <creators> list but we
@@ -323,6 +343,8 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
           id: crypto.randomUUID(),
           number: e.epno,
           title: e.title,
+          airdate: e.airdate,
+          length: e.length,
         }))
     const patch: Partial<Item> = {
       title: result.mainTitle,

@@ -33,7 +33,16 @@ function anidbNumberGroup(number: string): string | undefined {
     default: return undefined
   }
 }
-const EPISODE_CONFIG = { noun: 'episode' as const, doneLabel: 'Watched', showFiller: true, numberPlaceholder: 'Ep #', numberTooltip: anidbNumberTooltip, numberGroup: anidbNumberGroup }
+const EPISODE_CONFIG = {
+  noun: 'episode' as const,
+  doneLabel: 'Watched',
+  showFiller: true,
+  showAirdate: true,
+  showLength: true,
+  numberPlaceholder: 'Ep #',
+  numberTooltip: anidbNumberTooltip,
+  numberGroup: anidbNumberGroup,
+}
 
 export default function EpisodeListEditor({ episodes, onAdd, onRemove, onUpdate, onToggleWatched, onToggleFiller, onRatingChange, onBulkAdd }: {
   episodes: Episode[]
