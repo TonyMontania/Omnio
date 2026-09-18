@@ -1094,9 +1094,39 @@ pub async fn anidb_anime(client: String, aid: Value, state: State<'_, AppState>)
     if !resp.status().is_success() {
         return Ok(err(format!("HTTP {}", resp.status().as_u16())));
     }
-    let text = match resp.text().await {
-        Ok(t) => t,
+    // AniDB's HTTP API serves the anime XML gzip-compressed but
+    // OMITS the Content-Encoding header, so reqwest's automatic
+    // decompression never kicks in. We have to inflate the raw body
+    // ourselves — try gzip (magic bytes 0x1f 0x8b) first, then
+    // zlib-wrapped deflate (0x78 ..), and finally treat the bytes
+    // as plain UTF-8 for the (rare) case where AniDB returns an
+    // error envelope without compression.
+    let bytes = match resp.bytes().await {
+        Ok(b) => b,
         Err(e) => return Ok(err(e.to_string())),
+    };
+    use std::io::Read;
+    let text = if bytes.len() >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b {
+        // gzip
+        let mut d = flate2::read::GzDecoder::new(&bytes[..]);
+        let mut s = String::new();
+        if let Err(e) = d.read_to_string(&mut s) {
+            return Ok(err(format!("gzip decode: {e}")));
+        }
+        s
+    } else if bytes.len() >= 2 && bytes[0] == 0x78 {
+        // zlib-wrapped deflate
+        let mut d = flate2::read::ZlibDecoder::new(&bytes[..]);
+        let mut s = String::new();
+        if let Err(e) = d.read_to_string(&mut s) {
+            return Ok(err(format!("zlib decode: {e}")));
+        }
+        s
+    } else {
+        // Uncompressed — either an <error> envelope or a small ok
+        // payload. Decode as UTF-8; lossy so weird bytes don't
+        // panic the handler.
+        String::from_utf8_lossy(&bytes).into_owned()
     };
     // AniDB returns errors as XML: <error>Banned</error>, etc.
     static ERR_RE: Lazy<regex::Regex> = Lazy::new(|| regex::Regex::new(r"(?is)<error[^>]*>(.*?)</error>").unwrap());

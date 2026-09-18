@@ -71,6 +71,12 @@ urlencoding = "2"
 # used by fs_common_locations for the in-app file picker's sidebar.
 dirs = "5"
 
+# gzip / deflate / zlib decompression for AniDB's HTTP API, which
+# serves the anime XML compressed but WITHOUT a Content-Encoding
+# header — reqwest's built-in decompression is triggered by that
+# header, so we have to inflate the response body by hand.
+flate2 = "1"
+
 [features]
 # Only enabled by the release bundle build to lock down webview
 # security; matches Tauri's default template.

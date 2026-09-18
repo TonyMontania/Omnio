@@ -2236,6 +2236,7 @@ version = "0.5.2"
 dependencies = [
  "base64 0.22.1",
  "dirs 5.0.1",
+ "flate2",
  "futures-util",
  "mime_guess",
  "regex",
