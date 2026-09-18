@@ -167,7 +167,19 @@ export default function ErogeEditor({ initial, collections, allGames, f95Cookie,
     setImporting(false)
   }
 
+  // An existing description that reads like a scraped SEO title
+  // (e.g. "... (RJ01600055) Crack ... Direct Link Download") should
+  // be replaced by a freshly-fetched one — the old value came from a
+  // previous scraper pass that couldn't find the real DESCRIPTION
+  // block and fell back to the OG meta. Legit user text stays intact
+  // because it won't match the SEO-junk fingerprint.
+  const looksLikeSeoJunk = (s: string | undefined): boolean =>
+    !!s && /Direct\s*Link\s*Download|\bRJ\d{6,}\b\s*Crack/i.test(s)
+
   function mergeRyuu(target: ErogeItem, res: Awaited<ReturnType<typeof ryuuFetch>>, url: string): ErogeItem {
+    const nextDescription = looksLikeSeoJunk(target.description)
+      ? (res.description || target.description)
+      : (target.description || res.description)
     return {
       ...target,
       name: target.name || res.title || target.name,
@@ -175,7 +187,7 @@ export default function ErogeEditor({ initial, collections, allGames, f95Cookie,
       language: target.language || res.language,
       creator: target.creator || res.developer,
       releaseDate: target.releaseDate || res.releaseDate,
-      description: target.description || res.description,
+      description: nextDescription,
       dlsiteUrl: target.dlsiteUrl || res.dlsiteUrl,
       dlsiteId: target.dlsiteId || res.dlsiteId,
       steamUrl: target.steamUrl || res.steamUrl,

@@ -119,18 +119,24 @@ export async function ryuuFetch(url: string): Promise<RyuuFetchResult> {
     if (og) coverUrl = og[1]
   }
 
-  // Full description block. Ryuugames renders it under an
-  // <h2>DESCRIPTION</h2> (or h3) heading with paragraphs / <br>
-  // separators underneath, ending at the next heading, the download
-  // block, or the article close. Falls back to the OG description
-  // meta only when the block isn't found — that tag carries a much
-  // shorter summary and is only decent as a placeholder.
-  let description: string | undefined
-  const descBlock = html.match(/<h[23][^>]*>\s*DESCRIPTION\s*<\/h[23]>([\s\S]{0,20000}?)(?:<h[23]|<\/article|<\/main|$)/i)
-  if (descBlock) {
-    const raw = descBlock[1]
-      // Paragraph and <br> breaks become newlines so the pasted
-      // description keeps the shape shown on the page.
+  // Full description block. The section is titled "DESCRIPTION" but
+  // the surrounding tag varies between site revisions — sometimes
+  // it's an h2/h3 heading, sometimes a <p><strong>DESCRIPTION</strong>
+  // paragraph, sometimes a WordPress block that wraps the label in a
+  // <span>. We try every shape we've seen, keep the longest block
+  // that comes back, and fall back to the OG meta only if nothing
+  // matched. Reject fallback text that looks like SEO title junk
+  // ("Direct Link Download", "Crack" appended to the game name) so
+  // we don't pollute the field with search-engine bait.
+  const extractBlock = (headingRe: RegExp): string | undefined => {
+    const m = html.match(headingRe)
+    if (!m) return undefined
+    // The regex captures the body after the heading. Cut it at the
+    // next heading / </article> / </main> / a "Download" section /
+    // EOF so we don't spill into unrelated content.
+    const body = m[1]
+      .split(/<h[1-6]\b|<\/article|<\/main|<div[^>]+class=["'][^"']*(?:vndetails|td-post-sharing|entry-related)|LINK\s*DOWNLOAD|Direct\s*Link|Download\s*Links/i)[0]
+    const raw = body
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
       .replace(/<[^>]+>/g, '')
@@ -139,11 +145,31 @@ export async function ryuuFetch(url: string): Promise<RyuuFetchResult> {
       .map((l) => l.replace(/\s+$/g, '').replace(/^\s+/g, ''))
       .filter(Boolean)
       .join('\n')
-    if (cleaned.length > 0) description = cleaned
+    return cleaned.length > 0 ? cleaned : undefined
   }
+
+  let description: string | undefined
+  const patterns: RegExp[] = [
+    // <h2>DESCRIPTION</h2> ... — most common Ryuugames shape
+    /<h[1-6][^>]*>\s*(?:<[^>]+>\s*)*DESCRIPTION(?:\s*<\/[^>]+>)*\s*<\/h[1-6]>([\s\S]{0,20000})/i,
+    // <p><strong>DESCRIPTION</strong>...</p>  or <p><b>DESCRIPTION</b>...
+    /<(?:p|div)[^>]*>\s*<(?:strong|b)[^>]*>\s*DESCRIPTION\s*<\/(?:strong|b)>[\s\S]{0,200}?<\/(?:p|div)>([\s\S]{0,20000})/i,
+    // Bare "DESCRIPTION" heading-shaped span with class
+    /<(?:span|div)[^>]*class=["'][^"']*(?:heading|title|section)[^"']*["'][^>]*>\s*DESCRIPTION\s*<\/(?:span|div)>([\s\S]{0,20000})/i,
+  ]
+  for (const re of patterns) {
+    const found = extractBlock(re)
+    if (found && (!description || found.length > description.length)) description = found
+  }
+
+  // Fallback: the OG description meta. Skip it when the string
+  // reads like SEO junk (Ryuugames prepends "Direct Link Download"
+  // and the RJ id to boilerplate meta for search engines).
   if (!description) {
     const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i)
-    if (ogDesc) description = stripHtml(ogDesc[1])
+    const candidate = ogDesc ? stripHtml(ogDesc[1]) : ''
+    const looksSEO = /Direct\s*Link\s*Download|\bCrack\b|\bRJ\d{6,}\b/i.test(candidate)
+    if (candidate && !looksSEO) description = candidate
   }
 
   return { title, originalTitle, language, developer, releaseDate, dlsiteUrl, dlsiteId, steamUrl, itchUrl, coverUrl, description }
