@@ -126,49 +126,28 @@
   letter-spacing: -0.005em;
 }
 
-/* Eroge plugin detail view. Different HTML shape (`.er-detail-*`
-   instead of `.game-modal-*`) but same chip family, cover, and
-   description concept — so it gets the same polish, scoped
-   separately. */
-.er-detail-cover {
+/* Eroge plugin detail view. The plugin has intentional design
+   choices we shouldn't override:
+     - .er-tag carries semantic per-engine / per-status BACKGROUND
+       colours (VN red, Ren'Py purple, RPGM blue, etc), so we can't
+       swap in an accent-tinted background.
+     - .er-detail-desc is a centered rounded panel by design.
+     - .er-coll-chip has its own compact chip look inside .er-colls-bar.
+   Only the cover glow + a tighter title tracking make sense here —
+   both are safe, no semantic conflict. */
+.er-view .er-detail-cover {
   box-shadow:
     0 20px 40px -6px rgba(0, 0, 0, 0.55),
     0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-.er-detail-cover:hover {
+.er-view .er-detail-cover:hover {
   transform: translateY(-3px) scale(1.01);
   box-shadow:
     0 26px 46px -6px rgba(0, 0, 0, 0.6),
     0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
 }
-.er-detail-desc {
-  max-width: 78ch;
-  padding: 2px 0 2px 14px;
-  border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  color: var(--text);
-  line-height: 1.65;
-}
-.er-detail-title { letter-spacing: -0.015em; line-height: 1.1; }
-.er-tag,
-.er-coll-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 999px;
-  font-size: 12.5px;
-  font-family: var(--font-body);
-  font-weight: 500;
-  line-height: 1.35;
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
-  color: var(--text);
-  transition: background 0.16s, color 0.16s, border-color 0.16s;
-}
-.er-tag:hover, .er-coll-chip:hover {
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-}
+.er-view .er-detail-title { letter-spacing: -0.01em; line-height: 1.15; }
 
 /* Game detail — Sprint E/F sections rendered read-only.
    Playthroughs, store links and purchase log used to be
