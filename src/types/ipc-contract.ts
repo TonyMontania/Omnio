@@ -315,6 +315,10 @@ export type IpcContract = {
     { args: [trackName: string, artistName: string, albumName?: string]; result: LrclibResult }
   'anidb:anime':
     { args: [client: string, aid: string | number]; result: AnidbResult }
+  'anidb:download-titles':
+    { args: []; result: { ok: true; data: { count: number; path: string } } | { ok: false; error: string } }
+  'anidb:search-titles':
+    { args: [query: string, limit: number]; result: { ok: true; data: { aid: string; mainTitle: string; altTitles: string[]; score: number }[] } | { ok: false; error: string } }
   'pcgw:search':
     { args: [term: string]; result: PcgwSearchResult }
   'pcgw:save-paths':

@@ -16,6 +16,7 @@
 import { useState } from 'react'
 import type { Item, AnimeFormat, AiringStatus, Episode } from './types'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { invoke } from './utils/ipc'
 
 interface Props {
   initialUrl?: string
@@ -212,9 +213,58 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
   // How much of AniDB's episode listing to import. Regulars are what
   // most trackers care about; specials + OP/ED credits are opt-in.
   const [episodeScope, setEpisodeScope] = useState<'none' | 'regular' | 'regular_specials' | 'all'>('regular')
+  // Sprint I — title-search mode. AniDB's HTTP API has no search
+  // endpoint, but they publish a title dump we can cache and search
+  // offline. Two states: whether the user is in search mode (vs. AID
+  // paste mode), the query string, results, and a download busy flag.
+  const [searchMode, setSearchMode] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<{ aid: string; mainTitle: string; altTitles: string[] }[] | null>(null)
+  const [searchBusy, setSearchBusy] = useState<'idle' | 'downloading' | 'searching'>('idle')
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [dumpCount, setDumpCount] = useState<number | null>(null)
 
-  const fetchOne = async () => {
-    const aid = extractAid(input)
+  const downloadDump = async () => {
+    setSearchBusy('downloading')
+    setSearchError(null)
+    const r = await invoke('anidb:download-titles')
+    if (r.ok) {
+      setDumpCount(r.data.count)
+    } else {
+      setSearchError(`Could not download the title dump — ${r.error}`)
+    }
+    setSearchBusy('idle')
+  }
+
+  const runSearch = async (q: string) => {
+    if (!q.trim()) { setSearchResults([]); return }
+    setSearchBusy('searching')
+    setSearchError(null)
+    const r = await invoke('anidb:search-titles', q, 25)
+    if (r.ok) {
+      setSearchResults(r.data)
+      if (r.data.length === 0) setSearchError('No matches. Try a different spelling or the romaji title.')
+    } else {
+      setSearchResults(null)
+      if (r.error.includes('not downloaded')) {
+        setSearchError('Title cache not downloaded yet. Click "Download title dump" first (one-time, ~10 MB).')
+      } else {
+        setSearchError(r.error)
+      }
+    }
+    setSearchBusy('idle')
+  }
+
+  const pickFromSearch = async (aid: string) => {
+    setInput(aid)
+    setSearchMode(false)
+    setSearchResults(null)
+    // Small tick so the input state settles before fetchOne reads it.
+    setTimeout(() => { void fetchOne(aid) }, 0)
+  }
+
+  const fetchOne = async (overrideAid?: string) => {
+    const aid = overrideAid ?? extractAid(input)
     if (!aid) { setError('Paste an AniDB URL (anidb.net/anime/12345) or a numeric AID.'); return }
     if (!anidbClient) { setError('Set your AniDB client name in Settings → Data → Integrations first.'); return }
     setError(null)
@@ -298,12 +348,32 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
-          <p className="hint" style={{ marginTop: 0 }}>
-            AniDB's HTTP API has no title search — find the anime on
-            <b> anidb.net</b> first, then paste the URL (or just the AID number) below.
-            Rate-limited to one fetch every ~2 seconds per AniDB's terms.
-            Requires a registered client name (Settings → Data → Integrations).
-          </p>
+          <div className="anidb-mode-toggle">
+            <button
+              type="button"
+              className={!searchMode ? 'pill active' : 'pill'}
+              onClick={() => { setSearchMode(false); setSearchResults(null); setSearchError(null) }}
+            >By AID / URL</button>
+            <button
+              type="button"
+              className={searchMode ? 'pill active' : 'pill'}
+              onClick={() => { setSearchMode(true); setError(null); setResult(null) }}
+            >Search by title</button>
+          </div>
+
+          {!searchMode && (
+            <p className="hint" style={{ marginTop: 0 }}>
+              AniDB's HTTP API has no title search — find the anime on
+              <b> anidb.net</b> first, then paste the URL (or just the AID number) below.
+              Rate-limited to one fetch every ~2 seconds per AniDB's terms.
+              Requires a registered client name (Settings → Data → Integrations).
+            </p>
+          )}
+          {searchMode && (
+            <p className="hint" style={{ marginTop: 0 }}>
+              Uses AniDB's public title dump — no rate limit, no client name needed. Download it once (~10 MB compressed) and every search after that runs 100 % locally. Re-download whenever you feel it's out of date (they refresh it daily).
+            </p>
+          )}
 
           {!anidbClient && (
             <p className="save-files-error">
@@ -311,27 +381,76 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
             </p>
           )}
 
-          <div className="discogs-creds">
-            <label>
-              <span>AniDB URL or AID</span>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="https://anidb.net/anime/12345"
-                onKeyDown={(e) => { if (e.key === 'Enter') fetchOne() }}
-                autoFocus
-              />
-            </label>
-            <button
-              type="button"
-              className="importer-file-btn"
-              onClick={fetchOne}
-              disabled={busy || !anidbClient || !input.trim()}
-            >
-              {busy ? 'Fetching (respecting 2s throttle)…' : 'Fetch'}
-            </button>
-          </div>
+          {!searchMode && (
+            <div className="discogs-creds">
+              <label>
+                <span>AniDB URL or AID</span>
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="https://anidb.net/anime/12345"
+                  onKeyDown={(e) => { if (e.key === 'Enter') void fetchOne() }}
+                  autoFocus
+                />
+              </label>
+              <button
+                type="button"
+                className="importer-file-btn"
+                onClick={() => void fetchOne()}
+                disabled={busy || !anidbClient || !input.trim()}
+              >
+                {busy ? 'Fetching (respecting 2s throttle)…' : 'Fetch'}
+              </button>
+            </div>
+          )}
+
+          {searchMode && (
+            <div className="anidb-search">
+              <div className="anidb-search-bar">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Type an anime title (any language)…"
+                  onKeyDown={(e) => { if (e.key === 'Enter') void runSearch(searchQuery) }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="importer-file-btn"
+                  onClick={() => void runSearch(searchQuery)}
+                  disabled={searchBusy !== 'idle' || !searchQuery.trim()}
+                >
+                  {searchBusy === 'searching' ? 'Searching…' : 'Search'}
+                </button>
+                <button
+                  type="button"
+                  className="pill"
+                  onClick={() => void downloadDump()}
+                  disabled={searchBusy !== 'idle'}
+                  title="One-time (or occasional) download of the AniDB title dump. Reusable across every search after."
+                >
+                  {searchBusy === 'downloading' ? 'Downloading…' : (dumpCount ? `Re-download dump (${dumpCount})` : 'Download title dump')}
+                </button>
+              </div>
+              {searchError && <p className="save-files-error">{searchError}</p>}
+              {searchResults && searchResults.length > 0 && (
+                <ul className="anidb-search-results">
+                  {searchResults.map((r) => (
+                    <li key={r.aid} onClick={() => void pickFromSearch(r.aid)}>
+                      <div className="anidb-search-title">{r.mainTitle}</div>
+                      {r.altTitles.length > 0 && (
+                        <div className="anidb-search-alts">{r.altTitles.slice(0, 3).join(' · ')}{r.altTitles.length > 3 && ' …'}</div>
+                      )}
+                      <div className="anidb-search-aid">aid {r.aid}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {busy && <p className="hint">Fetching full details (respecting 2s throttle)…</p>}
+            </div>
+          )}
 
           {error && <pre className="save-files-error" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', margin: 0 }}>{error}</pre>}
 

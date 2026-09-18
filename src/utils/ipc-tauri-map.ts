@@ -89,6 +89,8 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'discogs:collection': ['username', 'token'],
   'lrclib:track': ['trackName', 'artistName', 'albumName'],
   'anidb:anime': ['client', 'aid'],
+  'anidb:download-titles': [],
+  'anidb:search-titles': ['query', 'limit'],
   'pcgw:search': ['term'],
   'pcgw:save-paths': ['pageName'],
 

@@ -168,6 +168,42 @@
 .track-editor-row button:hover { color: var(--text); }
 
 .track-table { table-layout: fixed; width: 100%; }
+
+/* AniDB-style prefix legend for anime episode numbers. Only renders
+   when the list has any episode whose `number` starts with a letter
+   (S / C / T / P / O), because that's when the user gets a table
+   full of cryptic "T1", "C3" rows. */
+.episode-number-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 8px 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.episode-number-legend > span:first-child {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  margin-right: 4px;
+}
+.episode-number-legend code {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+}
 .episode-table tr.ep-watched td { color: var(--text-faint); }
 .anime-picker { position: relative; }
 .anime-picker input { width: 100%; }

@@ -1666,6 +1666,81 @@
   user-select: none;
 }
 .anidb-episodes-options input { cursor: pointer; }
+
+/* Sprint I — title-search mode inside the AniDB fetcher. */
+.anidb-mode-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+}
+.anidb-search {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.anidb-search-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.anidb-search-bar input {
+  flex: 1;
+  min-width: 220px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 13.5px;
+}
+.anidb-search-bar input:focus { border-color: var(--accent); outline: none; }
+.anidb-search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.anidb-search-results li {
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  transition: border-color 0.12s, background 0.12s;
+}
+.anidb-search-results li:hover { border-color: var(--accent); background: var(--surface-2); }
+.anidb-search-title {
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 500;
+  grid-column: 1;
+}
+.anidb-search-alts {
+  color: var(--text-dim);
+  font-size: 11.5px;
+  grid-column: 1;
+  margin-top: 2px;
+}
+.anidb-search-aid {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
 .anidb-desc {
   margin: 4px 0 0;
   font-size: 12.5px;

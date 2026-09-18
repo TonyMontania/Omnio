@@ -318,6 +318,17 @@ export default function AnimeEditorSection(props: AnimeEditorSectionProps) {
           <button type="button" className={hasEpisodes ? 'pill active' : 'pill'} onClick={() => setHasEpisodes(true)}>Yes</button>
           <button type="button" className={!hasEpisodes ? 'pill active' : 'pill'} onClick={() => { setHasEpisodes(false); setEpisodes([]) }}>No</button>
         </div>
+        {hasEpisodes && (episodes.some((e) => /^[a-z]/i.test(e.number))) && (
+          <div className="episode-number-legend">
+            <span>Number prefix legend (AniDB):</span>
+            <code>1, 2, 3…</code> regular ·
+            <code>S</code> special / OVA ·
+            <code>C</code> credits (opening/ending) ·
+            <code>T</code> trailer / PV ·
+            <code>P</code> parody ·
+            <code>O</code> other
+          </div>
+        )}
         {hasEpisodes && (
           <EpisodeListEditor
             episodes={episodes}

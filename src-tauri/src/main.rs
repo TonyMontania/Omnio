@@ -129,6 +129,8 @@ fn main() {
             handlers::fetchers::discogs_collection,
             handlers::fetchers::lrclib_track,
             handlers::fetchers::anidb_anime,
+            handlers::fetchers::anidb_download_titles,
+            handlers::fetchers::anidb_search_titles,
             handlers::fetchers::pcgw_search,
             handlers::fetchers::pcgw_save_paths,
             // Plugin sandbox — generic infra for locally-installed

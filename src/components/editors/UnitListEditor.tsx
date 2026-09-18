@@ -23,6 +23,10 @@ export interface UnitListConfig {
   showFiller: boolean
   showScanlator?: boolean   // per-chapter fan-translation attribution column
   numberPlaceholder: string
+  // Optional hover-title on the # cell — used by anime episodes to
+  // explain AniDB's S / C / T / P / O prefixes without polluting the
+  // column with a legend column.
+  numberTooltip?: (number: string) => string | undefined
 }
 
 export function UnitListEditor({
@@ -82,7 +86,7 @@ export function UnitListEditor({
           <tbody>
             {units.map((u) => (
               <tr key={u.id}>
-                <td className="col-num">{u.number}</td>
+                <td className="col-num" title={config.numberTooltip?.(u.number)}>{u.number}</td>
                 <td className="col-title"><input className="track-artist-cell" value={u.title ?? ''} onChange={(e) => onUpdate(u.id, { title: e.target.value })} placeholder="—" /></td>
                 <td className="col-listened">
                   <button type="button" className={u.done ? 'track-listened-check active' : 'track-listened-check'} onClick={() => onToggleDone(u.id)}>{u.done ? '✓' : ''}</button>

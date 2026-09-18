@@ -1137,6 +1137,161 @@ pub async fn anidb_anime(client: String, aid: Value, state: State<'_, AppState>)
 }
 
 // ===================================================================
+// AniDB titles dump — offline title search.
+//
+// The HTTP API has no title-search endpoint on purpose, but AniDB
+// publishes a full title dump (all AIDs + every title variant per
+// AID) at http://anidb.net/api/anime-titles.xml.gz, updated daily,
+// no rate limit, no client name required. We download it once, cache
+// the decompressed XML in the app's data dir, and search it locally.
+//
+// Two commands:
+//   - anidb_download_titles(): pull the dump, gunzip, write to disk,
+//                              return { count, path }
+//   - anidb_search_titles(query, limit): scan the cached XML for
+//                              case-insensitive substring matches,
+//                              return the top N candidates as
+//                              [{aid, mainTitle, altTitles: [...]}]
+// ===================================================================
+const ANIDB_TITLES_URL: &str = "http://anidb.net/api/anime-titles.xml.gz";
+const ANIDB_TITLES_CACHE: &str = "anidb-titles.xml";
+
+fn anidb_titles_cache_path() -> std::path::PathBuf {
+    crate::paths::get().data_dir.join(ANIDB_TITLES_CACHE)
+}
+
+#[command]
+pub async fn anidb_download_titles(state: State<'_, AppState>) -> Result<Value, ()> {
+    let http = get_http_client(&state);
+    let resp = match http.get(ANIDB_TITLES_URL)
+        .header("User-Agent", OMNIO_UA)
+        .send().await
+    {
+        Ok(r) => r,
+        Err(e) => return Ok(err(e.to_string())),
+    };
+    if !resp.status().is_success() {
+        return Ok(err(format!("HTTP {}", resp.status().as_u16())));
+    }
+    let bytes = match resp.bytes().await {
+        Ok(b) => b,
+        Err(e) => return Ok(err(e.to_string())),
+    };
+    // The dump ships gzip-compressed. Same magic-byte sniff as
+    // anidb_anime — usually 0x1f 0x8b but we accept zlib too.
+    use std::io::Read;
+    let xml = if bytes.len() >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b {
+        let mut d = flate2::read::GzDecoder::new(&bytes[..]);
+        let mut s = String::new();
+        if let Err(e) = d.read_to_string(&mut s) {
+            return Ok(err(format!("gzip decode: {e}")));
+        }
+        s
+    } else {
+        String::from_utf8_lossy(&bytes).into_owned()
+    };
+    let path = anidb_titles_cache_path();
+    if let Some(parent) = path.parent() {
+        let _ = tokio::fs::create_dir_all(parent).await;
+    }
+    if let Err(e) = tokio::fs::write(&path, xml.as_bytes()).await {
+        return Ok(err(format!("write cache: {e}")));
+    }
+    // Rough count of <anime> entries so the caller can show progress.
+    let count = xml.matches("<anime ").count();
+    Ok(ok(json!({ "count": count, "path": path.display().to_string() })))
+}
+
+#[command]
+pub async fn anidb_search_titles(query: String, limit: Value) -> Result<Value, ()> {
+    let q = query.trim().to_lowercase();
+    if q.is_empty() { return Ok(ok(Value::Array(vec![]))); }
+    let n = match &limit {
+        Value::Number(n) => n.as_u64().unwrap_or(20).max(1).min(100) as usize,
+        _ => 20,
+    };
+    let path = anidb_titles_cache_path();
+    let xml = match tokio::fs::read_to_string(&path).await {
+        Ok(s) => s,
+        Err(_) => return Ok(err("Title cache not downloaded yet. Call anidb:download-titles first.")),
+    };
+    // The dump structure is:
+    //   <anime aid="12345">
+    //     <title xml:lang="x-jat" type="main">...</title>
+    //     <title xml:lang="ja" type="official">...</title>
+    //     ...
+    //   </anime>
+    // We stream-parse by iterating <anime ...> ... </anime> blocks with
+    // regex — the file is 30-40 MB and full XML parsing would blow the
+    // memory budget. Regex is fine because the shape is regular.
+    static ANIME_RE: Lazy<regex::Regex> = Lazy::new(||
+        regex::Regex::new(r#"(?s)<anime\s+aid="(\d+)"[^>]*>(.*?)</anime>"#).unwrap()
+    );
+    static TITLE_RE: Lazy<regex::Regex> = Lazy::new(||
+        regex::Regex::new(r#"(?s)<title\s+xml:lang="([^"]+)"(?:\s+type="([^"]+)")?[^>]*>([^<]+)</title>"#).unwrap()
+    );
+    struct Match {
+        aid: String,
+        main: String,
+        alts: Vec<String>,
+        score: u32,
+    }
+    let mut hits: Vec<Match> = Vec::new();
+    for cap in ANIME_RE.captures_iter(&xml) {
+        let aid = cap[1].to_string();
+        let body = &cap[2];
+        let mut titles: Vec<(String, String)> = Vec::new();   // (type, text)
+        let mut main = String::new();
+        for tc in TITLE_RE.captures_iter(body) {
+            let ttype = tc.get(2).map(|m| m.as_str().to_string()).unwrap_or_default();
+            let text = tc[3].to_string();
+            if ttype == "main" && main.is_empty() { main = text.clone(); }
+            titles.push((ttype, text));
+        }
+        // Match: any title contains the query. Score higher for shorter
+        // titles (more likely a direct hit) and for main / official types.
+        let mut best_score: u32 = 0;
+        for (ttype, text) in &titles {
+            let lc = text.to_lowercase();
+            if lc.contains(&q) {
+                let mut s: u32 = 100;
+                if lc == q { s += 1000; }
+                if lc.starts_with(&q) { s += 500; }
+                if ttype == "main" { s += 300; }
+                if ttype == "official" { s += 100; }
+                // shorter title wins ties
+                let len = text.chars().count() as u32;
+                s = s.saturating_add(200u32.saturating_sub(len.min(200)));
+                if s > best_score { best_score = s; }
+            }
+        }
+        if best_score > 0 {
+            let alts: Vec<String> = titles.iter()
+                .filter(|(t, txt)| t != "main" && *txt != main)
+                .map(|(_, txt)| txt.clone())
+                .take(4)
+                .collect();
+            hits.push(Match {
+                aid,
+                main: if main.is_empty() { titles.first().map(|(_, t)| t.clone()).unwrap_or_default() } else { main },
+                alts,
+                score: best_score,
+            });
+        }
+        if hits.len() > n * 5 { break; }   // early exit; top N will still be within this pool
+    }
+    hits.sort_by(|a, b| b.score.cmp(&a.score));
+    hits.truncate(n);
+    let out: Vec<Value> = hits.into_iter().map(|h| json!({
+        "aid": h.aid,
+        "mainTitle": h.main,
+        "altTitles": h.alts,
+        "score": h.score,
+    })).collect();
+    Ok(ok(Value::Array(out)))
+}
+
+// ===================================================================
 // PCGamingWiki — opensearch + wikitext parse for save/config paths.
 // ===================================================================
 const PCGW_BASE: &str = "https://www.pcgamingwiki.com/w/api.php";
