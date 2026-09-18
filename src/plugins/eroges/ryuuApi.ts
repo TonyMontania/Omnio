@@ -119,10 +119,32 @@ export async function ryuuFetch(url: string): Promise<RyuuFetchResult> {
     if (og) coverUrl = og[1]
   }
 
-  // Optional short description from the OG description meta.
+  // Full description block. Ryuugames renders it under an
+  // <h2>DESCRIPTION</h2> (or h3) heading with paragraphs / <br>
+  // separators underneath, ending at the next heading, the download
+  // block, or the article close. Falls back to the OG description
+  // meta only when the block isn't found — that tag carries a much
+  // shorter summary and is only decent as a placeholder.
   let description: string | undefined
-  const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i)
-  if (ogDesc) description = stripHtml(ogDesc[1])
+  const descBlock = html.match(/<h[23][^>]*>\s*DESCRIPTION\s*<\/h[23]>([\s\S]{0,20000}?)(?:<h[23]|<\/article|<\/main|$)/i)
+  if (descBlock) {
+    const raw = descBlock[1]
+      // Paragraph and <br> breaks become newlines so the pasted
+      // description keeps the shape shown on the page.
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+    const cleaned = decodeEntities(raw)
+      .split('\n')
+      .map((l) => l.replace(/\s+$/g, '').replace(/^\s+/g, ''))
+      .filter(Boolean)
+      .join('\n')
+    if (cleaned.length > 0) description = cleaned
+  }
+  if (!description) {
+    const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i)
+    if (ogDesc) description = stripHtml(ogDesc[1])
+  }
 
   return { title, originalTitle, language, developer, releaseDate, dlsiteUrl, dlsiteId, steamUrl, itchUrl, coverUrl, description }
 }
