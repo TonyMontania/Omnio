@@ -204,6 +204,23 @@
   font-size: 11px;
   color: var(--accent);
 }
+
+/* Section-header row rendered between episode groups (Specials,
+   Openings & Endings, Trailers, Parodies, Other). Kept subtle so a
+   long list still reads as one table, not five separate ones. */
+.track-table .track-group-row td {
+  padding: 12px 8px 6px !important;
+  background: transparent !important;
+  border-bottom: 1px solid var(--border) !important;
+  color: var(--accent) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 10.5px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 700 !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+}
 .episode-table tr.ep-watched td { color: var(--text-faint); }
 .anime-picker { position: relative; }
 .anime-picker input { width: 100%; }

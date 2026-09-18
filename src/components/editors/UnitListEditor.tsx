@@ -4,6 +4,7 @@
 // ("read" vs "watched") and a filler column (episodes only). The concrete
 // wrappers below expose the same public API the app already calls with.
 
+import type React from 'react'
 import { useState } from 'react'
 import { StarRatingInput } from '../../StarRating'
 
@@ -27,6 +28,13 @@ export interface UnitListConfig {
   // explain AniDB's S / C / T / P / O prefixes without polluting the
   // column with a legend column.
   numberTooltip?: (number: string) => string | undefined
+  // Optional group name derived from the unit number. When two
+  // consecutive units belong to different groups, the table renders
+  // a section header row between them. Used to visually break up
+  // the anime episode list into Regular / Specials / Openings &
+  // Endings / Trailers / Parody / Other blocks when AniDB's dump
+  // fills in prefix-tagged episodes.
+  numberGroup?: (number: string) => string | undefined
 }
 
 export function UnitListEditor({
@@ -84,28 +92,53 @@ export function UnitListEditor({
             </tr>
           </thead>
           <tbody>
-            {units.map((u) => (
-              <tr key={u.id}>
-                <td className="col-num" title={config.numberTooltip?.(u.number)}>{u.number}</td>
-                <td className="col-title"><input className="track-artist-cell" value={u.title ?? ''} onChange={(e) => onUpdate(u.id, { title: e.target.value })} placeholder="—" /></td>
-                <td className="col-listened">
-                  <button type="button" className={u.done ? 'track-listened-check active' : 'track-listened-check'} onClick={() => onToggleDone(u.id)}>{u.done ? '✓' : ''}</button>
-                </td>
-                <td className="col-rating"><StarRatingInput value={u.rating ?? 0} onChange={(v) => onRatingChange(u.id, v)} /></td>
-                {config.showFiller && (
-                  <td className="col-fav">
-                    <button type="button" className={u.filler ? 'track-fav active' : 'track-fav'} onClick={() => onToggleFiller?.(u.id)}>F</button>
-                  </td>
-                )}
-                {config.showScanlator && (
-                  <td className="col-artist">
-                    <input className="track-artist-cell" value={u.scanlator ?? ''} onChange={(e) => onUpdate(u.id, { scanlator: e.target.value })} placeholder="—" />
-                  </td>
-                )}
-                <td><button type="button" className="track-remove" onClick={() => onRemove(u.id)}>✕</button></td>
-                <td className="col-spacer"></td>
-              </tr>
-            ))}
+            {(() => {
+              // Compute the total column count for the group-header
+              // <td colSpan> so a header spans the entire row width
+              // regardless of which optional columns are on.
+              let cols = 5   // #, title, done, rating, remove
+              if (config.showFiller) cols++
+              if (config.showScanlator) cols++
+              cols++   // col-spacer
+              const rows: React.ReactNode[] = []
+              let lastGroup: string | undefined | null = null
+              for (const u of units) {
+                const group = config.numberGroup?.(u.number)
+                if (group && group !== lastGroup) {
+                  rows.push(
+                    <tr key={`__group-${group}-${u.id}`} className="track-group-row">
+                      <td colSpan={cols}>{group}</td>
+                    </tr>
+                  )
+                  lastGroup = group
+                } else if (!group) {
+                  lastGroup = null
+                }
+                rows.push(
+                  <tr key={u.id}>
+                    <td className="col-num" title={config.numberTooltip?.(u.number)}>{u.number}</td>
+                    <td className="col-title"><input className="track-artist-cell" value={u.title ?? ''} onChange={(e) => onUpdate(u.id, { title: e.target.value })} placeholder="—" /></td>
+                    <td className="col-listened">
+                      <button type="button" className={u.done ? 'track-listened-check active' : 'track-listened-check'} onClick={() => onToggleDone(u.id)}>{u.done ? '✓' : ''}</button>
+                    </td>
+                    <td className="col-rating"><StarRatingInput value={u.rating ?? 0} onChange={(v) => onRatingChange(u.id, v)} /></td>
+                    {config.showFiller && (
+                      <td className="col-fav">
+                        <button type="button" className={u.filler ? 'track-fav active' : 'track-fav'} onClick={() => onToggleFiller?.(u.id)}>F</button>
+                      </td>
+                    )}
+                    {config.showScanlator && (
+                      <td className="col-artist">
+                        <input className="track-artist-cell" value={u.scanlator ?? ''} onChange={(e) => onUpdate(u.id, { scanlator: e.target.value })} placeholder="—" />
+                      </td>
+                    )}
+                    <td><button type="button" className="track-remove" onClick={() => onRemove(u.id)}>✕</button></td>
+                    <td className="col-spacer"></td>
+                  </tr>
+                )
+              }
+              return rows
+            })()}
           </tbody>
         </table>
       )}

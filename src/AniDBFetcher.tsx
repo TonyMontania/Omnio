@@ -180,12 +180,24 @@ function parseAnidbXml(xml: string, aid: string): ParsedAnime | null {
       } as ParsedEpisode
     })
     .filter((e) => e.epno.length > 0)
-    // Regular episodes first, then specials, then others; each
-    // group in ascending numeric order.
+    // Sort order:
+    //   1. Regulars (1, 2, 3…)
+    //   2. Specials (S1, S2…)
+    //   3. Other — grouped by prefix letter first (all C's, then all
+    //      T's, then all P's, then all O's), each block in ascending
+    //      numeric order.
+    // Grouping the "other" bucket by first letter matters because
+    // AniDB interleaves C1/T1/C2/T2 in the raw dump — the user wants
+    // openings/endings together, trailers together, etc.
     .sort((a, b) => {
       const rank = (t: ParsedEpisode['type']) => t === 'regular' ? 0 : t === 'special' ? 1 : 2
       const dr = rank(a.type) - rank(b.type)
       if (dr !== 0) return dr
+      if (a.type === 'other') {
+        const la = a.epno.charAt(0).toUpperCase()
+        const lb = b.epno.charAt(0).toUpperCase()
+        if (la !== lb) return la.localeCompare(lb)
+      }
       return parseFloat(a.numeric || '0') - parseFloat(b.numeric || '0')
     })
   return {

@@ -18,7 +18,22 @@ function anidbNumberTooltip(number: string): string | undefined {
     default: return undefined
   }
 }
-const EPISODE_CONFIG = { noun: 'episode' as const, doneLabel: 'Watched', showFiller: true, numberPlaceholder: 'Ep #', numberTooltip: anidbNumberTooltip }
+// Section header — grouped by the AniDB prefix so the table breaks
+// into visually distinct blocks between regulars, specials, credits,
+// trailers, parodies and other. Regular numbers return undefined so
+// the top block stays untitled (matches user expectation).
+function anidbNumberGroup(number: string): string | undefined {
+  const first = number.charAt(0).toUpperCase()
+  switch (first) {
+    case 'S': return 'Specials / OVAs'
+    case 'C': return 'Openings & Endings'
+    case 'T': return 'Trailers / PVs'
+    case 'P': return 'Parodies'
+    case 'O': return 'Other'
+    default: return undefined
+  }
+}
+const EPISODE_CONFIG = { noun: 'episode' as const, doneLabel: 'Watched', showFiller: true, numberPlaceholder: 'Ep #', numberTooltip: anidbNumberTooltip, numberGroup: anidbNumberGroup }
 
 export default function EpisodeListEditor({ episodes, onAdd, onRemove, onUpdate, onToggleWatched, onToggleFiller, onRatingChange, onBulkAdd }: {
   episodes: Episode[]
