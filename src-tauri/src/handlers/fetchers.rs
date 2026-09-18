@@ -1153,7 +1153,16 @@ pub async fn anidb_anime(client: String, aid: Value, state: State<'_, AppState>)
 //                              return the top N candidates as
 //                              [{aid, mainTitle, altTitles: [...]}]
 // ===================================================================
-const ANIDB_TITLES_URL: &str = "http://anidb.net/api/anime-titles.xml.gz";
+// AniDB serves this file with hard-coded gzip and a User-Agent
+// allowlist — the default reqwest UA gets a 403 and even our own
+// project UA gets rejected. Every known-good client uses a
+// browser-shaped UA; we match that for this ONE endpoint only. The
+// rest of the AniDB API (rate-limited anime httpapi) keeps the
+// project UA so we stay identifiable to the ratelimit / ban system.
+// The URL is HTTPS because plain http redirects and reqwest drops
+// custom headers on redirect chains that cross scheme.
+const ANIDB_TITLES_URL: &str = "https://anidb.net/api/anime-titles.xml.gz";
+const ANIDB_TITLES_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 const ANIDB_TITLES_CACHE: &str = "anidb-titles.xml";
 
 fn anidb_titles_cache_path() -> std::path::PathBuf {
@@ -1164,7 +1173,9 @@ fn anidb_titles_cache_path() -> std::path::PathBuf {
 pub async fn anidb_download_titles(state: State<'_, AppState>) -> Result<Value, ()> {
     let http = get_http_client(&state);
     let resp = match http.get(ANIDB_TITLES_URL)
-        .header("User-Agent", OMNIO_UA)
+        .header("User-Agent", ANIDB_TITLES_UA)
+        .header("Accept", "*/*")
+        .header("Accept-Encoding", "gzip")
         .send().await
     {
         Ok(r) => r,
