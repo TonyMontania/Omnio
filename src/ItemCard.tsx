@@ -6,6 +6,7 @@ import type { AnyItem, GameField, MusicField, MangaField, MovieField, AnimeField
 import type { LibraryCustomFieldDef } from './types/customFields'
 import { displayLibraryCustomValue } from './types/customFields'
 import { OMNIO_ITEM_DRAG_TYPE } from './Sidebar'
+import { isCurrentlyAiring } from './utils/airing'
 
 interface Props {
   item: AnyItem
@@ -175,7 +176,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
         {vnLength && <p className="item-time">{vnLength}</p>}
         {isVn && vf!.year && item.releaseYear && <p className="item-time">{item.releaseYear}</p>}
         {showMovieStatus && <p className="item-status">{item.consumed ? 'Watched' : 'Not watched'}</p>}
-        {(isAnime || isSeries) && item.airingStatus === 'airing' && (
+        {(isAnime || isSeries) && isCurrentlyAiring(item) && (
           <p className="airing-chip" title={item.airingDay ? `New episodes on ${item.airingDay}` : 'Currently airing'}>
             <span className="airing-dot" aria-hidden />
             {item.airingDay ? `Airs ${item.airingDay.slice(0, 3)}` : 'Airing'}

@@ -6,6 +6,7 @@ import React from 'react'
 import type { Item } from '../types'
 import type { CategoryId } from '../types/items'
 import { assetSrc } from '../types'
+import { isCurrentlyAiring } from '../utils/airing'
 import { CATEGORIES } from '../categories'
 import { CategoryIcon, CalendarIcon, InsightsIcon } from '../icons'
 import { registerHomeWidget, type WidgetSize } from './registry'
@@ -400,10 +401,12 @@ registerHomeWidget({
     const airingCats = new Set(['anime', 'donghua', 'series'])
     const list = ctx.items
       .filter((i) => airingCats.has(i.categoryId))
-      // Both anime and series carry `airingStatus` for the world-state
-      // (the show itself). `seriesStatus` is user-state ("I'm
-      // watching"). Airing = the anime/series is currently on air.
-      .filter((i) => i.airingStatus === 'airing')
+      // Sprint I — accept items whose airingStatus is 'airing' AS WELL
+      // AS items where the derived airing check passes. That covers
+      // shows the user added bare (title + season + seasonYear) without
+      // touching the status flag: if season+year matches the current
+      // calendar quarter, the show still shows up here.
+      .filter((i) => isCurrentlyAiring(i))
       .sort((a, b) => recencyScore(b) - recencyScore(a))
     const cap = size === 'medium' ? 4 : 8
     const cut = list.slice(0, cap)

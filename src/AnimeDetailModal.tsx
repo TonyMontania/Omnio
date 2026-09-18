@@ -1,3 +1,4 @@
+import type React from 'react'
 import { getAnimeStatus, getAiringStatusLabel, getAnimeFormatLabel, getAnimeSeasonLabel, getDemographicLabel, getAnimeSourceLabel, getAgeRatingLabel, getTotalRuntimeMinutes, formatDurationMinutes, getNextUnwatchedEpisode, assetSrc } from './types'
 import { AnimeStatusIcon } from './icons'
 import type { Item, AnyItem, AnimeItem, Collection } from './types'
@@ -181,35 +182,88 @@ export default function AnimeDetailModal({ item, groups, allAnime, onClose, onEd
           <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
           <CustomFieldsView fields={item.customFields} />
 
-          {item.hasEpisodes && item.episodes && item.episodes.length > 0 && (
-            <div className="field-group">
-              <label>Episodes</label>
-              <table className="track-table episode-table">
-                <thead>
-                  <tr>
-                    <th className="col-num">#</th>
-                    <th className="col-title">Title</th>
-                    <th className="col-listened">✓</th>
-                    <th className="col-rating">Rating</th>
-                    <th className="col-fav">Filler</th>
-                    <th className="col-spacer"></th>
+          {item.hasEpisodes && item.episodes && item.episodes.length > 0 && (() => {
+            // Sprint I — visually group by AniDB prefix (S / C / T / P
+            // / O) in the read-only view so a list with specials and
+            // credits doesn't read as a single 40-row wall.
+            const groupFor = (number: string): string | undefined => {
+              const first = number.charAt(0).toUpperCase()
+              switch (first) {
+                case 'S': return 'Specials / OVAs'
+                case 'C': return 'Openings & Endings'
+                case 'T': return 'Trailers / PVs'
+                case 'P': return 'Parodies'
+                case 'O': return 'Other'
+                default: return undefined
+              }
+            }
+            const tooltipFor = (number: string): string | undefined => {
+              const first = number.charAt(0).toUpperCase()
+              switch (first) {
+                case 'S': return 'Special / OVA'
+                case 'C': return 'Credits (opening / ending)'
+                case 'T': return 'Trailer / PV'
+                case 'P': return 'Parody'
+                case 'O': return 'Other'
+                default: return undefined
+              }
+            }
+            const hasPrefixes = item.episodes.some((e) => /^[a-z]/i.test(e.number))
+            const rows: React.ReactNode[] = []
+            let lastGroup: string | undefined | null = null
+            for (const ep of item.episodes) {
+              const g = groupFor(ep.number)
+              if (g && g !== lastGroup) {
+                rows.push(
+                  <tr key={`__g-${g}-${ep.id}`} className="track-group-row">
+                    <td colSpan={6}>{g}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {item.episodes.map((ep) => (
-                    <tr key={ep.id} className={ep.watched ? 'ep-watched' : ''}>
-                      <td className="col-num">{ep.number}</td>
-                      <td className="col-title">{ep.title ?? '—'}</td>
-                      <td className="col-listened">{ep.watched ? '✓' : ''}</td>
-                      <td className="col-rating">{ep.rating ? `★ ${ep.rating}` : ''}</td>
-                      <td className="col-fav">{ep.filler ? 'F' : ''}</td>
-                      <td className="col-spacer"></td>
+                )
+                lastGroup = g
+              } else if (!g) {
+                lastGroup = null
+              }
+              rows.push(
+                <tr key={ep.id} className={ep.watched ? 'ep-watched' : ''}>
+                  <td className="col-num" title={tooltipFor(ep.number)}>{ep.number}</td>
+                  <td className="col-title">{ep.title ?? '—'}</td>
+                  <td className="col-listened">{ep.watched ? '✓' : ''}</td>
+                  <td className="col-rating">{ep.rating ? `★ ${ep.rating}` : ''}</td>
+                  <td className="col-fav">{ep.filler ? 'F' : ''}</td>
+                  <td className="col-spacer"></td>
+                </tr>
+              )
+            }
+            return (
+              <div className="field-group">
+                <label>Episodes</label>
+                {hasPrefixes && (
+                  <div className="episode-number-legend">
+                    <span>Number prefix legend (AniDB):</span>
+                    <code>1, 2, 3…</code> regular ·
+                    <code>S</code> special / OVA ·
+                    <code>C</code> credits (opening/ending) ·
+                    <code>T</code> trailer / PV ·
+                    <code>P</code> parody ·
+                    <code>O</code> other
+                  </div>
+                )}
+                <table className="track-table episode-table">
+                  <thead>
+                    <tr>
+                      <th className="col-num">#</th>
+                      <th className="col-title">Title</th>
+                      <th className="col-listened">✓</th>
+                      <th className="col-rating">Rating</th>
+                      <th className="col-fav">Filler</th>
+                      <th className="col-spacer"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>{rows}</tbody>
+                </table>
+              </div>
+            )
+          })()}
 
           <DetailNotes notes={item.notes} />
         </div>

@@ -67,6 +67,7 @@ import KanbanView from './views/KanbanView'
 import DiaryView from './views/DiaryView'
 import TimelineView from './views/TimelineView'
 import { patchItemStatus, getUniversalStatusOptions } from './utils/statusUniversal'
+import { isCurrentlyAiring } from './utils/airing'
 import { applyAutoStatus } from './utils/autoStatus'
 import { matchAction } from './utils/keyboardActions'
 import ShortcutsEditor from './components/ShortcutsEditor'
@@ -3159,16 +3160,18 @@ function App() {
           })()}
 
           {specialView === 'simulcastBoard' && (() => {
-            // Only anime + donghua are simulcast-relevant. Items surface here
-            // when the user set airingStatus='airing' AND picked an airingDay
-            // in the editor. Everything else stays out — showing "unknown day"
-            // slots would just be noise.
-            const airing = itemsInCategory.filter((i) => i.airingStatus === 'airing' && i.airingDay)
+            // Only anime + donghua are simulcast-relevant. An item surfaces
+            // here when it counts as currently airing (explicit
+            // airingStatus='airing', OR date window, OR season+year match
+            // via isCurrentlyAiring) AND has an airingDay picked. Items
+            // without a weekday still get counted below so the user can
+            // fill them in.
+            const airing = itemsInCategory.filter((i) => isCurrentlyAiring(i) && i.airingDay)
             const byDay = new Map<string, Item[]>()
             for (const w of WEEKDAY_OPTIONS) byDay.set(w.value, [])
             for (const item of airing) byDay.get(item.airingDay!)?.push(item)
             for (const list of byDay.values()) list.sort((a, b) => a.title.localeCompare(b.title))
-            const totalAiring = itemsInCategory.filter((i) => i.airingStatus === 'airing').length
+            const totalAiring = itemsInCategory.filter((i) => isCurrentlyAiring(i)).length
             const missingDay = totalAiring - airing.length
             return (
               <div className="content-scroll">
