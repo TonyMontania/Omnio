@@ -134,6 +134,14 @@ export default function HomeBoard(props: Props) {
           {effectiveLayout.map((slot, idx) => {
             const w = getHomeWidget(slot.id)
             if (!w) return null
+            const body = w.render(ctx, slot.size)
+            // Widgets that opt into self-hiding (like "On this day")
+            // return null when they have nothing to show. Skip the
+            // whole card outside of edit mode so the board stays
+            // clean instead of surfacing an empty header. In edit
+            // mode we still render the frame so the user can move,
+            // resize or remove it.
+            if (body === null && !editing) return null
             return (
               <section
                 key={`${slot.id}-${idx}`}
@@ -159,7 +167,7 @@ export default function HomeBoard(props: Props) {
                     </div>
                   )}
                 </header>
-                <div className="home-widget-body">{w.render(ctx, slot.size)}</div>
+                <div className="home-widget-body">{body ?? <p className="hint">Nothing to show right now — will appear on the right day.</p>}</div>
               </section>
             )
           })}

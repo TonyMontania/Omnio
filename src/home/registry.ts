@@ -68,6 +68,7 @@ export const DEFAULT_HOME_LAYOUT: readonly HomeWidgetSlot[] = [
   { id: 'cover-carousel', size: 'medium' },
   { id: 'upcoming-week',  size: 'medium' },
   { id: 'currently-airing', size: 'medium' },
+  { id: 'on-this-day',    size: 'medium' },
   { id: 'quick-add',      size: 'small'  },
   { id: 'recently-rated', size: 'medium' },
 ]

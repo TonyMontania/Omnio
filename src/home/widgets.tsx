@@ -522,6 +522,107 @@ registerHomeWidget({
   },
 })
 
+// ---- Widget: On this day ----
+//
+// Anniversary flashback: items you finished on today's month + day in
+// past years. Groups by "N year(s) ago". Reads `finishedAt` (ISO
+// yyyy-mm-dd) — anything without a date is skipped, and if nothing
+// matches at all the widget hides itself rather than nag with an
+// "you haven't finished anything on this day" empty state. Fully
+// respects the no-guilt rule: no comparisons, no counters, no
+// "start something today".
+
+interface AnniversaryHit { item: Item; year: number; yearsAgo: number }
+
+function collectAnniversaries(items: Item[], now: Date): AnniversaryHit[] {
+  const thisYear = now.getFullYear()
+  const m = now.getMonth() + 1
+  const d = now.getDate()
+  const hits: AnniversaryHit[] = []
+  for (const it of items) {
+    if (!it.finishedAt) continue
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(it.finishedAt)
+    if (!match) continue
+    const yr = parseInt(match[1], 10)
+    const mo = parseInt(match[2], 10)
+    const day = parseInt(match[3], 10)
+    if (mo !== m || day !== d) continue
+    const yearsAgo = thisYear - yr
+    if (yearsAgo <= 0) continue
+    hits.push({ item: it, year: yr, yearsAgo })
+  }
+  // Sort by yearsAgo ascending, then by rating desc so best-loved stuff
+  // wins the tiebreak within the same year bucket.
+  hits.sort((a, b) => a.yearsAgo - b.yearsAgo || (b.item.rating ?? 0) - (a.item.rating ?? 0))
+  return hits
+}
+
+registerHomeWidget({
+  id: 'on-this-day',
+  label: 'On this day',
+  description: 'Items you finished on today\'s date in past years. Hides itself when there\'s nothing to show.',
+  defaultSize: 'medium',
+  sizesSupported: ['small', 'medium', 'large'],
+  render: (ctx, size) => {
+    const now = new Date()
+    const hits = collectAnniversaries(ctx.items, now)
+    if (hits.length === 0) return null
+    const cap = size === 'small' ? 3 : size === 'medium' ? 6 : 12
+    const list = hits.slice(0, cap)
+    // Group by yearsAgo so the reader sees "1 year ago: X" then "5
+    // years ago: Y" instead of a flat list they have to squint at.
+    const groups = new Map<number, AnniversaryHit[]>()
+    for (const h of list) {
+      const g = groups.get(h.yearsAgo) ?? []
+      g.push(h); groups.set(h.yearsAgo, g)
+    }
+    const orderedGroups = Array.from(groups.entries()).sort(([a], [b]) => a - b)
+    return (
+      <div className="home-on-this-day">
+        {orderedGroups.map(([yearsAgo, entries]) => (
+          <div key={yearsAgo} className="home-on-this-day-group">
+            <div className="home-on-this-day-header">
+              <span className="home-on-this-day-when">
+                {yearsAgo === 1 ? 'One year ago' : `${yearsAgo} years ago`}
+              </span>
+              <span className="home-on-this-day-year">{now.getFullYear() - yearsAgo}</span>
+            </div>
+            <div className="home-on-this-day-rows">
+              {entries.map((h) => {
+                const cat = CATEGORIES.find((c) => c.id === h.item.categoryId)
+                return (
+                  <button
+                    key={h.item.id}
+                    type="button"
+                    className="home-on-this-day-row"
+                    onClick={() => ctx.onOpenItem(h.item)}
+                    title={h.item.title}
+                  >
+                    <div className="home-on-this-day-cover">
+                      {h.item.cover
+                        ? <img src={assetSrc(h.item.cover)} alt="" loading="lazy" />
+                        : <span>{h.item.title.charAt(0).toUpperCase()}</span>}
+                    </div>
+                    <div className="home-on-this-day-body">
+                      <div className="home-on-this-day-title">{h.item.title}</div>
+                      <div className="home-on-this-day-sub">
+                        {cat?.label ?? h.item.categoryId}
+                        {typeof h.item.rating === 'number' && h.item.rating > 0 && (
+                          <>{' · '}<span className="home-on-this-day-rating">★ {h.item.rating.toFixed(1)}</span></>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  },
+})
+
 // ---- Widget: Empty-state hint (only appears when the board is empty) ----
 
 registerHomeWidget({
