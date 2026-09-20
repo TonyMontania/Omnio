@@ -6374,15 +6374,21 @@ function App() {
               if (payload.activeTo !== undefined) setArtistActiveTo(payload.activeTo)
               if (payload.bandStatus) setArtistBandStatus(payload.bandStatus)
               if (payload.members && payload.members.length > 0) {
-                // Merge into existing members instead of blowing them
-                // away — if the user already entered stints or extra
-                // roles for a member Wikipedia doesn't know about, we
-                // keep those. Match on lower-cased name.
+                // Merge with existing members instead of blowing them
+                // away. Match on lower-cased name; when a match exists
+                // we fill any *missing* roles from Wikipedia but keep
+                // whatever the user already had (stints, deceased flag,
+                // dates, etc.). New members are appended at the end.
                 setArtistMembers((prev) => {
-                  const byName = new Map(prev.map((m) => [m.name.toLowerCase(), m]))
-                  const merged = [...prev]
+                  const merged = prev.map((m) => {
+                    const hit = payload.members!.find((wm) => wm.name.toLowerCase() === m.name.toLowerCase())
+                    if (!hit) return m
+                    if (m.roles && m.roles.length > 0) return m
+                    return { ...m, roles: hit.roles }
+                  })
+                  const existingNames = new Set(prev.map((m) => m.name.toLowerCase()))
                   for (const wm of payload.members!) {
-                    if (byName.has(wm.name.toLowerCase())) continue
+                    if (existingNames.has(wm.name.toLowerCase())) continue
                     merged.push(wm)
                   }
                   return merged

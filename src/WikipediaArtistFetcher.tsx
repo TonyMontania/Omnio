@@ -52,8 +52,8 @@ interface FetchResponse {
   labels: string[]
   activeFrom: string | null
   activeTo: string | null
-  currentMembers: { name: string }[]
-  pastMembers: { name: string }[]
+  currentMembers: { name: string; roles?: string[] }[]
+  pastMembers: { name: string; roles?: string[] }[]
   imageUrl: string | null
 }
 
@@ -88,18 +88,19 @@ export default function WikipediaArtistFetcher({ initialQuery, onApply, onClose 
       if (dl) photoPath = dl
     }
     // Members: convert to BandMember shape. Current members default to
-    // membership='current', past members to 'former'.
+    // membership='current', past members to 'former'. Roles come from
+    // the infobox bullet suffix ("* [[M. Shadows]] – lead vocals").
     const members: BandMember[] = [
       ...d.currentMembers.map((m) => ({
         id: crypto.randomUUID(),
         name: m.name,
-        roles: [],
+        roles: m.roles ?? [],
         membership: 'current' as const,
       })),
       ...d.pastMembers.map((m) => ({
         id: crypto.randomUUID(),
         name: m.name,
-        roles: [],
+        roles: m.roles ?? [],
         membership: 'former' as const,
       })),
     ]

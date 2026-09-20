@@ -1864,20 +1864,20 @@ pub async fn wiki_artist_fetch(pageTitle: String, state: State<'_, AppState>) ->
     };
     let params = parse_infobox_params(&infobox);
 
-    // 3. Resolve the image URL for whichever filename the infobox names.
-    // Wikipedia stores the raw filename ("Foo.jpg"); the actual URL
-    // needs an extra `imageinfo` query.
-    let image_url = if let Some(fname) = params.get("image").cloned().or_else(|| params.get("img").cloned()) {
-        let clean = clean_wikitext(&fname);
-        // Filenames sometimes carry the "File:" prefix, sometimes not.
-        let stripped = clean.trim().trim_start_matches("File:").trim_start_matches("Image:").to_string();
-        if stripped.is_empty() {
-            None
-        } else {
-            resolve_wiki_image_url(&client, &stripped).await
+    // 3. Resolve the image URL. Primary source: REST summary API (gives
+    // us `originalimage` for free with one clean HTTP call). If the
+    // summary has no image, fall back to whichever filename the
+    // infobox `image` parameter names — Wikipedia stores those as
+    // "Foo.jpg" and needs an extra `imageinfo` query to resolve.
+    let image_url = match fetch_wiki_summary_image(&client, pageTitle.trim()).await {
+        Some(url) => Some(url),
+        None => {
+            if let Some(fname) = params.get("image").cloned().or_else(|| params.get("img").cloned()) {
+                let cleaned = clean_wikitext(&fname);
+                let stripped = cleaned.trim().trim_start_matches("File:").trim_start_matches("Image:").to_string();
+                if stripped.is_empty() { None } else { resolve_wiki_image_url(&client, &stripped).await }
+            } else { None }
         }
-    } else {
-        None
     };
 
     let (active_from, active_to) = parse_years_active(
@@ -2070,10 +2070,9 @@ fn split_wiki_list(raw: &str) -> Vec<String> {
     parts.into_iter().filter(|p| seen.insert(p.to_lowercase())).collect()
 }
 
-// A member list uses one bullet per person. We parse each into a bare
-// name — the infobox rarely lists instruments alongside, and if it does
-// they're free text ("(vocals)") that the user can refine in the band
-// editor. Return array of name strings.
+// A member list uses one bullet per person, typically shaped as
+// `* [[Name]] – instrument1, instrument2` (any of –, —, - or : as
+// separator). Parse each bullet into { name, roles: [] }.
 fn parse_member_list(raw: &str) -> Vec<Value> {
     if raw.trim().is_empty() { return Vec::new(); }
     let mut out: Vec<Value> = Vec::new();
@@ -2081,9 +2080,53 @@ fn parse_member_list(raw: &str) -> Vec<Value> {
         let line = line.trim();
         if !line.starts_with('*') && !line.starts_with("#") { continue; }
         let stripped = line.trim_start_matches(|c: char| c == '*' || c == '#' || c == ' ');
-        let name = clean_wikitext(stripped);
-        if name.is_empty() || name.len() > 80 { continue; }
-        out.push(json!({ "name": name }));
+        let cleaned = clean_wikitext(stripped);
+        if cleaned.is_empty() { continue; }
+        // Split on the first name/roles separator we find. Wikipedia's
+        // house style favors the en-dash (–, U+2013) but em-dash (—),
+        // ASCII hyphen and colon all show up in the wild.
+        let sep_idx = cleaned.find(|c: char| c == '–' || c == '—' || c == ':')
+            .or_else(|| {
+                // Only accept ASCII '-' when surrounded by spaces, so
+                // we don't split names like "Jean-Pierre".
+                let bytes = cleaned.as_bytes();
+                for (i, &b) in bytes.iter().enumerate() {
+                    if b == b'-' && i > 0 && i + 1 < bytes.len()
+                        && bytes[i - 1] == b' ' && bytes[i + 1] == b' '
+                    {
+                        return Some(i);
+                    }
+                }
+                None
+            });
+        let (name_part, roles_part) = if let Some(idx) = sep_idx {
+            let name = cleaned[..idx].trim().to_string();
+            // Skip the separator char (up to 3 bytes for non-ASCII).
+            let rest = cleaned[idx..].chars().next()
+                .map(|c| idx + c.len_utf8())
+                .unwrap_or(idx + 1);
+            (name, cleaned[rest..].trim().to_string())
+        } else {
+            (cleaned.clone(), String::new())
+        };
+        if name_part.is_empty() || name_part.len() > 80 { continue; }
+        // Roles: split on comma, semicolon or "and". Cap each role at
+        // 40 chars to reject leaked footnote scraps.
+        let mut roles: Vec<String> = Vec::new();
+        if !roles_part.is_empty() {
+            let re_split = regex::Regex::new(r",|;|\band\b").unwrap();
+            for r in re_split.split(&roles_part) {
+                let r = r.trim().trim_end_matches('.').trim();
+                if r.is_empty() || r.len() > 40 { continue; }
+                // Capitalise the first character to match how the app's
+                // editor displays roles ("Vocals", "Guitar", …).
+                let mut chars = r.chars();
+                let first = chars.next().map(|c| c.to_uppercase().to_string()).unwrap_or_default();
+                let rest: String = chars.collect();
+                roles.push(format!("{first}{rest}"));
+            }
+        }
+        out.push(json!({ "name": name_part, "roles": roles }));
     }
     out
 }
@@ -2112,6 +2155,29 @@ fn parse_years_active(raw: &str) -> (Option<String>, Option<String>) {
         _ => None,
     };
     (first, to)
+}
+
+// Wikipedia's REST summary API returns a curated top image per page
+// as `originalimage.source`. Way more reliable than parsing the
+// infobox and doing an extra imageinfo round-trip — used as the
+// primary path for the artist photo.
+async fn fetch_wiki_summary_image(client: &reqwest::Client, page_title: &str) -> Option<String> {
+    // The REST endpoint takes the page title with underscores instead
+    // of spaces. `url_encode` handles the rest.
+    let path = page_title.replace(' ', "_");
+    let url = format!(
+        "https://en.wikipedia.org/api/rest_v1/page/summary/{}",
+        url_encode(&path),
+    );
+    let opts = ProxyJsonOptions {
+        method: Method::GET, headers: wiki_headers(), body: None, http_error_prefix: "Wiki",
+    };
+    let v = proxy_json(client, &url, opts).await.ok()?;
+    v.get("originalimage")
+        .or_else(|| v.get("thumbnail"))
+        .and_then(|obj| obj.get("source"))
+        .and_then(|s| s.as_str())
+        .map(String::from)
 }
 
 // Convert a wiki image filename ("Foo.jpg") into the direct URL by
