@@ -51,53 +51,77 @@ function joinStringArray(item: AnyItem, key: string): string {
   return v.filter((s): s is string => typeof s === 'string' && s.trim().length > 0).join(' · ')
 }
 
+// Guards against StrictMode double-invocation: two async build calls
+// firing back-to-back would race on the module-level `db` handle, one
+// closing what the other just populated. Coalesce them into a single
+// in-flight promise per items reference.
+let buildInFlight: Promise<{ ms: number; rows: number }> | null = null
+let buildInFlightRef: AnyItem[] | null = null
+
 // Concatenate every field into one FTS5-searchable blob. We also keep
 // each field as its own column so snippet() can hint which one matched.
 export async function buildIndex(items: AnyItem[]): Promise<{ ms: number; rows: number }> {
-  const sql = await ensureSql()
-  const start = performance.now()
-  if (db) db.close()
-  db = new sql.Database()
-  db.exec(`
-    CREATE VIRTUAL TABLE items USING fts5(
+  if (buildInFlight && buildInFlightRef === items) return buildInFlight
+  const promise = (async () => {
+    const sql = await ensureSql()
+    const start = performance.now()
+    if (db) { db.close(); db = null }
+    const fresh = new sql.Database()
+    // Two separate exec() calls — sql.js has occasionally rejected
+    // multi-statement blocks when the first statement is CREATE
+    // VIRTUAL TABLE; keep them apart for portability.
+    fresh.exec(`CREATE VIRTUAL TABLE items USING fts5(
       title, original_title, description, notes,
       review, listening_note,
       tokenize = 'unicode61 remove_diacritics 2'
-    );
-    CREATE TABLE meta (rowid INTEGER PRIMARY KEY, item_id TEXT NOT NULL, category_id TEXT NOT NULL);
-  `)
-  const insertItem = db.prepare(
-    'INSERT INTO items(rowid, title, original_title, description, notes, review, listening_note) VALUES (?, ?, ?, ?, ?, ?, ?)',
-  )
-  const insertMeta = db.prepare('INSERT INTO meta(rowid, item_id, category_id) VALUES (?, ?, ?)')
-  db.exec('BEGIN')
-  let rowid = 1
-  for (const it of items) {
-    const title = pluckString(it, 'title')
-    const original = [joinStringArray(it, 'alternativeTitles'), joinStringArray(it, 'vnAliases')]
-      .filter(Boolean).join(' · ')
-    const description = pluckString(it, 'description')
-    const notes = pluckString(it, 'notes')
-    // Review lives in a different key per category — coalesce them.
-    const review = (
-      pluckString(it, 'gameReview') || pluckString(it, 'animeReview')
-      || pluckString(it, 'seriesReview') || pluckString(it, 'musicReview')
-      || pluckString(it, 'mangaReview') || pluckString(it, 'movieReview')
-      || pluckString(it, 'bookReview') || pluckString(it, 'vnReview')
+    )`)
+    fresh.exec('CREATE TABLE meta (rowid INTEGER PRIMARY KEY, item_id TEXT NOT NULL, category_id TEXT NOT NULL)')
+    const insertItem = fresh.prepare(
+      'INSERT INTO items(rowid, title, original_title, description, notes, review, listening_note) VALUES (?, ?, ?, ?, ?, ?, ?)',
     )
-    const listeningNote = pluckString(it, 'listeningNote')
-    // Empty rows still get inserted so BM25 normalization stays honest.
-    insertItem.run([rowid, title, original, description, notes, review, listeningNote])
-    insertMeta.run([rowid, it.id, it.categoryId])
-    rowid += 1
+    const insertMeta = fresh.prepare('INSERT INTO meta(rowid, item_id, category_id) VALUES (?, ?, ?)')
+    fresh.exec('BEGIN')
+    let rowid = 1
+    for (const it of items) {
+      const title = pluckString(it, 'title')
+      const original = [joinStringArray(it, 'alternativeTitles'), joinStringArray(it, 'vnAliases')]
+        .filter(Boolean).join(' · ')
+      const description = pluckString(it, 'description')
+      const notes = pluckString(it, 'notes')
+      const review = (
+        pluckString(it, 'gameReview') || pluckString(it, 'animeReview')
+        || pluckString(it, 'seriesReview') || pluckString(it, 'musicReview')
+        || pluckString(it, 'mangaReview') || pluckString(it, 'movieReview')
+        || pluckString(it, 'bookReview') || pluckString(it, 'vnReview')
+      )
+      const listeningNote = pluckString(it, 'listeningNote')
+      insertItem.run([rowid, title, original, description, notes, review, listeningNote])
+      insertMeta.run([rowid, it.id, it.categoryId])
+      rowid += 1
+    }
+    fresh.exec('COMMIT')
+    insertItem.free()
+    insertMeta.free()
+    // Only publish the ready DB after every insert has landed — this
+    // way a query that fires while the build is running still sees the
+    // previous good index (or null → empty result) instead of a
+    // partially-populated one.
+    db = fresh
+    sourceRef = items
+    buildMs = performance.now() - start
+    indexedRows = items.length
+    return { ms: buildMs, rows: indexedRows }
+  })()
+  buildInFlight = promise
+  buildInFlightRef = items
+  try {
+    return await promise
+  } finally {
+    if (buildInFlight === promise) {
+      buildInFlight = null
+      buildInFlightRef = null
+    }
   }
-  db.exec('COMMIT')
-  insertItem.free()
-  insertMeta.free()
-  sourceRef = items
-  buildMs = performance.now() - start
-  indexedRows = items.length
-  return { ms: buildMs, rows: indexedRows }
 }
 
 // FTS5 accepts MATCH queries directly. We strip obvious punctuation so

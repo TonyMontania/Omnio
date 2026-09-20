@@ -45,8 +45,9 @@ export default function FtsSearchModal({ open, items, onClose, onOpenItem }: Pro
   }, [items])
 
   // (Re)build whenever the panel opens with a different items ref or
-  // when it's opened for the first time. Rebuilds are cheap for ~1k
-  // rows so we don't try to be too clever about invalidation.
+  // when it's opened for the first time. buildIndex coalesces
+  // concurrent calls so StrictMode's double-invoke doesn't race on the
+  // module-level DB handle.
   useEffect(() => {
     if (!open) return
     const stats = getIndexStats()
@@ -54,13 +55,13 @@ export default function FtsSearchModal({ open, items, onClose, onOpenItem }: Pro
       setState((s) => ({ ...s, building: false, buildMs: stats.buildMs, rows: stats.rows }))
       return
     }
-    setState((s) => ({ ...s, building: true, error: undefined }))
+    setState((s) => ({ ...s, building: true, error: undefined, results: [] }))
     let cancelled = false
     void (async () => {
       try {
         const r = await buildIndex(items)
         if (cancelled) return
-        setState((s) => ({ ...s, building: false, buildMs: r.ms, rows: r.rows }))
+        setState((s) => ({ ...s, building: false, buildMs: r.ms, rows: r.rows, error: undefined }))
       } catch (e) {
         if (cancelled) return
         setState((s) => ({ ...s, building: false, error: (e as Error).message }))
