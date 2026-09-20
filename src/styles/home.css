@@ -344,6 +344,41 @@
 .home-widget.editing {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent-soft);
+  cursor: grab;
+}
+.home-widget.editing:active { cursor: grabbing; }
+/* Drag & drop reorder feedback. The dragged card fades and gets a
+   dashed outline; potential drop targets get an accent bar on the
+   edge that faces the source. Uses ::before / ::after on the card
+   so no extra DOM. */
+.home-widget.dragging {
+  opacity: 0.4;
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+.home-widget.drop-before,
+.home-widget.drop-after { position: relative; }
+.home-widget.drop-before::before,
+.home-widget.drop-after::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.home-widget.drop-before::before { top: -6px; }
+.home-widget.drop-after::after { bottom: -6px; }
+.home-widget-grip {
+  display: inline-block;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  letter-spacing: -0.15em;
+  margin-right: 6px;
+  cursor: grab;
+  user-select: none;
 }
 .home-widget-header {
   display: flex;

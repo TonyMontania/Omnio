@@ -44,6 +44,12 @@ export default function HomeBoard(props: Props) {
 
   const [editing, setEditing] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  // Native HTML5 drag & drop reordering (edit mode only). No library —
+  // we track the source slot on dragstart, highlight the hovered
+  // target on dragover, and commit a swap on drop. `dragIdx`/`dragOverIdx`
+  // are null when nothing is being dragged.
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
 
   const today = useMemo(() => new Date(), [])
   const greeting = useMemo(() => {
@@ -82,6 +88,17 @@ export default function HomeBoard(props: Props) {
   }
   const resize = (idx: number, size: WidgetSize) => {
     const next = effectiveLayout.map((s, i) => i === idx ? { ...s, size } : s)
+    commit(next)
+  }
+  // Move a slot from `from` to just before `to`. `to` is expressed in
+  // pre-move indices, so if it's greater than `from` we account for the
+  // gap left behind by the removal. Used by the drop handler.
+  const reorder = (from: number, to: number) => {
+    if (from === to) return
+    const next = [...effectiveLayout]
+    const [moved] = next.splice(from, 1)
+    const insertAt = to > from ? to - 1 : to
+    next.splice(insertAt, 0, moved)
     commit(next)
   }
   const add = (id: string) => {
@@ -124,7 +141,7 @@ export default function HomeBoard(props: Props) {
 
       {editing && (
         <div className="home-edit-bar">
-          <span className="hint">Edit mode — reorder, resize, or remove widgets. Add new ones from the picker.</span>
+          <span className="hint">Edit mode — drag widgets to reorder, or use the ↑/↓ buttons. Resize / remove from each card.</span>
           <button type="button" className="secondary-btn" onClick={() => setPickerOpen(true)}>+ Add widget</button>
         </div>
       )}
@@ -142,14 +159,55 @@ export default function HomeBoard(props: Props) {
             // mode we still render the frame so the user can move,
             // resize or remove it.
             if (body === null && !editing) return null
+            const isDragging = dragIdx === idx
+            const isDropTarget = editing && dragIdx !== null && dragOverIdx === idx && dragIdx !== idx
+            const cls = [
+              `home-widget span-${slot.size}`,
+              editing ? 'editing' : '',
+              isDragging ? 'dragging' : '',
+              isDropTarget ? (dragIdx !== null && dragIdx < idx ? 'drop-after' : 'drop-before') : '',
+            ].filter(Boolean).join(' ')
             return (
               <section
                 key={`${slot.id}-${idx}`}
-                className={`home-widget span-${slot.size}${editing ? ' editing' : ''}`}
+                className={cls}
                 style={{ gridColumn: `span ${SIZE_SPAN[slot.size]}` }}
+                draggable={editing}
+                onDragStart={editing ? (e) => {
+                  setDragIdx(idx)
+                  e.dataTransfer.effectAllowed = 'move'
+                  // Firefox refuses to fire dragstart without any payload.
+                  e.dataTransfer.setData('text/plain', slot.id)
+                } : undefined}
+                onDragOver={editing ? (e) => {
+                  if (dragIdx === null) return
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = 'move'
+                  if (dragOverIdx !== idx) setDragOverIdx(idx)
+                } : undefined}
+                onDragLeave={editing ? () => {
+                  // Only clear when leaving the specific card that's marked;
+                  // otherwise a dragover on a child element bounces state.
+                  if (dragOverIdx === idx) setDragOverIdx(null)
+                } : undefined}
+                onDrop={editing ? (e) => {
+                  e.preventDefault()
+                  if (dragIdx === null) return
+                  const to = dragIdx < idx ? idx + 1 : idx
+                  reorder(dragIdx, to)
+                  setDragIdx(null)
+                  setDragOverIdx(null)
+                } : undefined}
+                onDragEnd={editing ? () => {
+                  setDragIdx(null)
+                  setDragOverIdx(null)
+                } : undefined}
               >
                 <header className="home-widget-header">
-                  <h2>{w.label}</h2>
+                  <h2>
+                    {editing && <span className="home-widget-grip" title="Drag to reorder" aria-hidden>⋮⋮</span>}
+                    {w.label}
+                  </h2>
                   {editing && (
                     <div className="home-widget-controls">
                       <button type="button" title="Move up" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
