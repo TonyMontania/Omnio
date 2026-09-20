@@ -2048,6 +2048,14 @@ function App() {
     // editingItem for stale-asset cleanup, and setToast.
     applyPatchFieldsToForm(patch, formSetters, { activeCategory })
 
+    // hltbHours is a number in AnyItem but a string on the form (matches
+    // the other numeric buffered fields). Route it here so the HltbFetcher
+    // doesn't have to know how the form buffers it.
+    const patchHltb = (patch as { hltbHours?: number }).hltbHours
+    if (typeof patchHltb === 'number' && Number.isFinite(patchHltb) && patchHltb > 0) {
+      setHltbHours(String(patchHltb))
+    }
+
     // If IGDB reported a parent game, look for it in the user's library and
     // pre-fill originalWorkId when a case-insensitive title matches. Saves
     // the user from picking it manually for remakes/expansions/ports.

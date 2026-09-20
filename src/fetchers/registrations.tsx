@@ -9,6 +9,7 @@ import { lazy, Suspense, createElement } from 'react'
 import { registerFetcher, type FetcherContext, type FetcherRegistration } from './registry'
 
 const AniDBFetcher       = lazy(() => import('../AniDBFetcher'))
+const HltbFetcher        = lazy(() => import('../HltbFetcher'))
 const AniListFetcher     = lazy(() => import('../AniListFetcher'))
 const ComicVineFetcher   = lazy(() => import('../ComicVineFetcher'))
 const IgdbFetcher        = lazy(() => import('../IgdbFetcher'))
@@ -161,6 +162,20 @@ const registrations: FetcherRegistration[] = [
         // IGDB is the only source that passes hints (parentGameTitle for
         // franchise seeding) — everyone else drops the arg.
         onApply: (p, c, b, h) => ctx.onApply(p, c, b, h),
+        onClose: ctx.onClose,
+      }),
+    ),
+  },
+  {
+    id: 'hltb',
+    label: 'HowLongToBeat',
+    categories: ['videojuegos'],
+    auth: 'none',
+    hint: 'Estimated hours to beat (Main / +Extras / 100%)',
+    render: (ctx: FetcherContext) => suspense(
+      createElement(HltbFetcher, {
+        initialQuery: ctx.initialQuery,
+        onApply: (p) => ctx.onApply(p),
         onClose: ctx.onClose,
       }),
     ),

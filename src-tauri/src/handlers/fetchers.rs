@@ -1493,9 +1493,189 @@ pub async fn pcgw_save_paths(pageName: String, state: State<'_, AppState>) -> Re
     Ok(ok(json!({ "pageName": pageName, "pageUrl": page_url, "rows": rows })))
 }
 
+// -- HowLongToBeat -----------------------------------------------------
+//
+// No official API. HLTB's front-end POSTs to `/api/{path}/{token}` where
+// `{path}` (search / seek / find / lookup) and `{token}` (32-char hex)
+// both rotate periodically to make scrapers a maintenance chore.
+//
+// Strategy: fetch the homepage, find the `_app-*.js` bundle, and regex
+// out the endpoint from its source. Cached for 6h so we're not hammering
+// their CDN. On rotation the cached endpoint 404s; we invalidate and
+// retry once.
+//
+// Response payload: `{ data: [{ game_id, game_name, comp_main, comp_plus,
+// comp_100, ... }], ... }` where `comp_*` are in seconds (0 = missing).
+
+static HLTB_ENDPOINT_CACHE: Lazy<AsyncMutex<Option<(String, Instant)>>> =
+    Lazy::new(|| AsyncMutex::new(None));
+const HLTB_ENDPOINT_TTL: Duration = Duration::from_secs(6 * 3600);
+
+async fn hltb_extract_endpoint(client: &reqwest::Client) -> Result<String, String> {
+    // 1. Fetch homepage HTML
+    let home = client
+        .get("https://howlongtobeat.com/")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
+        .send()
+        .await
+        .map_err(|e| format!("HLTB home fetch failed: {e}"))?;
+    if !home.status().is_success() {
+        return Err(format!("HLTB home returned {}", home.status()));
+    }
+    let html = home.text().await.map_err(|e| e.to_string())?;
+
+    // 2. Find _app-*.js (Next.js build hash) — the file that ships the
+    //    hardcoded API endpoint constant.
+    let re_app = regex::Regex::new(r#"/_next/static/chunks/pages/_app-([0-9a-f]+)\.js"#)
+        .map_err(|e| e.to_string())?;
+    let app_hash = re_app
+        .captures(&html)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().to_string())
+        .ok_or_else(|| "HLTB: no _app-*.js reference in homepage".to_string())?;
+
+    // 3. Fetch that bundle
+    let js_url = format!("https://howlongtobeat.com/_next/static/chunks/pages/_app-{app_hash}.js");
+    let js_resp = client
+        .get(&js_url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
+        .send()
+        .await
+        .map_err(|e| format!("HLTB _app fetch failed: {e}"))?;
+    if !js_resp.status().is_success() {
+        return Err(format!("HLTB _app returned {}", js_resp.status()));
+    }
+    let js = js_resp.text().await.map_err(|e| e.to_string())?;
+
+    // 4. Extract the endpoint path. HLTB has used /api/search, /api/seek,
+    //    /api/find, /api/lookup, /api/ouch over the years — pattern
+    //    matches all of them.
+    let re_endpoint = regex::Regex::new(r#"/api/[a-z]+/[a-zA-Z0-9]{20,}"#)
+        .map_err(|e| e.to_string())?;
+    let path = re_endpoint
+        .find(&js)
+        .map(|m| m.as_str().to_string())
+        .ok_or_else(|| "HLTB: no /api/*/{token} in _app bundle".to_string())?;
+    Ok(format!("https://howlongtobeat.com{path}"))
+}
+
+async fn hltb_endpoint(client: &reqwest::Client, force_refresh: bool) -> Result<String, String> {
+    if !force_refresh {
+        let cached = HLTB_ENDPOINT_CACHE.lock().await;
+        if let Some((url, at)) = cached.as_ref() {
+            if at.elapsed() < HLTB_ENDPOINT_TTL {
+                return Ok(url.clone());
+            }
+        }
+    }
+    let url = hltb_extract_endpoint(client).await?;
+    let mut cached = HLTB_ENDPOINT_CACHE.lock().await;
+    *cached = Some((url.clone(), Instant::now()));
+    Ok(url)
+}
+
+// Convert a HLTB "seconds" time into rounded whole hours. HLTB stores
+// 0 for missing data, so we treat 0 as "unknown" and return None.
+// Currently only exercised by the unit test — the renderer does the
+// same math in HltbFetcher.tsx. Kept here so a future refactor can move
+// the conversion server-side without re-deriving the rule.
+#[cfg(test)]
+fn hltb_seconds_to_hours(seconds: &Value) -> Option<f64> {
+    let s = seconds.as_f64()?;
+    if s <= 0.0 { return None; }
+    Some((s / 3600.0 * 10.0).round() / 10.0)
+}
+
+#[command]
+pub async fn hltb_search(term: String, state: State<'_, AppState>) -> Result<Value, ()> {
+    if term.trim().is_empty() { return Ok(err("Missing search term")); }
+    let source = "hltb".to_string();
+    let key = term.clone();
+    let result = cached_search(&state, &source, &key, || async {
+        let client = get_http_client(&state);
+        // Standard search payload — kept close to what the site itself
+        // sends so HLTB has no reason to treat us differently.
+        let payload = json!({
+            "searchType": "games",
+            "searchTerms": term.trim().split_whitespace().collect::<Vec<_>>(),
+            "searchPage": 1,
+            "size": 20,
+            "searchOptions": {
+                "games": {
+                    "userId": 0,
+                    "platform": "",
+                    "sortCategory": "popular",
+                    "rangeCategory": "main",
+                    "rangeTime": { "min": null, "max": null },
+                    "gameplay": { "perspective": "", "flow": "", "genre": "" },
+                    "rangeYear": { "min": "", "max": "" },
+                    "modifier": ""
+                },
+                "users": { "sortCategory": "postcount" },
+                "lists": { "sortCategory": "follows" },
+                "filter": "",
+                "sort": 0,
+                "randomizer": 0
+            },
+            "useCache": true
+        }).to_string();
+
+        // Two attempts: cached endpoint first, then bust the cache and
+        // try again if HLTB rotated the token in the last 6 hours.
+        for attempt in 0..2 {
+            let endpoint = match hltb_endpoint(&client, attempt == 1).await {
+                Ok(u) => u,
+                Err(e) => return err(format!("HLTB endpoint discovery: {e}")),
+            };
+            let opts = ProxyJsonOptions {
+                method: Method::POST,
+                headers: vec![
+                    ("Content-Type", "application/json"),
+                    ("Origin", "https://howlongtobeat.com"),
+                    ("Referer", "https://howlongtobeat.com/"),
+                    ("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"),
+                ],
+                body: Some(payload.clone()),
+                http_error_prefix: "HLTB",
+            };
+            match proxy_json(&client, &endpoint, opts).await {
+                Ok(v) => {
+                    let hits = v.get("data").cloned().unwrap_or(json!([]));
+                    let count = hits.as_array().map(|a| a.len()).unwrap_or(0);
+                    // A 200 response with an empty array on the first
+                    // attempt is legitimate ("no hits") — only retry
+                    // when the endpoint 404s or errors, which lands in
+                    // the Err arm below.
+                    let _ = count;
+                    return ok(json!({ "hits": hits }));
+                }
+                Err(e) => {
+                    // Bust the cache and retry once on 404 (rotation)
+                    // or 401/403 (token invalidated).
+                    let rotated = e.contains("404") || e.contains("401") || e.contains("403");
+                    if !rotated || attempt == 1 {
+                        return err(format!("HLTB search: {e}"));
+                    }
+                }
+            }
+        }
+        err("HLTB search failed after retry".to_string())
+    })
+    .await;
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hltb_seconds_conversion() {
+        assert_eq!(hltb_seconds_to_hours(&json!(0)), None);
+        assert_eq!(hltb_seconds_to_hours(&json!(3600)), Some(1.0));
+        assert_eq!(hltb_seconds_to_hours(&json!(5400)), Some(1.5));
+        assert_eq!(hltb_seconds_to_hours(&json!(null)), None);
+    }
 
     #[test]
     fn url_encode_matches_js() {

@@ -133,6 +133,7 @@ fn main() {
             handlers::fetchers::anidb_search_titles,
             handlers::fetchers::pcgw_search,
             handlers::fetchers::pcgw_save_paths,
+            handlers::fetchers::hltb_search,
             // Plugin sandbox — generic infra for locally-installed
             // renderer overlays under `src/categories/<slug>/`.
             handlers::install_scan::install_scan,
