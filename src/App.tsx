@@ -152,7 +152,7 @@ import {
 // Editors and pickers used inside detail modals and the toolbar
 import DistChart from './insights/DistChart'
 import Heatmap from './insights/Heatmap'
-import { pickImageToDataUrl, imageDropHandlers, assetBasename } from './utils/files'
+import { pickImageToDataUrl, imageDropHandlers, assetBasename, downloadImageAsset } from './utils/files'
 import { expandTagSelection } from './utils/tags'
 // Fetcher registry — panel iterates `getFetchersFor(activeCategory)`
 // and a single `activeFetcher: string | null` state drives which modal
@@ -1573,6 +1573,7 @@ function App() {
     return () => window.removeEventListener('omnio-toast', h)
   }, [])
 
+
   // Global click-to-zoom: any <img class="zoomable"> anywhere opens a
   // full-screen lightbox. When multiple `.zoomable` images share a
   // `data-zoom-group` value (e.g. a covers gallery), the arrow-key
@@ -2126,6 +2127,66 @@ function App() {
       : ''
     setToast(`${sourceLabel} data applied${franchiseNote}`)
   }
+
+  // Book ISBN quick-lookup. Editors dispatch `omnio-book-isbn-lookup` with
+  // the raw ISBN in event.detail. We hit OpenLibrary's search endpoint
+  // with `isbn:<value>`, take the first hit, download the cover, and
+  // route the whole thing through applyFetchedPatch so the rest of the
+  // editor state (log/rewatches/rating/notes) is left alone.
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const raw = (e as CustomEvent<string>).detail
+      if (!raw || activeCategory !== 'libros') return
+      const cleaned = raw.replace(/[^0-9Xx]/g, '')
+      if (cleaned.length !== 10 && cleaned.length !== 13) {
+        setToast('ISBN needs 10 or 13 digits')
+        return
+      }
+      setToast('Looking up ISBN…')
+      try {
+        const r = await window.ipcRenderer.invoke('openlibrary:search', `isbn:${cleaned}`) as
+          | { ok: true; data: Array<Record<string, unknown>> }
+          | { ok: false; error: string }
+        if (!r?.ok) { setToast(`ISBN lookup failed: ${r?.error ?? 'unknown'}`); return }
+        const hit = r.data?.[0]
+        if (!hit) { setToast('No book found for that ISBN'); return }
+        const workKey = hit.key as string | undefined
+        const wr = workKey
+          ? await window.ipcRenderer.invoke('openlibrary:work', workKey) as { ok: boolean; data?: { description?: string | { value?: string }; subjects?: string[] } }
+          : null
+        const description = wr?.data?.description
+        const descStr = typeof description === 'string' ? description : description?.value
+        const authorName = Array.isArray(hit.author_name) ? hit.author_name as string[] : undefined
+        const publisher = Array.isArray(hit.publisher) ? (hit.publisher as string[])[0] : undefined
+        const totalPages = typeof hit.number_of_pages_median === 'number' ? String(hit.number_of_pages_median) : undefined
+        const releaseDate = typeof hit.first_publish_year === 'number' ? `${hit.first_publish_year}-01-01` : undefined
+        const coverId = typeof hit.cover_i === 'number' ? hit.cover_i as number : undefined
+        const coverUrl = coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null
+        const coverPath = coverUrl
+          ? await downloadImageAsset(coverUrl, 'libros', 'cover', assetBasename(String(hit.title ?? cleaned), 'cover')) as string | null
+          : null
+        applyFetchedPatch(
+          {
+            title: hit.title as string,
+            authors: authorName,
+            publisher,
+            totalPages,
+            releaseDate,
+            description: descStr,
+            isbn: cleaned,
+          } as Partial<AnyItem>,
+          coverPath || undefined,
+          undefined,
+          'ISBN lookup',
+        )
+      } catch (err) {
+        setToast(`ISBN lookup failed: ${(err as Error).message}`)
+      }
+    }
+    window.addEventListener('omnio-book-isbn-lookup', handler as EventListener)
+    return () => window.removeEventListener('omnio-book-isbn-lookup', handler as EventListener)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory])
 
   // Single opener for every detail modal — was eight near-identical
   // per-category functions before Fase 2.2 collapsed the viewing

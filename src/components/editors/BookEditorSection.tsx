@@ -110,7 +110,30 @@ export default function BookEditorSection(props: BookEditorSectionProps) {
         </div>
         <div className="field-group">
           <label>ISBN</label>
-          <input value={isbn} onChange={(e) => setIsbn(e.target.value)} placeholder="e.g. 978-0-7653-1178-8" />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input
+              value={isbn}
+              onChange={(e) => setIsbn(e.target.value)}
+              placeholder="e.g. 978-0-7653-1178-8"
+              style={{ flex: 1 }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && isbn.trim()) {
+                  e.preventDefault()
+                  window.dispatchEvent(new CustomEvent('omnio-book-isbn-lookup', { detail: isbn.trim() }))
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="secondary-btn"
+              disabled={!isbn.trim()}
+              title="Fetch title, authors, publisher, page count and cover from OpenLibrary using this ISBN. Overwrites those fields — leaves your reading status, rating, notes and log alone."
+              onClick={() => window.dispatchEvent(new CustomEvent('omnio-book-isbn-lookup', { detail: isbn.trim() }))}
+            >Lookup</button>
+          </div>
+          <p className="hint" style={{ marginTop: 4 }}>
+            Paste the ISBN off the back cover (or barcode) — 10 or 13 digits, dashes optional. <b>Lookup</b> or Enter fills the rest.
+          </p>
         </div>
       </div>
       <div className="field-grid two">
