@@ -20,7 +20,14 @@ interface Props {
   onNavigate: (item: Item) => void
 }
 
-type Entry = { item: Item; date: Date; label: string; source: 'release' | 'aired' }
+type Entry = {
+  item: Item
+  date: Date
+  label: string
+  source: 'release' | 'aired' | 'episode'
+  // For per-episode entries: which episode number this event covers.
+  episodeNumber?: number
+}
 
 function parseISODate(s?: string): Date | null {
   if (!s) return null
@@ -36,6 +43,103 @@ function parseISODate(s?: string): Date | null {
 function parseYear(y?: string): Date | null {
   if (!y || !/^\d{4}$/.test(y.trim())) return null
   return new Date(parseInt(y, 10), 0, 1)
+}
+
+// Weekday name → JS getDay() index (0 = Sunday).
+const WEEKDAY_INDEX: Record<string, number> = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+  thursday: 4, friday: 5, saturday: 6,
+}
+
+// Roll `base` forward until it lands on `weekdayIndex` (0-6, 0=Sun).
+// Returns a copy — never mutates the input.
+function nextWeekday(base: Date, weekdayIndex: number): Date {
+  const d = new Date(base.getFullYear(), base.getMonth(), base.getDate())
+  const delta = (weekdayIndex - d.getDay() + 7) % 7
+  d.setDate(d.getDate() + delta)
+  return d
+}
+
+// Emit one entry per upcoming episode of a currently-airing anime /
+// donghua / series. Requires an anchor date (airedFrom preferred, else
+// airingDay from today) and a way to know how many episodes are left.
+// Caps at 60 events per item so a long-running Detective Conan doesn't
+// silently generate hundreds of years of weekly VEVENTs.
+function collectEpisodeEntries(items: Item[], today: Date): Entry[] {
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const out: Entry[] = []
+  const MAX_PER_ITEM = 60
+
+  for (const it of items) {
+    const isAnimeLike = it.categoryId === 'anime' || it.categoryId === 'donghua'
+    const isSeries = it.categoryId === 'series'
+    if (!isAnimeLike && !isSeries) continue
+
+    // Only currently-airing items. Anime uses airingStatus; series has
+    // no equivalent enum, so fall back to seriesStatus === 'watching'
+    // + no airedTo (still ongoing).
+    const airing = isAnimeLike
+      ? it.airingStatus === 'airing'
+      : it.seriesStatus === 'watching' && !it.airedTo && it.seriesFormat !== 'ended'
+    if (!airing) continue
+
+    // Weekday: prefer airingDay explicit; else derive from airedFrom.
+    const airedFromDate = parseISODate(it.airedFrom)
+    let weekday: number | null = null
+    if (it.airingDay && WEEKDAY_INDEX[it.airingDay] !== undefined) {
+      weekday = WEEKDAY_INDEX[it.airingDay]
+    } else if (airedFromDate) {
+      weekday = airedFromDate.getDay()
+    }
+    if (weekday === null) continue
+
+    // Starting date: airedFrom + (episodesWatched * 7d) if we know
+    // both — that keeps episode numbers in sync with the calendar. If
+    // we only know today, roll forward from today.
+    const alreadyWatched = parseInt(it.episodesWatched ?? '0', 10) || 0
+    let cursor: Date
+    let episodeNumber: number
+    if (airedFromDate) {
+      const from = new Date(airedFromDate)
+      // Skip the ones the user already watched. Episode 1 lives on
+      // airedFrom, episode N on airedFrom + (N-1)*7 days.
+      from.setDate(from.getDate() + alreadyWatched * 7)
+      cursor = nextWeekday(from, weekday)
+      episodeNumber = alreadyWatched + 1
+    } else {
+      cursor = nextWeekday(startOfToday, weekday)
+      episodeNumber = alreadyWatched + 1
+    }
+    // If the earliest projected event is in the past, roll forward to
+    // this week's episode so we don't spam the calendar with catch-up
+    // entries the user obviously missed.
+    while (cursor < startOfToday) {
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 7)
+      episodeNumber += 1
+    }
+
+    const total = parseInt(it.totalEpisodes ?? '', 10)
+    const airedToDate = parseISODate(it.airedTo)
+    const hardCap = new Date(startOfToday); hardCap.setFullYear(hardCap.getFullYear() + 1)
+
+    let emitted = 0
+    while (emitted < MAX_PER_ITEM) {
+      if (airedToDate && cursor > airedToDate) break
+      if (cursor > hardCap && !total) break
+      if (Number.isFinite(total) && total > 0 && episodeNumber > total) break
+      out.push({
+        item: it,
+        date: new Date(cursor),
+        label: `Episode ${episodeNumber}`,
+        source: 'episode',
+        episodeNumber,
+      })
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 7)
+      episodeNumber += 1
+      emitted += 1
+    }
+  }
+  return out
 }
 
 // Pick every candidate date on an item and return the ones in the future
@@ -97,9 +201,15 @@ function toICS(entries: Entry[]): string {
   ]
   for (const e of entries) {
     const end = new Date(e.date); end.setDate(end.getDate() + 1)
+    // Episode UIDs carry the number so multiple weekly events don't
+    // collide when re-imported. Release/aired UIDs stay stable across
+    // exports so re-imports overwrite instead of duplicate.
+    const uidTail = e.source === 'episode' && e.episodeNumber
+      ? `${e.source}-${e.episodeNumber}`
+      : e.source
     lines.push(
       'BEGIN:VEVENT',
-      `UID:${e.item.id}-${e.source}@omnio.local`,
+      `UID:${e.item.id}-${uidTail}@omnio.local`,
       `DTSTAMP:${dtstamp}`,
       `DTSTART;VALUE=DATE:${dt(e.date)}`,
       `DTEND;VALUE=DATE:${dt(end)}`,
@@ -135,12 +245,23 @@ export default function ReleaseCalendar({ items, onNavigate }: Props) {
   const [monthCursor, setMonthCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [comingLayout, setComingLayout] = useState<'list' | 'grid'>('list')
+  // ICS exports include per-episode events when this is on. Also folds
+  // the projected episode dates into the in-app view so the user can see
+  // what's about to hit their calendar. Off by default so the release
+  // list stays focused on macro dates.
+  const [includeEpisodes, setIncludeEpisodes] = useState(false)
 
   const filteredItems = useMemo(
     () => (categoryFilter ? items.filter((i) => i.categoryId === categoryFilter) : items),
     [items, categoryFilter],
   )
-  const entries = useMemo(() => collectEntries(filteredItems, today), [filteredItems, today])
+  const entries = useMemo(() => {
+    const base = collectEntries(filteredItems, today)
+    if (!includeEpisodes) return base
+    return base
+      .concat(collectEpisodeEntries(filteredItems, today))
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+  }, [filteredItems, today, includeEpisodes])
   const monthEntries = useMemo(() => entries.filter((e) => isSameMonth(e.date, monthCursor)), [entries, monthCursor])
 
   // Group month entries by day-of-month for grid rendering.
@@ -178,6 +299,14 @@ export default function ReleaseCalendar({ items, onNavigate }: Props) {
             <option value="">All libraries</option>
             {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-dim)' }} title="Add one event per upcoming episode for currently-airing anime and series">
+            <input
+              type="checkbox"
+              checked={includeEpisodes}
+              onChange={(e) => setIncludeEpisodes(e.target.checked)}
+            />
+            <span>Per-episode</span>
+          </label>
           <button
             type="button"
             className="secondary-btn"
