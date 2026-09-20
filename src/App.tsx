@@ -116,6 +116,7 @@ const ImageUploadGuide     = lazy(() => import('./ImageUploadGuide'))
 const RandomizerModal      = lazy(() => import('./RandomizerModal'))
 const DataHealthAuditModal = lazy(() => import('./DataHealthAuditModal'))
 const GlobalSearch      = lazy(() => import('./GlobalSearch'))
+const FtsSearchModal    = lazy(() => import('./FtsSearchModal'))
 const SteamGridDbPicker = lazy(() => import('./SteamGridDbPicker'))
 // Metadata fetchers (AniList, TMDb, IGDB, …) are lazy-loaded from
 // `fetchers/registrations.tsx`, not here — the registry owns them now.
@@ -849,6 +850,20 @@ function App() {
     }))
   }
   const [searchOpen, setSearchOpen] = useState(false)
+  // Ctrl+Shift+F opens the SQLite FTS5 PoC. Kept separate from the
+  // Ctrl+K palette so we can compare both side-by-side while deciding
+  // whether to migrate the JSON store.
+  const [ftsPocOpen, setFtsPocOpen] = useState(false)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
+        e.preventDefault()
+        setFtsPocOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [ctxMenu, setCtxMenu] = useState<{ item: AnyItem; x: number; y: number } | null>(null)
   // Sprint C — modal pickers spawned from the card context menu.
@@ -6181,6 +6196,13 @@ function App() {
           </div>
         </div>
       )}
+
+      <FtsSearchModal
+        open={ftsPocOpen}
+        items={items}
+        onClose={() => setFtsPocOpen(false)}
+        onOpenItem={navigateToItem}
+      />
 
       <GlobalSearch
         open={searchOpen}
