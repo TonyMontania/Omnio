@@ -166,13 +166,14 @@ export default function MovieEditorSection(props: MovieEditorSectionProps) {
         <span className="form-section-title">Watch history</span>
       </div>
       <div className="field-group">
-        <label>Rewatch history</label>
+        <label>Watch history</label>
         <RewatchListEditor
           rewatches={rewatches}
           onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
           onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
           onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
           onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
+          labels={{ rewatch: 'Rewatched', started: 'Started watching', finished: 'Finished watching', dropped: 'Dropped', note: 'Note' }}
         />
       </div>
       <div className="form-section-header" data-belongs-to="related">

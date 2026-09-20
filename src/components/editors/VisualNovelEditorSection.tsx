@@ -499,13 +499,14 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
         <span className="form-section-hint">Log each replay (different route, true ending, etc.)</span>
       </div>
       <div className="field-group">
-        <label>Replays</label>
+        <label>Play history</label>
         <RewatchListEditor
           rewatches={rewatches}
           onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
           onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
           onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
           onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
+          labels={{ rewatch: 'Replayed', started: 'Started playing', finished: 'Finished playing', dropped: 'Dropped', note: 'Note' }}
         />
       </div>
 

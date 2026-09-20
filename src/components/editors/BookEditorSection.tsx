@@ -192,13 +192,14 @@ export default function BookEditorSection(props: BookEditorSectionProps) {
         <span className="form-section-hint">Log each reread with date + optional rating and notes</span>
       </div>
       <div className="field-group">
-        <label>Rereads</label>
+        <label>Reading history</label>
         <RewatchListEditor
           rewatches={rewatches}
           onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
           onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
           onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
           onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
+          labels={{ rewatch: 'Reread', started: 'Started reading', finished: 'Finished reading', dropped: 'Dropped', note: 'Note' }}
         />
       </div>
 

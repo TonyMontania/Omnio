@@ -253,9 +253,17 @@ export interface RelatedItem {
   relation: RelationKind
 }
 
+// Kind of history entry. Legacy entries had no kind — treat those as
+// 'rewatch' (they were called "Rewatch history" / "Reread history" /
+// "Replay history" everywhere). New entries can also capture starts,
+// finishes, drops, and plain journaling — no state change implied.
+export type RewatchKind = 'rewatch' | 'started' | 'finished' | 'dropped' | 'note'
+
 export interface RewatchEntry {
   id: string
   date: string
+  // Missing = legacy entry; treated as 'rewatch' by every consumer.
+  kind?: RewatchKind
   rating?: number
   notes?: string
 }

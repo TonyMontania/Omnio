@@ -313,13 +313,14 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
         <span className="form-section-hint">Every replay / campaign log</span>
       </div>
       <div className="field-group">
-        <label>Replay history</label>
+        <label>Play history</label>
         <RewatchListEditor
           rewatches={rewatches}
           onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
           onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
           onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
           onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
+          labels={{ rewatch: 'Replayed', started: 'Started playing', finished: 'Finished playing', dropped: 'Dropped', note: 'Note' }}
         />
       </div>
       <div className="form-section-header" data-belongs-to="related">

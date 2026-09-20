@@ -356,6 +356,7 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
           onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
           onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
           onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
+          labels={{ rewatch: 'Relistened', started: 'First heard', finished: 'Completed listen', dropped: 'Skipped through', note: 'Note' }}
         />
       </div>
       <div className="form-section-header" data-belongs-to="related">
