@@ -363,6 +363,79 @@ select:-webkit-autofill {
 .tag-pill button { background: transparent; border: none; color: var(--text-faint); cursor: pointer; font-size: 11px; }
 .tag-pill button:hover { color: var(--danger); }
 
+/* Auto-tag suggestions surfaced from the last metadata fetch. Sits
+   right below the TagEditor as a subtle accent-tinted panel until the
+   user accepts or dismisses each chip. */
+.tag-suggestions {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface-2));
+  border: 1px dashed color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tag-suggestions-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--accent) 65%, var(--text-dim));
+}
+.tag-suggestions-dismiss-all,
+.tag-suggestion-accept-all {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.tag-suggestions-dismiss-all:hover { border-color: #b04a4a; color: #b04a4a; }
+.tag-suggestion-accept-all { border-color: var(--accent); color: var(--accent); }
+.tag-suggestion-accept-all:hover {
+  background: var(--accent);
+  color: #1a1408;
+}
+.tag-suggestions-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tag-suggestion-chip {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--border));
+  border-radius: 999px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+.tag-suggestion-accept {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.tag-suggestion-accept:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+.tag-suggestion-dismiss {
+  background: transparent;
+  border: none;
+  border-left: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  color: var(--text-faint);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.tag-suggestion-dismiss:hover { color: #b04a4a; }
+
 .new-collection { display: flex; gap: 8px; max-width: 420px; margin-bottom: 24px; }
 .new-collection input {
   flex: 1;

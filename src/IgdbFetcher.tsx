@@ -12,7 +12,7 @@ interface Props {
   clientId?: string
   clientSecret?: string
   initialQuery: string
-  onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string, hints?: { parentGameTitle?: string }) => void
+  onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string, hints?: { parentGameTitle?: string; suggestedTags?: string[] }) => void
   onClose: () => void
 }
 
@@ -51,6 +51,8 @@ interface Game {
   age_ratings?: AgeRatingRef[]
   game_modes?: Named[]
   themes?: Named[]
+  player_perspectives?: Named[]
+  keywords?: Named[]
   category?: number             // 0=main, 1=DLC, 8=remake, 9=remaster, 11=port...
   parent_game?: { id: number; name: string }
   total_rating?: number
@@ -252,11 +254,24 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
     // "10 hidden" so we use `log` here — an unmapped shape is worth being
     // loud about. Screenshot the object and it lands in an issue.
     console.log('[IGDB] game:', g.name, '| age_ratings:', g.age_ratings, '| category:', g.category, '| parent_game:', g.parent_game)
+    // Suggest player_perspectives (First person, Third person, VR),
+    // game_modes (Single-player, Co-op, Battle royale) and keywords
+    // as tags. `themes` is deliberately excluded — the current apply
+    // path folds it into `genres`, and doubling up would flood the
+    // suggestion panel with duplicates of what just went in there.
+    const tagPool = [
+      ...(g.player_perspectives ?? []).map((x) => x.name),
+      ...(g.game_modes ?? []).map((x) => x.name),
+      ...(g.keywords ?? []).map((x) => x.name).slice(0, 8),
+    ].filter(Boolean)
     onApply(
       gameToPatch(g),
       coverPath || undefined,
       bannerPath || undefined,
-      g.parent_game?.name ? { parentGameTitle: g.parent_game.name } : undefined,
+      {
+        ...(g.parent_game?.name ? { parentGameTitle: g.parent_game.name } : {}),
+        ...(tagPool.length > 0 ? { suggestedTags: Array.from(new Set(tagPool)) } : {}),
+      },
     )
     onClose()
   }

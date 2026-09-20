@@ -14,7 +14,7 @@ interface Props {
   initialQuery: string
   kind: Kind
   categoryId: string
-  onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string) => void
+  onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string, hints?: { suggestedTags?: string[] }) => void
   onClose: () => void
 }
 
@@ -78,6 +78,7 @@ interface Details {
   belongs_to_collection?: Collection | null
   release_dates?: { results?: MovieReleaseCountry[] }   // movies
   content_ratings?: { results?: TvContentRating[] }     // tv
+  keywords?: { keywords?: { name: string }[]; results?: { name: string }[] }
 }
 
 // TMDb reports certifications per country. Prefer US, then GB, then AU,
@@ -223,7 +224,17 @@ export default function TmdbFetcher({ apiKey, initialQuery, kind, categoryId, on
       ? await downloadImageAsset( bannerUrl, categoryId, 'banner', assetBasename(title, 'banner')) as string | null
       : null
 
-    onApply(detailsToPatch(kind, d), coverPath || undefined, bannerPath || undefined)
+    // TMDb keywords: freeform "spy thriller, cold war, nuclear paranoia".
+    // Movies use `keywords.keywords[]`; TV series use `keywords.results[]`.
+    // Cap at 15 so the suggestion strip doesn't dominate the editor.
+    const kwSource = kind === 'movie' ? (d.keywords?.keywords ?? []) : (d.keywords?.results ?? [])
+    const kwNames = kwSource.map((k) => k.name).filter(Boolean).slice(0, 15)
+    onApply(
+      detailsToPatch(kind, d),
+      coverPath || undefined,
+      bannerPath || undefined,
+      kwNames.length > 0 ? { suggestedTags: kwNames } : undefined,
+    )
     onClose()
   }
 

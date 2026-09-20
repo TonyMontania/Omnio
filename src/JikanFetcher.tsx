@@ -14,7 +14,7 @@ interface Props {
   initialQuery: string
   kind: MediaType
   categoryId: string
-  onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string) => void
+  onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string, hints?: { suggestedTags?: string[] }) => void
   onClose: () => void
 }
 
@@ -43,6 +43,8 @@ interface JikanMedia {
   authors?: { name: string }[]
   serializations?: { name: string }[]
   genres?: { name: string }[]
+  themes?: { name: string }[]
+  explicit_genres?: { name: string }[]
   demographics?: { name: string }[]
   rating?: string             // "PG-13", "R+ - Mild Nudity", "Rx - Hentai", etc.
 }
@@ -145,7 +147,16 @@ export default function JikanFetcher({ initialQuery, kind, categoryId, onApply, 
       patch.magazine = m.serializations?.[0]?.name
     }
 
-    onApply(patch, coverPath || undefined, undefined)
+    // Themes are Jikan's most tag-like taxonomy (Isekai, Time Travel,
+    // Iyashikei, Music, Historical, …) — distinct from the structured
+    // Genres field. Surface them as suggestions so the user can accept
+    // the ones that fit without them silently mixing into either
+    // `tags` or `genres`.
+    const themeNames = [
+      ...(m.themes ?? []).map((t) => t.name),
+      ...(m.explicit_genres ?? []).map((t) => t.name),
+    ]
+    onApply(patch, coverPath || undefined, undefined, themeNames.length > 0 ? { suggestedTags: themeNames } : undefined)
     onClose()
   }
 

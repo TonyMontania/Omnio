@@ -12,7 +12,7 @@ interface Props {
   initialQuery: string
   kind: MediaType
   categoryId: string
-  onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string) => void
+  onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string, hints?: { suggestedTags?: string[] }) => void
   onClose: () => void
 }
 
@@ -42,6 +42,7 @@ interface Media {
   synonyms?: string[]
   averageScore?: number
   siteUrl?: string
+  tags?: { name: string; rank?: number; isMediaSpoiler?: boolean; isGeneralSpoiler?: boolean }[]
 }
 
 // AniList staff roles are free-text — "Story", "Art", "Story & Art", "Original
@@ -167,7 +168,16 @@ export default function AniListFetcher({ initialQuery, kind, categoryId, onApply
       if (artists.length) patch.mangaArtists = artists
       if (m.status && PUB_STATUS_MAP[m.status]) patch.pubStatus = PUB_STATUS_MAP[m.status]
     }
-    onApply(patch, coverPath || undefined, bannerPath || undefined)
+    // AniList exposes a rich thematic-tag graph per title (Time Loop,
+    // Foreign, Dark Fantasy, Iyashikei, …). Take the top 12 non-spoiler
+    // tags ranked by community score — that's the useful signal
+    // without flooding the editor.
+    const themeTags = (m.tags ?? [])
+      .filter((t) => !t.isMediaSpoiler && !t.isGeneralSpoiler)
+      .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0))
+      .slice(0, 12)
+      .map((t) => t.name)
+    onApply(patch, coverPath || undefined, bannerPath || undefined, themeTags.length > 0 ? { suggestedTags: themeTags } : undefined)
     onClose()
   }
 

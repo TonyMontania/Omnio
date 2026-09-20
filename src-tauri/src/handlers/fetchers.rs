@@ -564,7 +564,7 @@ async fn ensure_igdb_token(
 
 // Apicalypse field list — same set as the TS. Everything the fetcher
 // needs in one call, no follow-up "details" round-trip.
-const IGDB_FIELDS: &str = "name,summary,storyline,first_release_date,cover.image_id,artworks.image_id,screenshots.image_id,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,platforms.name,genres.name,franchises.name,collection.name,alternative_names.name,alternative_names.comment,age_ratings.*,game_modes.name,themes.name,category,parent_game.name,parent_game.id,total_rating,total_rating_count";
+const IGDB_FIELDS: &str = "name,summary,storyline,first_release_date,cover.image_id,artworks.image_id,screenshots.image_id,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,platforms.name,genres.name,franchises.name,collection.name,alternative_names.name,alternative_names.comment,age_ratings.*,game_modes.name,themes.name,player_perspectives.name,keywords.name,category,parent_game.name,parent_game.id,total_rating,total_rating_count";
 
 #[command]
 pub async fn igdb_search(
@@ -646,9 +646,9 @@ pub async fn tmdb_details(
         return Ok(err("Missing API key or id"));
     }
     let extras = if kind == "movie" {
-        "credits,images,external_ids,release_dates"
+        "credits,images,external_ids,release_dates,keywords"
     } else {
-        "credits,images,external_ids,content_ratings"
+        "credits,images,external_ids,content_ratings,keywords"
     };
     let url = format!(
         "{TMDB_BASE}/{kind}/{id_str}?api_key={}&append_to_response={extras}",
@@ -682,6 +682,7 @@ query ($search: String, $type: MediaType) {
       source countryOfOrigin
       coverImage { extraLarge large }
       bannerImage synonyms averageScore siteUrl
+      tags { name rank isMediaSpoiler isGeneralSpoiler }
     }
   }
 }"#;

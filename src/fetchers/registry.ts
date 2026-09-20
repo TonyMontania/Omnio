@@ -39,6 +39,12 @@ export interface FetcherApplyHints {
   // walks the user's library and turns any slug that matches an existing
   // item's `vndbId` into a proper RelatedItem entry.
   vnRelations?: { vndbId: string; relation: string; title: string }[]
+  // Optional tag suggestions the source knows about but that shouldn't
+  // silently overwrite the user's own `tags` array. applyFetchedPatch
+  // surfaces these as clickable chips in the editor — one click accepts,
+  // ✕ dismisses. Genres and other structured taxonomy fields still get
+  // applied directly (they map to a dedicated field, not free-text tags).
+  suggestedTags?: string[]
 }
 
 export interface FetcherContext {

@@ -994,6 +994,11 @@ function App() {
   const [tags, setTags] = useState<string[]>([])
   const [rating, setRating] = useState(0)
   const [finishedAt, setFinishedAt] = useState('')
+  // Buffered auto-tag suggestions from the last metadata fetch.
+  // Rendered as clickable chips next to the tag editor; click accepts
+  // (moves to `tags`), ✕ dismisses. Cleared on resetForm and every
+  // panel open — never persisted to disk on its own.
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([])
 
   const [devs, setDevs] = useState<string[]>([])
   const [publishers, setPublishers] = useState<string[]>([])
@@ -1706,6 +1711,7 @@ function App() {
     setStoreLinks([]); setPurchases([]); setDeckCompat(undefined); setProtonRating(undefined)
     setViewings([]); setBookHighlights([])
     setBookmarkChapter(''); setBookmarkNote(''); setListeningNote('')
+    setSuggestedTags([])
   }
 
   const resetListControls = () => { setSearch(''); setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]) }
@@ -1886,6 +1892,7 @@ function App() {
     setBookmarkChapter(item.bookmarkChapter ?? '')
     setBookmarkNote(item.bookmarkNote ?? '')
     setListeningNote(item.listeningNote ?? '')
+    setSuggestedTags([])
   }
 
   // When every detail view closes and the list JSX remounts, restore the
@@ -2014,8 +2021,27 @@ function App() {
     coverPath?: string,
     bannerPath?: string,
     sourceLabel = 'Metadata',
-    hints?: { parentGameTitle?: string; vnRelations?: { vndbId: string; relation: string; title: string }[] },
+    hints?: { parentGameTitle?: string; vnRelations?: { vndbId: string; relation: string; title: string }[]; suggestedTags?: string[] },
   ) => {
+    // Auto-tag suggestions from the source (AniList "Time Travel",
+    // MAL themes, IGDB themes, TMDb keywords, …). Buffered into
+    // suggestedTags so the editor can render clickable chips — one
+    // click accepts (moves it to `tags`), ✕ dismisses. Never
+    // silently overwrites the user's own tag list.
+    if (hints?.suggestedTags && hints.suggestedTags.length > 0) {
+      const clean = Array.from(new Set(
+        hints.suggestedTags.map((t) => t.trim()).filter((t) => t.length > 0),
+      ))
+      setSuggestedTags((prev) => {
+        const existing = new Set(prev)
+        const currentTags = new Set(tags.map((t) => t.toLowerCase()))
+        for (const t of clean) {
+          if (currentTags.has(t.toLowerCase())) continue
+          existing.add(t)
+        }
+        return Array.from(existing)
+      })
+    }
     // Apply every pure per-field routing through the field-map table
     // (see src/editor/applyPatch.ts). What remains here is the handful
     // of side effects that need renderer-only state — items lookup,
@@ -5836,6 +5862,54 @@ function App() {
                       onAdd={(t) => setTags((prev) => prev.includes(t) ? prev : [...prev, t])}
                       onRemove={(i) => setTags((prev) => prev.filter((_, idx) => idx !== i))}
                     />
+
+                    {suggestedTags.length > 0 && (
+                      <div className="tag-suggestions">
+                        <div className="tag-suggestions-header">
+                          <span>Suggested from the last fetch</span>
+                          <button
+                            type="button"
+                            className="tag-suggestions-dismiss-all"
+                            onClick={() => setSuggestedTags([])}
+                            title="Dismiss all suggestions"
+                          >Dismiss all</button>
+                        </div>
+                        <div className="tag-suggestions-chips">
+                          {suggestedTags.map((t) => (
+                            <span key={t} className="tag-suggestion-chip">
+                              <button
+                                type="button"
+                                className="tag-suggestion-accept"
+                                onClick={() => {
+                                  setTags((prev) => prev.includes(t) ? prev : [...prev, t])
+                                  setSuggestedTags((prev) => prev.filter((x) => x !== t))
+                                }}
+                                title={`Accept "${t}" as a tag`}
+                              >+ {t}</button>
+                              <button
+                                type="button"
+                                className="tag-suggestion-dismiss"
+                                onClick={() => setSuggestedTags((prev) => prev.filter((x) => x !== t))}
+                                title="Dismiss"
+                              >✕</button>
+                            </span>
+                          ))}
+                          <button
+                            type="button"
+                            className="tag-suggestion-accept-all"
+                            onClick={() => {
+                              setTags((prev) => {
+                                const set = new Set(prev)
+                                for (const t of suggestedTags) set.add(t)
+                                return Array.from(set)
+                              })
+                              setSuggestedTags([])
+                            }}
+                            title="Accept every suggestion"
+                          >Accept all</button>
+                        </div>
+                      </div>
+                    )}
 
                     <LibraryCustomFieldsSection
                       defs={settings.libraryCustomFields?.[activeCategory] ?? []}
