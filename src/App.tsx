@@ -295,6 +295,11 @@ interface Settings {
   // gated by a user action (e.g. typing a plugin's slug into the
   // Home viewport keyboard listener).
   unlockedPlugins?: string[]
+  // Subset of unlockedPlugins the user has hidden from the sidebar via
+  // Settings → Enabled libraries. Hiding is fully reversible from the
+  // same panel — the checkbox stays there so the plugin can be brought
+  // back without re-typing the unlock code.
+  hiddenPlugins?: string[]
   // Per-plugin, per-field on/off overrides. Missing entries fall back
   // to the plugin's declared defaults.
   pluginCardFields?: Record<string, Record<string, boolean>>
@@ -668,21 +673,33 @@ function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [specialView, activePluginSlug])
   useEffect(() => { if (!activePluginSlug) setPluginPageMeta(null) }, [activePluginSlug])
-  // If the user re-locks a plugin whose view is currently open, snap
-  // them back to Home so they aren't stranded in a hidden library.
+  // If the user re-locks or hides a plugin whose view is currently
+  // open, snap them back to Home so they aren't stranded in a hidden
+  // library.
   useEffect(() => {
-    if (activePluginSlug && !settings.unlockedPlugins?.includes(activePluginSlug)) {
+    if (
+      activePluginSlug
+      && (!settings.unlockedPlugins?.includes(activePluginSlug)
+        || settings.hiddenPlugins?.includes(activePluginSlug))
+    ) {
       setActivePluginSlug(null)
       setSpecialView('home')
     }
-  }, [activePluginSlug, settings.unlockedPlugins])
+  }, [activePluginSlug, settings.unlockedPlugins, settings.hiddenPlugins])
   // Only compiled plugins the user has unlocked (via the Home
   // keyboard listener) show up in the sidebar / settings / card
   // fields. Everyone else runs the same build with the plugin's code
   // present but no visible surface anywhere.
-  const visiblePlugins: PluginDef[] = useMemo(
+  const unlockedPluginDefs: PluginDef[] = useMemo(
     () => PLUGINS.filter((p) => settings.unlockedPlugins?.includes(p.slug)),
     [settings.unlockedPlugins],
+  )
+  // Sidebar / routing / card-field views drop any plugin the user has
+  // hidden from Settings → Enabled libraries. Settings itself keeps
+  // using unlockedPluginDefs so the checkbox stays reachable.
+  const visiblePlugins: PluginDef[] = useMemo(
+    () => unlockedPluginDefs.filter((p) => !settings.hiddenPlugins?.includes(p.slug)),
+    [unlockedPluginDefs, settings.hiddenPlugins],
   )
   const [animeBoardStatus, setAnimeBoardStatus] = useState<AnimeStatus>('plan_to_watch')
   const [seriesBoardStatus, setSeriesBoardStatus] = useState<SeriesStatus>('plan_to_watch')
@@ -4006,23 +4023,26 @@ function App() {
                         })}
                       </div>
                     </div>
-                    {visiblePlugins.length > 0 && (
+                    {unlockedPluginDefs.length > 0 && (
                       <div className="field-group">
                         <label>Plugins</label>
-                        <p className="hint">Optional libraries you've unlocked. Uncheck to hide from the sidebar again.</p>
+                        <p className="hint">Optional libraries you've unlocked. Uncheck to hide from the sidebar — your data stays intact and the toggle stays here so you can bring it back anytime.</p>
                         <div className="library-toggle-list">
-                          {visiblePlugins.map((plug) => {
+                          {unlockedPluginDefs.map((plug) => {
                             const Icon = plug.icon
+                            const hidden = settings.hiddenPlugins?.includes(plug.slug) ?? false
                             return (
                               <label key={plug.slug} className="library-toggle-row">
                                 <input
                                   type="checkbox"
-                                  checked={true}
-                                  onChange={() => setSettings((s) => ({
-                                    ...s,
-                                    unlockedPlugins: (s.unlockedPlugins ?? []).filter((sl) => sl !== plug.slug),
-                                  }))}
-                                  title={`Uncheck to hide ${plug.label} again`}
+                                  checked={!hidden}
+                                  onChange={() => setSettings((s) => {
+                                    const set = new Set(s.hiddenPlugins ?? [])
+                                    if (hidden) set.delete(plug.slug)
+                                    else set.add(plug.slug)
+                                    return { ...s, hiddenPlugins: Array.from(set) }
+                                  })}
+                                  title={hidden ? `Show ${plug.label} in the sidebar again` : `Hide ${plug.label} from the sidebar`}
                                 />
                                 <span className="library-toggle-icon"><Icon /></span>
                                 <span>{plug.label}</span>
