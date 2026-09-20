@@ -93,6 +93,11 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'anidb:search-titles': ['query', 'limit'],
   'pcgw:search': ['term'],
   'pcgw:save-paths': ['pageName'],
+  'hltb:search': ['term'],
+  'lastfm:top_albums': ['apiKey', 'username', 'limit', 'period'],
+  'lastfm:album_info': ['apiKey', 'username', 'artist', 'album'],
+  'wiki:artist_search': ['term'],
+  'wiki:artist_fetch': ['pageTitle'],
 
   // -- plugin sandbox (generic infra for `src/categories/<slug>/`) --
   'install:scan': ['customRoots'],

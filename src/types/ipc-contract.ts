@@ -323,6 +323,16 @@ export type IpcContract = {
     { args: [term: string]; result: PcgwSearchResult }
   'pcgw:save-paths':
     { args: [pageName: string]; result: PcgwSavePathsResult }
+  'hltb:search':
+    { args: [term: string]; result: FetcherObjectEnvelope }
+  'lastfm:top_albums':
+    { args: [apiKey: string, username: string, limit: number, period: string]; result: FetcherObjectEnvelope }
+  'lastfm:album_info':
+    { args: [apiKey: string, username: string, artist: string, album: string]; result: FetcherObjectEnvelope }
+  'wiki:artist_search':
+    { args: [term: string]; result: FetcherHitsEnvelope }
+  'wiki:artist_fetch':
+    { args: [pageTitle: string]; result: FetcherObjectEnvelope }
 }
 
 // Helpers for callers who need to name the args / result of a channel.
