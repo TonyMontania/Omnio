@@ -128,6 +128,7 @@ const StoryGraphImporter = lazy(() => import('./StoryGraphImporter'))
 const ImdbImporter       = lazy(() => import('./ImdbImporter'))
 const RymImporter        = lazy(() => import('./RymImporter'))
 const HltbImporter       = lazy(() => import('./HltbImporter'))
+const LastfmApiSync      = lazy(() => import('./LastfmApiSync'))
 const SerializdImporter  = lazy(() => import('./SerializdImporter'))
 const SpotifyImporter    = lazy(() => import('./SpotifyImporter'))
 const HighlightsImporter = lazy(() => import('./HighlightsImporter'))
@@ -257,6 +258,11 @@ interface Settings {
   igdbClientId?: string
   igdbClientSecret?: string
   comicvineApiKey?: string
+  // Last.fm API key + the scrobbler username to import top albums for.
+  // Both required to run the Last.fm importer; empty disables the
+  // Settings row entirely. Register a free key at last.fm/api/account.
+  lastFmApiKey?: string
+  lastFmUsername?: string
   // AniDB's HTTP API requires a registered client name (register at
   // anidb.net/software/add — the site issues a name after a quick review).
   // Empty means "AniDB fetcher disabled"; the button in the anime editor
@@ -958,6 +964,7 @@ function App() {
   const [imdbOpen, setImdbOpen] = useState(false)
   const [rymOpen, setRymOpen] = useState(false)
   const [hltbOpen, setHltbOpen] = useState(false)
+  const [lastFmOpen, setLastFmOpen] = useState(false)
   const [serializdOpen, setSerializdOpen] = useState(false)
   const [spotifyOpen, setSpotifyOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
@@ -4301,7 +4308,8 @@ function App() {
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setSerializdOpen(true)}><ServiceLogo service="serializd" /><span>Serializd</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setSpotifyOpen(true)}><ServiceLogo service="spotify" /><span>Spotify library</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setHighlightsImportOpen(true)}><ServiceLogo service="kindle" /><span>Kindle highlights</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setLastfmImportOpen(true)}><ServiceLogo service="lastfm" /><span>Last.fm scrobbles</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setLastfmImportOpen(true)}><ServiceLogo service="lastfm" /><span>Last.fm scrobbles (CSV)</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setLastFmOpen(true)}><ServiceLogo service="lastfm" /><span>Last.fm sync (API)</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setTraktImportOpen(true)}><ServiceLogo service="trakt" /><span>Trakt.tv</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setDiscogsImportOpen(true)}><ServiceLogo service="discogs" /><span>Discogs collection</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setStoryGraphOpen(true)}><ServiceLogo service="storygraph" /><span>StoryGraph</span></button>
@@ -4466,6 +4474,24 @@ function App() {
                       />
                       <p className="hint">Free v3 key at <code>themoviedb.org/settings/api</code>.</p>
                     </div>
+                    <div className="field-group">
+                      <label>Last.fm (Music)</label>
+                      <input
+                        type="password"
+                        placeholder="Free API key from last.fm/api/account/create…"
+                        value={settings.lastFmApiKey ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, lastFmApiKey: e.target.value }))}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Your Last.fm username"
+                        value={settings.lastFmUsername ?? ''}
+                        onChange={(e) => setSettings((s) => ({ ...s, lastFmUsername: e.target.value }))}
+                        style={{ marginTop: 6 }}
+                      />
+                      <p className="hint">Feeds the "Sync from Last.fm" importer — maps your top-scrobbled albums onto the Music library and pre-fills playcounts.</p>
+                    </div>
+
                     <p className="hint" style={{ marginTop: -6 }}>AniList, Kitsu, MangaDex, MusicBrainz, MyAnimeList and VGMdb need no key — they work out of the box.</p>
 
                     <div className="settings-section-title">Updates</div>
@@ -6794,6 +6820,26 @@ function App() {
               setToast(`Patched ${patches.length} game${patches.length === 1 ? '' : 's'} with HLTB times`)
             }}
             onClose={() => setHltbOpen(false)}
+          />
+        </Suspense>
+      )}
+
+      {lastFmOpen && (
+        <Suspense fallback={null}>
+          <LastfmApiSync
+            existingItems={items}
+            apiKey={settings.lastFmApiKey ?? ''}
+            username={settings.lastFmUsername ?? ''}
+            onPatch={(patches) => {
+              const byId = new Map(patches.map((p) => [p.id, p]))
+              setItems((all) => all.map((it) => {
+                const patch = byId.get(it.id)
+                if (!patch) return it
+                return { ...it, consumed: patch.consumed, rewatches: patch.rewatches } as Item
+              }))
+              setToast(`Synced ${patches.length} album${patches.length === 1 ? '' : 's'} from Last.fm`)
+            }}
+            onClose={() => setLastFmOpen(false)}
           />
         </Suspense>
       )}

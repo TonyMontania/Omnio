@@ -1665,6 +1665,119 @@ pub async fn hltb_search(term: String, state: State<'_, AppState>) -> Result<Val
     Ok(result)
 }
 
+// -- Last.fm -----------------------------------------------------------
+//
+// Only two commands so far:
+//   - `lastfm_top_albums` fuels the bulk importer (map top albums from
+//     the user's overall scrobbles onto their Music library).
+//   - `lastfm_album_info` fuels the per-item lookup (userplaycount for
+//     one specific artist+album). Not wired to a fetcher yet.
+//
+// Free API key required (last.fm/api/account/create — no auth flow,
+// just a static key). The user-agent line matches what the client would
+// naturally send.
+
+const LASTFM_BASE: &str = "https://ws.audioscrobbler.com/2.0/";
+
+#[command]
+pub async fn lastfm_top_albums(
+    apiKey: String,
+    username: String,
+    limit: u32,
+    period: String,
+    state: State<'_, AppState>,
+) -> Result<Value, ()> {
+    if apiKey.trim().is_empty() || username.trim().is_empty() {
+        return Ok(err("Missing Last.fm API key or username"));
+    }
+    let capped = limit.clamp(1, 500);
+    // Period vocab: overall / 7day / 1month / 3month / 6month / 12month.
+    // Any unknown value falls back to overall so the caller never gets a
+    // 400 that's caused by a typo in a settings dropdown.
+    let p = match period.as_str() {
+        "7day" | "1month" | "3month" | "6month" | "12month" => period,
+        _ => "overall".to_string(),
+    };
+    let source = "lastfm-top-albums".to_string();
+    let key = format!("{username}:{p}:{capped}");
+    let result = cached_search(&state, &source, &key, || async {
+        let query = qs(&[
+            ("method", "user.gettopalbums"),
+            ("user", username.trim()),
+            ("api_key", apiKey.trim()),
+            ("format", "json"),
+            ("limit", &capped.to_string()),
+            ("period", &p),
+        ]);
+        let url = format!("{LASTFM_BASE}?{query}");
+        let client = get_http_client(&state);
+        let opts = ProxyJsonOptions {
+            method: Method::GET,
+            headers: vec![("User-Agent", "Omnio/1.0 (+https://github.com/TonyMontania/Omnio)")],
+            body: None,
+            http_error_prefix: "Last.fm",
+        };
+        match proxy_json(&client, &url, opts).await {
+            Ok(v) => {
+                // Last.fm 200s with an error envelope on invalid keys —
+                // surface it as an error instead of pretending success.
+                if let Some(msg) = v.get("message").and_then(|m| m.as_str()) {
+                    if v.get("error").is_some() {
+                        return err(format!("Last.fm: {msg}"));
+                    }
+                }
+                ok(v)
+            }
+            Err(e) => err(format!("Last.fm search: {e}")),
+        }
+    })
+    .await;
+    Ok(result)
+}
+
+#[command]
+pub async fn lastfm_album_info(
+    apiKey: String,
+    username: String,
+    artist: String,
+    album: String,
+    state: State<'_, AppState>,
+) -> Result<Value, ()> {
+    if apiKey.trim().is_empty() || artist.trim().is_empty() || album.trim().is_empty() {
+        return Ok(err("Missing Last.fm API key, artist or album"));
+    }
+    let mut pairs = vec![
+        ("method", "album.getinfo"),
+        ("api_key", apiKey.trim()),
+        ("artist", artist.trim()),
+        ("album", album.trim()),
+        ("format", "json"),
+        ("autocorrect", "1"),
+    ];
+    if !username.trim().is_empty() {
+        pairs.push(("username", username.trim()));
+    }
+    let url = format!("{LASTFM_BASE}?{}", qs(&pairs));
+    let client = get_http_client(&state);
+    let opts = ProxyJsonOptions {
+        method: Method::GET,
+        headers: vec![("User-Agent", "Omnio/1.0 (+https://github.com/TonyMontania/Omnio)")],
+        body: None,
+        http_error_prefix: "Last.fm",
+    };
+    match proxy_json(&client, &url, opts).await {
+        Ok(v) => {
+            if let Some(msg) = v.get("message").and_then(|m| m.as_str()) {
+                if v.get("error").is_some() {
+                    return Ok(err(format!("Last.fm: {msg}")));
+                }
+            }
+            Ok(ok(v))
+        }
+        Err(e) => Ok(err(format!("Last.fm album.getinfo: {e}"))),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
