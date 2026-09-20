@@ -138,7 +138,7 @@ export default function BookEditorSection(props: BookEditorSectionProps) {
       </div>
       <div className="field-group">
         <label>Description</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Book synopsis" />
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={8} placeholder="Book synopsis" />
       </div>
 
       <div className="form-section-header" data-belongs-to="progress">
