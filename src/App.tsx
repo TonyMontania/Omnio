@@ -129,6 +129,7 @@ const ImdbImporter       = lazy(() => import('./ImdbImporter'))
 const RymImporter        = lazy(() => import('./RymImporter'))
 const HltbImporter       = lazy(() => import('./HltbImporter'))
 const LastfmApiSync      = lazy(() => import('./LastfmApiSync'))
+const WikipediaArtistFetcher = lazy(() => import('./WikipediaArtistFetcher'))
 const SerializdImporter  = lazy(() => import('./SerializdImporter'))
 const SpotifyImporter    = lazy(() => import('./SpotifyImporter'))
 const HighlightsImporter = lazy(() => import('./HighlightsImporter'))
@@ -755,6 +756,7 @@ function App() {
   const [newArtistName, setNewArtistName] = useState('')
   const [viewingArtist, setViewingArtist] = useState<MusicArtist | null>(null)
   const [artistPanelOpen, setArtistPanelOpen] = useState(false)
+  const [wikiArtistOpen, setWikiArtistOpen] = useState(false)
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null)
   const [artistEditorTab, setArtistEditorTab] = useState<'overview' | 'details' | 'members' | 'concerts'>('overview')
   const [artistNameField, setArtistNameField] = useState('')
@@ -6264,6 +6266,15 @@ function App() {
                     <div className="field-group">
                       <label>Name</label>
                       <input value={artistNameField} onChange={(e) => setArtistNameField(e.target.value)} />
+                      <div style={{ marginTop: 6 }}>
+                        <button
+                          type="button"
+                          className="secondary-btn"
+                          disabled={!artistNameField.trim()}
+                          title="Search en.wikipedia.org and autofill origin, genres, active years, labels, current + past members and the artist photo."
+                          onClick={() => setWikiArtistOpen(true)}
+                        >↗ Fetch from Wikipedia</button>
+                      </div>
                     </div>
                     <div className="field-group image-drop" {...imageDropHandlers(setArtistPhotoField)}>
                       <label>Photo</label>
@@ -6349,6 +6360,40 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {wikiArtistOpen && (
+        <Suspense fallback={null}>
+          <WikipediaArtistFetcher
+            initialQuery={artistNameField.trim()}
+            onApply={(payload) => {
+              if (payload.origin) setArtistOrigin(payload.origin)
+              if (payload.genres) setArtistGenres(payload.genres)
+              if (payload.labels) setArtistLabels(payload.labels)
+              if (payload.activeFrom !== undefined) setArtistActiveFrom(payload.activeFrom)
+              if (payload.activeTo !== undefined) setArtistActiveTo(payload.activeTo)
+              if (payload.bandStatus) setArtistBandStatus(payload.bandStatus)
+              if (payload.members && payload.members.length > 0) {
+                // Merge into existing members instead of blowing them
+                // away — if the user already entered stints or extra
+                // roles for a member Wikipedia doesn't know about, we
+                // keep those. Match on lower-cased name.
+                setArtistMembers((prev) => {
+                  const byName = new Map(prev.map((m) => [m.name.toLowerCase(), m]))
+                  const merged = [...prev]
+                  for (const wm of payload.members!) {
+                    if (byName.has(wm.name.toLowerCase())) continue
+                    merged.push(wm)
+                  }
+                  return merged
+                })
+              }
+              if (payload.photoPath) setArtistPhotoField(payload.photoPath)
+              setToast('Wikipedia data applied')
+            }}
+            onClose={() => setWikiArtistOpen(false)}
+          />
+        </Suspense>
       )}
 
       <GlobalSearch

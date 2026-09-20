@@ -1778,6 +1778,366 @@ pub async fn lastfm_album_info(
     }
 }
 
+// -- Wikipedia (musical artists) ---------------------------------------
+//
+// Scrapes en.wikipedia.org for the `{{Infobox musical artist}}` template
+// so the Artist editor can autofill origin, genres, active years,
+// labels, current + past members, and a photo URL.
+//
+// Two commands:
+//   - `wiki_artist_search` — MediaWiki search endpoint, returns
+//     candidate pages.
+//   - `wiki_artist_fetch` — fetches wikitext + main image, parses the
+//     infobox params and returns a normalized JSON payload the
+//     renderer can plug straight into the artist form.
+//
+// Kept intentionally best-effort: wikipedia infoboxes vary across
+// articles (`current_members` may live under `members`, `origin` may
+// contain nested wikilinks with region qualifiers, etc.). We do the
+// cheap cleanup pass and leave the rest for the user to tidy.
+
+const WIKI_API: &str = "https://en.wikipedia.org/w/api.php";
+const WIKI_UA: &str = "Omnio/1.0 (+https://github.com/TonyMontania/Omnio) reqwest";
+
+fn wiki_headers() -> Vec<(&'static str, &'static str)> {
+    vec![("User-Agent", WIKI_UA), ("Accept", "application/json")]
+}
+
+#[command]
+pub async fn wiki_artist_search(term: String, state: State<'_, AppState>) -> Result<Value, ()> {
+    if term.trim().is_empty() { return Ok(err("Missing search term")); }
+    let key = term.clone();
+    let result = cached_search(&state, "wikipedia-artist", &key, || async {
+        // Bias the search toward pages tagged as musical acts by
+        // appending `hastemplate:"Infobox musical artist"` — the same
+        // filter Wikipedia's own advanced search uses.
+        let srsearch = format!("{} hastemplate:\"Infobox musical artist\"", term.trim());
+        let url = format!(
+            "{WIKI_API}?action=query&list=search&srsearch={}&srlimit=10&format=json&formatversion=2",
+            url_encode(&srsearch),
+        );
+        let client = get_http_client(&state);
+        let opts = ProxyJsonOptions {
+            method: Method::GET, headers: wiki_headers(), body: None, http_error_prefix: "Wiki",
+        };
+        match proxy_json(&client, &url, opts).await {
+            Ok(v) => ok(v.get("query")
+                .and_then(|q| q.get("search"))
+                .cloned()
+                .unwrap_or(json!([]))),
+            Err(e) => err(format!("Wikipedia search: {e}")),
+        }
+    })
+    .await;
+    Ok(result)
+}
+
+#[command]
+pub async fn wiki_artist_fetch(pageTitle: String, state: State<'_, AppState>) -> Result<Value, ()> {
+    if pageTitle.trim().is_empty() { return Ok(err("Missing page title")); }
+    let client = get_http_client(&state);
+
+    // 1. Fetch wikitext + main image URL in one round-trip.
+    let url = format!(
+        "{WIKI_API}?action=parse&page={}&prop=wikitext|images&format=json&formatversion=2&redirects=1",
+        url_encode(pageTitle.trim()),
+    );
+    let parse_opts = ProxyJsonOptions {
+        method: Method::GET, headers: wiki_headers(), body: None, http_error_prefix: "Wiki",
+    };
+    let parsed = match proxy_json(&client, &url, parse_opts).await {
+        Ok(v) => v,
+        Err(e) => return Ok(err(format!("Wikipedia parse: {e}"))),
+    };
+    let wikitext = parsed.get("parse")
+        .and_then(|p| p.get("wikitext"))
+        .and_then(|w| w.as_str())
+        .unwrap_or("");
+    if wikitext.is_empty() {
+        return Ok(err("Wikipedia page had no wikitext"));
+    }
+
+    // 2. Extract the infobox, then each `| key = value` line.
+    let infobox = match extract_infobox(wikitext) {
+        Some(s) => s,
+        None => return Ok(err("Page has no {{Infobox musical artist}}")),
+    };
+    let params = parse_infobox_params(&infobox);
+
+    // 3. Resolve the image URL for whichever filename the infobox names.
+    // Wikipedia stores the raw filename ("Foo.jpg"); the actual URL
+    // needs an extra `imageinfo` query.
+    let image_url = if let Some(fname) = params.get("image").cloned().or_else(|| params.get("img").cloned()) {
+        let clean = clean_wikitext(&fname);
+        // Filenames sometimes carry the "File:" prefix, sometimes not.
+        let stripped = clean.trim().trim_start_matches("File:").trim_start_matches("Image:").to_string();
+        if stripped.is_empty() {
+            None
+        } else {
+            resolve_wiki_image_url(&client, &stripped).await
+        }
+    } else {
+        None
+    };
+
+    let (active_from, active_to) = parse_years_active(
+        params.get("years_active").map(String::as_str).unwrap_or(""),
+    );
+
+    let genres = split_wiki_list(params.get("genres").or_else(|| params.get("genre")).map(String::as_str).unwrap_or(""));
+    let labels = split_wiki_list(params.get("label").map(String::as_str).unwrap_or(""));
+    let origin = clean_wikitext(params.get("origin").or_else(|| params.get("birth_place")).map(String::as_str).unwrap_or(""));
+    let current_members = parse_member_list(params.get("current_members").or_else(|| params.get("members")).map(String::as_str).unwrap_or(""));
+    let past_members = parse_member_list(params.get("past_members").map(String::as_str).unwrap_or(""));
+
+    Ok(ok(json!({
+        "title": clean_wikitext(params.get("name").map(String::as_str).unwrap_or(pageTitle.trim())),
+        "origin": if origin.is_empty() { Value::Null } else { Value::String(origin) },
+        "genres": genres,
+        "labels": labels,
+        "activeFrom": active_from.map(Value::String).unwrap_or(Value::Null),
+        "activeTo": active_to.map(Value::String).unwrap_or(Value::Null),
+        "currentMembers": current_members,
+        "pastMembers": past_members,
+        "imageUrl": image_url.map(Value::String).unwrap_or(Value::Null),
+    })))
+}
+
+// Locate the balanced {{Infobox musical artist ... }} block. Returns
+// the inner content (between the opening brace after "artist" and the
+// closing "}}"). Handles nested templates via brace-depth counting.
+fn extract_infobox(wikitext: &str) -> Option<String> {
+    let lower = wikitext.to_lowercase();
+    // Match either "musical artist" or "musician" heading — a handful of
+    // pages use the older "Infobox musician" template.
+    let anchor = lower.find("{{infobox musical artist")
+        .or_else(|| lower.find("{{infobox musician"))?;
+    let bytes = wikitext.as_bytes();
+    let mut i = anchor;
+    // Advance past the opening {{
+    i += 2;
+    let mut depth = 1;
+    let start_content = i;
+    while i < bytes.len() && depth > 0 {
+        if bytes[i] == b'{' && i + 1 < bytes.len() && bytes[i + 1] == b'{' {
+            depth += 1;
+            i += 2;
+            continue;
+        }
+        if bytes[i] == b'}' && i + 1 < bytes.len() && bytes[i + 1] == b'}' {
+            depth -= 1;
+            if depth == 0 { break; }
+            i += 2;
+            continue;
+        }
+        i += 1;
+    }
+    if depth != 0 { return None; }
+    let inner = &wikitext[start_content..i];
+    Some(inner.to_string())
+}
+
+// Split "| key = value" pairs. Value may span multiple lines; we treat
+// a new line beginning with `|` (at brace depth 0) as the delimiter.
+// Nested templates and their internal pipes are preserved.
+fn parse_infobox_params(infobox: &str) -> std::collections::HashMap<String, String> {
+    use std::collections::HashMap;
+    let mut params: HashMap<String, String> = HashMap::new();
+    let bytes = infobox.as_bytes();
+    let mut i = 0;
+    let n = bytes.len();
+    // Skip the leading "Infobox musical artist" name (or "Infobox musician")
+    // up to the first newline.
+    while i < n && bytes[i] != b'\n' { i += 1; }
+
+    while i < n {
+        // Find next `|` at brace depth 0, potentially on this line.
+        // We already sit at a newline (i.e. bytes[i] == '\n') or just past.
+        while i < n && (bytes[i] == b'\n' || bytes[i].is_ascii_whitespace()) { i += 1; }
+        if i >= n { break; }
+        if bytes[i] != b'|' { break; }
+        i += 1;
+
+        // Read key until '='
+        let key_start = i;
+        while i < n && bytes[i] != b'=' && bytes[i] != b'\n' { i += 1; }
+        if i >= n || bytes[i] == b'\n' { continue; }
+        let key = infobox[key_start..i].trim().to_lowercase();
+        i += 1;
+
+        // Read value until next line starting with '|' at depth 0, or end.
+        let val_start = i;
+        let mut depth: i32 = 0;
+        while i < n {
+            if bytes[i] == b'{' && i + 1 < n && bytes[i + 1] == b'{' {
+                depth += 1;
+                i += 2;
+                continue;
+            }
+            if bytes[i] == b'}' && i + 1 < n && bytes[i + 1] == b'}' {
+                depth -= 1;
+                if depth < 0 { break; }
+                i += 2;
+                continue;
+            }
+            // Newline followed by pipe (at depth 0) = next param.
+            if depth == 0 && bytes[i] == b'\n' {
+                // Peek past whitespace on the next line.
+                let mut j = i + 1;
+                while j < n && bytes[j] == b' ' { j += 1; }
+                if j < n && (bytes[j] == b'|' || bytes[j] == b'}') { break; }
+            }
+            i += 1;
+        }
+        let val = infobox[val_start..i.min(n)].trim_end().to_string();
+        if !key.is_empty() {
+            params.insert(key, val);
+        }
+    }
+    params
+}
+
+// Strip wikilinks / templates from a value. Aggressive but not
+// destructive: known templates get flattened to their display text, the
+// rest just have their template markers stripped.
+fn clean_wikitext(raw: &str) -> String {
+    let mut s = raw.to_string();
+    // Drop <ref>…</ref>
+    let re_ref = regex::Regex::new(r"<ref[^>]*/>|<ref[^>]*>[\s\S]*?</ref>").unwrap();
+    s = re_ref.replace_all(&s, "").to_string();
+    // Drop <br> and other simple tags (leave a space so words don't run together)
+    let re_br = regex::Regex::new(r"<br\s*/?>|<small>|</small>|<sup[^>]*>|</sup>|<sub[^>]*>|</sub>").unwrap();
+    s = re_br.replace_all(&s, " ").to_string();
+    // Handle {{Nowrap|X}} / {{nowrap|X}}
+    let re_nw = regex::Regex::new(r"\{\{[Nn]owrap\|([^}]*)\}\}").unwrap();
+    s = re_nw.replace_all(&s, "$1").to_string();
+    // {{URL|foo.com}} → foo.com
+    let re_url = regex::Regex::new(r"\{\{URL\|([^}|]*)(?:\|[^}]*)?\}\}").unwrap();
+    s = re_url.replace_all(&s, "$1").to_string();
+    // {{Start date and age|1999}} → 1999 (leave the year)
+    let re_date = regex::Regex::new(r"\{\{[Ss]tart date(?: and age)?\|(\d{4})[^}]*\}\}").unwrap();
+    s = re_date.replace_all(&s, "$1").to_string();
+    let re_end = regex::Regex::new(r"\{\{[Ee]nd date(?: and age)?\|(\d{4})[^}]*\}\}").unwrap();
+    s = re_end.replace_all(&s, "$1").to_string();
+    // {{hlist|A|B|C}} or {{flatlist|...}} → A · B · C. We handle hlist
+    // inline; flatlist wraps a bulleted list which gets handled in
+    // parse_member_list / split_wiki_list further downstream.
+    let re_hlist = regex::Regex::new(r"\{\{[Hh]list\|([^{}]*)\}\}").unwrap();
+    s = re_hlist.replace_all(&s, "$1").to_string();
+    let re_plainlist = regex::Regex::new(r"\{\{[Pp]lainlist\s*\|?").unwrap();
+    s = re_plainlist.replace_all(&s, "").to_string();
+    let re_flatlist = regex::Regex::new(r"\{\{[Ff]latlist\s*\|?").unwrap();
+    s = re_flatlist.replace_all(&s, "").to_string();
+    // Any surviving simple template like {{X|Y}} → Y
+    let re_tmpl = regex::Regex::new(r"\{\{[^{}|]+\|([^{}]*)\}\}").unwrap();
+    s = re_tmpl.replace_all(&s, "$1").to_string();
+    // Bare templates {{X}} → X
+    let re_tmpl2 = regex::Regex::new(r"\{\{([^{}|]+)\}\}").unwrap();
+    s = re_tmpl2.replace_all(&s, "$1").to_string();
+    // [[X|Y]] → Y
+    let re_link_disp = regex::Regex::new(r"\[\[[^\[\]|]+\|([^\[\]]+)\]\]").unwrap();
+    s = re_link_disp.replace_all(&s, "$1").to_string();
+    // [[X]] → X
+    let re_link = regex::Regex::new(r"\[\[([^\[\]|]+)\]\]").unwrap();
+    s = re_link.replace_all(&s, "$1").to_string();
+    // Trim leftover braces/pipes
+    s = s.replace("}}", "").replace("{{", "");
+    // Collapse whitespace runs
+    let re_ws = regex::Regex::new(r"[ \t]+").unwrap();
+    s = re_ws.replace_all(&s, " ").to_string();
+    s.trim().trim_matches(|c: char| c == ',' || c == ';' || c == '|').trim().to_string()
+}
+
+// Split a genres/labels-style value into a Vec<String>. Handles hlist,
+// bullets, commas and pipes as separators.
+fn split_wiki_list(raw: &str) -> Vec<String> {
+    if raw.trim().is_empty() { return Vec::new(); }
+    // Trim leading `* ` / `# ` bullets, and split on newline for
+    // bullet-style lists; then on `|` or `,` inside hlist templates.
+    let cleaned = clean_wikitext(raw);
+    let mut parts: Vec<String> = Vec::new();
+    // Split first on any of the common separators — bullet lists get
+    // replaced by newlines during clean_wikitext (leftover `*`).
+    for chunk in cleaned.split(|c: char| c == '\n' || c == '|' || c == '·' || c == ',') {
+        let s = chunk.trim().trim_start_matches('*').trim_start_matches('#').trim();
+        if s.is_empty() { continue; }
+        // Skip artefacts from bullet lists like "See below".
+        if s.len() > 60 { continue; }
+        parts.push(s.to_string());
+    }
+    // Dedup preserving order.
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    parts.into_iter().filter(|p| seen.insert(p.to_lowercase())).collect()
+}
+
+// A member list uses one bullet per person. We parse each into a bare
+// name — the infobox rarely lists instruments alongside, and if it does
+// they're free text ("(vocals)") that the user can refine in the band
+// editor. Return array of name strings.
+fn parse_member_list(raw: &str) -> Vec<Value> {
+    if raw.trim().is_empty() { return Vec::new(); }
+    let mut out: Vec<Value> = Vec::new();
+    for line in raw.lines() {
+        let line = line.trim();
+        if !line.starts_with('*') && !line.starts_with("#") { continue; }
+        let stripped = line.trim_start_matches(|c: char| c == '*' || c == '#' || c == ' ');
+        let name = clean_wikitext(stripped);
+        if name.is_empty() || name.len() > 80 { continue; }
+        out.push(json!({ "name": name }));
+    }
+    out
+}
+
+// Wikipedia infoboxes state years_active as "1999–present" or
+// "1999–2005, 2012–present" etc. Extract the first year as activeFrom
+// and the last date piece as activeTo (or "present" → empty string).
+fn parse_years_active(raw: &str) -> (Option<String>, Option<String>) {
+    let cleaned = clean_wikitext(raw);
+    if cleaned.is_empty() { return (None, None); }
+    let re_year = regex::Regex::new(r"\d{4}").unwrap();
+    let years: Vec<&str> = re_year.find_iter(&cleaned).map(|m| m.as_str()).collect();
+    let first = years.first().map(|s| s.to_string());
+    // If the string ends with "present" (case-insensitive), leave `to`
+    // empty so the artist appears as still active.
+    let low = cleaned.to_lowercase();
+    if low.contains("present") {
+        return (first, Some(String::new()));
+    }
+    let last = years.last().map(|s| s.to_string());
+    // Only surface `to` when it's actually a different year from `from`
+    // — avoids "activeFrom=1999, activeTo=1999" spam for artists with a
+    // single year in the field.
+    let to = match (first.clone(), last.clone()) {
+        (Some(a), Some(b)) if a != b => Some(b),
+        _ => None,
+    };
+    (first, to)
+}
+
+// Convert a wiki image filename ("Foo.jpg") into the direct URL by
+// asking MediaWiki's imageinfo endpoint. Returns None if the file
+// doesn't exist or the API errors.
+async fn resolve_wiki_image_url(client: &reqwest::Client, filename: &str) -> Option<String> {
+    let url = format!(
+        "{WIKI_API}?action=query&titles=File:{}&prop=imageinfo&iiprop=url&format=json&formatversion=2",
+        url_encode(filename),
+    );
+    let opts = ProxyJsonOptions {
+        method: Method::GET, headers: wiki_headers(), body: None, http_error_prefix: "Wiki",
+    };
+    let v = proxy_json(client, &url, opts).await.ok()?;
+    v.get("query")?
+        .get("pages")?
+        .as_array()?
+        .first()?
+        .get("imageinfo")?
+        .as_array()?
+        .first()?
+        .get("url")?
+        .as_str()
+        .map(String::from)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
