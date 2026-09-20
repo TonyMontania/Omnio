@@ -165,6 +165,16 @@ select:-webkit-autofill {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
+/* Books/VN Progress-style side-by-side fields. Force onto its own row
+   in the .form flex-wrap so it doesn't sit next to a section header
+   and crash into the tab bar above it. */
+.field-grid {
+  flex: 1 1 100%;
+  display: grid;
+  gap: 12px 16px;
+}
+.field-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
 /* Tabbed editor prototype — bar sits above the form column. */
 .editor-tabs-bar {
   display: flex;
