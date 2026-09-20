@@ -455,13 +455,16 @@ select:-webkit-autofill {
   border-radius: var(--radius-sm);
 }
 .band-member-top { display: flex; gap: 8px; align-items: center; }
-.band-member-status {
+/* Selector chained through .band-member-top to beat the (0,1,1)
+   .form input/select/textarea{width:100%} baseline that would
+   otherwise flatten these into full-width flex items. */
+.band-member-top .band-member-status {
   flex: 0 0 auto;
   width: 150px;
   font-size: 12px;
   padding: 5px 8px;
 }
-.band-member-name {
+.band-member-top .band-member-name {
   flex: 1 1 auto;
   min-width: 0;
   width: auto;
