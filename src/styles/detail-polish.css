@@ -247,12 +247,11 @@
   background: color-mix(in srgb, var(--accent) 6%, var(--surface));
 }
 .track-table tbody tr.ep-watched td {
-  color: var(--text-faint);
+  color: var(--text-dim);
 }
 .track-table tbody tr.ep-watched .col-title {
-  text-decoration: line-through;
-  text-decoration-color: var(--text-faint);
-  text-decoration-thickness: 1px;
+  color: var(--text);
+  opacity: 0.72;
 }
 .track-table .col-listened {
   color: var(--accent);
