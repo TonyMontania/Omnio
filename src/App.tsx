@@ -1287,6 +1287,14 @@ function App() {
       }
       if (merged.startupCategory === 'last' && merged.lastCategory && isCategoryId(merged.lastCategory)) {
         setActiveCategory(merged.lastCategory)
+        // switchCategory is what normally restores the per-library sort, but
+        // that only runs on user-driven category changes — not on the initial
+        // mount. Without this the "Remember sort per library" setting looks
+        // broken because sortBy is stuck at its default 'recent'.
+        if (merged.rememberCategorySort) {
+          const saved = merged.categorySortModes?.[merged.lastCategory] as SortBy | undefined
+          if (saved) setSortBy(saved)
+        }
       }
       // Home dashboard takes precedence when the setting is on — sets a
       // specialView instead of choosing a category. First-run only; F5
