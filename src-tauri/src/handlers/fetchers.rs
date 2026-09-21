@@ -2229,60 +2229,109 @@ async fn fetch_wiki_summary(client: &reqwest::Client, page_title: &str) -> (Opti
     (image, extract)
 }
 
-// Parse the article's "Band members" (or "Members" / "Personnel")
-// section. Wikipedia's house style groups the roster under bolded
-// subheadings — `'''Current members'''` and `'''Former members'''` —
-// with bullets shaped as:
+// Parse the article's "Band members" (or "Members" / "Personnel" /
+// "Line-up" / "Musicians") section. Wikipedia's house style groups the
+// roster under either bold-quoted labels ('''Current members''') or
+// wiki subheadings (=== Current ===) — both are handled here, plus a
+// handful of common variants ('Current lineup', 'Former', 'Past').
 //
+// Each bullet arrives as one of:
 //   * [[Name]] (Real name) – lead vocals, keyboards <small>(1999–present)</small>
+//   * Name – guitar (2015–present)                              # 156/Silence
+//   * (#6) [[Name|Alias]] – percussion (1995–present)           # Slipknot
 //
 // Return (current, past) as JSON member objects with `name`, `roles`,
 // `joinedIn`, `leftIn`. Empty tuples when the section isn't present.
+// The `bucket_kind` label carried alongside each bullet is used later
+// to route touring musicians into the touring MemberStatus buckets.
 fn parse_band_members_section(wikitext: &str) -> (Vec<Value>, Vec<Value>) {
+    // Section heading tolerates trailing templates like {{anchor|X}} —
+    // Slipknot literally uses "== Band members{{anchor|Band_members}} ==".
     let re_section = regex::Regex::new(
-        r"(?m)^={2,3}\s*(Band members|Members|Personnel)\s*={2,3}\s*$",
+        r"(?im)^(={2,4})\s*(Band members|Band personnel|Members|Personnel|Line[- ]?up|Lineup|Musicians)\b[^=]*\1\s*$",
     ).unwrap();
     let Some(head) = re_section.find(wikitext) else { return (Vec::new(), Vec::new()); };
-    // Slice from after the heading to the next heading of the same-or-
-    // higher level (== title == / == title2 ==) or EOF.
+    // Determine the heading level so we can stop at the next heading of
+    // the same or higher level — subheadings (===) belong to us.
+    let matched = &wikitext[head.start()..head.end()];
+    let level = matched.chars().take_while(|&c| c == '=').count().max(2);
     let tail = &wikitext[head.end()..];
-    let re_next = regex::Regex::new(r"(?m)^={2,3}[^=]").unwrap();
+    // Build a regex that matches EXACTLY `level` `=` at line start,
+    // followed by non-`=` (so a deeper subheading doesn't count).
+    let same_or_higher = format!(r"(?m)^={{2,{level}}}[^=]");
+    let re_next = regex::Regex::new(&same_or_higher).unwrap();
     let end = re_next.find(tail).map(|m| m.start()).unwrap_or(tail.len());
     let body = &tail[..end];
 
-    let mut current = Vec::new();
-    let mut past = Vec::new();
-    let mut bucket: Option<&mut Vec<Value>> = None;
+    let mut current: Vec<Value> = Vec::new();
+    let mut past: Vec<Value> = Vec::new();
+    // Bucket kind: 0 = none, 1 = current, 2 = former,
+    // 3 = current touring, 4 = former touring.
+    let mut bucket_kind: u8 = 0;
 
     for raw_line in body.lines() {
         let line = raw_line.trim();
-        // Detect the "Current members" / "Former members" subheadings —
-        // they can be bold-quoted, or plain wiki subheadings, or plain
-        // capitalised words. Case-insensitive.
-        let lower = line.to_lowercase();
-        if lower.contains("current members") || lower.contains("current lineup")
-            || lower.contains("current line-up") || lower.contains("current line up")
-        {
-            bucket = Some(&mut current);
-            continue;
-        }
-        if lower.contains("former members") || lower.contains("past members")
-            || lower.contains("previous members") || lower.contains("touring members")
-            || lower.contains("former touring") || lower.contains("session")
-        {
-            bucket = Some(&mut past);
+        // Detect subheading (`=== Current ===`) or bold label
+        // (`'''Current members'''`).
+        if let Some(kind) = classify_member_subheading(line) {
+            bucket_kind = kind;
             continue;
         }
         if !line.starts_with('*') && !line.starts_with('#') { continue; }
-        let Some(target) = bucket.as_deref_mut() else { continue };
-
+        if bucket_kind == 0 { continue; }
         let stripped = line.trim_start_matches(|c: char| c == '*' || c == '#' || c == ' ');
-        if let Some(member) = parse_member_bullet(stripped) {
-            target.push(member);
+        if let Some(member_obj) = parse_member_bullet(stripped) {
+            // Route by bucket. Attach the intended membership so the
+            // renderer can pick up touring musicians correctly.
+            let mut with_meta = member_obj;
+            if let Value::Object(ref mut m) = with_meta {
+                let membership = match bucket_kind {
+                    1 => "current",
+                    2 => "former",
+                    3 => "current-touring",
+                    4 => "former-touring",
+                    _ => "current",
+                };
+                m.insert("membership".to_string(), json!(membership));
+            }
+            if bucket_kind == 1 || bucket_kind == 3 {
+                current.push(with_meta);
+            } else {
+                past.push(with_meta);
+            }
         }
     }
 
     (current, past)
+}
+
+// Match a member-list subheading line and return the bucket kind:
+//   1 current, 2 former, 3 current touring, 4 former touring.
+// Returns None when the line doesn't look like a subheading at all.
+fn classify_member_subheading(line: &str) -> Option<u8> {
+    // Strip both wiki subheading markers `===` and bold quotes `'''`
+    // before matching so `'''Current members'''` and `=== Current ===`
+    // both reach the classifier with a bare "current members" string.
+    let bare = line
+        .trim_matches(|c: char| c == '=' || c == '\'' || c.is_whitespace())
+        .to_lowercase();
+    if bare.is_empty() { return None; }
+    let is_touring = bare.contains("touring") || bare.contains("session");
+    let is_former = bare.contains("former") || bare.contains("past") || bare.contains("previous")
+        || bare.contains("ex-") || bare.contains("original");
+    let is_current = bare.contains("current") || bare.contains("present") || bare.contains("active");
+    // "Members" / "Lineup" on their own default to current.
+    let is_bare_members = matches!(bare.as_str(),
+        "current" | "current members" | "current lineup" | "current line-up" | "current line up"
+        | "members" | "lineup" | "line-up" | "line up"
+    );
+    if is_touring {
+        if is_former { return Some(4); }
+        return Some(3);
+    }
+    if is_former { return Some(2); }
+    if is_current || is_bare_members { return Some(1); }
+    None
 }
 
 // Turn one bullet — everything after "* " — into a member JSON object.
@@ -2291,14 +2340,26 @@ fn parse_band_members_section(wikitext: &str) -> (Vec<Value>, Vec<Value>) {
 //   Name – roles
 //   Name (Real name)
 fn parse_member_bullet(raw: &str) -> Option<Value> {
-    // Pull year-range info out of every <small>(...)</small> chunk
-    // before we clean the string, so we can populate joinedIn / leftIn
-    // per the *first* stint mentioned.
+    // Pull year-range info from any <small>(...)</small> chunk first,
+    // falling back to any plain (yyyy–yyyy) or (yyyy–present) that
+    // sits in the tail — 156/Silence writes the range without the
+    // <small> wrapper, so we need both paths.
     let re_small = regex::Regex::new(r"<small>\s*\(([^<)]*)\)\s*</small>").unwrap();
-    let year_hints: Vec<String> = re_small
+    let mut year_hints: Vec<String> = re_small
         .captures_iter(raw)
         .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
         .collect();
+    if year_hints.is_empty() {
+        // Plain "(1999–present)" or "(2015–2017)". Only accept parens
+        // that contain a 4-digit year to avoid slurping real-name
+        // parentheticals ("(Matthew Sanders)").
+        let re_plain = regex::Regex::new(r"\(\s*([^()]*\d{4}[^()]*)\)").unwrap();
+        for c in re_plain.captures_iter(raw) {
+            if let Some(m) = c.get(1) {
+                year_hints.push(m.as_str().to_string());
+            }
+        }
+    }
     let (joined_in, left_in) = year_hints.first()
         .map(|s| parse_years_active(s))
         .unwrap_or((None, None));
@@ -2306,6 +2367,13 @@ fn parse_member_bullet(raw: &str) -> Option<Value> {
     // Now clean the display line: templates, wikilinks, tags — including
     // the <small> spans we just harvested.
     let cleaned = clean_wikitext(raw);
+    if cleaned.is_empty() { return None; }
+
+    // Strip Slipknot-style "(#6) " numbering prefix, if present.
+    let cleaned = {
+        let re_num = regex::Regex::new(r"^\(#?\w{1,4}\)\s*").unwrap();
+        re_num.replace(&cleaned, "").to_string()
+    };
     if cleaned.is_empty() { return None; }
 
     // Strip the "(Real name)" segment right after the display name;

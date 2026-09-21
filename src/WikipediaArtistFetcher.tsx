@@ -9,7 +9,7 @@
 // under the hood. Applying downloads the photo asset and calls a single
 // callback the editor uses to merge the payload into its form buffers.
 
-import type { BandMember, MusicArtist } from './types'
+import type { BandMember, MemberStatus, MusicArtist } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
 
@@ -52,8 +52,8 @@ interface FetchResponse {
   labels: string[]
   activeFrom: string | null
   activeTo: string | null
-  currentMembers: { name: string; roles?: string[]; joinedIn?: string; leftIn?: string }[]
-  pastMembers: { name: string; roles?: string[]; joinedIn?: string; leftIn?: string }[]
+  currentMembers: { name: string; roles?: string[]; joinedIn?: string; leftIn?: string; membership?: MemberStatus }[]
+  pastMembers: { name: string; roles?: string[]; joinedIn?: string; leftIn?: string; membership?: MemberStatus }[]
   imageUrl: string | null
 }
 
@@ -95,7 +95,7 @@ export default function WikipediaArtistFetcher({ initialQuery, onApply, onClose 
         id: crypto.randomUUID(),
         name: m.name,
         roles: m.roles ?? [],
-        membership: 'current' as const,
+        membership: (m.membership ?? 'current') as MemberStatus,
         joinedIn: m.joinedIn,
         leftIn: m.leftIn,
       })),
@@ -103,7 +103,7 @@ export default function WikipediaArtistFetcher({ initialQuery, onApply, onClose 
         id: crypto.randomUUID(),
         name: m.name,
         roles: m.roles ?? [],
-        membership: 'former' as const,
+        membership: (m.membership ?? 'former') as MemberStatus,
         joinedIn: m.joinedIn,
         leftIn: m.leftIn,
       })),
