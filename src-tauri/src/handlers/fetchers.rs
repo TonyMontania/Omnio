@@ -2423,15 +2423,17 @@ fn parse_member_bullet(raw: &str) -> Option<Value> {
     if !roles_part.is_empty() {
         // Strip every '(...)' block from the roles tail BEFORE splitting
         // on commas — otherwise a year range like '(1999–2009, his
-        // death)' or '(2000, 2016)' bleeds into two bogus roles. Do the
-        // same for any leftover ';' sub-clauses that still carry a
-        // paren fragment.
+        // death)' or '(2000, 2016)' bleeds into two bogus roles.
         let no_parens = strip_parens_all(&roles_part);
-        // Split on `,` `;` `and` — same rule as the infobox path.
-        let re_split = regex::Regex::new(r",|;|\band\b").unwrap();
+        // Split on `,` and `;` only. NOT on "and" — Wikipedia writes
+        // combined roles like "backing and occasional lead vocals" as
+        // one phrase; splitting on "and" would drop "vocals" from the
+        // first half and produce noise. Commas already do the real
+        // work in every infobox line we saw.
+        let re_split = regex::Regex::new(r"[,;]").unwrap();
         for r in re_split.split(&no_parens) {
             let r = r.trim().trim_end_matches('.').trim();
-            if r.is_empty() || r.len() > 40 { continue; }
+            if r.is_empty() || r.len() > 60 { continue; }
             let mut chars = r.chars();
             let first = chars.next().map(|c| c.to_uppercase().to_string()).unwrap_or_default();
             let rest: String = chars.collect();

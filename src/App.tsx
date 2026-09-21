@@ -6376,24 +6376,22 @@ function App() {
               if (payload.members && payload.members.length > 0) {
                 // Merge with existing members instead of blowing them
                 // away. Match on lower-cased name. When a match exists:
-                //   - Take Wikipedia's roles when they're richer than
-                //     what the user already had. A previous fetch may
-                //     have left a bare "Guitar" from the prose fallback,
-                //     and the new run with the Band-members-section
-                //     parser now has "Rhythm guitar, Backing, ...".
+                //   - Overwrite roles with whatever Wikipedia has
+                //     (only when it brought at least one). The user
+                //     explicitly clicked Fetch — they want the source's
+                //     roles now, not a stale merge from a previous
+                //     buggy run.
                 //   - Take joinedIn / leftIn only when the local field
-                //     is empty, so we never overwrite a user's typed
-                //     date.
-                // Stints, deceased flag, membership tweaks stay untouched.
+                //     is empty, so a typed date is never overwritten.
+                // Stints, deceased flag and membership stay untouched.
                 setArtistMembers((prev) => {
                   const merged = prev.map((m) => {
                     const hit = payload.members!.find((wm) => wm.name.toLowerCase() === m.name.toLowerCase())
                     if (!hit) return m
                     const newRoles = hit.roles ?? []
-                    const shouldReplaceRoles = newRoles.length > (m.roles?.length ?? 0)
                     return {
                       ...m,
-                      roles: shouldReplaceRoles ? newRoles : m.roles,
+                      roles: newRoles.length > 0 ? newRoles : m.roles,
                       joinedIn: m.joinedIn || hit.joinedIn,
                       leftIn: m.leftIn || hit.leftIn,
                     }
