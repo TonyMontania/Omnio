@@ -6,7 +6,6 @@
 [![Latest release](https://img.shields.io/github/v/release/TonyMontania/Omnio?color=c9a227)](https://github.com/TonyMontania/Omnio/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/TonyMontania/Omnio/total.svg?color=c9a227)](https://github.com/TonyMontania/Omnio/releases)
 [![Tests](https://github.com/TonyMontania/Omnio/actions/workflows/test.yml/badge.svg)](https://github.com/TonyMontania/Omnio/actions/workflows/test.yml)
-[![Lint](https://github.com/TonyMontania/Omnio/actions/workflows/lint.yml/badge.svg)](https://github.com/TonyMontania/Omnio/actions/workflows/lint.yml)
 ![Platform: Windows · macOS · Linux](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-informational.svg)
 ![Local-first](https://img.shields.io/badge/local--first-yes-success.svg)
 
@@ -77,7 +76,7 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 *Library grid — cover-first browsing with filters, tag hierarchy, custom sort, and bulk actions.*
 
 ![Omnio — Tabbed editor with live preview](https://github.com/user-attachments/assets/ffba12f6-f3b2-44b2-a531-91d16c804204)
-*Tabbed editor (Overview / Identity / Progress / Media / History / Related / Notes) with live preview + one-click metadata fetch from 13 sources.*
+*Tabbed editor (Overview / Identity / Progress / Media / History / Related / Notes) with live preview + one-click metadata fetch from 14 sources.*
 
 ## Features
 
@@ -100,10 +99,11 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 
 **Discover**
 
-- **One-click metadata + covers** from 13 sources (see below). Cached locally for 24 h
+- **One-click metadata + covers** from 14 sources (see below). Cached locally for 24 h
 - **Quick-add via URL** — paste an IGDB / TMDb / AniList / VNDB / Steam URL into the title field, the fetcher opens pre-filled
 - **Global search (Ctrl+K)** across every library with operator syntax (`favorite:true`, `year:>2020`, `status:playing`)
-- **Home widget board** — customizable dashboard with "in progress" / "upcoming" / "recently rated" + per-library portals
+- **Home widget board** — customizable dashboard with "in progress" / "upcoming" / "recently rated" / "on this day" + per-library portals. Drag & drop reorder in edit mode.
+- **Statistics view** — per-category distribution + activity heatmap, cross-library genre matrix, monthly added-vs-finished chart, top rated / artists / genres / labels / devs / publishers / platforms
 - **Arcade section** — score / 1cc tracker for shmups and arcade games. Grid mode adapted from [doopu/1ccTracker](https://github.com/doopu/1ccTracker)
 
 </td>
@@ -112,7 +112,7 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 **Own your data**
 
 - **Fully local** — no accounts, no telemetry, no analytics
-- **Import** — MAL / AniList XML, Steam, Letterboxd, IMDb, Backloggd, Serializd, Spotify, RateYourMusic, Kindle highlights, Last.fm, Trakt.tv, Discogs, StoryGraph, HowLongToBeat, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads presets
+- **Import** — MAL / AniList XML, Steam, Letterboxd, IMDb, Backloggd, Serializd, Spotify, RateYourMusic, Kindle highlights, Last.fm (CSV + API sync), local music folder scan, Trakt.tv, Discogs, StoryGraph, HowLongToBeat, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads presets
 - **Export** — static HTML site (searchable, light/dark), MAL XML, iCal for release calendar, per-category CSV, Yearly Wrapped PNG
 - **Rolling backups** — 5 automatic snapshots per save, restore any of them
 - **In-app updater** — checks GitHub Releases, downloads the matching build
@@ -136,6 +136,7 @@ Sources are grouped by the library they feed. Anything marked *No key* works out
 | [IGDB](https://www.igdb.com/) | Full metadata + source inference (Remake / Remaster / Port…) | Twitch Client ID + Secret (free) |
 | [SteamGridDB](https://www.steamgriddb.com/) | Covers, banners, logos, heroes | Free API key |
 | [PCGamingWiki](https://www.pcgamingwiki.com/) | Save + config paths per OS | No key |
+| [HowLongToBeat](https://howlongtobeat.com/) | Main story / +extras / completionist hours (fills `hltbHours`) | No key |
 
 **Movies & Series**
 
@@ -166,6 +167,7 @@ Sources are grouped by the library they feed. Anything marked *No key* works out
 | --- | --- | --- |
 | [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Title, artist, tracklist, producers, cover art | No key |
 | [lrclib](https://lrclib.net/) | Per-track lyrics (synced when available) | No key |
+| [Last.fm](https://www.last.fm/) | Sync your top-scrobbled albums (marks matches as listened) | Free API key + username |
 
 **Books**
 
