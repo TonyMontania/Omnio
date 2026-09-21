@@ -650,8 +650,35 @@ fn parse_flat_folder(name: &str) -> Option<(String, String, Option<String>)> {
     let artist = name[..sep].trim().to_string();
     let rest = name[sep + 3..].trim().to_string();
     if artist.is_empty() || rest.is_empty() { return None; }
+    // "1999 - Album" (year prefix) is the "Year - Album" convention,
+    // not "Artist - Album". Reject the flat parse and let the caller
+    // fall through to the nested-layout branch which will pick up the
+    // real artist from the parent folder.
+    if artist.len() == 4 && artist.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
     let (album, year) = split_year_suffix(&rest);
     Some((artist, album, year))
+}
+
+// Detect "YYYY - Album" or "YYYY. Album" folder shapes and pull out
+// both parts. Used when parse_flat_folder rejected the name because
+// the first segment was a year.
+fn split_year_prefix(name: &str) -> Option<(String, String)> {
+    let bytes = name.as_bytes();
+    if bytes.len() < 5 { return None; }
+    if !bytes[..4].iter().all(|b| b.is_ascii_digit()) { return None; }
+    // Accept " - ", " – ", " — ", ". " or " " as the year/album separator.
+    let tail = &name[4..];
+    for sep in &[" - ", " – ", " — ", ". ", " "] {
+        if let Some(stripped) = tail.strip_prefix(*sep) {
+            let album = stripped.trim().to_string();
+            if !album.is_empty() {
+                return Some((name[..4].to_string(), album));
+            }
+        }
+    }
+    None
 }
 
 fn split_year_suffix(s: &str) -> (String, Option<String>) {
@@ -704,8 +731,17 @@ async fn scan_directory(
 
     if track_count > 0 {
         // This folder is an album. Determine artist + album.
+        //
+        // Priority order:
+        //   1. YYYY - Album prefix, when we know the artist from the parent
+        //      folder (nested layout with year-prefixed album names).
+        //   2. Artist - Album (flat layout).
+        //   3. Just Album (with optional trailing "(Year)"), artist taken
+        //      from the parent folder when we have one.
         let folder_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-        let (artist, album, year) = if let Some((a, b, y)) = parse_flat_folder(&folder_name) {
+        let (artist, album, year) = if let (Some((y, a)), Some(hint)) = (split_year_prefix(&folder_name), artist_hint) {
+            (hint.to_string(), a, Some(y))
+        } else if let Some((a, b, y)) = parse_flat_folder(&folder_name) {
             (a, b, y)
         } else if let Some(a) = artist_hint {
             let (album, year) = split_year_suffix(&folder_name);
