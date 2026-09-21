@@ -572,6 +572,201 @@ pub async fn export_csv(
     CsvResult::Ok { ok: true, path: target.display().to_string(), count: written }
 }
 
+// -- music:scan_folder ------------------------------------------------
+//
+// Walks a local music root and returns one entry per album folder it
+// finds. Two layouts are supported side-by-side — plenty of libraries
+// mix them:
+//
+//   Root/Artist Name/Album Name/track.mp3     (nested)
+//   Root/Artist - Album Name/track.mp3        (flat)
+//
+// Recognized audio extensions: mp3, flac, m4a, mp4, aac, ogg, opus,
+// wav, wma. Cover art detection is a name check for
+// cover|folder|front|album|artwork in jpg/png/webp.
+//
+// Depth is capped so a very deep tree (someone pointing at a whole
+// disk) doesn't spin. Directories that look like non-music junk
+// (`.git`, `Recycle Bin`, `System Volume Information`) are skipped.
+
+const MAX_SCAN_DEPTH: usize = 4;
+const AUDIO_EXTS: &[&str] = &["mp3", "flac", "m4a", "mp4", "aac", "ogg", "opus", "wav", "wma"];
+const COVER_STEMS: &[&str] = &["cover", "folder", "front", "album", "artwork"];
+const COVER_EXTS: &[&str] = &["jpg", "jpeg", "png", "webp"];
+
+#[derive(serde::Serialize)]
+pub struct MusicAlbumOut {
+    pub artist: String,
+    pub album: String,
+    pub year: Option<String>,
+    pub track_count: usize,
+    pub folder_path: String,
+    pub cover_path: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(untagged)]
+pub enum MusicScanResult {
+    Ok { ok: bool, albums: Vec<MusicAlbumOut> },
+    Err { ok: bool, error: String },
+}
+
+fn is_audio_file(name: &str) -> bool {
+    if let Some(dot) = name.rfind('.') {
+        let ext = name[dot + 1..].to_ascii_lowercase();
+        return AUDIO_EXTS.iter().any(|e| *e == ext);
+    }
+    false
+}
+
+fn detect_cover(entries: &[(String, bool)]) -> Option<String> {
+    // Prefer files whose stem matches one of our cover-name hints.
+    for (name, is_dir) in entries {
+        if *is_dir { continue; }
+        let lower = name.to_ascii_lowercase();
+        let dot = match lower.rfind('.') { Some(i) => i, None => continue };
+        let stem = &lower[..dot];
+        let ext = &lower[dot + 1..];
+        if !COVER_EXTS.iter().any(|e| *e == ext) { continue; }
+        if COVER_STEMS.iter().any(|s| stem == *s || stem.starts_with(*s)) {
+            return Some(name.clone());
+        }
+    }
+    // Fall back to any image in the folder.
+    for (name, is_dir) in entries {
+        if *is_dir { continue; }
+        let lower = name.to_ascii_lowercase();
+        let dot = match lower.rfind('.') { Some(i) => i, None => continue };
+        let ext = &lower[dot + 1..];
+        if COVER_EXTS.iter().any(|e| *e == ext) { return Some(name.clone()); }
+    }
+    None
+}
+
+fn parse_flat_folder(name: &str) -> Option<(String, String, Option<String>)> {
+    // "Artist - Album" or "Artist - Album (Year)". Split on the FIRST
+    // " - " so an album with a hyphen in the name doesn't get chopped.
+    let sep = name.find(" - ")?;
+    let artist = name[..sep].trim().to_string();
+    let rest = name[sep + 3..].trim().to_string();
+    if artist.is_empty() || rest.is_empty() { return None; }
+    let (album, year) = split_year_suffix(&rest);
+    Some((artist, album, year))
+}
+
+fn split_year_suffix(s: &str) -> (String, Option<String>) {
+    // "Album Name (2015)" → ("Album Name", Some("2015")). Only matches
+    // a 4-digit year in parens at the tail.
+    if let Some(open) = s.rfind('(') {
+        if s.ends_with(')') {
+            let inner = &s[open + 1..s.len() - 1];
+            if inner.len() == 4 && inner.chars().all(|c| c.is_ascii_digit()) {
+                return (s[..open].trim().to_string(), Some(inner.to_string()));
+            }
+        }
+    }
+    (s.to_string(), None)
+}
+
+fn should_skip(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    matches!(lower.as_str(),
+        ".git" | "$recycle.bin" | "system volume information"
+        | "node_modules" | ".ds_store" | "thumbs.db"
+    )
+}
+
+async fn read_dir_entries(path: &std::path::Path) -> Option<Vec<(String, bool)>> {
+    let mut rd = tokio::fs::read_dir(path).await.ok()?;
+    let mut out: Vec<(String, bool)> = Vec::new();
+    while let Ok(Some(entry)) = rd.next_entry().await {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if should_skip(&name) { continue; }
+        let meta = match entry.metadata().await { Ok(m) => m, Err(_) => continue };
+        out.push((name, meta.is_dir()));
+    }
+    Some(out)
+}
+
+// Recursive walk. `depth` tracks how far we've descended; `artist_hint`
+// is the parent folder name when the caller thinks it might be an
+// artist (for the nested layout).
+async fn scan_directory(
+    path: &std::path::Path,
+    depth: usize,
+    artist_hint: Option<&str>,
+    albums: &mut Vec<MusicAlbumOut>,
+) {
+    if depth > MAX_SCAN_DEPTH { return; }
+    let entries = match read_dir_entries(path).await { Some(v) => v, None => return };
+
+    let track_count = entries.iter().filter(|(n, is_dir)| !is_dir && is_audio_file(n)).count();
+
+    if track_count > 0 {
+        // This folder is an album. Determine artist + album.
+        let folder_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        let (artist, album, year) = if let Some((a, b, y)) = parse_flat_folder(&folder_name) {
+            (a, b, y)
+        } else if let Some(a) = artist_hint {
+            let (album, year) = split_year_suffix(&folder_name);
+            (a.to_string(), album, year)
+        } else {
+            let (album, year) = split_year_suffix(&folder_name);
+            (String::new(), album, year)
+        };
+        let cover_name = detect_cover(&entries);
+        let cover_path = cover_name.map(|n| path.join(&n).to_string_lossy().to_string());
+        albums.push(MusicAlbumOut {
+            artist,
+            album,
+            year,
+            track_count,
+            folder_path: path.to_string_lossy().to_string(),
+            cover_path,
+        });
+        return; // don't descend below an album folder
+    }
+
+    // No audio yet — descend. Current folder becomes the artist_hint
+    // for its children (nested layout).
+    let self_name = path.file_name().map(|n| n.to_string_lossy().to_string());
+    for (name, is_dir) in entries {
+        if !is_dir { continue; }
+        let child = path.join(&name);
+        scan_directory_boxed(
+            &child,
+            depth + 1,
+            self_name.as_deref(),
+            albums,
+        ).await;
+    }
+}
+
+// Recursion in async fns needs boxing — provide a thin wrapper that
+// tokio::spawn's the initial walk so we return through the IPC boundary
+// cleanly.
+#[tauri::command]
+pub async fn music_scan_folder(rootPath: String) -> MusicScanResult {
+    let root = std::path::PathBuf::from(&rootPath);
+    if !root.exists() {
+        return MusicScanResult::Err { ok: false, error: format!("Folder not found: {rootPath}") };
+    }
+    let mut albums: Vec<MusicAlbumOut> = Vec::new();
+    scan_directory_boxed(&root, 0, None, &mut albums).await;
+    albums.sort_by(|a, b| a.artist.to_lowercase().cmp(&b.artist.to_lowercase())
+        .then(a.album.to_lowercase().cmp(&b.album.to_lowercase())));
+    MusicScanResult::Ok { ok: true, albums }
+}
+
+fn scan_directory_boxed<'a>(
+    path: &'a std::path::Path,
+    depth: usize,
+    artist_hint: Option<&'a str>,
+    albums: &'a mut Vec<MusicAlbumOut>,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send + 'a>> {
+    Box::pin(scan_directory(path, depth, artist_hint, albums))
+}
+
 // -- helpers ---------------------------------------------------------
 
 // Tauri's `FilePath` can be either an OS path or an Android/iOS

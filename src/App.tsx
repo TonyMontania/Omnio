@@ -129,6 +129,7 @@ const ImdbImporter       = lazy(() => import('./ImdbImporter'))
 const RymImporter        = lazy(() => import('./RymImporter'))
 const HltbImporter       = lazy(() => import('./HltbImporter'))
 const LastfmApiSync      = lazy(() => import('./LastfmApiSync'))
+const MusicFolderScanner = lazy(() => import('./MusicFolderScanner'))
 const SerializdImporter  = lazy(() => import('./SerializdImporter'))
 const SpotifyImporter    = lazy(() => import('./SpotifyImporter'))
 const HighlightsImporter = lazy(() => import('./HighlightsImporter'))
@@ -967,6 +968,7 @@ function App() {
   const [rymOpen, setRymOpen] = useState(false)
   const [hltbOpen, setHltbOpen] = useState(false)
   const [lastFmOpen, setLastFmOpen] = useState(false)
+  const [musicScanOpen, setMusicScanOpen] = useState(false)
   const [serializdOpen, setSerializdOpen] = useState(false)
   const [spotifyOpen, setSpotifyOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
@@ -4376,6 +4378,7 @@ function App() {
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setHighlightsImportOpen(true)}><ServiceLogo service="kindle" /><span>Kindle highlights</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setLastfmImportOpen(true)}><ServiceLogo service="lastfm" /><span>Last.fm scrobbles (CSV)</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setLastFmOpen(true)}><ServiceLogo service="lastfm" /><span>Last.fm sync (API)</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setMusicScanOpen(true)}><ServiceLogo service="musicbrainz" /><span>Local music folder</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setTraktImportOpen(true)}><ServiceLogo service="trakt" /><span>Trakt.tv</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setDiscogsImportOpen(true)}><ServiceLogo service="discogs" /><span>Discogs collection</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setStoryGraphOpen(true)}><ServiceLogo service="storygraph" /><span>StoryGraph</span></button>
@@ -6886,6 +6889,19 @@ function App() {
               setToast(`Patched ${patches.length} game${patches.length === 1 ? '' : 's'} with HLTB times`)
             }}
             onClose={() => setHltbOpen(false)}
+          />
+        </Suspense>
+      )}
+
+      {musicScanOpen && (
+        <Suspense fallback={null}>
+          <MusicFolderScanner
+            existingItems={items}
+            onImport={(newItems) => {
+              setItems((all) => [...all, ...newItems])
+              setToast(`Imported ${newItems.length} album${newItems.length === 1 ? '' : 's'} from folder`)
+            }}
+            onClose={() => setMusicScanOpen(false)}
           />
         </Suspense>
       )}

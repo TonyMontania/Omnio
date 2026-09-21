@@ -72,6 +72,7 @@ fn main() {
             handlers::system::fs_path_info,
             handlers::system::fs_mkdir,
             handlers::system::fs_read_text_file,
+            handlers::system::music_scan_folder,
             handlers::system::dialog_pick_directory,
             handlers::system::export_site,
             handlers::system::export_csv,
