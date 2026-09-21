@@ -131,10 +131,15 @@ export default function MusicFolderScanner({ existingItems, onImport, onClose }:
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Point at a folder that holds your ripped / downloaded music. Recognized layouts:
-            <br /><code>Root/Artist/Album/track.mp3</code> or <code>Root/Artist - Album (Year)/track.mp3</code>.
-            Scans read filenames and folder structure — no ID3 tag parsing yet. Each detected album shows track count
-            and an optional cover file (any <code>cover.jpg</code> / <code>folder.png</code> / etc. sitting next to the tracks).
+            Point at a folder that holds your music. Supported layouts (mix inside a root is fine):
+            <br />
+            <code>Artist/Album/track.mp3</code> · <code>Artist/YYYY - Album/track.mp3</code> · <code>Artist/Album (YYYY)/track.mp3</code> · <code>Artist/[YYYY] Album/track.mp3</code>
+            <br />
+            <code>Artist - Album/track.mp3</code> · <code>Artist - Album [YYYY]/track.mp3</code> · <code>Artist_-_Album/track.mp3</code>
+            <br />
+            <code>Genre/Artist/…</code> and <code>Artist/Discography/YYYY - Album/</code> grouping folders are followed through.
+            Multi-disc albums (<code>CD1</code> / <code>Disc 2</code> / <code>Vol. 3</code> subfolders) are rolled up into one entry.
+            Cover art picks any <code>cover</code>/<code>folder</code>/<code>front</code>/<code>artwork</code> in jpg/png/webp — or the first image in the folder.
           </p>
 
           <div className="importer-summary" style={{ marginTop: 4 }}>

@@ -589,10 +589,31 @@ pub async fn export_csv(
 // disk) doesn't spin. Directories that look like non-music junk
 // (`.git`, `Recycle Bin`, `System Volume Information`) are skipped.
 
-const MAX_SCAN_DEPTH: usize = 4;
-const AUDIO_EXTS: &[&str] = &["mp3", "flac", "m4a", "mp4", "aac", "ogg", "opus", "wav", "wma"];
-const COVER_STEMS: &[&str] = &["cover", "folder", "front", "album", "artwork"];
-const COVER_EXTS: &[&str] = &["jpg", "jpeg", "png", "webp"];
+const MAX_SCAN_DEPTH: usize = 5;
+const AUDIO_EXTS: &[&str] = &[
+    "mp3", "flac", "m4a", "m4b", "mp4", "aac", "alac",
+    "ogg", "oga", "opus", "wav", "wma", "aiff", "aif",
+    "ape", "wv", "dsf", "dff",
+];
+const COVER_STEMS: &[&str] = &[
+    "cover", "folder", "front", "album", "artwork", "art",
+    "cd", "case", "insert", "booklet",
+];
+const COVER_EXTS: &[&str] = &["jpg", "jpeg", "png", "webp", "gif", "bmp"];
+// Non-music side folders inside an album directory. When only
+// these + audio files are present, treat the whole thing as one album
+// instead of descending into `Artwork` etc. as if they were sub-albums.
+const NON_AUDIO_SIDE_FOLDERS: &[&str] = &[
+    "artwork", "scans", "covers", "art", "booklet", "log", "logs",
+    "cue", "cuesheets", "info", "images", "extras", "bonus",
+    ".unwanted",
+];
+// Every "disc-2" / "cd2" / "vol.3" pattern I've seen across real
+// libraries. `is_disc_folder` matches these case-insensitively so a
+// CD1 / CD2 layout gets rolled up into one album.
+const DISC_PREFIXES: &[&str] = &[
+    "cd", "disc", "disk", "disco", "volume", "vol", "vol.", "part",
+];
 
 #[derive(serde::Serialize)]
 pub struct MusicAlbumOut {
@@ -643,56 +664,176 @@ fn detect_cover(entries: &[(String, bool)]) -> Option<String> {
     None
 }
 
-fn parse_flat_folder(name: &str) -> Option<(String, String, Option<String>)> {
-    // "Artist - Album" or "Artist - Album (Year)". Split on the FIRST
-    // " - " so an album with a hyphen in the name doesn't get chopped.
-    let sep = name.find(" - ")?;
-    let artist = name[..sep].trim().to_string();
-    let rest = name[sep + 3..].trim().to_string();
-    if artist.is_empty() || rest.is_empty() { return None; }
-    // "1999 - Album" (year prefix) is the "Year - Album" convention,
-    // not "Artist - Album". Reject the flat parse and let the caller
-    // fall through to the nested-layout branch which will pick up the
-    // real artist from the parent folder.
-    if artist.len() == 4 && artist.chars().all(|c| c.is_ascii_digit()) {
-        return None;
+// Normalize a folder-name segment before parsing: turn underscores
+// into spaces (common in ripped libraries), collapse repeated
+// whitespace, trim, and lowercase separators. Non-destructive to the
+// artist/album text itself — a title with an underscore in the tag
+// would already have been kept as-is on disk usually.
+fn normalize_folder_name(name: &str) -> String {
+    let s = name.replace('_', " ");
+    let mut out = String::with_capacity(s.len());
+    let mut prev_space = false;
+    for c in s.chars() {
+        if c.is_whitespace() {
+            if !prev_space { out.push(' '); prev_space = true; }
+        } else {
+            out.push(c);
+            prev_space = false;
+        }
     }
-    let (album, year) = split_year_suffix(&rest);
-    Some((artist, album, year))
+    out.trim().to_string()
 }
 
-// Detect "YYYY - Album" or "YYYY. Album" folder shapes and pull out
-// both parts. Used when parse_flat_folder rejected the name because
-// the first segment was a year.
-fn split_year_prefix(name: &str) -> Option<(String, String)> {
-    let bytes = name.as_bytes();
-    if bytes.len() < 5 { return None; }
-    if !bytes[..4].iter().all(|b| b.is_ascii_digit()) { return None; }
-    // Accept " - ", " – ", " — ", ". " or " " as the year/album separator.
-    let tail = &name[4..];
-    for sep in &[" - ", " – ", " — ", ". ", " "] {
-        if let Some(stripped) = tail.strip_prefix(*sep) {
-            let album = stripped.trim().to_string();
-            if !album.is_empty() {
-                return Some((name[..4].to_string(), album));
+// Look for a 4-digit year in a plausible range (1900–2099) anywhere
+// inside the string. Returns the year and the (start, end) byte range
+// inside the ORIGINAL string so the caller can excise it. Accepts:
+//   "Album (2015)"      "Album [2015]"    "Album {2015}"
+//   "Album - 2015"      "2015 - Album"    "Album 2015"
+//   "[2015] Album"      "(2015) Album"    "1999. Album"
+fn find_year_range(s: &str) -> Option<(String, usize, usize)> {
+    let bytes = s.as_bytes();
+    let n = bytes.len();
+    let mut i = 0;
+    while i + 4 <= n {
+        // Fast scan: require 4 consecutive ASCII digits.
+        if bytes[i..i + 4].iter().all(|b| b.is_ascii_digit()) {
+            let year: u32 = std::str::from_utf8(&bytes[i..i + 4]).ok()?.parse().ok()?;
+            // Not part of a longer digit run (would be a track number
+            // or serial), and not preceded/followed by more digits.
+            let prev_ok = i == 0 || !bytes[i - 1].is_ascii_digit();
+            let next_ok = i + 4 == n || !bytes[i + 4].is_ascii_digit();
+            if prev_ok && next_ok && (1900..=2099).contains(&year) {
+                let start = i;
+                let mut end = i + 4;
+                // Extend the excision range to include surrounding
+                // brackets / parens / spaces / separators so the album
+                // name reads cleanly after removal.
+                let mut s2 = start;
+                while s2 > 0 && matches!(bytes[s2 - 1], b'(' | b'[' | b'{' | b' ') { s2 -= 1; }
+                while end < n && matches!(bytes[end], b')' | b']' | b'}' | b' ' | b'-' | b'.' | b',') { end += 1; }
+                if s2 > 0 && bytes[s2 - 1] == b' ' { /* already covered */ }
+                // Extend one more space when both sides are spaces so
+                // "Album 2015 Extra" collapses to "Album Extra".
+                return Some((year.to_string(), s2, end));
+            }
+            i += 4;
+        } else {
+            i += 1;
+        }
+    }
+    None
+}
+
+// Excise the year range and clean up leftover whitespace / punctuation.
+fn strip_year(s: &str, start: usize, end: usize) -> String {
+    let mut left = s[..start].trim_end().to_string();
+    let right = s[end..].trim_start().to_string();
+    // Drop lingering separators between the two halves.
+    while left.ends_with(|c: char| c == '-' || c == '.' || c == ',' || c == '·') {
+        left.pop();
+        left = left.trim_end().to_string();
+    }
+    let combined = if left.is_empty() {
+        right
+    } else if right.is_empty() {
+        left
+    } else {
+        format!("{left} {right}")
+    };
+    combined.trim().to_string()
+}
+
+// Split "Artist - Album", "Artist – Album", "Artist — Album" or the
+// occasional "Artist -- Album" / "Artist :: Album". Returns the FIRST
+// hit so an album title with a hyphen doesn't get chopped.
+fn split_artist_album(name: &str) -> Option<(String, String)> {
+    for sep in &[" - ", " – ", " — ", " -- ", " · ", " :: ", " | "] {
+        if let Some(idx) = name.find(*sep) {
+            let a = name[..idx].trim().to_string();
+            let b = name[idx + sep.len()..].trim().to_string();
+            if !a.is_empty() && !b.is_empty() {
+                return Some((a, b));
             }
         }
     }
     None
 }
 
-fn split_year_suffix(s: &str) -> (String, Option<String>) {
-    // "Album Name (2015)" → ("Album Name", Some("2015")). Only matches
-    // a 4-digit year in parens at the tail.
-    if let Some(open) = s.rfind('(') {
-        if s.ends_with(')') {
-            let inner = &s[open + 1..s.len() - 1];
-            if inner.len() == 4 && inner.chars().all(|c| c.is_ascii_digit()) {
-                return (s[..open].trim().to_string(), Some(inner.to_string()));
+// Parse a folder that MIGHT be "Artist - Album (...)". Returns None
+// when the first segment is a year (that's a year-prefix layout, not
+// artist-album). Year detection inside the tail is delegated to
+// `find_year_range` so `Artist - Album [2015]` and every other variant
+// works.
+fn parse_flat_folder(name: &str) -> Option<(String, String, Option<String>)> {
+    let normalized = normalize_folder_name(name);
+    let (artist, rest) = split_artist_album(&normalized)?;
+    // Year-prefix layout ("2015 - Album") — bail out so the caller can
+    // pick up the real artist from the parent folder.
+    if artist.len() == 4 && artist.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let (album, year) = extract_year(&rest);
+    Some((artist, album, year))
+}
+
+// "YYYY - Album" / "YYYY. Album" / "YYYY_Album" style folder shape.
+// Used when we're nested under an artist folder and the child name
+// starts with a year. Also accepts "[YYYY] Album" / "(YYYY) Album".
+fn split_year_prefix(name: &str) -> Option<(String, String)> {
+    let normalized = normalize_folder_name(name);
+    let bytes = normalized.as_bytes();
+    if bytes.len() < 5 { return None; }
+    // Plain "YYYY - Album" / "YYYY. Album" / "YYYY Album".
+    if bytes[..4].iter().all(|b| b.is_ascii_digit()) {
+        let tail = &normalized[4..];
+        for sep in &[" - ", " – ", " — ", " -- ", ". ", " · ", " ", "_", "-"] {
+            if let Some(stripped) = tail.strip_prefix(*sep) {
+                let album = stripped.trim().to_string();
+                if !album.is_empty() {
+                    return Some((normalized[..4].to_string(), album));
+                }
             }
         }
     }
-    (s.to_string(), None)
+    // Bracketed / parenthesized year up front.
+    for (open, close) in &[('[', ']'), ('(', ')'), ('{', '}')] {
+        if bytes[0] as char == *open && bytes.len() >= 6 {
+            let close_idx = normalized.find(*close)?;
+            let inner = &normalized[1..close_idx];
+            if inner.len() == 4 && inner.chars().all(|c| c.is_ascii_digit()) {
+                let tail = normalized[close_idx + 1..].trim_start_matches(|c: char| c == ' ' || c == '-' || c == '.' || c == '_');
+                if !tail.is_empty() {
+                    return Some((inner.to_string(), tail.to_string()));
+                }
+            }
+        }
+    }
+    None
+}
+
+// Extract the year from a folder-name segment (any position, any
+// enclosure). Returns (album_without_year, Option<year>). No-op when
+// no plausible year is present.
+fn extract_year(s: &str) -> (String, Option<String>) {
+    match find_year_range(s) {
+        Some((y, start, end)) => (strip_year(s, start, end), Some(y)),
+        None => (s.trim().to_string(), None),
+    }
+}
+
+// True when a folder name looks like a disc/CD subfolder — `CD1`,
+// `CD 2`, `Disc-3`, `Vol. 4`, etc.
+fn is_disc_folder(name: &str) -> bool {
+    let lower = name.trim().to_ascii_lowercase();
+    for prefix in DISC_PREFIXES {
+        if lower.starts_with(prefix) {
+            let rest = lower[prefix.len()..].trim_start_matches(|c: char| c == ' ' || c == '.' || c == '-' || c == '_');
+            if rest.chars().all(|c| c.is_ascii_digit()) && !rest.is_empty() {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 fn should_skip(name: &str) -> bool {
@@ -727,30 +868,47 @@ async fn scan_directory(
     if depth > MAX_SCAN_DEPTH { return; }
     let entries = match read_dir_entries(path).await { Some(v) => v, None => return };
 
-    let track_count = entries.iter().filter(|(n, is_dir)| !is_dir && is_audio_file(n)).count();
+    // Aggregate audio in this folder + any disc subfolders (CD1/CD2/…).
+    // Also collect entries used for cover detection at the top level.
+    let mut track_count = entries.iter().filter(|(n, is_dir)| !is_dir && is_audio_file(n)).count();
+    let mut cover_entries: Vec<(String, bool)> = entries.iter().cloned().collect();
+
+    // Roll up disc subfolders. Their tracks belong to THIS album and
+    // shouldn't produce a separate row per disc. Also count them so
+    // the summary shows the true track total.
+    let disc_children: Vec<String> = entries.iter()
+        .filter(|(n, is_dir)| *is_dir && is_disc_folder(n))
+        .map(|(n, _)| n.clone())
+        .collect();
+    for disc in &disc_children {
+        let sub = path.join(disc);
+        if let Some(disc_entries) = read_dir_entries(&sub).await {
+            track_count += disc_entries.iter().filter(|(n, is_dir)| !is_dir && is_audio_file(n)).count();
+            // Include disc-folder covers too, so `Album/CD1/cover.jpg`
+            // still lands on the parent album.
+            for e in &disc_entries {
+                cover_entries.push((format!("{}/{}", disc, e.0), e.1));
+            }
+        }
+    }
 
     if track_count > 0 {
-        // This folder is an album. Determine artist + album.
-        //
-        // Priority order:
-        //   1. YYYY - Album prefix, when we know the artist from the parent
-        //      folder (nested layout with year-prefixed album names).
-        //   2. Artist - Album (flat layout).
-        //   3. Just Album (with optional trailing "(Year)"), artist taken
-        //      from the parent folder when we have one.
         let folder_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-        let (artist, album, year) = if let (Some((y, a)), Some(hint)) = (split_year_prefix(&folder_name), artist_hint) {
-            (hint.to_string(), a, Some(y))
-        } else if let Some((a, b, y)) = parse_flat_folder(&folder_name) {
-            (a, b, y)
-        } else if let Some(a) = artist_hint {
-            let (album, year) = split_year_suffix(&folder_name);
-            (a.to_string(), album, year)
-        } else {
-            let (album, year) = split_year_suffix(&folder_name);
-            (String::new(), album, year)
-        };
-        let cover_name = detect_cover(&entries);
+        let (artist, album, year) = derive_artist_album(&folder_name, artist_hint);
+        // Cover detection walks the top-level entries first, then any
+        // disc subfolder image. Prefer the parent-level cover when
+        // both exist.
+        let top_cover = detect_cover(&entries);
+        let disc_cover = if top_cover.is_none() {
+            cover_entries.iter()
+                .find(|(name, is_dir)| !is_dir && {
+                    let lower = name.to_ascii_lowercase();
+                    let dot = lower.rfind('.');
+                    dot.map(|i| COVER_EXTS.iter().any(|e| *e == &lower[i + 1..])).unwrap_or(false)
+                })
+                .map(|(name, _)| name.clone())
+        } else { None };
+        let cover_name = top_cover.or(disc_cover);
         let cover_path = cover_name.map(|n| path.join(&n).to_string_lossy().to_string());
         albums.push(MusicAlbumOut {
             artist,
@@ -764,18 +922,69 @@ async fn scan_directory(
     }
 
     // No audio yet — descend. Current folder becomes the artist_hint
-    // for its children (nested layout).
+    // for its children (nested layout). Skip obvious non-music side
+    // folders inside an artist directory so `Artist/Discography/`
+    // grouping folders don't turn into a bogus artist hint.
     let self_name = path.file_name().map(|n| n.to_string_lossy().to_string());
+    let self_lower = self_name.as_deref().map(|s| s.to_ascii_lowercase());
     for (name, is_dir) in entries {
         if !is_dir { continue; }
         let child = path.join(&name);
+        let child_lower = name.to_ascii_lowercase();
+        // Skip artwork / scans / etc. side folders — they're not albums.
+        if NON_AUDIO_SIDE_FOLDERS.iter().any(|s| *s == child_lower) { continue; }
+        // "Discography" / "Studio Albums" / "Live Albums" sitting under
+        // an artist folder are grouping folders — descend but preserve
+        // the artist hint from the grandparent rather than adopting
+        // "Discography" as the artist.
+        let hint_for_child = if is_grouping_folder(&child_lower) {
+            artist_hint.or(self_name.as_deref())
+        } else {
+            self_name.as_deref()
+        };
+        let _ = &self_lower;
         scan_directory_boxed(
             &child,
             depth + 1,
-            self_name.as_deref(),
+            hint_for_child,
             albums,
         ).await;
     }
+}
+
+// True when a folder name looks like a grouping directory an artist
+// uses to organize their releases, rather than an actual album.
+fn is_grouping_folder(lower: &str) -> bool {
+    matches!(lower,
+        "discography" | "albums" | "studio albums" | "studio" | "live albums" | "live"
+        | "eps" | "ep" | "singles" | "compilations" | "compilation"
+        | "bootlegs" | "demos" | "rarities" | "remixes" | "soundtracks" | "ost"
+    )
+}
+
+// Central place to figure out artist/album/year from a folder name +
+// optional parent-folder hint. Priority order:
+//   1. Year-prefix ("2015 - Album" / "[2015] Album") when we have an
+//      artist hint from the parent folder.
+//   2. Artist - Album (flat layout, with any year enclosure).
+//   3. Just Album (any year enclosure), artist taken from the parent
+//      folder when available.
+fn derive_artist_album(folder_name: &str, artist_hint: Option<&str>) -> (String, String, Option<String>) {
+    if let (Some((y, a)), Some(hint)) = (split_year_prefix(folder_name), artist_hint) {
+        let (album, extra) = extract_year(&a);
+        // A year-prefix folder shouldn't also carry a suffix year, but
+        // if it does (very rare), keep whichever we found first.
+        return (hint.to_string(), album, Some(extra.unwrap_or(y)));
+    }
+    if let Some((a, b, y)) = parse_flat_folder(folder_name) {
+        return (a, b, y);
+    }
+    if let Some(a) = artist_hint {
+        let (album, year) = extract_year(folder_name);
+        return (a.to_string(), album, year);
+    }
+    let (album, year) = extract_year(folder_name);
+    (String::new(), album, year)
 }
 
 // Recursion in async fns needs boxing — provide a thin wrapper that
