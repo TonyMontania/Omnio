@@ -2247,17 +2247,23 @@ async fn fetch_wiki_summary(client: &reqwest::Client, page_title: &str) -> (Opti
 fn parse_band_members_section(wikitext: &str) -> (Vec<Value>, Vec<Value>) {
     // Section heading tolerates trailing templates like {{anchor|X}} —
     // Slipknot literally uses "== Band members{{anchor|Band_members}} ==".
+    // Rust's `regex` crate doesn't support backreferences, so we can't
+    // enforce that the opening and closing `=` runs are equal via `\1`.
+    // Instead, we match the opening run + heading keyword, then walk
+    // manually to compute the actual level for the same/higher stop.
     let re_section = regex::Regex::new(
-        r"(?im)^(={2,4})\s*(Band members|Band personnel|Members|Personnel|Line[- ]?up|Lineup|Musicians)\b[^=]*\1\s*$",
+        r"(?im)^={2,4}\s*(Band members|Band personnel|Members|Personnel|Line[- ]?up|Lineup|Musicians)\b",
     ).unwrap();
     let Some(head) = re_section.find(wikitext) else { return (Vec::new(), Vec::new()); };
-    // Determine the heading level so we can stop at the next heading of
-    // the same or higher level — subheadings (===) belong to us.
     let matched = &wikitext[head.start()..head.end()];
     let level = matched.chars().take_while(|&c| c == '=').count().max(2);
-    let tail = &wikitext[head.end()..];
-    // Build a regex that matches EXACTLY `level` `=` at line start,
-    // followed by non-`=` (so a deeper subheading doesn't count).
+    // Advance to end-of-line so we don't scan the heading line itself
+    // as body content.
+    let nl_from_start = wikitext[head.start()..].find('\n').map(|i| head.start() + i + 1).unwrap_or(wikitext.len());
+    let tail = &wikitext[nl_from_start..];
+    // Build a regex that matches 2..=level `=` at line start followed
+    // by non-`=`. So a `=== subheading ===` inside a `== Section ==`
+    // (level 2) doesn't count as terminating the section.
     let same_or_higher = format!(r"(?m)^={{2,{level}}}[^=]");
     let re_next = regex::Regex::new(&same_or_higher).unwrap();
     let end = re_next.find(tail).map(|m| m.start()).unwrap_or(tail.len());

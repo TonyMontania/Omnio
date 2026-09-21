@@ -72,11 +72,19 @@ export default function WikipediaArtistFetcher({ initialQuery, onApply, onClose 
   }
 
   const apply = async (h: Hit) => {
+    try { await runApply(h) } catch (e) {
+      window.dispatchEvent(new CustomEvent('omnio-toast', { detail: `Wikipedia fetch failed: ${(e as Error).message}` }))
+      onClose()
+    }
+  }
+
+  const runApply = async (h: Hit) => {
     const r = await window.ipcRenderer.invoke('wiki:artist_fetch', h.title) as
       | { ok: true; data: FetchResponse }
       | { ok: false; error: string }
     if (!r?.ok) {
       window.dispatchEvent(new CustomEvent('omnio-toast', { detail: `Wikipedia fetch: ${r?.error ?? 'unknown'}` }))
+      onClose()
       return
     }
     const d = r.data
