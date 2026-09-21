@@ -1864,12 +1864,11 @@ pub async fn wiki_artist_fetch(pageTitle: String, state: State<'_, AppState>) ->
     };
     let params = parse_infobox_params(&infobox);
 
-    // 3. Resolve the image URL. Primary source: REST summary API (gives
-    // us `originalimage` for free with one clean HTTP call). If the
-    // summary has no image, fall back to whichever filename the
-    // infobox `image` parameter names — Wikipedia stores those as
-    // "Foo.jpg" and needs an extra `imageinfo` query to resolve.
-    let image_url = match fetch_wiki_summary_image(&client, pageTitle.trim()).await {
+    // 3. REST summary API gives us both a curated image and the intro
+    // prose. We use the image directly; the extract feeds the prose-
+    // based role fallback below.
+    let (summary_image, extract) = fetch_wiki_summary(&client, pageTitle.trim()).await;
+    let image_url = match summary_image {
         Some(url) => Some(url),
         None => {
             if let Some(fname) = params.get("image").cloned().or_else(|| params.get("img").cloned()) {
@@ -1887,8 +1886,46 @@ pub async fn wiki_artist_fetch(pageTitle: String, state: State<'_, AppState>) ->
     let genres = split_wiki_list(params.get("genres").or_else(|| params.get("genre")).map(String::as_str).unwrap_or(""));
     let labels = split_wiki_list(params.get("label").map(String::as_str).unwrap_or(""));
     let origin = clean_wikitext(params.get("origin").or_else(|| params.get("birth_place")).map(String::as_str).unwrap_or(""));
-    let current_members = parse_member_list(params.get("current_members").or_else(|| params.get("members")).map(String::as_str).unwrap_or(""));
-    let past_members = parse_member_list(params.get("past_members").map(String::as_str).unwrap_or(""));
+    // Members: prefer the dedicated "Band members" section of the
+    // article — it's the richest source, carrying instruments and
+    // active-years per person. Fall back to the infobox lists (bare
+    // names) plus the intro prose (best-effort role inference) when the
+    // section isn't present or the parser gets nothing usable.
+    let (section_current, section_past) = parse_band_members_section(wikitext);
+    let mut current_members = if !section_current.is_empty() {
+        section_current
+    } else {
+        parse_member_list(params.get("current_members").or_else(|| params.get("members")).map(String::as_str).unwrap_or(""))
+    };
+    let mut past_members = if !section_past.is_empty() {
+        section_past
+    } else {
+        parse_member_list(params.get("past_members").map(String::as_str).unwrap_or(""))
+    };
+
+    // Enrich members with roles inferred from the intro prose when the
+    // infobox left them empty. Handles bands like Avenged Sevenfold
+    // whose infobox lists just names, with instruments only in the
+    // narrative ("vocalist X, guitarists Y and Z, ...").
+    if let Some(prose) = extract.as_deref() {
+        let prose_roles = extract_roles_from_prose(prose);
+        for m in current_members.iter_mut().chain(past_members.iter_mut()) {
+            let Some(obj) = m.as_object_mut() else { continue };
+            let name = obj.get("name").and_then(|n| n.as_str()).unwrap_or("").to_string();
+            let already_has_roles = obj.get("roles")
+                .and_then(|r| r.as_array())
+                .map(|a| !a.is_empty())
+                .unwrap_or(false);
+            if already_has_roles { continue; }
+            // Match on last name too — prose often shortens "M. Shadows"
+            // to just "Shadows" or "Zacky Vengeance" to "Vengeance".
+            let last = name.rsplit(' ').next().unwrap_or(&name).to_string();
+            let hit = prose_roles.iter().find(|(n, _)| **n == name || (last.len() >= 3 && n.ends_with(&last)));
+            if let Some((_, roles)) = hit {
+                obj.insert("roles".to_string(), json!(roles));
+            }
+        }
+    }
 
     Ok(ok(json!({
         "title": clean_wikitext(params.get("name").map(String::as_str).unwrap_or(pageTitle.trim())),
@@ -2002,6 +2039,11 @@ fn parse_infobox_params(infobox: &str) -> std::collections::HashMap<String, Stri
 // rest just have their template markers stripped.
 fn clean_wikitext(raw: &str) -> String {
     let mut s = raw.to_string();
+    // Drop HTML comments <!-- … --> — infoboxes commonly seed these
+    // inside {{flatlist}} to hint editors about sourcing; they'd
+    // otherwise land as bogus genre entries.
+    let re_comment = regex::Regex::new(r"<!--[\s\S]*?-->").unwrap();
+    s = re_comment.replace_all(&s, "").to_string();
     // Drop <ref>…</ref>
     let re_ref = regex::Regex::new(r"<ref[^>]*/>|<ref[^>]*>[\s\S]*?</ref>").unwrap();
     s = re_ref.replace_all(&s, "").to_string();
@@ -2157,13 +2199,12 @@ fn parse_years_active(raw: &str) -> (Option<String>, Option<String>) {
     (first, to)
 }
 
-// Wikipedia's REST summary API returns a curated top image per page
-// as `originalimage.source`. Way more reliable than parsing the
-// infobox and doing an extra imageinfo round-trip — used as the
-// primary path for the artist photo.
-async fn fetch_wiki_summary_image(client: &reqwest::Client, page_title: &str) -> Option<String> {
-    // The REST endpoint takes the page title with underscores instead
-    // of spaces. `url_encode` handles the rest.
+// Wikipedia's REST summary API returns a curated top image AND the
+// first prose paragraph in one call. We use both: image feeds the
+// photo, extract feeds the role-inference fallback for bands whose
+// infobox doesn't list instruments (very common — A7X, most punk
+// bands, several metal outfits).
+async fn fetch_wiki_summary(client: &reqwest::Client, page_title: &str) -> (Option<String>, Option<String>) {
     let path = page_title.replace(' ', "_");
     let url = format!(
         "https://en.wikipedia.org/api/rest_v1/page/summary/{}",
@@ -2172,12 +2213,260 @@ async fn fetch_wiki_summary_image(client: &reqwest::Client, page_title: &str) ->
     let opts = ProxyJsonOptions {
         method: Method::GET, headers: wiki_headers(), body: None, http_error_prefix: "Wiki",
     };
-    let v = proxy_json(client, &url, opts).await.ok()?;
-    v.get("originalimage")
+    let v = match proxy_json(client, &url, opts).await {
+        Ok(v) => v,
+        Err(_) => return (None, None),
+    };
+    let image = v.get("originalimage")
         .or_else(|| v.get("thumbnail"))
         .and_then(|obj| obj.get("source"))
         .and_then(|s| s.as_str())
-        .map(String::from)
+        // Strip the utm_* query params the REST endpoint tacks on so
+        // downloadImageAsset doesn't reject the URL, and so the saved
+        // filename doesn't end up with a giant query string.
+        .map(|s| s.split('?').next().unwrap_or(s).to_string());
+    let extract = v.get("extract").and_then(|s| s.as_str()).map(String::from);
+    (image, extract)
+}
+
+// Parse the article's "Band members" (or "Members" / "Personnel")
+// section. Wikipedia's house style groups the roster under bolded
+// subheadings — `'''Current members'''` and `'''Former members'''` —
+// with bullets shaped as:
+//
+//   * [[Name]] (Real name) – lead vocals, keyboards <small>(1999–present)</small>
+//
+// Return (current, past) as JSON member objects with `name`, `roles`,
+// `joinedIn`, `leftIn`. Empty tuples when the section isn't present.
+fn parse_band_members_section(wikitext: &str) -> (Vec<Value>, Vec<Value>) {
+    let re_section = regex::Regex::new(
+        r"(?m)^={2,3}\s*(Band members|Members|Personnel)\s*={2,3}\s*$",
+    ).unwrap();
+    let Some(head) = re_section.find(wikitext) else { return (Vec::new(), Vec::new()); };
+    // Slice from after the heading to the next heading of the same-or-
+    // higher level (== title == / == title2 ==) or EOF.
+    let tail = &wikitext[head.end()..];
+    let re_next = regex::Regex::new(r"(?m)^={2,3}[^=]").unwrap();
+    let end = re_next.find(tail).map(|m| m.start()).unwrap_or(tail.len());
+    let body = &tail[..end];
+
+    let mut current = Vec::new();
+    let mut past = Vec::new();
+    let mut bucket: Option<&mut Vec<Value>> = None;
+
+    for raw_line in body.lines() {
+        let line = raw_line.trim();
+        // Detect the "Current members" / "Former members" subheadings —
+        // they can be bold-quoted, or plain wiki subheadings, or plain
+        // capitalised words. Case-insensitive.
+        let lower = line.to_lowercase();
+        if lower.contains("current members") || lower.contains("current lineup")
+            || lower.contains("current line-up") || lower.contains("current line up")
+        {
+            bucket = Some(&mut current);
+            continue;
+        }
+        if lower.contains("former members") || lower.contains("past members")
+            || lower.contains("previous members") || lower.contains("touring members")
+            || lower.contains("former touring") || lower.contains("session")
+        {
+            bucket = Some(&mut past);
+            continue;
+        }
+        if !line.starts_with('*') && !line.starts_with('#') { continue; }
+        let Some(target) = bucket.as_deref_mut() else { continue };
+
+        let stripped = line.trim_start_matches(|c: char| c == '*' || c == '#' || c == ' ');
+        if let Some(member) = parse_member_bullet(stripped) {
+            target.push(member);
+        }
+    }
+
+    (current, past)
+}
+
+// Turn one bullet — everything after "* " — into a member JSON object.
+// Handles the wikitext-loaded shapes we see in real articles:
+//   [[Name]] (Real name) – roles <small>(1999–present)</small>
+//   Name – roles
+//   Name (Real name)
+fn parse_member_bullet(raw: &str) -> Option<Value> {
+    // Pull year-range info out of every <small>(...)</small> chunk
+    // before we clean the string, so we can populate joinedIn / leftIn
+    // per the *first* stint mentioned.
+    let re_small = regex::Regex::new(r"<small>\s*\(([^<)]*)\)\s*</small>").unwrap();
+    let year_hints: Vec<String> = re_small
+        .captures_iter(raw)
+        .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
+        .collect();
+    let (joined_in, left_in) = year_hints.first()
+        .map(|s| parse_years_active(s))
+        .unwrap_or((None, None));
+
+    // Now clean the display line: templates, wikilinks, tags — including
+    // the <small> spans we just harvested.
+    let cleaned = clean_wikitext(raw);
+    if cleaned.is_empty() { return None; }
+
+    // Strip the "(Real name)" segment right after the display name;
+    // Wikipedia uses it to spell out real names next to stage names.
+    // Only strip the first pair of parens that comes before the roles
+    // separator, so the roles list itself keeps any parenthetical
+    // qualifiers.
+    let sep_idx = cleaned.find(|c: char| c == '–' || c == '—' || c == ':')
+        .or_else(|| find_ascii_dash_separator(&cleaned));
+    let (name_part, roles_part) = if let Some(idx) = sep_idx {
+        let name = cleaned[..idx].trim().to_string();
+        let rest = cleaned[idx..].chars().next()
+            .map(|c| idx + c.len_utf8())
+            .unwrap_or(idx + 1);
+        (name, cleaned[rest..].trim().to_string())
+    } else {
+        (cleaned.clone(), String::new())
+    };
+
+    // Drop the "(Real name)" parenthetical from the display name.
+    let name_clean = strip_first_parens(&name_part);
+    if name_clean.is_empty() || name_clean.len() > 80 { return None; }
+
+    let mut roles: Vec<String> = Vec::new();
+    if !roles_part.is_empty() {
+        // Split on `,` `;` `and` — same rule as the infobox path.
+        let re_split = regex::Regex::new(r",|;|\band\b").unwrap();
+        for r in re_split.split(&roles_part) {
+            // Strip trailing/leading year parentheticals and punctuation.
+            let r = r.trim().trim_end_matches('.').trim();
+            // Drop "(...)" wrappers left over from stripped small tags
+            // that were nested inside the roles list.
+            let cleaned_role = strip_parens(r);
+            if cleaned_role.is_empty() || cleaned_role.len() > 40 { continue; }
+            let mut chars = cleaned_role.chars();
+            let first = chars.next().map(|c| c.to_uppercase().to_string()).unwrap_or_default();
+            let rest: String = chars.collect();
+            roles.push(format!("{first}{rest}"));
+        }
+    }
+
+    let mut obj = json!({ "name": name_clean, "roles": roles });
+    if let Value::Object(ref mut o) = obj {
+        if let Some(j) = joined_in { o.insert("joinedIn".to_string(), json!(j)); }
+        if let Some(l) = left_in { o.insert("leftIn".to_string(), json!(l)); }
+    }
+    Some(obj)
+}
+
+fn find_ascii_dash_separator(s: &str) -> Option<usize> {
+    let bytes = s.as_bytes();
+    for (i, &b) in bytes.iter().enumerate() {
+        if b == b'-' && i > 0 && i + 1 < bytes.len()
+            && bytes[i - 1] == b' ' && bytes[i + 1] == b' '
+        {
+            return Some(i);
+        }
+    }
+    None
+}
+
+fn strip_first_parens(s: &str) -> String {
+    let bytes = s.as_bytes();
+    if let Some(open) = bytes.iter().position(|&b| b == b'(') {
+        if let Some(rel_close) = bytes[open..].iter().position(|&b| b == b')') {
+            let close = open + rel_close;
+            let before = s[..open].trim_end();
+            let after = &s[close + 1..];
+            return format!("{before}{after}").trim().to_string();
+        }
+    }
+    s.trim().to_string()
+}
+
+fn strip_parens(s: &str) -> String {
+    let re = regex::Regex::new(r"\([^)]*\)").unwrap();
+    re.replace_all(s, "").trim().to_string()
+}
+
+// Role vocabulary that appears in intro prose for bands. Order matters:
+// "guitarist" wins over "guitar" so we don't over-count the substring.
+static PROSE_ROLE_PATTERNS: &[(&str, &str)] = &[
+    ("vocalist", "Vocals"),
+    ("lead vocalist", "Lead vocals"),
+    ("lead singer", "Lead vocals"),
+    ("singer", "Vocals"),
+    ("frontman", "Vocals"),
+    ("lead guitarist", "Lead guitar"),
+    ("rhythm guitarist", "Rhythm guitar"),
+    ("guitarist", "Guitar"),
+    ("bassist", "Bass"),
+    ("bass player", "Bass"),
+    ("drummer", "Drums"),
+    ("percussionist", "Percussion"),
+    ("keyboardist", "Keyboards"),
+    ("pianist", "Piano"),
+    ("saxophonist", "Saxophone"),
+    ("violinist", "Violin"),
+    ("cellist", "Cello"),
+    ("trumpeter", "Trumpet"),
+    ("DJ", "DJ"),
+    ("producer", "Producer"),
+    ("songwriter", "Songwriter"),
+];
+
+// Parse "vocalist X, guitarists Y and Z, bassist W and drummer V" style
+// intro prose into (member_name → [role]) mappings. Best-effort — we
+// look for a known role verb, then walk the neighboring names (either
+// stopping at the next role verb or at a period).
+fn extract_roles_from_prose(prose: &str) -> std::collections::HashMap<String, Vec<String>> {
+    use std::collections::HashMap;
+    let mut map: HashMap<String, Vec<String>> = HashMap::new();
+    if prose.trim().is_empty() { return map; }
+    // Grab the first 1-2 sentences — "The band's current lineup consists
+    // of vocalist X, ..." is almost always in there. Cap so we don't
+    // pull role words from unrelated later paragraphs.
+    let clean = prose.replace('\n', " ");
+    let head: String = clean.chars().take(600).collect();
+    // For each role pattern, look for occurrences and attach the roles
+    // to the capitalized name(s) that follow. Names are runs of
+    // capitalized words possibly separated by ". ", " ", or a period.
+    let name_re = regex::Regex::new(r"([A-Z][A-Za-z.'’-]+(?:\s+[A-Z][A-Za-z.'’-]+){0,3})").unwrap();
+    // Longest patterns first so "lead guitarist" wins over "guitarist"
+    // when matched.
+    let mut patterns: Vec<(&str, &str)> = PROSE_ROLE_PATTERNS.to_vec();
+    patterns.sort_by_key(|(k, _)| std::cmp::Reverse(k.len()));
+
+    for (verb, role) in patterns {
+        let verb_re = regex::Regex::new(&format!(
+            r"(?i)\b{}s?\b",
+            regex::escape(verb),
+        )).unwrap();
+        for hit in verb_re.find_iter(&head) {
+            let tail = &head[hit.end()..];
+            // Grab all capitalized names in the immediate span (up to
+            // the next role verb or a period).
+            let cutoff = tail.find(|c: char| c == '.' || c == ';')
+                .map(|i| i.min(120))
+                .unwrap_or(120);
+            let span = &tail[..cutoff.min(tail.len())];
+            // Stop at the next known role verb.
+            let mut stop = span.len();
+            for (v2, _) in PROSE_ROLE_PATTERNS {
+                if let Some(idx) = span.to_lowercase().find(v2) {
+                    if idx < stop { stop = idx; }
+                }
+            }
+            let take = &span[..stop];
+            for cap in name_re.captures_iter(take) {
+                let name = cap.get(1).map(|m| m.as_str().trim().to_string()).unwrap_or_default();
+                if name.is_empty() || name.len() > 60 { continue; }
+                // Skip lower-value hits like "The" or "A7X".
+                if name.chars().count() < 3 { continue; }
+                let entry = map.entry(name).or_default();
+                if !entry.iter().any(|r| r == role) {
+                    entry.push(role.to_string());
+                }
+            }
+        }
+    }
+    map
 }
 
 // Convert a wiki image filename ("Foo.jpg") into the direct URL by

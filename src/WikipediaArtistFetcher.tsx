@@ -52,8 +52,8 @@ interface FetchResponse {
   labels: string[]
   activeFrom: string | null
   activeTo: string | null
-  currentMembers: { name: string; roles?: string[] }[]
-  pastMembers: { name: string; roles?: string[] }[]
+  currentMembers: { name: string; roles?: string[]; joinedIn?: string; leftIn?: string }[]
+  pastMembers: { name: string; roles?: string[]; joinedIn?: string; leftIn?: string }[]
   imageUrl: string | null
 }
 
@@ -96,12 +96,16 @@ export default function WikipediaArtistFetcher({ initialQuery, onApply, onClose 
         name: m.name,
         roles: m.roles ?? [],
         membership: 'current' as const,
+        joinedIn: m.joinedIn,
+        leftIn: m.leftIn,
       })),
       ...d.pastMembers.map((m) => ({
         id: crypto.randomUUID(),
         name: m.name,
         roles: m.roles ?? [],
         membership: 'former' as const,
+        joinedIn: m.joinedIn,
+        leftIn: m.leftIn,
       })),
     ]
     onApply({
