@@ -129,7 +129,6 @@ const ImdbImporter       = lazy(() => import('./ImdbImporter'))
 const RymImporter        = lazy(() => import('./RymImporter'))
 const HltbImporter       = lazy(() => import('./HltbImporter'))
 const LastfmApiSync      = lazy(() => import('./LastfmApiSync'))
-const WikipediaArtistFetcher = lazy(() => import('./WikipediaArtistFetcher'))
 const SerializdImporter  = lazy(() => import('./SerializdImporter'))
 const SpotifyImporter    = lazy(() => import('./SpotifyImporter'))
 const HighlightsImporter = lazy(() => import('./HighlightsImporter'))
@@ -756,7 +755,6 @@ function App() {
   const [newArtistName, setNewArtistName] = useState('')
   const [viewingArtist, setViewingArtist] = useState<MusicArtist | null>(null)
   const [artistPanelOpen, setArtistPanelOpen] = useState(false)
-  const [wikiArtistOpen, setWikiArtistOpen] = useState(false)
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null)
   const [artistEditorTab, setArtistEditorTab] = useState<'overview' | 'details' | 'members' | 'concerts'>('overview')
   const [artistNameField, setArtistNameField] = useState('')
@@ -6266,15 +6264,6 @@ function App() {
                     <div className="field-group">
                       <label>Name</label>
                       <input value={artistNameField} onChange={(e) => setArtistNameField(e.target.value)} />
-                      <div style={{ marginTop: 6 }}>
-                        <button
-                          type="button"
-                          className="secondary-btn"
-                          disabled={!artistNameField.trim()}
-                          title="Search en.wikipedia.org and autofill origin, genres, active years, labels, current + past members and the artist photo."
-                          onClick={() => setWikiArtistOpen(true)}
-                        >↗ Fetch from Wikipedia</button>
-                      </div>
                     </div>
                     <div className="field-group image-drop" {...imageDropHandlers(setArtistPhotoField)}>
                       <label>Photo</label>
@@ -6360,56 +6349,6 @@ function App() {
             </div>
           </div>
         </div>
-      )}
-
-      {wikiArtistOpen && (
-        <Suspense fallback={null}>
-          <WikipediaArtistFetcher
-            initialQuery={artistNameField.trim()}
-            onApply={(payload) => {
-              if (payload.origin) setArtistOrigin(payload.origin)
-              if (payload.genres) setArtistGenres(payload.genres)
-              if (payload.labels) setArtistLabels(payload.labels)
-              if (payload.activeFrom !== undefined) setArtistActiveFrom(payload.activeFrom)
-              if (payload.activeTo !== undefined) setArtistActiveTo(payload.activeTo)
-              if (payload.bandStatus) setArtistBandStatus(payload.bandStatus)
-              if (payload.members && payload.members.length > 0) {
-                // Merge with existing members instead of blowing them
-                // away. Match on lower-cased name. When a match exists:
-                //   - Overwrite roles with whatever Wikipedia has
-                //     (only when it brought at least one). The user
-                //     explicitly clicked Fetch — they want the source's
-                //     roles now, not a stale merge from a previous
-                //     buggy run.
-                //   - Take joinedIn / leftIn only when the local field
-                //     is empty, so a typed date is never overwritten.
-                // Stints, deceased flag and membership stay untouched.
-                setArtistMembers((prev) => {
-                  const merged = prev.map((m) => {
-                    const hit = payload.members!.find((wm) => wm.name.toLowerCase() === m.name.toLowerCase())
-                    if (!hit) return m
-                    const newRoles = hit.roles ?? []
-                    return {
-                      ...m,
-                      roles: newRoles.length > 0 ? newRoles : m.roles,
-                      joinedIn: m.joinedIn || hit.joinedIn,
-                      leftIn: m.leftIn || hit.leftIn,
-                    }
-                  })
-                  const existingNames = new Set(prev.map((m) => m.name.toLowerCase()))
-                  for (const wm of payload.members!) {
-                    if (existingNames.has(wm.name.toLowerCase())) continue
-                    merged.push(wm)
-                  }
-                  return merged
-                })
-              }
-              if (payload.photoPath) setArtistPhotoField(payload.photoPath)
-              setToast('Wikipedia data applied')
-            }}
-            onClose={() => setWikiArtistOpen(false)}
-          />
-        </Suspense>
       )}
 
       <GlobalSearch
