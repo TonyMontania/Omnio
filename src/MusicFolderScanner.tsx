@@ -56,10 +56,11 @@ export default function MusicFolderScanner({ existingItems, onImport, onClose }:
   }, [existingItems])
 
   const pickFolder = async () => {
-    const r = await window.ipcRenderer.invoke('dialog:pick-directory', 'Pick your music root folder') as
-      | { ok: true; path: string }
-      | { ok: false; error?: string }
-    if (r?.ok) setRootPath(r.path)
+    // dialog:pick-directory returns the picked path as a plain string,
+    // or null when the user cancels — same shape the other importers
+    // consume it as.
+    const picked = await window.ipcRenderer.invoke('dialog:pick-directory', 'Pick your music root folder') as string | null
+    if (picked) setRootPath(picked)
   }
 
   const scan = async () => {
