@@ -2315,6 +2315,22 @@ fn parse_band_members_section(wikitext: &str) -> (Vec<Value>, Vec<Value>) {
 //   1 current, 2 former, 3 current touring, 4 former touring.
 // Returns None when the line doesn't look like a subheading at all.
 fn classify_member_subheading(line: &str) -> Option<u8> {
+    // HTML comments and templates commonly sit between the section
+    // header and the actual roster subheading. They can carry stray
+    // words that trip the keyword match (a comment saying "the years
+    // they originally joined the band" would otherwise get treated as
+    // "originally" → former). Skip them outright.
+    if line.starts_with("<!--") || line.starts_with("<gallery")
+        || line.starts_with("</gallery>") || line.starts_with("{{")
+        || line.starts_with("|}") || line.starts_with("File:")
+    { return None; }
+    // A real subheading is EITHER `=== something ===` OR `'''something'''`.
+    // Enforce that shape before scanning for keywords, so plain prose
+    // lines that happen to contain "former" don't accidentally flip
+    // the bucket.
+    let looks_like_subheading = (line.starts_with('=') && line.ends_with('='))
+        || (line.starts_with("'''") && line.contains("'''"));
+    if !looks_like_subheading { return None; }
     // Strip both wiki subheading markers `===` and bold quotes `'''`
     // before matching so `'''Current members'''` and `=== Current ===`
     // both reach the classifier with a bare "current members" string.
@@ -2405,16 +2421,18 @@ fn parse_member_bullet(raw: &str) -> Option<Value> {
 
     let mut roles: Vec<String> = Vec::new();
     if !roles_part.is_empty() {
+        // Strip every '(...)' block from the roles tail BEFORE splitting
+        // on commas — otherwise a year range like '(1999–2009, his
+        // death)' or '(2000, 2016)' bleeds into two bogus roles. Do the
+        // same for any leftover ';' sub-clauses that still carry a
+        // paren fragment.
+        let no_parens = strip_parens_all(&roles_part);
         // Split on `,` `;` `and` — same rule as the infobox path.
         let re_split = regex::Regex::new(r",|;|\band\b").unwrap();
-        for r in re_split.split(&roles_part) {
-            // Strip trailing/leading year parentheticals and punctuation.
+        for r in re_split.split(&no_parens) {
             let r = r.trim().trim_end_matches('.').trim();
-            // Drop "(...)" wrappers left over from stripped small tags
-            // that were nested inside the roles list.
-            let cleaned_role = strip_parens(r);
-            if cleaned_role.is_empty() || cleaned_role.len() > 40 { continue; }
-            let mut chars = cleaned_role.chars();
+            if r.is_empty() || r.len() > 40 { continue; }
+            let mut chars = r.chars();
             let first = chars.next().map(|c| c.to_uppercase().to_string()).unwrap_or_default();
             let rest: String = chars.collect();
             roles.push(format!("{first}{rest}"));
@@ -2454,9 +2472,17 @@ fn strip_first_parens(s: &str) -> String {
     s.trim().to_string()
 }
 
-fn strip_parens(s: &str) -> String {
+// Strip every (…) group AND any dangling '(' or ')' left behind by a
+// broken pair — happens when an earlier split (say on comma) cut a
+// paren in half. Ensures the remaining role tokens don't carry lonely
+// parens or the year fragment.
+fn strip_parens_all(s: &str) -> String {
     let re = regex::Regex::new(r"\([^)]*\)").unwrap();
-    re.replace_all(s, "").trim().to_string()
+    let mut out = re.replace_all(s, "").to_string();
+    // Kill anything from an unclosed '(' to end-of-token so we don't
+    // leak "(1999" or "(2000, 2016" into the role list.
+    out = out.replace('(', "").replace(')', "");
+    out.trim().to_string()
 }
 
 // Role vocabulary that appears in intro prose for bands. Order matters:
