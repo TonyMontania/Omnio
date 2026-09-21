@@ -67,6 +67,88 @@
 
 .top-rated-list { display: flex; flex-direction: column; gap: 6px; max-width: 420px; }
 
+/* Cross-library genre heatmap. Rows are genres, columns are libraries;
+   cell background scales with the item count (log-normalised). */
+.genre-heatmap {
+  margin-top: 32px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+}
+.genre-heatmap-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.genre-heatmap-header .hint { display: block; margin-top: 4px; font-size: 11.5px; }
+.genre-heatmap-header select {
+  padding: 4px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+}
+.genre-heatmap-scroll { overflow-x: auto; }
+.genre-heatmap-table {
+  border-collapse: separate;
+  border-spacing: 2px;
+  min-width: 100%;
+}
+.genre-heatmap-table th, .genre-heatmap-table td {
+  padding: 6px 8px;
+  text-align: center;
+  font-size: 12px;
+  vertical-align: middle;
+}
+.genre-heatmap-corner { min-width: 140px; background: transparent; }
+.genre-heatmap-col-head,
+.genre-heatmap-total-head {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--accent) 65%, var(--text-dim));
+  border-bottom: 1px solid var(--border-soft);
+}
+.genre-heatmap-row-head {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  border-radius: 4px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.genre-heatmap-cell {
+  min-width: 44px;
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  transition: background 0.15s;
+}
+.genre-heatmap-total {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  padding-left: 12px;
+  border-left: 1px solid var(--border-soft);
+}
+.genre-heatmap-empty {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px dashed var(--border-soft);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
 .top-rated-row {
   display: flex;
   align-items: center;

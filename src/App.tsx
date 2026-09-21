@@ -152,6 +152,7 @@ import {
 // Editors and pickers used inside detail modals and the toolbar
 import DistChart from './insights/DistChart'
 import Heatmap from './insights/Heatmap'
+import GenreHeatmap from './insights/GenreHeatmap'
 import { pickImageToDataUrl, imageDropHandlers, assetBasename, downloadImageAsset } from './utils/files'
 import { expandTagSelection } from './utils/tags'
 // Fetcher registry — panel iterates `getFetchersFor(activeCategory)`
@@ -3782,6 +3783,8 @@ function App() {
                   )
                 })()}
               </div>
+
+              <GenreHeatmap items={items} enabledCategories={settings.enabledCategories} />
               </div>
             </>
           )}
