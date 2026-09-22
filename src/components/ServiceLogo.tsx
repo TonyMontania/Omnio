@@ -8,9 +8,9 @@
 // as its own visual language. See the `WITH_ASSET` map below.
 //
 // Niche services simpleicons doesn't ship (StoryGraph, Backloggd,
-// Serializd, HowLongToBeat, RateYourMusic, Kindle, the eroge plugin's
-// F95/DLsite/itch/Ryuugames) fall through to hand-drawn inline SVGs
-// in the `CUSTOM` switch so no button ends up unbadged.
+// Serializd, HowLongToBeat, RateYourMusic, Kindle, itch.io) fall
+// through to hand-drawn inline SVGs in the `CUSTOM` switch so no
+// button ends up unbadged.
 
 import type { CSSProperties } from 'react'
 
@@ -43,11 +43,6 @@ import ea from '../assets/service-logos/ea.svg'
 import battlenet from '../assets/service-logos/battledotnet.svg'
 import rockstar from '../assets/service-logos/rockstargames.svg'
 import goodreadsSvg from '../assets/service-logos/goodreads.svg'
-// Eroge-specific brand marks pulled directly from each site — PNGs
-// because their sites don't publish SVGs. Bundled locally so the
-// plugin's link row shows real logos instead of stylised typography.
-import f95Png from '../assets/service-logos/f95zone.png'
-import dlsitePng from '../assets/service-logos/dlsite.png'
 
 export type ServiceName =
   | 'mal' | 'anilist' | 'kitsu'
@@ -59,7 +54,7 @@ export type ServiceName =
   | 'backloggd' | 'hltb' | 'igdb' | 'sgdb' | 'pcgw'
   | 'anidb' | 'vndb' | 'mangadex' | 'comicvine'
   | 'notion' | 'csv'
-  | 'f95' | 'dlsite' | 'itch' | 'ryuugames'
+  | 'itch'
 
 // Real-logo entries: URL to the bundled SVG + the brand's primary
 // colour (used as the badge background). The SVG is rendered white
@@ -92,8 +87,6 @@ const WITH_ASSET: Partial<Record<ServiceName, { src: string; bg: string; noInver
   battlenet:   { src: battlenet,  bg: '#00aeff' },
   rockstar:    { src: rockstar,   bg: '#fca90d' },
   goodreads:   { src: goodreadsSvg, bg: '#553b08' },
-  f95:         { src: f95Png,     bg: '#131a24', noInvert: true },
-  dlsite:      { src: dlsitePng,  bg: '#ffffff', noInvert: true },
 }
 
 interface Props {
@@ -168,8 +161,6 @@ export default function ServiceLogo({ service, size = 18, style }: Props) {
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#0072b0" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="14" fill="#fff">C</text></svg>
     case 'csv':
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#1e7d3a" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">CSV</text></svg>
-    case 'ryuugames':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#0e5c2e" /><text x="16" y="24" textAnchor="middle" fontFamily="'Yu Mincho', 'MS Mincho', serif" fontWeight="700" fontSize="20" fill="#fff">龍</text></svg>
     default:
       return null
   }
