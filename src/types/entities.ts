@@ -1,47 +1,86 @@
-// Pure type declarations. No runtime values, no functions, no side effects.
-// Everything a component might need to type its props or state lives here.
+// Pure type declarations shared across the renderer.
 
-// type-only import — items.ts imports back from here, TS handles the
-// circular type dep cleanly since neither side pulls runtime values.
 import type { CategoryId } from './items'
 
 export type Platform = string
 export type Ownership = 'owned' | 'shared' | 'subscription' | 'unlicensed'
 export type GameStatus = 'backlog' | 'playing' | 'played' | 'completed' | 'dropped'
 export type GameSource = 'original' | 'remake' | 'remaster' | 'reimagined' | 'reboot' | 'port' | 'sequel' | 'spinoff' | 'standalone' | 'expanded' | 'collection' | 'other'
-export type GameField = 'title' | 'status' | 'playTime' | 'rating' | 'tags'
+export type GameField = 'title' | 'status' | 'playTime' | 'rating' | 'tags' | 'deckCompat'
 
 export type MusicType = 'single' | 'ep' | 'album' | 'ost' | 'live' | 'recopilation'
 export type MusicSource = 'original' | 'compilation' | 'soundtrack' | 'remaster' | 'deluxe' | 'reissue' | 'other'
 export type MusicField = 'title' | 'artist' | 'releaseYear' | 'type' | 'rating' | 'tags'
-// Standard Goldmine grading scale for physical media condition.
+// Goldmine grading scale for physical media condition.
 export type VinylCondition = 'mint' | 'near_mint' | 'very_good_plus' | 'very_good' | 'good_plus' | 'good' | 'fair' | 'poor'
 
-// User-defined tracklist spanning multiple albums / artists. Lives at
-// the top-level (data/playlists.json) rather than on any single Music
-// item — a playlist references tracks by (itemId, trackId).
+// Cross-item playlist stored at the top level; references tracks by
+// their owning music item + track id.
 export interface PlaylistTrackRef {
-  itemId: string        // Music Item that owns the track
-  trackId: string       // Track.id inside that item
+  itemId: string
+  trackId: string
 }
 export interface Playlist {
   id: string
   name: string
   description?: string
-  cover?: string        // relative asset path or URL
+  cover?: string
   tracks: PlaylistTrackRef[]
   createdAt: number
 }
 
-// One entry per live show the user has attended. Similar shape to a
-// RewatchEntry but with venue/city metadata that only makes sense for
-// concerts.
+// User-defined groups inside a franchise (Timeline A/B, Liberl Arc,
+// Prime series…). Items not assigned to any section fall into an
+// implicit "Ungrouped" strip.
+export interface FranchiseSection {
+  id: string
+  name: string
+  itemIds: string[]
+  notes?: Record<string, string>
+}
+
+// Free-canvas franchise diagram — Zelda-style branches with labels and
+// convergence arrows. Node coordinates are React Flow world units.
+export type FranchiseGraphNodeShape = 'rect' | 'rounded' | 'pill' | 'circle' | 'diamond' | 'text'
+export interface FranchiseGraphNode {
+  id: string
+  itemId?: string
+  text?: string
+  shape?: FranchiseGraphNodeShape
+  x: number
+  y: number
+  width?: number
+  height?: number
+  // Explicit user-set stack order (Send to back / Bring to front).
+  zIndex?: number
+}
+
+export type FranchiseGraphEdgeType = 'bezier' | 'straight' | 'step' | 'smoothstep'
+export type FranchiseGraphEdgeMarker = 'arrow' | 'arrow-closed' | 'none'
+export interface FranchiseGraphEdge {
+  id: string
+  from: string
+  to: string
+  // Persisted so React Flow re-routes the arrow from the same anchor
+  // point on reload instead of picking a new default.
+  fromHandle?: string
+  toHandle?: string
+  label?: string
+  color?: string
+  edgeType?: FranchiseGraphEdgeType
+  marker?: FranchiseGraphEdgeMarker
+}
+export interface FranchiseGraph {
+  nodes: FranchiseGraphNode[]
+  edges: FranchiseGraphEdge[]
+}
+
 export interface ConcertEntry {
   id: string
-  date: string          // ISO date
+  date: string
   venue: string
   city?: string
-  setlist?: string      // free-form multiline
+  setlist?: string
   notes?: string
 }
 
@@ -91,70 +130,55 @@ export interface VnCharacter {
   role: VnCharacterRole
   description?: string
   seiyuu?: string
-  seiyuuNote?: string      // "young / adult", "route Amane only", etc.
-  image?: string           // relative asset path or URL
-  vndbId?: string          // "c1234" — lets the detail modal deep-link back to VNDB
+  seiyuuNote?: string
+  image?: string
+  vndbId?: string
 }
 
-// One person credited on a VN, grouped by role. VNDB splits staff into
-// dozens of roles — collapsed here to the ones a hobby tracker actually
-// cares about; users add anything else as a custom field.
 export type VnStaffRole = 'writer' | 'artist' | 'composer' | 'director' | 'translator' | 'other'
 export interface VnStaffMember {
   id: string
   name: string
-  original?: string       // native-script name (e.g. Japanese kanji) when different from `name`
+  original?: string
   role: VnStaffRole
-  note?: string           // e.g. "Common route", "Route: Yuki", "Chapter 3-5"
+  note?: string
 }
 
-// A publisher who released the VN in a specific language / region. VNDB
-// exposes publishers per release, not per VN — this shape collapses that
-// out to one row per (publisher, language) pair so the editor can show
-// "Frontwing 🇯🇵 · Sekai Project 🇺🇸".
+// One row per (publisher, language) pair — VNDB stores publishers on
+// releases, not on the VN itself, so multiple releases collapse here.
 export interface VnPublisher {
   id: string
   name: string
-  original?: string       // native-script name
-  lang: string            // ISO-ish code from VNDB: "ja", "en", "zh-Hans", …
+  original?: string
+  lang: string
   role?: 'publisher' | 'developer' | 'both'
 }
 
-// One release edition of a VN. VNDB tracks these as `editions` on the VN
-// itself (Original / Limited / Fan-translated / …). Kept read-only in the
-// editor for now — the fetcher fills them and the user rarely edits.
 export interface VnEdition {
   id: string
-  eid?: number            // VNDB's own edition id
+  eid?: number
   lang?: string
   name: string
   official?: boolean
 }
 
-// One cover artwork for a VN. VNs typically ship multiple covers — one per
-// release, plus fan editions and re-releases. The user picks which one is
-// the main cover (used on the card) and can flag any as "exhibited" in the
-// detail view's covers gallery.
+// Exactly one cover per VN should carry `main` = true.
 export interface VnCover {
   id: string
-  path: string            // relative asset path or URL
-  lang?: string           // language of the release the cover comes from
-  releaseTitle?: string   // e.g. "Original edition", "Steam release"
-  main?: boolean          // exactly one cover should carry this flag
-  exhibited?: boolean     // shown in the "Covers" gallery section
+  path: string
+  lang?: string
+  releaseTitle?: string
+  main?: boolean
+  exhibited?: boolean
 }
 
-// VNDB dev status. 0 = Finished, 1 = In development, 2 = Cancelled.
 export type VnDevStatus = 'finished' | 'in_development' | 'cancelled'
 
-// One screenshot attached to a VN. Same shape as Game Screenshot but with
-// a per-screenshot NSFW flag — VNDB annotates each screenshot individually,
-// and the detail modal blurs sensitive ones behind a click-to-reveal.
 export interface VnScreenshot {
   id: string
   filename: string
-  path: string             // relative to assets/
-  addedAt: string          // ISO
+  path: string
+  addedAt: string
   caption?: string
   nsfw?: boolean
 }
@@ -172,73 +196,58 @@ export interface DlcEntry {
   status: GameStatus
 }
 
-// A game bundled inside another (Metal Gear Solid HD Collection contains
-// MGS2 + MGS3, etc.). Kept intentionally light — the parent Item already
-// carries the shared metadata; each sub-entry only needs a cover + own status.
+// Games bundled inside a parent item (Metal Gear Solid HD Collection).
+// Each sub-entry only needs a cover + status; the parent Item carries
+// the shared metadata.
 export interface BundleGame {
   id: string
   name: string
-  cover?: string           // relative asset path (assets/videojuegos/bundle/…) or URL
+  cover?: string
   status: GameStatus
 }
 
-// Highlight / note captured from a book while reading. Bulk-imported
-// from Kindle "My Clippings.txt" (and eventually other sources like
-// StoryGraph CSV). Read-only display in BookDetailModal — bulk-imported
-// artifacts, users delete individually if they want to prune.
 export interface Highlight {
   id: string
   text: string
-  note?: string          // separate note text (Kindle exports Note entries too)
-  page?: string          // "42"
-  location?: string      // Kindle location range, e.g. "1200-1204"
-  addedAt?: string       // ISO date
+  note?: string
+  page?: string
+  location?: string
+  addedAt?: string
 }
 
-// Detailed per-achievement record (Games). Coexists with the flat
-// achievementsUnlocked / achievementsTotal string fields — those stay
-// as a fast "12 / 40" summary; this array is opt-in richer data for
-// users who care about the full list.
+// Full per-achievement record — coexists with the summary
+// achievementsUnlocked / achievementsTotal fields for a quick "12/40".
 export interface Achievement {
   id: string
   name: string
   description?: string
-  unlockedAt?: string    // ISO date
-  icon?: string          // relative asset path or URL
+  unlockedAt?: string
+  icon?: string
 }
 
-// Screenshot attached to a Game. Stored under assets/games/screenshots/
-// <title>/<filename>. Same shape as SaveFile without the mandatory size —
-// screenshots are always images so previews get shown in the editor +
-// detail modal.
 export interface Screenshot {
   id: string
   filename: string
-  path: string           // relative to assets/
-  addedAt: string        // ISO
+  path: string
+  addedAt: string
   caption?: string
 }
 
-// Per-chapter reading note for a Book. Chapter is free-form so "Prologue",
-// "1", "1.5", "Chapter 12 — The Return" all work.
 export interface ChapterNote {
   id: string
   chapter: string
   note: string
 }
 
-// User-uploaded save files for a game. Stored on disk under
-// assets/games/saves/<title>/<filename>. Any extension is accepted
-// (.sav / .dat / .zip / .rar / whatever) — save formats vary too much
-// per engine to whitelist. Uploads accumulate over time; the `note`
-// field is what makes 20 entries for the same game useful ("post-final
-// boss", "NG+", "all collectibles").
+// Any file extension is accepted — save formats vary too much per
+// engine to whitelist. `note` is what makes multiple slots useful
+// ("post-final boss", "NG+", "all collectibles").
 export interface SaveFile {
   id: string
-  filename: string       // original filename, with (2)/(3)/… suffix on collision
-  path: string           // relative to assets/, e.g. "games/saves/Metro Exodus/Slot 3.sav"
-  size: number           // bytes
-  addedAt: string        // ISO
+  filename: string
+  path: string
+  size: number
+  addedAt: string
   note?: string
 }
 
@@ -253,16 +262,12 @@ export interface RelatedItem {
   relation: RelationKind
 }
 
-// Kind of history entry. Legacy entries had no kind — treat those as
-// 'rewatch' (they were called "Rewatch history" / "Reread history" /
-// "Replay history" everywhere). New entries can also capture starts,
-// finishes, drops, and plain journaling — no state change implied.
 export type RewatchKind = 'rewatch' | 'started' | 'finished' | 'dropped' | 'note'
 
 export interface RewatchEntry {
   id: string
   date: string
-  // Missing = legacy entry; treated as 'rewatch' by every consumer.
+  // Legacy entries omit this; every consumer treats missing as 'rewatch'.
   kind?: RewatchKind
   rating?: number
   notes?: string
@@ -276,12 +281,9 @@ export interface Chapter {
   readDate?: string
   rating?: number
   notes?: string
-  scanlator?: string        // fan-translation attribution group ("MangaDex" / "Void Scans" / etc.)
+  scanlator?: string
 }
 
-// Physical vs digital ownership tracker (manga family). Users often
-// collect the physical volumes and read the digital release — this
-// captures both without collapsing the distinction.
 export type MediaOwnership = 'physical' | 'digital' | 'both' | 'neither'
 
 export interface Episode {
@@ -293,10 +295,7 @@ export interface Episode {
   rating?: number
   notes?: string
   filler?: boolean
-  // Sprint I — populated by the AniDB fetcher's episode list import.
-  // `airdate` is an ISO yyyy-mm-dd; `length` is a free-text minutes
-  // string (AniDB emits "25", we don't parse it further so odd values
-  // like "24-26" survive round-trip).
+  // Free-text minutes ("25", "24-26"); AniDB values survive round-trip.
   airdate?: string
   length?: string
 }
@@ -324,24 +323,19 @@ export interface Track {
   rating?: number
   listened?: boolean
   lyrics?: string
-  // Disc number for multi-disc albums (physical releases). "1" for the
-  // first disc, "2" for the second, etc. Undefined = single-disc album
-  // or unassigned — the tracklist treats those as one flat list.
   disc?: string
 }
 
-// A distinct release edition of an album (Deluxe, Japan, 10th Anniversary…),
-// each with its own optional cover and extra/alternate tracks.
+// Distinct release edition of an album (Deluxe, Japan, 10th Anniversary…).
 export interface AlbumEdition {
   id: string
   name: string
   cover?: string
-  releaseDate?: string     // ISO date; each edition often ships months/years after the base album
+  releaseDate?: string
   tracks?: Track[]
 }
 
-// Artwork for a single that shipped with its own cover, often before the
-// album dropped. Displayed as a small gallery under the tracklist.
+// Single that shipped with its own cover — often ahead of the album.
 export interface SingleCover {
   id: string
   name: string
@@ -356,36 +350,24 @@ export interface Unit {
 
 export type BandStatus = 'active' | 'disbanded' | 'hiatus' | 'unknown'
 
-// One period of a member's tenure with a specific role set. Members who
-// only ever did one thing don't need `stints[]` — the top-level roles +
-// joinedIn/leftIn cover the common case. Stints kick in when a member
-// switched instruments over time (bassist who later became rhythm
-// guitarist, etc.); each entry stands on its own.
+// One tenure period with a distinct role set. Members who never
+// changed instruments don't need stints — the top-level roles + join/
+// leave years cover them.
 export interface MemberStint {
   id: string
   roles: string[]
-  from?: string           // free-text year: "1998", "March 2003", "?"
-  to?: string             // empty = still doing this role in this stint
-  // Marks this stint as a touring-only period — the member was on
-  // stage for the tour(s) but never joined the studio line-up (or
-  // switched instruments only for the road). Rendered with a dashed
-  // border on the band timeline.
+  from?: string
+  to?: string
+  // Touring-only stint: on stage for the tour but not in the studio
+  // line-up. Rendered dashed on the band timeline.
   touring?: boolean
 }
 
-// Membership tier — expands the old `former: boolean` toggle into four
-// buckets so touring musicians get their own visual group without
-// getting mixed into the studio line-up.
-//   - 'current'          — active studio member
-//   - 'current-touring'  — currently touring only (no studio credit)
-//   - 'former'           — past studio member
-//   - 'former-touring'   — past touring member (no studio credit)
+// 'current' / 'former' apply to studio members; the '-touring' variants
+// mark musicians who were on stage but not on the studio line-up.
 export type MemberStatus = 'current' | 'current-touring' | 'former' | 'former-touring'
 
-// Resolve the effective membership tier from a member, migrating the
-// legacy `former: boolean` field on the fly. Keeps callers in the UI
-// simple: `getMemberStatus(m) === 'former-touring'` regardless of what
-// era the JSON was written in.
+// Reads the effective status, migrating the legacy `former: boolean`.
 export function getMemberStatus(m: { membership?: MemberStatus; former?: boolean }): MemberStatus {
   if (m.membership) return m.membership
   return m.former ? 'former' : 'current'
@@ -401,21 +383,17 @@ export function isTouringMember(m: { membership?: MemberStatus; former?: boolean
   return s === 'current-touring' || s === 'former-touring'
 }
 
-// A band member with one or more roles (Vocals, Guitar, Bass, Drums…).
-// `membership` groups the line-up on the artist detail page and the
-// band timeline. `former` is kept for back-compat with pre-0.4.1 data
-// — the load path migrates `former: true` → `membership: 'former'`.
-// `deceased` renders a † next to the name.
 export interface BandMember {
   id: string
   name: string
   roles: string[]
   membership?: MemberStatus
-  former?: boolean         // deprecated: read-only, kept so old JSON still loads
-  joinedIn?: string        // free-text year: "1998", "March 2003", "?"
-  leftIn?: string          // only meaningful when the membership is a 'former*' tier
+  // Legacy pre-0.4.1 flag; load path migrates it to `membership`.
+  former?: boolean
+  joinedIn?: string
+  leftIn?: string
   deceased?: boolean
-  stints?: MemberStint[]   // optional extra periods with different role sets
+  stints?: MemberStint[]
 }
 
 export interface MusicArtist {
@@ -431,10 +409,6 @@ export interface MusicArtist {
   activeTo?: string
   labels?: string[]
   members?: BandMember[]
-  // Live shows attended for this artist. Moved from Item (albums used to
-  // carry their own concerts list, which meant re-typing the same show
-  // for every album by the same band). Legacy Item.concerts arrays are
-  // migrated onto the matching artist on first load post-0.3.6.
   concerts?: ConcertEntry[]
 }
 
@@ -447,27 +421,14 @@ export interface Collection {
   cover?: string
 }
 
-// Bag view of an item — every field of every variant, all optional,
-// `categoryId` widened to plain string. This is the top-level `Item`
-// type most of the codebase still uses. Components that opted into the
-// discriminated union (`GameItem`, `MusicItem`, … from `./items`)
-// declare the strict variant they accept and narrow via the
-// `isGameItem` / `isMusicItem` type guards. Fase 2 will split App.tsx
-// state per-category and let us swap `Item` from this bag to
-// `TypedItem` (the strict union) — until then this is the shared
-// vocabulary.
-//
-// `AnyItem` and `Item` refer to the same shape; the alias makes the
-// intent clear when a signature specifically wants the "cross-category
-// bag view" (sort/filter helpers, stat aggregators, importers).
-// Note: also re-exported under the name `Item` from `./items`.
+// Bag view — every field of every variant, all optional. Discriminated
+// variants (GameItem / MusicItem / …) live in ./items and narrow via
+// the isGameItem / isMusicItem type guards. Re-exported as `Item`.
 export interface AnyItem {
   id: string
   categoryId: CategoryId
   title: string
-  // Item-level favorite ⭐. Toggled from the card and the detail view.
-  // Fuels the Home "Favorites" strip and the `favorite:true` operator
-  // in Ctrl+K search. Distinct from Track.favorite (per-song).
+  // Item-level favorite. Distinct from Track.favorite (per-song).
   favorite?: boolean
   cover?: string
   bannerImage?: string
@@ -478,7 +439,6 @@ export interface AnyItem {
   tags?: string[]
   rating?: number
   finishedAt?: string
-  // Games — devs & publishers are lists (were single strings pre-0.2; migrated on load).
   devs?: string[]
   publishers?: string[]
   achievementsUnlocked?: string
@@ -488,53 +448,18 @@ export interface AnyItem {
   ownership?: Ownership
   gameStatus?: GameStatus
   playTime?: string
-  // Sprint E — structured playthroughs / runs. Each entry captures one
-  // discrete play session (a full campaign run, a NG+ replay, a co-op
-  // buddy playthrough). Different from `playTime` which is a single
-  // total-hours field; this array lets a user log "I beat this three
-  // times: hardcore ranger, mage, and coop with a friend". The card
-  // meta / detail view can sum hours from here when playTime is empty.
+  // Structured play sessions — each row is one campaign, NG+ replay
+  // or co-op session. Coexists with the free-text `playTime` total.
   playthroughs?: Playthrough[]
-  // Sprint E — VN endings tracker. Each entry represents one route /
-  // ending a VN offers; the user ticks off which ones they've seen.
-  // Purely additive — a VN with no endings tracked shows nothing.
   vnEndings?: VnEnding[]
-  // Sprint F — Games polish. Links to the game's store page across
-  // every storefront the user cares about, so opening "Elden Ring"
-  // in Steam vs GOG is a single click from the detail view. Each
-  // entry keeps its own store label so the icons render correctly.
   storeLinks?: StoreLink[]
-  // Sprint F — Games polish. Purchase log. One entry per time the
-  // user bought this game — many people own the same game on Steam
-  // AND GOG AND a physical copy; the log captures the shape of that
-  // ownership. Feeds a "total spent" strip in the editor header.
   purchases?: Purchase[]
-  // Sprint F — Games polish. Steam Deck / SteamOS compatibility as
-  // Valve labels it: Verified, Playable, Unsupported, or Unknown.
-  // Only rendered when set — the field stays out of libraries that
-  // don't care about it.
   deckCompat?: DeckCompat
-  // Sprint F — Games polish. ProtonDB rating for Linux users:
-  // platinum / gold / silver / bronze / borked. Same "hide when
-  // unset" rule as deckCompat.
   protonRating?: ProtonRating
-  // Sprint E finish — Movies. Structured viewing log: each row is
-  // one time the user watched this movie, with format, date,
-  // companions and a note. Separate from the free-text `rewatches`
-  // used elsewhere; this one is Movie-only and typed.
   viewings?: MovieViewing[]
-  // Sprint E finish — Books. Kindle-style highlights list — page
-  // reference, quoted text, and an optional personal note.
   bookHighlights?: BookHighlight[]
-  // Sprint E finish — Manga family. Where the reader left off:
-  // the chapter cursor + a short note ("last panel of the arc
-  // before the timeskip"). Rendered as a small block in the editor
-  // and a chip on the card when set.
   bookmarkChapter?: string
   bookmarkNote?: string
-  // Sprint E finish — Music. Freeform personal note about the
-  // album / track / concert — anecdote-friendly, not a review.
-  // "First time I heard this was at Sam's beach house 2022".
   listeningNote?: string
   hasDlc?: boolean
   dlcList?: DlcEntry[]
@@ -545,9 +470,8 @@ export interface AnyItem {
   saveFiles?: SaveFile[]
   achievements?: Achievement[]
   screenshots?: Screenshot[]
-  // PCGamingWiki page name once matched (e.g. "Metro Exodus"). Stored so
-  // the save-paths panel doesn't re-run opensearch every time the editor
-  // opens. Cleared / re-matched via the "Re-match" button in that panel.
+  // Cached PCGamingWiki page match so the save-paths panel doesn't
+  // re-run opensearch every time the editor opens.
   pcgwPage?: string
   releaseYear?: string
   duration?: string
@@ -555,8 +479,10 @@ export interface AnyItem {
   artist?: string
   genres?: string[]
   label?: string
-  partOfAlbum?: string        // free-text fallback (imports, legacy entries where the album isn't in the library)
-  partOfAlbumId?: string      // preferred: live reference to another Music item (typically an album). Set on non-albums that were later absorbed into an album — EPs, singles collected into a compilation, OSTs bundled into a deluxe edition. The detail view resolves this to a clickable link.
+  // Free-text fallback for legacy / imported entries whose parent album
+  // isn't in the library. Prefer `partOfAlbumId` when the album exists.
+  partOfAlbum?: string
+  partOfAlbumId?: string
   authors?: string[]
   mangaArtists?: string[]
   pubStatus?: PublicationStatus
@@ -570,7 +496,7 @@ export interface AnyItem {
   studios?: string[]
   animeFormat?: AnimeFormat
   airingStatus?: AiringStatus
-  airingDay?: Weekday        // used by the Simulcast board to slot the show into its weekday column
+  airingDay?: Weekday
   watchStatus?: AnimeStatus
   episodesWatched?: string
   totalEpisodes?: string
@@ -630,17 +556,15 @@ export interface AnyItem {
   productionCompanies?: string[]
   distributors?: string[]
   gameSource?: GameSource
-  // If this game derives from another (remake, port, expanded, standalone,
-  // reimagined, sequel etc.), point at the parent item so the two show as
-  // connected on both sides.
+  // Points at the parent item when this game derives from another
+  // (remake, port, sequel, …) so both ends of the link render as connected.
   originalWorkId?: string
   gameReview?: string
   mangaDescription?: string
   directors?: string[]
   cast?: string[]
   franchise?: string
-  // Cross-library adaptation link — points at another item (any
-  // category). Used by BasedOnDisplay + FranchiseTimeline.
+  // Cross-library adaptation link — the source work in any category.
   basedOnItemId?: string
   watchedWhere?: WatchLocation
   bannerImage2?: string
@@ -654,14 +578,12 @@ export interface AnyItem {
   startYear?: string
   endYear?: string
   units?: Unit[]
-  // Books — mirrors the manga shape (authors + reading progress + publication
-  // status) with a couple of book-specific fields on top.
   bookStatus?: BookStatus
   bookFormat?: BookFormat
   bookSource?: BookSource
   publisher?: string
-  saga?: string           // "The Wheel of Time", "Foundation", etc.
-  sagaIndex?: string      // "Book 1", "Vol. 3"; free-form so "1.5" works
+  saga?: string
+  sagaIndex?: string
   pagesRead?: string
   totalPages?: string
   isbn?: string
@@ -669,37 +591,31 @@ export interface AnyItem {
   bookReview?: string
   highlights?: Highlight[]
   chapterNotes?: ChapterNote[]
-  // Visual Novels — VNDB-shaped metadata. Shares a lot with Games (devs,
-  // publishers, platforms, releaseDate) but adds VN-specific fields: staff
-  // by role, characters, engine, length enum + community hours, per-work
-  // NSFW flag, and VNDB id for future re-syncs.
   visualNovelStatus?: VisualNovelStatus
   vnLength?: VnLength
-  vnLengthHours?: string      // community-averaged hours from VNDB, free-form
-  vnEngine?: string           // "Ren'Py" / "Kirikiri" / "TyranoBuilder" / etc.
-  vnOriginalLanguage?: string // ISO-ish code from VNDB: "ja", "en", "zh", "ko", …
-  vnLanguages?: string[]      // every language the release ships in
-  vnAliases?: string[]        // alternate titles (romaji, english, other)
+  vnLengthHours?: string
+  vnEngine?: string
+  vnOriginalLanguage?: string
+  vnLanguages?: string[]
+  vnAliases?: string[]
   vnCharacters?: VnCharacter[]
   vnStaff?: VnStaffMember[]
   vnScreenshots?: VnScreenshot[]
-  vnCovers?: VnCover[]        // multi-cover gallery; one carries `main: true`
-  vnEditions?: VnEdition[]    // release editions (Original / Steam / fan tr.)
-  vnPublishers?: VnPublisher[] // per-language publishers with country tags
-  vnCommunityRating?: string  // VNDB score /10, free-form so "8.45" fits
+  vnCovers?: VnCover[]
+  vnEditions?: VnEdition[]
+  vnPublishers?: VnPublisher[]
+  vnCommunityRating?: string
   vnDevStatus?: VnDevStatus
   vnDescription?: string
   vnReview?: string
-  vndbId?: string             // "v12345" — page slug on vndb.org
-  nsfw?: boolean              // work-level flag; screenshots carry their own too
-  // User-defined free-form fields, Notion-style. Displayed at the bottom of
-  // every detail view; each item can carry its own list independently of the
-  // built-in category schema.
+  vndbId?: string
+  // Work-level NSFW; VnScreenshot carries a per-image flag too.
+  nsfw?: boolean
+  // Notion-style per-item ad-hoc fields (rendered at the bottom of
+  // every detail view).
   customFields?: CustomField[]
-  // User-defined *library-level* custom fields (see types/customFields.ts).
-  // The schema lives in Settings.libraryCustomFields[categoryId]; each item
-  // stores its own values keyed by field id under this bag. Missing entries
-  // mean the item just hasn't answered that field — never a crash.
+  // Library-schema custom fields — schema lives in
+  // Settings.libraryCustomFields[categoryId]; values keyed by field id.
   libraryCustomFieldValues?: Record<string, string | number | boolean | null>
 }
 
@@ -709,9 +625,7 @@ export interface CustomField {
   value: string
 }
 
-// Sprint F — Games polish. One store button on a game's detail view.
-// `store` is a short slug the UI maps to an icon / label. Free-text
-// `note` is optional (e.g. "Bought as a gift", "Family library").
+// Store slug the UI maps to an icon and label.
 export type StoreSlug =
   | 'steam' | 'gog' | 'epic' | 'itch' | 'humble' | 'ubi' | 'ea'
   | 'battlenet' | 'rockstar' | 'nintendo' | 'playstation' | 'xbox'
@@ -723,97 +637,67 @@ export interface StoreLink {
   note?: string
 }
 
-// Sprint F — Games polish. One purchase entry. Every field except
-// `id` is optional so the log can capture partial history (a game
-// gifted with no price, or a Steam sale with no exact discount %).
+// Every field except `id` is optional so partial history (gift with
+// no price, unknown discount) can still be captured.
 export interface Purchase {
   id: string
-  date?: string        // ISO yyyy-mm-dd
-  price?: string       // free-text so "€19.99" and "1999 JPY" both fit
-  currency?: string    // ISO code when the price is numeric
-  storeLabel?: string  // matches a StoreLink.store slug OR a free-text label
-  discount?: string    // "-75%" or "$40 off"
-  note?: string        // "Bought as a birthday gift", "Physical PS5 disc"
+  date?: string
+  price?: string
+  currency?: string
+  // Matches a StoreLink.store slug or a free-text label.
+  storeLabel?: string
+  discount?: string
+  note?: string
   createdAt: number
 }
 
 export type DeckCompat = 'verified' | 'playable' | 'unsupported' | 'unknown'
 export type ProtonRating = 'platinum' | 'gold' | 'silver' | 'bronze' | 'borked'
 
-// Sprint E finish — Movies. One watching session.
 export type MovieFormat = 'theater' | 'streaming' | 'bluray' | 'dvd' | 'download' | 'other'
 export interface MovieViewing {
   id: string
-  date?: string            // ISO yyyy-mm-dd
+  date?: string
   format?: MovieFormat
-  location?: string        // theater name, streaming service, room in the house
-  companions?: string      // "with @friend / family / solo"
+  location?: string
+  companions?: string
   note?: string
   createdAt: number
 }
 
-// Sprint E finish — Books. One highlight / quote captured while reading.
 export interface BookHighlight {
   id: string
-  page?: string            // free-text so "vii", "epilogue", "page 240" all fit
-  text: string             // the quoted passage
-  note?: string            // personal reflection on it
-  capturedAt?: string      // ISO yyyy-mm-dd
+  page?: string
+  text: string
+  note?: string
+  capturedAt?: string
   createdAt: number
 }
 
-// Sprint E — one entry in Item.vnEndings. Ordered list of the VN's
-// endings (or routes, however the user maps their mental model). A
-// route/ending is "seen" once the user ticks the checkbox; the
-// optional note is for tag-of-truth details ("bad end", "true",
-// "harem — Fate/Stay Night style").
+// One route / ending of a VN. Blank `route` means shared/common route.
 export interface VnEnding {
   id: string
   name: string
   seen: boolean
-  // Optional route this ending belongs to. Blank means "shared /
-  // common route ending". Rendered as a small heading in the editor.
   route?: string
-  // Free-text tag ("good", "bad", "true", "normal", "epilogue").
   kind?: string
   note?: string
-  seenAt?: string   // ISO yyyy-mm-dd
+  seenAt?: string
   createdAt: number
 }
 
-// Sprint E — one entry in Item.playthroughs. Every field except `id`
-// is optional: the user might log a run with just its hours and a
-// note, or record only the character/build without dates. The editor
-// UI renders every field but never requires more than the id.
+// Free-form fields; `hours` mirrors `playTime`'s shape so
+// parseDurationToSeconds consumes either. Only `id` is required.
 export interface Playthrough {
   id: string
-  // ISO date strings (yyyy-mm-dd). `finishedAt` is the anchor date
-  // for insights (finished-this-year counts, etc); `startedAt` is
-  // informational only.
   startedAt?: string
   finishedAt?: string
-  // Free-text hours as string (matches the parent `playTime` shape so
-  // parseDurationToSeconds can consume either). "12h", "24:30", "80"
-  // — all valid.
   hours?: string
-  // The character / class / archetype used ("Sorcerer", "Ranger",
-  // "Solo no-death"). Blank when not applicable.
   character?: string
-  // Difficulty label as the user tracks it ("Very hard", "NG+7",
-  // "Ironman"). Free-text so every game can express its own scale.
   difficulty?: string
-  // Platform this specific run was played on. Games might replay a
-  // title on PC after starting on console; the array shape mirrors
-  // the parent `platforms` field so aggregation code stays uniform.
   platform?: Platform
-  // Companion / co-op tag — the friend's tag, guildmate, or "solo".
   coop?: string
-  // Longer note about the run: mods used, house rules, memorable
-  // moments. Rendered in the editor as a textarea.
   note?: string
-  // Milestones this playthrough completed — the game's "true ending",
-  // a hidden boss killed, etc. Free-text tags so any milestone the
-  // game surfaces can be captured.
   achievementsHit?: string[]
   createdAt: number
 }

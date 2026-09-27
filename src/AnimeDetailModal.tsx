@@ -1,7 +1,7 @@
 import type React from 'react'
 import { getAnimeStatus, getAiringStatusLabel, getAnimeFormatLabel, getAnimeSeasonLabel, getDemographicLabel, getAnimeSourceLabel, getAgeRatingLabel, getTotalRuntimeMinutes, formatDurationMinutes, getNextUnwatchedEpisode, assetSrc } from './types'
 import { AnimeStatusIcon } from './icons'
-import type { Item, AnyItem, AnimeItem, Collection } from './types'
+import type { Item, AnyItem, AnimeItem, Collection, FranchiseSection, FranchiseGraph } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import CoverPlaceholder from './components/CoverPlaceholder'
 import { exportItemAsJson } from './utils/files'
@@ -22,12 +22,16 @@ interface Props {
   onDuplicate: () => void
   onNavigate: (id: string) => void
   allItems?: AnyItem[]
+  onOpenCrossLibraryFranchise?: (franchise: string) => void
+  franchiseSections?: FranchiseSection[]
+  franchiseViewMode?: 'year' | 'sections' | 'graph'
+  franchiseGraph?: FranchiseGraph
 }
 
 const timelineSortKey = (i: Item) => i.airedFrom || i.seasonYear || i.releaseYear || ''
 const yearOf = (i: Item) => timelineSortKey(i).slice(0, 4)
 
-export default function AnimeDetailModal({ item, groups, allAnime, onClose, onEdit, onDuplicate, onNavigate, allItems }: Props) {
+export default function AnimeDetailModal({ item, groups, allAnime, onClose, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
   const ws = getAnimeStatus(item.watchStatus)
   const totalRuntime = getTotalRuntimeMinutes(item.episodeDuration, item.totalEpisodes, item.episodesWatched)
   const airedRange = item.airedFrom || item.airedTo
@@ -178,7 +182,7 @@ export default function AnimeDetailModal({ item, groups, allAnime, onClose, onEd
           <DetailReview review={item.animeReview} hasSpoilers={item.hasSpoilers} />
           <DetailHistoryTable label="Rewatch history" entries={item.rewatches ?? []} />
           <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} />
+          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
           <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
           <CustomFieldsView fields={item.customFields} />
 

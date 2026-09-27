@@ -1,5 +1,5 @@
 import { formatDurationMinutes, getWatchLocationLabel, getMovieSourceLabel, assetSrc } from './types'
-import type { Item, AnyItem, MovieItem, Collection } from './types'
+import type { Item, AnyItem, MovieItem, Collection, FranchiseSection, FranchiseGraph } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import CoverPlaceholder from './components/CoverPlaceholder'
 import { exportItemAsJson } from './utils/files'
@@ -22,11 +22,15 @@ interface Props {
   onEdit: () => void
   onDuplicate: () => void
   onNavigate: (id: string) => void
+  onOpenCrossLibraryFranchise?: (franchise: string) => void
+  franchiseSections?: FranchiseSection[]
+  franchiseViewMode?: 'year' | 'sections' | 'graph'
+  franchiseGraph?: FranchiseGraph
 }
 
 const yearOf = (i: Item) => i.releaseYear || ''
 
-export default function MovieDetailModal({ item, groups, allMovies, allItems, onClose, onEdit, onDuplicate, onNavigate }: Props) {
+export default function MovieDetailModal({ item, groups, allMovies, allItems, onClose, onEdit, onDuplicate, onNavigate, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
   const banner = item.bannerImage2
   const franchiseItems = item.franchise
     ? allMovies.filter((a) => a.franchise === item.franchise).sort((a, b) => yearOf(a).localeCompare(yearOf(b)))
@@ -164,7 +168,7 @@ export default function MovieDetailModal({ item, groups, allMovies, allItems, on
           <DetailNotes notes={item.notes} />
           <DetailHistoryTable label="Rewatch history" entries={item.rewatches ?? []} />
           <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} />
+          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
           <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
           <CustomFieldsView fields={item.customFields} />
         </div>

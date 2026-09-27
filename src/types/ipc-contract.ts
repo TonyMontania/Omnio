@@ -1,46 +1,17 @@
-// Typed IPC contract. This file is the single source of truth for
-// every channel the renderer can invoke and every response the Rust
-// backend returns. The renderer helper (`invoke` in
-// `src/utils/ipc.ts`) refuses to compile if a caller passes the
-// wrong argument shape or reads the wrong field off the return
-// value. The Tauri shim (`src/utils/ipc-shim.ts`) uses the
-// per-channel arg-name table (`src/utils/ipc-tauri-map.ts`) to route
-// each positional invoke into a named Tauri command call.
-//
-// Adding a new channel = one entry here + one row in the arg-name
-// map + one `#[tauri::command]` in the corresponding
-// `src-tauri/src/handlers/*.rs` module + one line in the
-// `.invoke_handler(...)` list in `src-tauri/src/main.rs`.
-//
-// Naming convention: renderer uses `namespace:kebab-case`
-// (`data:save`, `asset-blob:save`), the shim translates to
-// `snake_case` (`data_save`, `asset_blob_save`) for the Rust side.
+// Single source of truth for every IPC channel's args and return shape.
+// Adding a channel needs an entry here plus a row in ipc-tauri-map.ts,
+// a #[tauri::command] under src-tauri/src/handlers/, and a line in
+// main.rs's `.invoke_handler(...)` list. Renderer uses `ns:kebab-case`;
+// the shim translates to `snake_case` for the Rust side.
 
-// ---------------------------------------------------------------------
-// Common return-shape helpers
-// ---------------------------------------------------------------------
-
-// Every fetcher / write handler returns this envelope. Callers
-// pattern-match on `.ok` before touching `.data` or `.error`.
+// Standard fetcher / write handler envelope.
 export type Envelope<T> = { ok: true; data: T } | { ok: false; error: string }
 
-// Some ops report success without any payload (delete, apply, clear).
-// A separate alias keeps the intent obvious at the call site.
+// Success without a payload (delete / apply / clear).
 export type SimpleResult = { ok: true } | { ok: false; error: string }
 
-// A handful of legacy handlers respond with `true`/`false` booleans
-// instead of the envelope — kept as-is for backwards compat since
-// the renderer is used to reading them that way.
+// Legacy handlers that return a bare boolean rather than the envelope.
 export type BoolResult = boolean
-
-// ---------------------------------------------------------------------
-// Per-channel response shapes.
-//
-// These are the "public" shapes — anything the renderer reads off the
-// return value of an invoke() call. Kept as loose as the caller needs
-// (many use `unknown` for nested payload because a proper strict type
-// belongs to the domain module, not the IPC contract).
-// ---------------------------------------------------------------------
 
 export interface UpdateAssetRow { name: string; url: string; size: number }
 export type UpdatesCheckResult =
@@ -90,9 +61,7 @@ export interface DataSaveResult {
   rewrites: { from: string; to: string }[]
 }
 
-// `data:load` returns the raw split payload. The renderer's own
-// AppData type is stricter; here we stay at `Record<string, unknown>`
-// because the contract owns the wire shape only.
+// The renderer narrows to AppData at the call site.
 export type DataLoadResult = Record<string, unknown> | null
 
 export interface BackupRow { file: string; mtime: number; size: number }
@@ -134,10 +103,8 @@ export interface StorageCleanupArtifactsResult { removed: number; bytes: number 
 
 export type SteamLibraryResult = { ok: true; xml: string } | { ok: false; error: string }
 
-// Fetcher payloads are typed loosely — each fetcher component knows its
-// own hit shape and can safely narrow the `unknown[]` it gets back.
-// Keeping the contract at `unknown` avoids duplicating VnHit / IgdbHit
-// / TmdbHit definitions here just for the wire.
+// Fetcher payloads stay loose (`unknown[]`) so per-source hit shapes
+// live in the fetcher components rather than being duplicated here.
 export type FetcherHitsEnvelope = Envelope<unknown[]>
 export type FetcherObjectEnvelope = Envelope<Record<string, unknown>>
 
@@ -157,17 +124,8 @@ export type DiscogsCollectionResult = Envelope<{
   totalPages: number
 }>
 
-// ---------------------------------------------------------------------
-// The contract itself.
-//
-// Each entry: `channel: { args: [...tuple], result: T }`. The tuple
-// preserves argument order and per-position names so calls read
-// naturally. `result` is what the promise resolves to.
-//
-// Grouped by handler file (src-tauri/src/handlers/*.rs) so the contract
-// mirrors the runtime split. Adding a handler = adding an entry in
-// the right group here.
-// ---------------------------------------------------------------------
+// Contract table. Grouped by handler module. Each entry:
+// `channel: { args: [...tuple], result: T }`.
 
 export type IpcContract = {
   // -- handlers/system.ts --
@@ -262,7 +220,7 @@ export type IpcContract = {
   'storage:cleanup-migration-artifacts':
     { args: []; result: StorageCleanupArtifactsResult }
 
-  // -- handlers/fetchers.ts (17 sources, 28 channels) --
+  // -- handlers/fetchers.ts --
   'sgdb:search':
     { args: [apiKey: string, term: string]; result: FetcherHitsEnvelope }
   'sgdb:assets':
@@ -281,8 +239,10 @@ export type IpcContract = {
     { args: [apiKey: string, id: number | string]; result: FetcherObjectEnvelope }
   'mb:search':
     { args: [term: string]; result: FetcherHitsEnvelope }
+  'mb:release-group-releases':
+    { args: [releaseGroupId: string]; result: FetcherHitsEnvelope }
   'mb:release-group-details':
-    { args: [releaseGroupId: string]; result: Envelope<Record<string, unknown>> & { chosenReleaseId?: string; releaseGroupId?: string } }
+    { args: [releaseGroupId: string, releaseId?: string]; result: Envelope<Record<string, unknown>> & { chosenReleaseId?: string; releaseGroupId?: string } }
   'vgmdb:search':
     { args: [term: string]; result: FetcherHitsEnvelope }
   'vgmdb:album':
@@ -331,7 +291,7 @@ export type IpcContract = {
     { args: [apiKey: string, username: string, artist: string, album: string]; result: FetcherObjectEnvelope }
 }
 
-// Helpers for callers who need to name the args / result of a channel.
+// Helpers for narrowing to a single channel's arg / result types.
 export type IpcChannel = keyof IpcContract
 export type IpcArgs<K extends IpcChannel> = IpcContract[K]['args']
 export type IpcResult<K extends IpcChannel> = IpcContract[K]['result']

@@ -1,13 +1,11 @@
 import { useState, useEffect, useMemo, useRef, ChangeEvent, Suspense, lazy } from 'react'
 
-// Category metadata (Games / Music / Movies / Series / Anime & Donghua / Comics & Manga family)
 import {
   CATEGORIES,
   isAnimeLikeCategory, isCategoryId,
 } from './categories'
 import type { CategoryId } from './types/items'
 
-// Types
 import type {
   Item, AnyItem, Collection, Unit, MusicArtist,
   Platform, Ownership, GameStatus, GameField, GameSource,
@@ -20,7 +18,7 @@ import type {
   BookField, BookStatus, BookFormat, BookSource,
   VnField, VisualNovelStatus, VnLength, VnCharacter, VnStaffMember, VnScreenshot,
   VnCover, VnEdition, VnPublisher, VnDevStatus,
-  AgeRating, RelatedItem, RewatchEntry,
+  AgeRating, RelatedItem, RewatchEntry, FranchiseSection, FranchiseGraph,
   BandStatus, BandMember, SingleCover, AlbumEdition,
   CustomField, SaveFile, Achievement, Screenshot, ChapterNote, Playthrough, VnEnding,
   StoreLink, Purchase, DeckCompat, ProtonRating,
@@ -28,7 +26,6 @@ import type {
 } from './types'
 import type { ArcadeGame } from './types/arcade'
 
-// Runtime constants (option lists, default field visibility)
 import {
   GAME_STATUS_OPTIONS, GAME_FIELD_OPTIONS, DEFAULT_GAME_FIELDS,
   MUSIC_FIELD_OPTIONS, DEFAULT_MUSIC_FIELDS,
@@ -42,14 +39,12 @@ import {
   BAND_STATUS_OPTIONS,
 } from './types'
 
-// Helpers (label lookups, derived counts, formatters, mini markdown)
 import {
   getGameStatusRank, getMangaStatus, getAnimeStatus, getSeriesStatus, getBookStatus,
   isMangaLike,
   assetSrc, renderMiniMarkdown, parseDurationToSeconds,
 } from './types'
 
-// Stats — pure aggregation functions used by the Insights view
 import {
   getCategoryStats, getTopRated, getTopArtists, getTopStudios, getTopNetworks, getTopActors,
   getTopGenres, getTopDirectors, getTopDevs, getTopPublishers, getTopPlatforms,
@@ -58,10 +53,8 @@ import {
   getMoviesWatchedPerMonth, getMangaChaptersPerMonth, getMusicListensPerMonth,
   getDistribution,
 } from './insights/stats'
-// UI: category-specific detail modals + shared building blocks.
-// Every on-demand modal is code-split via React.lazy so the initial
-// bundle stays lean — the app boots faster and users only pay for a
-// modal's JS the first time they open it (imperceptible on local disk).
+// Detail modals + heavy pages are lazy-loaded so the initial bundle
+// stays lean; users only pay for a modal's JS on first open.
 import ItemCard from './ItemCard'
 import KanbanView from './views/KanbanView'
 import DiaryView from './views/DiaryView'
@@ -79,9 +72,7 @@ import ApiRegistrationGuide from './components/ApiRegistrationGuide'
 import type { ApiGuideId } from './components/ApiRegistrationGuide'
 import ServiceLogo from './components/ServiceLogo'
 import { parentOf } from './utils/paths'
-import PlaythroughsEditor from './components/editors/PlaythroughsEditor'
 import VnEndingsEditor from './components/editors/VnEndingsEditor'
-import GameStoreEditor from './components/editors/GameStoreEditor'
 import MovieViewingsEditor from './components/editors/MovieViewingsEditor'
 import BookHighlightsEditor from './components/editors/BookHighlightsEditor'
 import type { SmartList } from './types/smartLists'
@@ -105,8 +96,6 @@ import { PLUGINS } from './plugins/registry'
 import type { PluginDef, PluginPageMeta } from './plugins/registry'
 import { subscribePluginCounts } from './plugins/counts'
 const ArtistDetailView  = lazy(() => import('./ArtistDetailView'))
-// The eight per-category detail modals were pulled out of this
-// module and now live inside `components/DetailModalRouter.tsx`.
 const DetailModalRouter = lazy(() => import('./components/DetailModalRouter'))
 const DuplicatesModal   = lazy(() => import('./DuplicatesModal'))
 const GenreNormalizerModal = lazy(() => import('./GenreNormalizerModal'))
@@ -146,21 +135,16 @@ import { buildStaticSiteHtml } from './exportSite'
 import { buildCsvExports, buildSingleCsv } from './CsvExporter'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
-  // ChevronIcon removed — no more collapsible library groups.
   InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon,
 } from './icons'
 
-// Editors and pickers used inside detail modals and the toolbar
 import DistChart from './insights/DistChart'
 import Heatmap from './insights/Heatmap'
 import GenreHeatmap from './insights/GenreHeatmap'
 import BacklogChart from './insights/BacklogChart'
 import { pickImageToDataUrl, imageDropHandlers, assetBasename, downloadImageAsset } from './utils/files'
 import { expandTagSelection } from './utils/tags'
-// Fetcher registry — panel iterates `getFetchersFor(activeCategory)`
-// and a single `activeFetcher: string | null` state drives which modal
-// is on screen. All 11 built-in sources declare themselves in
-// `fetchers/registrations.tsx`; that side-effect import seeds the map.
+// Side-effect import that seeds getFetchersFor() with every source.
 import './fetchers'
 import { getFetchersFor, resolveHint, type FetcherRegistration } from './fetchers/registry'
 import { detectQuickAddUrl } from './utils/quickAddUrl'
@@ -187,15 +171,10 @@ type Layout = 'list' | 'grid' | 'compact' | 'kanban' | 'timeline' | 'diary'
 type GroupBy = 'none' | 'year' | 'decade' | 'status' | 'rating'
 type SortBy =
   | 'alpha' | 'recent' | 'rating' | 'custom'
-  // Games
   | 'time' | 'status' | 'releaseAsc' | 'releaseDesc' | 'hltbAsc' | 'hltbDesc'
-  // Cross-category
   | 'yearAsc' | 'yearDesc' | 'duration'
-  // Series / Anime
   | 'episodes' | 'animeStatus' | 'seriesStatus'
-  // Manga family
   | 'chapters' | 'mangaStatus'
-  // Music
   | 'artist'
 
 type ThemeName = 'dark' | 'light' | 'dark-amoled' | 'nord' | 'gruvbox-dark' | 'solarized-dark' | 'dracula' | 'tokyo-night' | 'catppuccin' | 'rose-pine' | 'everforest'
@@ -261,89 +240,50 @@ interface Settings {
   igdbClientId?: string
   igdbClientSecret?: string
   comicvineApiKey?: string
-  // Last.fm API key + the scrobbler username to import top albums for.
-  // Both required to run the Last.fm importer; empty disables the
-  // Settings row entirely. Register a free key at last.fm/api/account.
+  // Last.fm API key + scrobbler username; both required for the importer.
   lastFmApiKey?: string
   lastFmUsername?: string
-  // AniDB's HTTP API requires a registered client name (register at
-  // anidb.net/software/add — the site issues a name after a quick review).
-  // Empty means "AniDB fetcher disabled"; the button in the anime editor
-  // links to the settings when this is missing.
+  // AniDB HTTP API requires a registered client name; empty disables the fetcher.
   anidbClient?: string
-  // Optional HTTP/HTTPS proxy URL applied to every outbound fetch in the
-  // main process. Useful for NAS containers behind corporate firewalls
-  // or Pi-hole-style DNS filters. Format: `http://user:pass@host:port`.
+  // Applied to every outbound fetch: `http://user:pass@host:port`.
   httpProxy?: string
-  // Automatic backup to an external folder. Interval is the minimum time
-  // between snapshots; the app checks hourly while running and fires the
-  // same storage:copy-data-to routine as the manual button. Empty target
-  // = feature disabled even if interval is set. lastAt is the unix ms
-  // of the most recent successful auto-backup, used to gate the check.
+  // Empty target disables auto-backup even when interval is set.
+  // `lastAt` is unix ms of the most recent successful snapshot.
   autoBackupInterval?: 'off' | 'daily' | 'weekly'
   autoBackupTarget?: string
   autoBackupLastAt?: number
-  // Optional parent-tag map for the Tag hierarchy feature. Keys are child
-  // tag strings, values are the parent tag string. Missing keys = the tag
-  // is top-level. Cycles are ignored by the expand helper.
+  // Child tag → parent tag. Missing keys are top-level; cycles are
+  // ignored by the expand helper.
   tagTree?: Record<string, string>
-  // Home board layout — user-arranged list of widgets (id + size). Missing
-  // = the default layout kicks in (libraries + currently + upcoming).
-  // Empty array [] = user explicitly cleared everything; the board shows
-  // the "empty" hint instead of silently reverting to defaults.
+  franchiseSections?: Record<string, FranchiseSection[]>
+  franchiseViewMode?: Record<string, 'year' | 'sections' | 'graph'>
+  franchiseGraphs?: Record<string, FranchiseGraph>
+  // Empty array [] means the user explicitly cleared the Home layout;
+  // missing means "use the default set of widgets".
   homeWidgets?: { id: string; size: 'small' | 'medium' | 'large' }[]
-  // Persistent sidebar collapsed → icon-rail only. Users can toggle
-  // from the sidebar itself. Omitted = expanded (default).
   sidebarCollapsed?: boolean
-  // Extras section in the sidebar can be toggled per item from
-  // Settings → Enabled libraries. Omitted = enabled (default).
   arcadeEnabled?: boolean
-  // Plugins that the user has explicitly unlocked. Compiled plugins
-  // stay invisible in the sidebar, "Enabled libraries" list and
-  // card-field settings until their slug is added here. Unlocking is
-  // gated by a user action (e.g. typing a plugin's slug into the
-  // Home viewport keyboard listener).
+  // Plugins whose slug the user has unlocked via the Home keyboard listener.
   unlockedPlugins?: string[]
-  // Subset of unlockedPlugins the user has hidden from the sidebar via
-  // Settings → Enabled libraries. Hiding is fully reversible from the
-  // same panel — the checkbox stays there so the plugin can be brought
-  // back without re-typing the unlock code.
+  // Subset of unlockedPlugins hidden from the sidebar — reversible from Settings.
   hiddenPlugins?: string[]
-  // Per-plugin, per-field on/off overrides. Missing entries fall back
-  // to the plugin's declared defaults.
   pluginCardFields?: Record<string, Record<string, boolean>>
-  // Per-category defaults applied when the user opens Add. Set via
-  // "Save as template" in the add panel; cleared per-category from
-  // Settings → Behavior. Keys are CategoryId strings.
+  // Add-panel prefill defaults per category, keyed by CategoryId.
   itemTemplates?: Partial<Record<string, ItemTemplate>>
-  // Sprint D — auto-status transitions. When on, giving an item a
-  // rating (or setting finishedAt) bumps its status to completed if
-  // it's still in a backlog / in-progress state. Off = the user logs
-  // status by hand and the app never touches it.
+  // When on, rating an item (or setting finishedAt) auto-transitions
+  // its status to completed if it was still backlog / in-progress.
   autoStatusOnRate?: boolean
   autoFinishedAtOnComplete?: boolean
-  // Sprint D — keyboard shortcut overrides. Keys are action ids
-  // (see KEYBOARD_ACTIONS), values are a key-combo string built by
-  // formatCombo (e.g. "Ctrl+F", "Alt+Shift+K"). Missing entries fall
-  // back to the built-in default; a blank string disables the action.
+  // Key = action id from KEYBOARD_ACTIONS; empty string disables the action.
   shortcutOverrides?: Record<string, string>
-  // Sprint D — user-defined library custom-field schema keyed by
-  // categoryId. Each entry is an array of LibraryCustomFieldDef the
-  // item editor renders under a "Custom fields" section for that
-  // library. Missing = no custom fields for that library.
   libraryCustomFields?: Record<string, LibraryCustomFieldDef[]>
-  // Sprint G polish — last folder the user actually saved an export
-  // to. Auto-updates on every successful save so the next picker opens
-  // where the previous one left off; no explicit "set default folder"
-  // step. Missing = no export has been saved yet, the picker opens at
-  // the OS-provided Home folder.
+  // Auto-updated on each successful export so the next picker opens
+  // where the previous one left off.
   lastExportFolder?: string
 }
 
-// Small subset of add-panel fields we're willing to prefill for a new
-// item. Kept optional so a template only touches the slots the user
-// actually filled in when they saved it — a template with just
-// `platforms: ['PC']` doesn't force a status onto every new game.
+// Optional so a template only carries the slots the user actually
+// filled in — an empty template doesn't force anything onto new items.
 interface ItemTemplate {
   gameStatus?: GameStatus
   watchStatus?: AnimeStatus
@@ -365,14 +305,12 @@ interface AppData {
   settings?: Settings
   customOrders?: Record<string, string[]>
   arcadeGames?: ArcadeGame[]
-  // Sprint C — saved filter presets (see types/smartLists). Optional on
-  // disk so older saves keep loading.
+  // Optional on disk so older saves keep loading.
   smartLists?: SmartList[]
   playlists?: Playlist[]
 }
 
-// Displayed in Settings → Data → About. Sourced from package.json so the
-// About string can't drift from the packaged version number.
+// Sourced from package.json so About can't drift from the packaged version.
 const APP_VERSION = __APP_VERSION__
 
 const DEFAULT_SETTINGS: Settings = { defaultLayout: 'grid', confirmDelete: true, theme: 'dark', accent: 'default', density: 'comfortable', motion: 'auto', startupCategory: 'last', gameFields: DEFAULT_GAME_FIELDS, musicFields: DEFAULT_MUSIC_FIELDS, mangaFields: DEFAULT_MANGA_FIELDS, movieFields: DEFAULT_MOVIE_FIELDS, animeFields: DEFAULT_ANIME_FIELDS, seriesFields: DEFAULT_SERIES_FIELDS, bookFields: DEFAULT_BOOK_FIELDS, vnFields: DEFAULT_VN_FIELDS, rememberCategorySort: true, categorySortModes: {}, cardZoom: 'md', autoStatusOnRate: true, autoFinishedAtOnComplete: true }
@@ -392,14 +330,7 @@ function compareDates(a?: string, b?: string, asc = true): number {
   return asc ? da - db : db - da
 }
 
-// Reads whichever year-ish field the item happens to have populated.
-// Different categories store year in different places (games use releaseDate,
-// music/movies use releaseYear, series use startYear, anime uses airedFrom, etc).
-// Group a pre-sorted item list into buckets for the "Group by" render
-// mode. Every bucket keeps its input order (so the outer sortBy still
-// controls how items appear inside a group). Categories that don't
-// carry a given axis (e.g. Music has no `year` on every album) still
-// work — items without a key land in the "Unknown" bucket at the end.
+// Items without a key land in the "Unknown" bucket at the end.
 interface Bucket { key: string; label: string; list: AnyItem[] }
 function groupItems(list: AnyItem[], by: 'year' | 'decade' | 'status' | 'rating', categoryId: string): Bucket[] {
   const buckets = new Map<string, Bucket>()
@@ -446,8 +377,6 @@ function groupItems(list: AnyItem[], by: 'year' | 'decade' | 'status' | 'rating'
     }
   }
   const arr = Array.from(buckets.values())
-  // Sort buckets: numeric keys ascending (year / decade / rating),
-  // status by original enum order, "_unknown" last.
   arr.sort((a, b) => {
     if (a.key === '_unknown') return 1
     if (b.key === '_unknown') return -1
@@ -467,8 +396,7 @@ function pickYear(i: AnyItem): number {
   return isNaN(n) ? 0 : n
 }
 
-// Total runtime / listen time in seconds. Music sums track durations,
-// movies use their `duration` (minutes), series/anime use eps * ep duration.
+// Total runtime in seconds across categories.
 function pickDuration(i: AnyItem): number {
   if (i.tracks && i.tracks.length > 0) {
     return i.tracks.reduce((acc: number, t) => acc + parseDurationToSeconds(t.duration), 0)
@@ -506,15 +434,11 @@ function filterAndSort<T extends AnyItem>(list: T[], search: string, filterTags:
   if (minRating > 0) result = result.filter((i) => (i.rating ?? 0) >= minRating)
   if (!sortBy) return result
   const arr = [...result]
-  // Universal
   if (sortBy === 'alpha') arr.sort((a, b) => a.title.localeCompare(b.title))
   else if (sortBy === 'recent') arr.sort((a, b) => b.createdAt - a.createdAt)
   else if (sortBy === 'rating') arr.sort((a, b) => (b.rating || 0) - (a.rating || 0))
-  // Games
   else if (sortBy === 'time') arr.sort((a, b) => parseFloat(b.playTime || '0') - parseFloat(a.playTime || '0'))
-  // Backlog prioritization — shortest / longest games first based on
-  // HowLongToBeat's main-story estimate. Unrated games fall to the
-  // end so a fresh backlog with no HLTB data still sorts sensibly.
+  // Unrated games fall to the end so a fresh backlog still sorts sensibly.
   else if (sortBy === 'hltbAsc') arr.sort((a, b) => {
     const av = (a as { hltbHours?: number }).hltbHours ?? Number.POSITIVE_INFINITY
     const bv = (b as { hltbHours?: number }).hltbHours ?? Number.POSITIVE_INFINITY
@@ -524,20 +448,15 @@ function filterAndSort<T extends AnyItem>(list: T[], search: string, filterTags:
   else if (sortBy === 'status') arr.sort((a, b) => getGameStatusRank(b.gameStatus) - getGameStatusRank(a.gameStatus))
   else if (sortBy === 'releaseAsc') arr.sort((a, b) => compareDates(a.releaseDate, b.releaseDate, true))
   else if (sortBy === 'releaseDesc') arr.sort((a, b) => compareDates(a.releaseDate, b.releaseDate, false))
-  // Cross-category year & duration
   else if (sortBy === 'yearAsc') arr.sort((a, b) => (pickYear(a) || 9999) - (pickYear(b) || 9999))
   else if (sortBy === 'yearDesc') arr.sort((a, b) => pickYear(b) - pickYear(a))
   else if (sortBy === 'duration') arr.sort((a, b) => pickDuration(b) - pickDuration(a))
-  // Series / Anime
   else if (sortBy === 'episodes') arr.sort((a, b) => (parseInt(b.episodesWatched || '0', 10) || 0) - (parseInt(a.episodesWatched || '0', 10) || 0))
   else if (sortBy === 'animeStatus') arr.sort((a, b) => statusRank(a.watchStatus, 'plan_to_watch', ANIME_STATUS_OPTIONS) - statusRank(b.watchStatus, 'plan_to_watch', ANIME_STATUS_OPTIONS))
   else if (sortBy === 'seriesStatus') arr.sort((a, b) => statusRank(a.seriesStatus, 'plan_to_watch', SERIES_STATUS_OPTIONS) - statusRank(b.seriesStatus, 'plan_to_watch', SERIES_STATUS_OPTIONS))
-  // Manga family
   else if (sortBy === 'chapters') arr.sort((a, b) => (parseInt(b.chaptersRead || '0', 10) || 0) - (parseInt(a.chaptersRead || '0', 10) || 0))
   else if (sortBy === 'mangaStatus') arr.sort((a, b) => statusRank(a.mangaStatus, 'plan_to_read', MANGA_STATUS_OPTIONS) - statusRank(b.mangaStatus, 'plan_to_read', MANGA_STATUS_OPTIONS))
-  // Music
   else if (sortBy === 'artist') arr.sort((a, b) => (a.artist || '').localeCompare(b.artist || ''))
-  // Custom (drag order)
   else if (sortBy === 'custom') {
     const idx = new Map(customOrder.map((id, i) => [id, i]))
     arr.sort((a, b) => (idx.has(a.id) ? idx.get(a.id)! : Infinity) - (idx.has(b.id) ? idx.get(b.id)! : Infinity))
@@ -548,48 +467,23 @@ function filterAndSort<T extends AnyItem>(list: T[], search: string, filterTags:
 
 
 function App() {
-  // In-app folder picker. Replaces every `dialog:pick-directory` call
-  // so folder selection uses the same visual language as the rest of
-  // Omnio instead of dropping the user into Windows Explorer.
   const { pickFolder, pickSaveFile, pickOpenFile } = useFolderPicker()
   const [activeCategory, setActiveCategory] = useState<CategoryId>(CATEGORIES[0].id)
-  // App-level items state stays on the loose `AnyItem` bag so the
-  // dozens of generic mappers / bulk ops inside App.tsx keep compiling
-  // without a narrow per line. Component boundaries (detail modals,
-  // editor sections) declare their strict variant (`GameItem`,
-  // `MusicItem`, …) — narrowing happens at the pass site via the
-  // `isGameItem` / `isMusicItem` type guards. Fase 2 will split this
-  // per-category and drop `AnyItem` entirely.
   const [items, setItems] = useState<AnyItem[]>([])
   const [collections, setCollections] = useState<Collection[]>([])
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [loaded, setLoaded] = useState(false)
   const [layout, setLayout] = useState<Layout>('grid')
   const [groupBy, setGroupBy] = useState<GroupBy>('none')
-  // `ItemCard` only accepts the three classic layouts. Special views
-  // (musicBoard, mangaBoard, per-status boards, etc.) always render as
-  // grid/list/compact, so when the main layout is kanban/timeline/diary
-  // we degrade to 'grid' inside those special renderers.
+  // ItemCard only supports the three classic layouts; degrade for special views.
   const classicLayout: 'list' | 'grid' | 'compact' =
     layout === 'list' || layout === 'compact' ? layout : 'grid'
   const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'vnBoard' | 'simulcastBoard' | 'stats' | 'calendar' | 'settings' | 'arcade' | 'playlists'>('none')
-  // Arcade section state (score log + 1cc grid). Loaded from and
-  // persisted to the same JSON blob as `items` — see save/load below.
   const [arcadeGames, setArcadeGames] = useState<ArcadeGame[]>([])
-  // Sprint C — saved filter presets. `activeSmartListId` layers on top
-  // of the current filter state: while set, `visibleItems` runs each
-  // item through the list's rules before rendering. Clearing it
-  // (setter → null) restores the plain filter view.
   const [smartLists, setSmartLists] = useState<SmartList[]>([])
   const [activeSmartListId, setActiveSmartListId] = useState<string | null>(null)
   const [smartListsModalOpen, setSmartListsModalOpen] = useState(false)
-  // Settings → Integrations · API keys — which service guide is open.
-  // Missing = no modal. Set by the "?" button next to each key field.
   const [apiGuide, setApiGuide] = useState<ApiGuideId | null>(null)
-  // Sprint G polish — direct in-app save through the FilePicker.
-  // No intermediate modal, no default-folder setting: the picker
-  // opens at settings.lastExportFolder (the last folder the user
-  // successfully saved to) and we update that field on every save.
   const saveExportInApp = async (
     body: string,
     suggestedName: string,
@@ -624,25 +518,18 @@ function App() {
       setToast(`Export failed — ${(r as { ok: false; error: string }).error}`)
     }
   }
-  // Sprint C — cross-library ordered lists.
   const [playlists, setPlaylists] = useState<Playlist[]>([])
-  // Locally-installed plugin (git-ignored overlay under
-  // `src/categories/<slug>/`). When non-null, its <View/> replaces
-  // the library grid. Registry populates via `import.meta.glob` — the
-  // public build has zero entries so this state stays `null`.
+  // Non-null when a locally-installed plugin's <View/> replaces the library grid.
   const [activePluginSlug, setActivePluginSlug] = useState<string | null>(null)
   const [pluginCounts, setPluginCounts] = useState<Record<string, number>>({})
   const [pluginPageMeta, setPluginPageMeta] = useState<PluginPageMeta | null>(null)
   useEffect(() => subscribePluginCounts(setPluginCounts), [])
 
-  // Fire each plugin's `preload` once so the sidebar count is
-  // populated before the user opens the plugin for the first time.
+  // Preload sidebar counts before the user opens each plugin the first time.
   useEffect(() => { for (const p of PLUGINS) { void p.preload?.() } }, [])
 
-  // Home-screen keyboard listener: user types a plugin's slug and
-  // the app unlocks (or re-locks) it. Only active on the Home view
-  // and when no input/textarea has focus — otherwise we'd steal
-  // keystrokes from search boxes.
+  // Typing a plugin's slug on Home unlocks or re-locks it. Skip when an
+  // input has focus so we don't swallow search keystrokes.
   const pluginKeyBufferRef = useRef('')
   useEffect(() => {
     if (specialView !== 'home' || activePluginSlug) return
@@ -682,9 +569,7 @@ function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [specialView, activePluginSlug])
   useEffect(() => { if (!activePluginSlug) setPluginPageMeta(null) }, [activePluginSlug])
-  // If the user re-locks or hides a plugin whose view is currently
-  // open, snap them back to Home so they aren't stranded in a hidden
-  // library.
+  // If the plugin whose view is open gets re-locked or hidden, snap back to Home.
   useEffect(() => {
     if (
       activePluginSlug
@@ -695,17 +580,11 @@ function App() {
       setSpecialView('home')
     }
   }, [activePluginSlug, settings.unlockedPlugins, settings.hiddenPlugins])
-  // Only compiled plugins the user has unlocked (via the Home
-  // keyboard listener) show up in the sidebar / settings / card
-  // fields. Everyone else runs the same build with the plugin's code
-  // present but no visible surface anywhere.
   const unlockedPluginDefs: PluginDef[] = useMemo(
     () => PLUGINS.filter((p) => settings.unlockedPlugins?.includes(p.slug)),
     [settings.unlockedPlugins],
   )
-  // Sidebar / routing / card-field views drop any plugin the user has
-  // hidden from Settings → Enabled libraries. Settings itself keeps
-  // using unlockedPluginDefs so the checkbox stays reachable.
+  // Settings keeps using unlockedPluginDefs so the checkbox stays reachable.
   const visiblePlugins: PluginDef[] = useMemo(
     () => unlockedPluginDefs.filter((p) => !settings.hiddenPlugins?.includes(p.slug)),
     [unlockedPluginDefs, settings.hiddenPlugins],
@@ -714,11 +593,6 @@ function App() {
   const [seriesBoardStatus, setSeriesBoardStatus] = useState<SeriesStatus>('plan_to_watch')
   const [bookBoardStatus, setBookBoardStatus] = useState<BookStatus>('plan_to_read')
   const [vnBoardStatus, setVnBoardStatus] = useState<VisualNovelStatus>('plan_to_play')
-  // Single detail-modal state. `viewing` holds whichever item the
-  // user opened; `<DetailModalRouter>` narrows via the per-category
-  // type guards and picks the right modal. Replaces eight separate
-  // `viewingX` slots that used to live one per category — see
-  // components/DetailModalRouter.tsx.
   const [viewing, setViewing] = useState<AnyItem | null>(null)
   const [settingsTab, setSettingsTab] = useState<'appearance' | 'behavior' | 'libraries' | 'cards' | 'customFields' | 'shortcuts' | 'data' | 'integrations' | 'maintenance'>('appearance')
   const [welcomeStep, setWelcomeStep] = useState<'libraries' | 'keys' | 'tips'>('libraries')
@@ -730,10 +604,8 @@ function App() {
 
   useEffect(() => {
     if (settings.enabledCategories && settings.enabledCategories.length > 0 && !settings.enabledCategories.includes(activeCategory)) {
-      // Guard: `enabledCategories` is `string[]` on disk, so cross the
-      // boundary through isCategoryId — a bad value from a hand-edited
-      // settings file falls back to the first CATEGORIES entry rather
-      // than corrupting state.
+      // Cross the string[] disk boundary through isCategoryId so a
+      // hand-edited settings file with a bad value falls back cleanly.
       const first = settings.enabledCategories[0]
       if (isCategoryId(first)) setActiveCategory(first)
     }
@@ -750,9 +622,7 @@ function App() {
   }, [settings.arcadeEnabled, specialView])
 
   const [subView, setSubView] = useState<'items' | 'groups' | 'artists'>('items')
-  // Sort order for the folder-grid sub-views (Groups and Artists).
-  // Independent of the main library `sortBy` so switching between
-  // items and groups doesn't clobber either one's ordering.
+  // Independent of the main library `sortBy` so the two don't clobber each other.
   const [folderSort, setFolderSort] = useState<'alpha' | 'recent'>('alpha')
   const [musicArtists, setMusicArtists] = useState<MusicArtist[]>([])
   const [newArtistName, setNewArtistName] = useState('')
@@ -813,10 +683,8 @@ function App() {
   const [auditOpen, setAuditOpen] = useState(false)
   const [brokenAssets, setBrokenAssets] = useState<{ itemId: string; itemTitle: string; category: string; field: string; rel: string }[]>([])
 
-  // Mirror of storage:clear-asset-ref but for the in-memory items /
-  // collections / artists state, so a Clear from the broken-cover modal
-  // reflects instantly — otherwise <img> tags keep firing 404s on every
-  // render until the user hits F5.
+  // Mirror of storage:clear-asset-ref in memory so a Clear from the
+  // broken-cover modal reflects instantly instead of firing 404s until reload.
   const applyClearedRefLocally = (b: { itemId: string; category: string; field: string }) => {
     skipHistoryRef.current = true
     if (b.category === 'artists') {
@@ -860,11 +728,8 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [ctxMenu, setCtxMenu] = useState<{ item: AnyItem; x: number; y: number } | null>(null)
-  // Sprint C — modal pickers spawned from the card context menu.
   const [libraryPickerFor, setLibraryPickerFor] = useState<AnyItem | null>(null)
   const [playlistPickerFor, setPlaylistPickerFor] = useState<AnyItem | null>(null)
-  // Active tab in the tabbed editor prototype. Reset to 'overview' each
-  // time the user opens a new item so they always land on the essentials.
   const [editorTab, setEditorTab] = useState<'overview' | 'identity' | 'progress' | 'media' | 'history' | 'related' | 'notes'>('overview')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
@@ -891,7 +756,6 @@ function App() {
       return
     }
     if (r.hasUpdate) {
-      // Point the user at the exact asset that matches their install kind.
       const installKind = await invoke('updates:install-kind')
       let matchedAssetUrl: string | undefined
       let matchedAssetName: string | undefined
@@ -910,7 +774,6 @@ function App() {
   }
 
   useEffect(() => {
-    // Silent check once at boot; renderer decides when so we don't block startup.
     const t = setTimeout(() => { runUpdateCheck(true) }, 1500)
     return () => clearTimeout(t)
   }, [])
@@ -946,7 +809,7 @@ function App() {
       await invoke('updates:open-dmg', downloadState.path)
       setUpdateModalOpen(false)
     } else {
-      // Portable / unknown → reveal in explorer, user runs manually.
+      // Portable / unknown → reveal so the user can run it manually.
       await invoke('updates:reveal', downloadState.path)
       setUpdateModalOpen(false)
     }
@@ -972,6 +835,7 @@ function App() {
   const [serializdOpen, setSerializdOpen] = useState(false)
   const [spotifyOpen, setSpotifyOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
+  const [viewMenuOpen, setViewMenuOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [coverWallOpen, setCoverWallOpen] = useState(false)
   const [franchiseTimelineOpen, setFranchiseTimelineOpen] = useState<string | null>(null)
@@ -980,10 +844,7 @@ function App() {
   const [exporting, setExporting] = useState(false)
   const [exportScope, setExportScope] = useState<string>('all')
 
-  // ---- Undo / redo of library mutations ----
-  // We snapshot items+collections+artists on every observable change and
-  // let Ctrl+Z pop back through them. Deliberately limited to library data
-  // — settings, panel state and modal state are not undoable.
+  // Undo / redo covers library data only — settings and panel state are not undoable.
   interface HistorySnap { items: AnyItem[]; collections: Collection[]; artists: MusicArtist[] }
   const historyRef = useRef<HistorySnap[]>([])
   const redoRef = useRef<HistorySnap[]>([])
@@ -998,17 +859,12 @@ function App() {
   const [title, setTitle] = useState('')
   const [cover, setCover] = useState('')
   const [notes, setNotes] = useState('')
-  // Sprint D — buffered values for the library's user-defined custom
-  // fields. Reset at every panel open. Keyed by field id, so renaming
-  // a field doesn't strand its value.
+  // Keyed by field id so renaming a custom field doesn't strand its value.
   const [libraryCustomValues, setLibraryCustomValues] = useState<Record<string, string | number | boolean | null>>({})
   const [tags, setTags] = useState<string[]>([])
   const [rating, setRating] = useState(0)
   const [finishedAt, setFinishedAt] = useState('')
-  // Buffered auto-tag suggestions from the last metadata fetch.
-  // Rendered as clickable chips next to the tag editor; click accepts
-  // (moves to `tags`), ✕ dismisses. Cleared on resetForm and every
-  // panel open — never persisted to disk on its own.
+  // Auto-tag suggestions from the last fetch; click accepts, ✕ dismisses.
   const [suggestedTags, setSuggestedTags] = useState<string[]>([])
 
   const [devs, setDevs] = useState<string[]>([])
@@ -1024,22 +880,12 @@ function App() {
   const [gameStatus, setGameStatus] = useState<GameStatus>('backlog')
   const [playTime, setPlayTime] = useState('')
   const [hltbHours, setHltbHours] = useState('')
-  // Sprint E — Games polish. Structured playthroughs / runs the user
-  // can log alongside the flat `playTime` string. Loaded from
-  // Item.playthroughs; persisted back through buildItemFromForm's
-  // extra-fields injection in handleSave.
   const [playthroughs, setPlaythroughs] = useState<Playthrough[]>([])
-  // Sprint E — VN endings tracker. Same shape story as playthroughs
-  // above: buffered locally, cleared on reset, loaded on edit,
-  // patched back in on save.
   const [vnEndings, setVnEndings] = useState<VnEnding[]>([])
-  // Sprint F — Games polish. Store links, purchase log, and two
-  // compat enums live in their own buffered state slots.
   const [storeLinks, setStoreLinks] = useState<StoreLink[]>([])
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [deckCompat, setDeckCompat] = useState<DeckCompat | undefined>(undefined)
   const [protonRating, setProtonRating] = useState<ProtonRating | undefined>(undefined)
-  // Sprint E finish — per-library polish buffers.
   const [viewings, setViewings] = useState<MovieViewing[]>([])
   const [bookHighlights, setBookHighlights] = useState<BookHighlight[]>([])
   const [bookmarkChapter, setBookmarkChapter] = useState('')
@@ -1132,7 +978,6 @@ function App() {
   const [mangaReview, setMangaReview] = useState('')
   const [hasChapters, setHasChapters] = useState(false)
   const [chapters, setChapters] = useState<Chapter[]>([])
-  // Books — mirror manga's shape (status, pages read/total, publication status, review)
   const [bookStatus, setBookStatus] = useState<BookStatus>('plan_to_read')
   const [bookFormat, setBookFormat] = useState<BookFormat | ''>('')
   const [bookSource, setBookSource] = useState<BookSource | ''>('')
@@ -1144,7 +989,6 @@ function App() {
   const [isbn, setIsbn] = useState('')
   const [translator, setTranslator] = useState('')
   const [bookReview, setBookReview] = useState('')
-  // Visual Novels — VNDB-shaped state
   const [visualNovelStatus, setVisualNovelStatus] = useState<VisualNovelStatus>('plan_to_play')
   const [vnLength, setVnLength] = useState<VnLength | ''>('')
   const [vnLengthHours, setVnLengthHours] = useState('')
@@ -1193,9 +1037,7 @@ function App() {
     loadFromDisk({ applySettings: true })
   }, [])
 
-  // Reads the split JSON files off disk and hydrates state. Runs once on
-  // mount and again whenever the user hits F5, so external edits to the
-  // data/ folder (or a snapshot restore) show up without a full app restart.
+  // Runs on mount and on F5 so external data/ edits or snapshot restores appear without a restart.
   const loadFromDisk = async ({ applySettings }: { applySettings: boolean }): Promise<void> => {
     const migrate = async (list: AnyItem[]): Promise<{ list: AnyItem[]; changed: boolean }> => {
       let changed = false
@@ -1221,10 +1063,8 @@ function App() {
           changed = true
         }
         let publishers = it.publishers
-        // Legacy pre-0.2 games stored a single `publisher: string`. Split
-        // into `publishers: string[]` and strip the legacy field ONLY when
-        // we actually did the migration — otherwise Book items (which use
-        // publisher as a first-class field) get wiped every load.
+        // Only strip the legacy `publisher` field on games — Book items
+        // use `publisher` as a first-class field and must keep it.
         let stripLegacyPublisher = false
         if (!publishers && typeof anyIt.publisher === 'string' && anyIt.publisher && it.categoryId === 'videojuegos') {
           publishers = [(anyIt.publisher as string).trim()].filter(Boolean)
@@ -1254,11 +1094,8 @@ function App() {
     const artistsRes = await migrateArtists(artists)
     artists = artistsRes.list
 
-    // 0.3.6 migration: Music Item.concerts → MusicArtist.concerts. Older
-    // versions kept a concerts list on every album/single; now it lives
-    // on the artist. Match by exact artist name, create the artist if
-    // there is no existing one, and dedupe on (date + venue) so re-runs
-    // are idempotent. Item.concerts is cleared once merged.
+    // 0.3.6 migration: Item.concerts → MusicArtist.concerts.
+    // Idempotent — dedupes on (date + venue) and clears Item.concerts once merged.
     {
       const withConcerts = items.filter((i) => i.categoryId === 'musica' && Array.isArray(i.concerts) && i.concerts.length > 0)
       if (withConcerts.length > 0) {
@@ -1312,26 +1149,18 @@ function App() {
       }
       setSettings(merged)
       setLayout(merged.defaultLayout)
-      // Apply the HTTP proxy setting (if any) to the main-process fetch
-      // dispatcher so every metadata / cover / updater request routes
-      // through it. Cheap no-op when unset.
       if (merged.httpProxy !== undefined) {
         window.ipcRenderer.invoke('proxy:apply', merged.httpProxy)
       }
       if (merged.startupCategory === 'last' && merged.lastCategory && isCategoryId(merged.lastCategory)) {
         setActiveCategory(merged.lastCategory)
-        // switchCategory is what normally restores the per-library sort, but
-        // that only runs on user-driven category changes — not on the initial
-        // mount. Without this the "Remember sort per library" setting looks
-        // broken because sortBy is stuck at its default 'recent'.
+        // switchCategory restores per-library sort on user changes only;
+        // this branch does the same on initial mount.
         if (merged.rememberCategorySort) {
           const saved = merged.categorySortModes?.[merged.lastCategory] as SortBy | undefined
           if (saved) setSortBy(saved)
         }
       }
-      // Home dashboard takes precedence when the setting is on — sets a
-      // specialView instead of choosing a category. First-run only; F5
-      // keeps whatever the user was looking at.
       if (applySettings && merged.startupCategory === 'home') {
         setSpecialView('home')
       }
@@ -1344,8 +1173,7 @@ function App() {
     if (!loaded) return
     void (async () => {
       const res = await window.ipcRenderer.invoke('data:save', { items, collections, settings, artists: musicArtists, arcadeGames, smartLists, playlists }) as { ok?: boolean; rewrites?: { from: string; to: string }[] } | boolean
-      // Main-process rename step may have renamed some asset files to match
-      // titles. Reflect those rewrites in local state so <img src> resolves
+      // Reflect main-process asset renames locally so <img src> resolves
       // to the new filename without a full reload.
       const rewrites = (typeof res === 'object' && res?.rewrites) || []
       if (rewrites.length === 0) return
@@ -1365,9 +1193,7 @@ function App() {
       }))
       setMusicArtists((list) => list.map((a) => ({ ...a, photo: swap(a.photo), bannerImage: swap(a.bannerImage) })))
       setCollections((list) => list.map((g) => ({ ...g, cover: swap(g.cover) ?? g.cover })))
-      // Also refresh the currently-open editor's field states so the input
-      // boxes show the new filename immediately — without this the user
-      // would see the old UUID path until they close and reopen the modal.
+      // Refresh the open editor's field states so inputs show the new filename immediately.
       setCover((v) => swap(v) ?? v)
       setBannerImage((v) => swap(v) ?? v)
       setLogoImage((v) => swap(v) ?? v)
@@ -1387,9 +1213,8 @@ function App() {
       const inField = (e.target as HTMLElement | null)?.matches?.('input, textarea, [contenteditable="true"]')
       const action = matchAction(e, settings.shortcutOverrides)
       if (!action) return
-      // A few actions are safe inside a text field (they act on the
-      // field itself). Everything else bails so a rebind of Ctrl+Z to
-      // "Undo" doesn't fight the field's own undo.
+      // Only search actions run inside a text field; everything else bails
+      // so a rebound Ctrl+Z doesn't fight the field's own undo.
       const okInField = action === 'focus-search' || action === 'open-global-search'
       if (inField && !okInField) return
       switch (action) {
@@ -1418,9 +1243,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subView, specialView, settings.shortcutOverrides])
 
-  // Track library mutations and stash them on a bounded history stack.
-  // Only fires for real content edits (items/collections/artists), not
-  // settings or UI state.
+  // Push a snapshot on every content edit, capped at 40 entries.
   useEffect(() => {
     if (!loaded) return
     if (skipHistoryRef.current) { skipHistoryRef.current = false; prevSnapRef.current = { items, collections, artists: musicArtists }; return }
@@ -1465,9 +1288,7 @@ function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-    // closePanel / closeArtistPanel change on every render but that would
-    // cause the listener to rebind constantly; the closure captures the
-    // latest versions each time this effect re-runs.
+    // closePanel / closeArtistPanel change every render; the closure captures the latest.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alertMsg, confirmState, viewing, viewingArtist, artistPanelOpen, panelOpen])
 
@@ -1477,19 +1298,10 @@ function App() {
     return () => clearTimeout(t)
   }, [toast])
 
-  // Tabbed-editor visibility. Walks the form container, groups each
-  // `.form-section-header` with its following siblings until the next
-  // header, and toggles a `.editor-hidden` class on every node in a group
-  // whose assigned tab (data-belongs-to on the header) doesn't match the
-  // active tab. Sections without an assigned tab default to 'notes' so
-  // nothing is lost silently.
-  //
-  // A MutationObserver watches childList changes on the form so nodes that
-  // mount post-render — a fetcher applying metadata that populates a
-  // previously-empty section, editions/tracks appearing, etc. — get the
-  // class applied immediately, instead of bleeding into the current tab
-  // until the user switches tabs and back. `attributes` is intentionally
-  // NOT observed, so toggling .editor-hidden ourselves doesn't self-trigger.
+  // Toggle `.editor-hidden` per section based on the active tab, then keep
+  // it in sync as fetchers add nodes post-render. Sections without
+  // data-belongs-to default to 'notes'. attributes is deliberately not
+  // observed so our own class writes don't self-trigger.
   useEffect(() => {
     if (!panelOpen) return
     const root = document.querySelector<HTMLElement>('.form[data-editor-tab]')
@@ -1498,8 +1310,7 @@ function App() {
       const headers = Array.from(root.querySelectorAll<HTMLElement>('.form-section-header'))
       if (headers.length === 0) return
       const firstHeader = headers[0]
-      // Section 0 is everything before the first header (fetch-metadata
-      // panel + basic-info block). Keep it visible in overview only.
+      // Section 0 (fetch-metadata + basic-info block) shows only in overview.
       let node: ChildNode | null = root.firstChild
       while (node && node !== firstHeader) {
         if (node instanceof HTMLElement) node.classList.toggle('editor-hidden', editorTab !== 'overview')
@@ -1523,10 +1334,8 @@ function App() {
     return () => observer.disconnect()
   }, [editorTab, panelOpen, editingId, activeCategory])
 
-  // Fetchers dispatch this event via downloadImageAsset when image:download
-  // returns { ok: false, error }. Surfacing the reason is the whole point —
-  // before this, a bad TMDb URL / rate-limit / CDN blip left the item with
-  // no cover and the user had no idea why.
+  // Surface image:download failures — otherwise a bad URL / rate-limit leaves
+  // the item with no cover and no visible reason why.
   useEffect(() => {
     const h = (e: Event) => {
       const detail = (e as CustomEvent<{ kind: string; error: string }>).detail
@@ -1536,15 +1345,8 @@ function App() {
     return () => window.removeEventListener('omnio-image-download-error', h)
   }, [])
 
-  // Scheduled auto-backup driver. Checks every hour while the app is
-  // running and fires storage:copy-data-to if:
-  //   * the interval is not 'off'
-  //   * a destination folder is configured
-  //   * enough time has passed since the last auto-backup for the picked
-  //     cadence (daily = 24h, weekly = 7*24h)
-  // Silent on success (writes autoBackupLastAt back to settings), toasts
-  // on failure. The hourly cadence means users don't wait > 1h to see
-  // the first backup after setting up.
+  // Scheduled auto-backup: hourly check; fires when the configured
+  // cadence has elapsed. Silent on success, toasts on failure.
   useEffect(() => {
     const interval = settings.autoBackupInterval ?? 'off'
     const target = settings.autoBackupTarget
@@ -1578,12 +1380,8 @@ function App() {
   }, [])
 
 
-  // Global click-to-zoom: any <img class="zoomable"> anywhere opens a
-  // full-screen lightbox. When multiple `.zoomable` images share a
-  // `data-zoom-group` value (e.g. a covers gallery), the arrow-key
-  // navigation walks between them; otherwise it's a single-image view.
-  // Registered on document instead of per-modal so wiring a new cover /
-  // banner / logo only takes adding the class.
+  // Any <img class="zoomable"> opens the lightbox; sharing a `data-zoom-group`
+  // lets arrow keys walk between images.
   const [zoomState, setZoomState] = useState<{ images: { src: string; label?: string; caption?: string }[]; index: number } | null>(null)
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -1591,10 +1389,7 @@ function App() {
       if (!target || target.tagName !== 'IMG') return
       const img = target as HTMLImageElement
       if (!img.classList.contains('zoomable')) return
-      // Never intercept clicks that already have a specific handler on
-      // the image itself (existing lightbox owners inside GameDetail /
-      // MangaDetail have their own onClick and this global one would
-      // fire in addition, opening two views).
+      // Detail modals with their own lightbox mark the img so we don't double-open.
       if (img.dataset.zoomHandled === '1') return
       e.preventDefault()
       e.stopPropagation()
@@ -1605,10 +1400,6 @@ function App() {
       }
       const startIndex = Math.max(0, siblings.indexOf(img))
       const images = siblings.map((s) => ({
-        // The `src` attribute is already the fully resolved URL (Tauri's
-        // asset:// via convertFileSrc, or a plain http URL). ImageLightbox
-        // re-runs assetSrc on its input which is a no-op for those forms
-        // — safe to pass along.
         src: s.currentSrc || s.src,
         label: s.dataset.zoomLabel,
         caption: s.dataset.zoomCaption || s.alt || undefined,
@@ -1657,10 +1448,8 @@ function App() {
   const availableTags = getUniqueTags(scopedItems)
   const availablePlatforms = Array.from(new Set(scopedItems.flatMap((i) => i.platforms || [])))
   const availableGenres = Array.from(new Set(scopedItems.flatMap((i) => i.genres || []))).sort()
-  // Inside a collection, `custom` order reads the collection's own itemIds
-  // list; outside, it reads the per-category custom order map. Wrapped in
-  // its own useMemo so the visibleItems memo below has a stable array
-  // reference between renders (ESLint exhaustive-deps was flagging it).
+  // Inside a collection, `custom` reads the collection's itemIds; outside,
+  // the per-category custom order map. Memoized for a stable ref.
   const effectiveCustomOrder = useMemo(
     () => activeCollection ? activeCollection.itemIds : (customOrders[activeCategory] || []),
     [activeCollection, customOrders, activeCategory],
@@ -1681,20 +1470,14 @@ function App() {
 
   const editingItem = items.find((i) => i.id === editingId) || null
 
-  // Memoized once for every RelatedListEditor's cross-library allItems prop —
-  // otherwise each render passed a fresh array literal to N sites and cascaded
-  // child re-renders through the picker.
+  // Stable ref for every RelatedListEditor's cross-library allItems prop.
   const relatedCrossLibraryOptions = useMemo(
     () => items.filter((i) => i.id !== editingId),
     [items, editingId],
   )
 
-  // Setter bag reused by resetForm / loadItemIntoForm. All entries are
-  // React setters from useState calls above, which are stable across
-  // renders — so this object doesn't need memoization for identity, but
-  // wrapping in useMemo avoids re-building the (large) literal each
-  // render and makes it easy to spot new setters missing from either
-  // helper below.
+  // Setter bag reused by resetForm / loadItemIntoForm. Memoized just to
+  // avoid rebuilding the literal each render.
   const formSetters: FormSetters = useMemo(() => ({
     setActiveCategory, setEditingId,
     setTitle, setCover, setNotes, setTags, setRating, setFinishedAt, setCustomFields,
@@ -1812,9 +1595,6 @@ function App() {
   }
 
   const switchCategory = (id: CategoryId) => {
-    // Restore the sort the user last picked in this category (if the
-    // "remember sort" setting is on) so their preferred view stays put
-    // between visits. Falls back to 'recent' for first-time entries.
     const nextSort = settings.rememberCategorySort
       ? ((settings.categorySortModes?.[id] as SortBy | undefined) ?? 'recent')
       : 'recent'
@@ -1823,9 +1603,7 @@ function App() {
     setSettings((s) => ({ ...s, lastCategory: id }))
   }
 
-  // Wrap setSortBy so every UI-driven change also persists to settings for
-  // the currently-active category. Non-UI callers (like the "custom" reset
-  // when opening a collection) go straight to setSortBy and are excluded.
+  // Persists the sort for the active category; non-UI callers bypass this.
   const setSortByPersistent = (v: SortBy) => {
     setSortBy(v)
     if (settings.rememberCategorySort && activeCategory) {
@@ -1849,9 +1627,7 @@ function App() {
   }
 
   const captureCurrentTemplate = (): ItemTemplate => {
-    // Only categories that use each field see it back. `undefined` here
-    // means "don't override". Empty arrays / '' are still meaningful (a
-    // template of "no platforms" is a valid template).
+    // `undefined` = "don't override"; empty arrays / '' are meaningful.
     const t: ItemTemplate = {}
     if (activeCategory === 'videojuegos') {
       t.gameStatus = gameStatus
@@ -1877,18 +1653,15 @@ function App() {
 
   const openAddPanel = () => {
     setEditingId(null); resetForm(); setHltbHours(''); setBasedOnItemId('')
-    // Apply the per-category template AFTER resetForm so template
-    // slots override the reset defaults. Editing an existing item
-    // never triggers this path — templates are for brand-new items only.
+    // Applied after resetForm so template slots override the reset defaults.
     applyItemTemplate(settings.itemTemplates?.[activeCategory])
     setPanelOpen(true)
   }
 
   const loadItemIntoForm = (item: AnyItem) => {
     loadItemIntoFormImpl(formSetters, item)
-    // Extra fields not covered by the auto-generated FormSetters bag.
-    // Adding them there would ripple through every form-related type;
-    // wire them inline instead.
+    // Fields not covered by FormSetters — wired inline to avoid rippling
+    // through every form-related type.
     const hltb = (item as { hltbHours?: number }).hltbHours
     setHltbHours(hltb !== undefined ? String(hltb) : '')
     setBasedOnItemId((item as { basedOnItemId?: string }).basedOnItemId ?? '')
@@ -1907,9 +1680,8 @@ function App() {
     setSuggestedTags([])
   }
 
-  // When every detail view closes and the list JSX remounts, restore the
-  // scroll position we snapshotted before opening the detail. Uses rAF so it
-  // runs after the DOM has painted the list at scrollTop 0.
+  // Restore the pre-open scroll position after the list remounts. rAF so
+  // it runs after the DOM has repainted at scrollTop 0.
   useEffect(() => {
     const anyOpen = viewing || viewingArtist
     if (anyOpen) return
@@ -1925,13 +1697,9 @@ function App() {
   }, [viewing, viewingArtist])
 
   const openEditPanel = (item: AnyItem) => {
-    // Snapshot the list's scroll position so we can put the user back where
-    // they were after they close the detail view.
     const el = document.querySelector('main.content .content-scroll') as HTMLElement | null
     savedScrollRef.current = el?.scrollTop ?? 0
-    // Every category with a dedicated detail modal is handled by the
-    // DetailModalRouter (see components/DetailModalRouter.tsx). Items
-    // that don't have a modal fall through to the editor panel.
+    // Categories in this set route through DetailModalRouter; others open the editor.
     const HAS_DETAIL_MODAL = new Set([
       'videojuegos', 'musica', 'libros', 'visual_novels', 'peliculas', 'series',
     ])
@@ -1943,9 +1711,6 @@ function App() {
     setPanelOpen(true)
   }
 
-  // Global search / cross-category open: switches category first so the
-  // sidebar reflects where the item lives, then hands off to the normal
-  // detail-modal flow. Also closes any open modals so we land clean.
   const navigateToItem = (item: AnyItem) => {
     setViewing(null); setViewingArtist(null)
     setActiveCategory(item.categoryId)
@@ -2004,8 +1769,7 @@ function App() {
       () => {
         const ids = new Set(selectedIds)
         setItems((all) => all.map((it) => ids.has(it.id) ? { ...it, categoryId: targetCategoryId } : it))
-        // Group memberships stay bound to the source category, so remove
-        // moved items from any group whose categoryId no longer matches.
+        // Groups are per-category; drop moved items from mismatched groups.
         setCollections((all) => all.map((c) => c.categoryId === targetCategoryId ? c : { ...c, itemIds: c.itemIds.filter((id) => !ids.has(id)) }))
         clearSelection()
         setToast(`Moved ${count} item${count === 1 ? '' : 's'} to ${targetLabel}`)
@@ -2025,9 +1789,6 @@ function App() {
     )
   }
 
-  // Merge a fetched Partial<Item> patch into the currently-open editor form.
-  // Handles the union of AniList / Jikan / TMDb output — each source only
-  // populates the fields it knows about, and we just set what's present.
   const applyFetchedPatch = (
     patch: Partial<AnyItem>,
     coverPath?: string,
@@ -2035,11 +1796,7 @@ function App() {
     sourceLabel = 'Metadata',
     hints?: { parentGameTitle?: string; vnRelations?: { vndbId: string; relation: string; title: string }[]; suggestedTags?: string[] },
   ) => {
-    // Auto-tag suggestions from the source (AniList "Time Travel",
-    // MAL themes, IGDB themes, TMDb keywords, …). Buffered into
-    // suggestedTags so the editor can render clickable chips — one
-    // click accepts (moves it to `tags`), ✕ dismisses. Never
-    // silently overwrites the user's own tag list.
+    // Buffered as chips so nothing overwrites the user's own tag list.
     if (hints?.suggestedTags && hints.suggestedTags.length > 0) {
       const clean = Array.from(new Set(
         hints.suggestedTags.map((t) => t.trim()).filter((t) => t.length > 0),
@@ -2054,38 +1811,26 @@ function App() {
         return Array.from(existing)
       })
     }
-    // Apply every pure per-field routing through the field-map table
-    // (see src/editor/applyPatch.ts). What remains here is the handful
-    // of side effects that need renderer-only state — items lookup,
-    // editingItem for stale-asset cleanup, and setToast.
     applyPatchFieldsToForm(patch, formSetters, { activeCategory })
 
-    // hltbHours is a number in AnyItem but a string on the form (matches
-    // the other numeric buffered fields). Route it here so the HltbFetcher
-    // doesn't have to know how the form buffers it.
+    // hltbHours is a number on AnyItem but a string on the form.
     const patchHltb = (patch as { hltbHours?: number }).hltbHours
     if (typeof patchHltb === 'number' && Number.isFinite(patchHltb) && patchHltb > 0) {
       setHltbHours(String(patchHltb))
     }
 
-    // If IGDB reported a parent game, look for it in the user's library and
-    // pre-fill originalWorkId when a case-insensitive title matches. Saves
-    // the user from picking it manually for remakes/expansions/ports.
+    // If IGDB reported a parent game, look for it locally and prefill originalWorkId.
     if (hints?.parentGameTitle && activeCategory === 'videojuegos') {
       const t = hints.parentGameTitle.toLowerCase().trim()
       const parent = items.find((i) => i.categoryId === 'videojuegos' && i.id !== editingId && i.title.toLowerCase().trim() === t)
       if (parent) setOriginalWorkId(parent.id)
     }
-    // Sibling-count sidebar for the toast — needs `items`, so it stays here.
     let franchiseSiblingCount = 0
     if (patch.franchise && activeCategory === 'videojuegos') {
       franchiseSiblingCount = items.filter((i) => i.categoryId === 'videojuegos' && i.franchise === patch.franchise && i.id !== editingId).length
     }
 
-    // Resolve VNDB relation slugs against the user's own library — a
-    // slug that matches an existing item's `vndbId` becomes a proper
-    // RelatedItem entry. Uses the same relation vocabulary as VNDB
-    // (sequel/prequel/side/…) collapsed to what RelationKind accepts.
+    // Match VNDB relation slugs against existing items' `vndbId`.
     if (hints?.vnRelations && activeCategory === 'visual_novels') {
       const mapRel = (r: string): RelatedItem['relation'] => {
         const t = r.toLowerCase()
@@ -2110,9 +1855,7 @@ function App() {
       }
     }
     if (coverPath) {
-      // If the editor already had a fetched cover pending save from an
-      // earlier apply, delete that file — otherwise every re-fetch during
-      // the same edit session accumulates orphaned assets on disk.
+      // Drop a pending-but-unsaved fetched cover so re-fetching doesn't orphan assets.
       const savedCover = editingItem?.cover
       if (isLocalAssetPath(cover) && cover !== savedCover && cover !== coverPath) {
         window.ipcRenderer.invoke('image:delete', cover)
@@ -2132,11 +1875,7 @@ function App() {
     setToast(`${sourceLabel} data applied${franchiseNote}`)
   }
 
-  // Book ISBN quick-lookup. Editors dispatch `omnio-book-isbn-lookup` with
-  // the raw ISBN in event.detail. We hit OpenLibrary's search endpoint
-  // with `isbn:<value>`, take the first hit, download the cover, and
-  // route the whole thing through applyFetchedPatch so the rest of the
-  // editor state (log/rewatches/rating/notes) is left alone.
+  // Book ISBN quick-lookup: OpenLibrary → cover → applyFetchedPatch.
   useEffect(() => {
     const handler = async (e: Event) => {
       const raw = (e as CustomEvent<string>).detail
@@ -2192,9 +1931,6 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory])
 
-  // Single opener for every detail modal — was eight near-identical
-  // per-category functions before Fase 2.2 collapsed the viewing
-  // state.
   const openEditFromModal = () => {
     if (!viewing) return
     loadItemIntoForm(viewing)
@@ -2202,17 +1938,9 @@ function App() {
   }
 
   const closePanel = ({ afterSave = false }: { afterSave?: boolean } = {}) => {
-    // If the user fetched artwork during this edit session but never saved,
-    // the file lives on disk but isn't referenced by any item. Compare the
-    // current form state against the persisted item and unlink any transient
-    // assets before closing.
-    //
-    // afterSave=true skips this entirely: handleSave already ran
-    // findOrphanedItemAssets against the just-persisted item, and the current
-    // form state IS the saved state. If we ran the cleanup here we'd read a
-    // stale editingItem (React hasn't propagated the setItems yet) and
-    // delete files that were just saved — the exact "artwork downloaded,
-    // then 404" bug.
+    // Unlink assets fetched during the session but never saved.
+    // afterSave=true skips this — handleSave already ran the cleanup and
+    // the editingItem here would still be stale from React's batch.
     if (!afterSave && editingId && editingItem) {
       const orphanCandidates: (string | undefined)[] = [
         cover !== editingItem.cover ? cover : undefined,
@@ -2228,9 +1956,7 @@ function App() {
         if (isLocalAssetPath(c)) window.ipcRenderer.invoke('image:delete', c)
       }
     } else if (!afterSave && !editingId) {
-      // "Add" mode + cancel: nothing was ever persisted, so every asset in
-      // the form is transient and safe to remove. When afterSave=true the
-      // item just got saved so its assets are legitimately referenced now.
+      // Add + cancel: nothing persisted, so every form asset is transient.
       for (const c of [cover, bannerImage, logoImage, movieBanner]) {
         if (isLocalAssetPath(c)) window.ipcRenderer.invoke('image:delete', c)
       }
@@ -2241,8 +1967,6 @@ function App() {
     setPanelOpen(false); setEditingId(null); resetForm()
   }
 
-  // Rebuilds only when any field the preview reads actually changes, so
-  // typing a description doesn't rebuild the object 20 times per second.
   const previewItem = useMemo<Item>(() => ({
     id: editingId || 'preview',
     categoryId: activeCategory,
@@ -2317,11 +2041,6 @@ function App() {
     vnEditions, vnPublishers, vnCommunityRating, vnDevStatus, vnDescription,
     vnReview, vndbId, nsfw,
   })
-  // Placeholder — the actual implementation is now imported from
-  // ./editor/buildItemFromForm.ts. Every branch below (Games, Movies,
-  // Series, Anime, Manga, Books, VN, Music) is a category-specific
-  // return with the same field-mapping the helper implements.
-
   const persistDataUrl = async (val: string | undefined, categoryId: string, kind: string, basename?: string): Promise<string | undefined> => {
     if (!val || !val.startsWith('data:')) return val
     const rel = await window.ipcRenderer.invoke('image:save', categoryId, kind, val, basename)
@@ -2346,10 +2065,8 @@ function App() {
     if (editions && editions.length > 0) {
       editions = await Promise.all(editions.map(async (e) => ({ ...e, cover: await persistDataUrl(e.cover, item.categoryId, 'edition', assetBasename(t, 'edition', e.name)) })))
     }
-    // VN character-card uploads land as data URLs in vnCharacters[].image
-    // (via pickImageToDataUrl on the editor). Fetched covers/screenshots
-    // already come back as asset paths from the fetcher's downloadImageAsset
-    // calls; persistDataUrl no-ops on those since they aren't data URLs.
+    // Character-card uploads arrive as data URLs; fetched art is already
+    // an asset path and persistDataUrl no-ops on it.
     let vnCharacters = item.vnCharacters
     if (vnCharacters && vnCharacters.length > 0) {
       vnCharacters = await Promise.all(vnCharacters.map(async (c, i) => ({
@@ -2374,9 +2091,7 @@ function App() {
     return { ...item, cover, bannerImage, bannerImage2, logoImage, volumeCovers, singleCovers, editions, vnCharacters, vnCovers, vnScreenshots }
   }
 
-  // True only for asset paths we own on disk under assets/ — i.e. relative
-  // strings, not data URLs, remote URLs, or blob:/file: refs. Used to gate
-  // image:delete calls so we never try to unlink something we didn't write.
+  // Only relative asset/ paths — never data URLs, remote URLs, or blob:/file:.
   const isLocalAssetPath = (val: string | undefined | null): val is string => {
     if (!val) return false
     return !/^(data:|https?:|file:|blob:|omnio-asset:)/i.test(val)
@@ -2386,9 +2101,7 @@ function App() {
     if (isLocalAssetPath(rel)) window.ipcRenderer.invoke('image:delete', rel)
   }
 
-  // Compare the item we're about to save against the previously-saved version
-  // and collect every asset path that used to be referenced but no longer is.
-  // Covers the "clear cover", "replace banner", "remove one volume" cases.
+  // Collects asset paths the old item referenced but the new one doesn't.
   const findOrphanedItemAssets = (oldItem: AnyItem | undefined, newItem: AnyItem): string[] => {
     if (!oldItem) return []
     const orphans: string[] = []
@@ -2408,13 +2121,11 @@ function App() {
         if (newV && isLocalAssetPath(oldV.cover) && oldV.cover !== newV.cover) orphans.push(oldV.cover)
       }
     })
-    // Single covers (removed or replaced).
     const newSingleIds = new Set((newItem.singleCovers ?? []).map((s) => s.id))
     ;(oldItem.singleCovers ?? []).forEach((oldS) => {
       const newS = newItem.singleCovers?.find((s) => s.id === oldS.id)
       if ((!newSingleIds.has(oldS.id) || (newS && oldS.cover !== newS.cover)) && isLocalAssetPath(oldS.cover)) orphans.push(oldS.cover)
     })
-    // Edition covers (removed or replaced).
     const newEdIds = new Set((newItem.editions ?? []).map((e) => e.id))
     ;(oldItem.editions ?? []).forEach((oldE) => {
       const newE = newItem.editions?.find((e) => e.id === oldE.id)
@@ -2425,16 +2136,9 @@ function App() {
 
   const handleSave = async () => {
     if (!title.trim()) return
-    // `basedOnItemId` lives on BaseItem so every category can carry a
-    // cross-library adaptation link, but the form scaffolding
-    // (FormSnapshot / buildItemFromForm) is per-category. Patch it in
-    // after the build so we don't have to thread the field through
-    // every editor section's props.
+    // basedOnItemId lives on BaseItem but the form scaffolding is per-category.
     const withBasedOn = (it: AnyItem): AnyItem =>
       basedOnItemId ? ({ ...it, basedOnItemId } as AnyItem) : ({ ...it, basedOnItemId: undefined } as AnyItem)
-    // Sprint E — Games only. Attach the buffered playthroughs list;
-    // strip the property entirely when empty so on-disk JSON stays
-    // tidy and non-game items never carry a stray key.
     const withPlaythroughs = (it: AnyItem): AnyItem => {
       if (it.categoryId !== 'videojuegos') return it
       if (playthroughs.length === 0) {
@@ -2444,9 +2148,6 @@ function App() {
       }
       return { ...it, playthroughs }
     }
-    // Sprint E — VN endings. Same tidy-up story: strip the key
-    // entirely when nothing is tracked so on-disk JSON stays clean
-    // and non-VN items never carry the field.
     const withVnEndings = (it: AnyItem): AnyItem => {
       if (it.categoryId !== 'visual_novels') return it
       if (vnEndings.length === 0) {
@@ -2456,11 +2157,6 @@ function App() {
       }
       return { ...it, vnEndings }
     }
-    // Sprint F — Games storefront + purchase log + compat enums.
-    // Everything below the categoryId gate is stripped for non-game
-    // items so a movie or a book never grows a stray store link on
-    // save. Empty arrays / undefined enums drop the property so the
-    // on-disk JSON stays tidy.
     const withGamePolish = (it: AnyItem): AnyItem => {
       if (it.categoryId !== 'videojuegos') return it
       const {
@@ -2475,9 +2171,6 @@ function App() {
       if (protonRating) next.protonRating = protonRating
       return next
     }
-    // Sprint E finish — per-library polish. Each block is gated by
-    // categoryId so a movie's viewing log never lands on a book, and
-    // each field is stripped when empty so JSON stays tidy.
     const withEfinishPolish = (it: AnyItem): AnyItem => {
       let next = it
       if (it.categoryId === 'peliculas') {
@@ -2505,10 +2198,6 @@ function App() {
       }
       return next
     }
-    // Attach the buffered library-custom-field values. When the panel
-    // form left the bag empty (nothing set for this item, no custom
-    // fields declared for this library), we omit the property so the
-    // JSON on disk stays tidy.
     const withLibraryCustom = (it: AnyItem): AnyItem => {
       const cleaned: Record<string, string | number | boolean | null> = {}
       let has = false
@@ -2524,9 +2213,6 @@ function App() {
       }
       return { ...it, libraryCustomFieldValues: cleaned }
     }
-    // Sprint D — auto-status transitions. Runs on every save; a no-op
-    // when the toggle is off or when the rating/finishedAt signals
-    // didn't cross the "user finished this" threshold.
     const autoStatusOpts = {
       enabled: settings.autoStatusOnRate !== false,
       autoFinishedAt: settings.autoFinishedAtOnComplete !== false,
@@ -2551,8 +2237,6 @@ function App() {
   }
 
   const performDelete = (item: AnyItem) => {
-    // Fire-and-forget removal of any local asset files this item owned so
-    // deleting an entry doesn't leave orphan images under assets/.
     deleteAssetFile(item.cover)
     deleteAssetFile(item.bannerImage)
     deleteAssetFile(item.bannerImage2)
@@ -2574,18 +2258,12 @@ function App() {
     else performDelete(item)
   }
 
-  // Toggle item-level favorite ⭐. Called from every card + the detail
-  // views. Undo-tracked because it's an observable data change.
   const toggleItemFavorite = (item: AnyItem) => {
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, favorite: !i.favorite } : i)))
   }
 
   const handleDeleteFromPanel = () => { if (editingItem) handleDelete(editingItem) }
 
-  // Builds the right-click menu for a card. Actions are common to every
-  // library (open, edit, duplicate, move, add to group, delete) so no
-  // per-category branching is needed here — the modals underneath handle
-  // the category-specific state.
   const buildCardMenu = (item: AnyItem): CardMenuAction[] => {
     const dup = () => {
       const copy: AnyItem = { ...item, id: crypto.randomUUID(), title: `${item.title} (Copy)`, createdAt: Date.now() }
@@ -2619,10 +2297,6 @@ function App() {
     ]
   }
 
-  // Single "duplicate" handler for every detail modal. Fase 2.3
-  // collapsed eight per-category near-identical functions into this
-  // one — copy the item currently in `viewing`, give it a new uuid +
-  // `(Copy)` title, drop it into the library, and open the editor.
   const handleDuplicate = () => {
     if (!viewing) return
     const copy: AnyItem = { ...viewing, id: crypto.randomUUID(), title: `${viewing.title} (Copy)`, createdAt: Date.now() }
@@ -2727,11 +2401,6 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
-  // Sprint H — import backup through the in-app FilePicker instead of
-  // an OS file input. The legacy handler (kept below as a fallback
-  // for older callers) accepts a File object; this one takes the
-  // path picked by pickOpenFile and reads the text through the
-  // Rust fs:read-text-file command.
   const handleImportBackup = async () => {
     const path = await pickOpenFile('Choose an Omnio backup', 'json', settings.lastExportFolder)
     if (!path) return
@@ -2751,8 +2420,7 @@ function App() {
     }
   }
   const handleImportFile = (e: ChangeEvent<HTMLInputElement>) => {
-    // Legacy OS-input flow, kept as a fallback for the hidden <input>
-    // that never got removed. New buttons should call handleImportBackup.
+    // Legacy OS-input fallback for the hidden <input>; new callers use handleImportBackup.
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
@@ -2781,26 +2449,58 @@ function App() {
     })
   }
 
-  // Page context surfaced in the topnav (icon + title + count + back +
-  // per-view actions). Replaces the duplicated `.content-header` blocks
-  // that used to sit at the top of every board / library / stats view.
-  // The topnav is the single header now.
-  // Kanban / Timeline / Diary only make sense on a real item list.
-  // Artists sub-tab shows folder cards, Groups shows collections,
-  // Artist detail view is its own thing — degrade to classic in all
-  // those cases.
+  // Kanban / Timeline / Diary need a real item list — artist/group views degrade to classic.
   const supportsExtendedViews = subView === 'items' && !viewingArtist && !activeCollectionId
+  const VIEW_OPTIONS: { value: Layout; icon: string; label: string; hint: string; extended?: boolean }[] = [
+    { value: 'list',     icon: '☰', label: 'List',     hint: 'One card per row with meta' },
+    { value: 'grid',     icon: '▦', label: 'Grid',     hint: 'Cover-first tiles' },
+    { value: 'compact',  icon: '≡', label: 'Compact',  hint: 'Dense list, tiny covers' },
+    { value: 'kanban',   icon: '⊞', label: 'Kanban',   hint: 'Columns per status; drag to change', extended: true },
+    { value: 'timeline', icon: '⇢', label: 'Timeline', hint: 'Grouped by release year',            extended: true },
+    { value: 'diary',    icon: '✎', label: 'Diary',    hint: 'Chronological log',                  extended: true },
+  ]
+  const availableViews = VIEW_OPTIONS.filter((o) => !o.extended || supportsExtendedViews)
+  const currentView = availableViews.find((o) => o.value === layout) ?? availableViews[0]
+  const viewMenuRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!viewMenuOpen) return
+    const onClick = (e: MouseEvent) => {
+      if (viewMenuRef.current && !viewMenuRef.current.contains(e.target as Node)) setViewMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [viewMenuOpen])
   const viewToggleBtns = (
-    <div className="view-toggle">
-      <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')} title="List — one card per row with meta">☰ List</button>
-      <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')} title="Grid — cover-first tiles">▦ Grid</button>
-      <button className={layout === 'compact' ? 'active' : ''} onClick={() => setLayout('compact')} title="Compact — dense list, tiny covers">≡ Compact</button>
-      {supportsExtendedViews && (
-        <>
-          <button className={layout === 'kanban' ? 'active' : ''} onClick={() => setLayout('kanban')} title="Kanban — columns per status, drag cards to change status">⊞ Kanban</button>
-          <button className={layout === 'timeline' ? 'active' : ''} onClick={() => setLayout('timeline')} title="Timeline — items grouped by release year">⇢ Timeline</button>
-          <button className={layout === 'diary' ? 'active' : ''} onClick={() => setLayout('diary')} title="Diary — chronological log by finished/added date">✎ Diary</button>
-        </>
+    <div className="view-drop" ref={viewMenuRef}>
+      <button
+        type="button"
+        className="view-drop-trigger"
+        onClick={() => setViewMenuOpen((v) => !v)}
+        title="Change view"
+      >
+        <span className="view-drop-icon" aria-hidden>{currentView.icon}</span>
+        <span className="view-drop-label">{currentView.label}</span>
+        <span className="view-drop-arrow" aria-hidden>▾</span>
+      </button>
+      {viewMenuOpen && (
+        <div className="view-drop-menu" role="menu">
+          {availableViews.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              role="menuitem"
+              className={o.value === layout ? 'view-drop-item active' : 'view-drop-item'}
+              onClick={() => { setLayout(o.value); setViewMenuOpen(false) }}
+            >
+              <span className="view-drop-icon" aria-hidden>{o.icon}</span>
+              <span className="view-drop-item-body">
+                <span className="view-drop-item-label">{o.label}</span>
+                <span className="view-drop-item-hint">{o.hint}</span>
+              </span>
+              {o.value === layout && <span className="view-drop-check" aria-hidden>✓</span>}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -2859,13 +2559,10 @@ function App() {
   }
   type PageCount = { n: number; unit: string }
   const pageMeta: { icon: React.ReactNode; title: string; count?: PageCount; onBack?: () => void; actions?: React.ReactNode; chips?: PageChip[] } | null = (() => {
-    // Home and Arcade own their whole viewport (hero header + widgets
-    // or grid), so the shell doesn't add a topbar on top.
+    // Home and Arcade own their viewport and skip the shell topbar.
     if (specialView === 'home') return null
     if (specialView === 'arcade') return null
-    // When a plugin is active, it owns the topnav and publishes its
-    // own meta via `setPageMeta` — mirror it here so the shell
-    // renders it in the standard Omnio topbar.
+    // Active plugin publishes its meta via setPageMeta; mirror it here.
     if (activePluginSlug) return pluginPageMeta
     if (specialView === 'calendar') return { icon: <CalendarIcon />, title: 'Release calendar' }
     if (specialView === 'playlists') return { icon: <span className="page-icon-glyph">♪</span>, title: 'Playlists', count: { n: playlists.length, unit: playlists.length === 1 ? 'playlist' : 'playlists' } }
@@ -2909,7 +2606,6 @@ function App() {
       const airing = itemsInCategory.filter((i) => i.airingStatus === 'airing' && i.airingDay)
       return { icon: <CategoryIcon id={activeCategory} />, title: 'This season', count: { n: airing.length, unit: airing.length === 1 ? 'show' : 'shows' }, onBack: backToLibrary }
     }
-    // specialView === 'none' → the library view (with optional collection drill-in)
     const count: PageCount = showFolderListing
       ? { n: categoryCollections.length, unit: categoryCollections.length === 1 ? 'group' : 'groups' }
       : { n: visibleItems.length, unit: visibleItems.length === 1 ? 'item' : 'items' }
@@ -2927,9 +2623,7 @@ function App() {
         {subView === 'items' && <button className="add-btn" onClick={openAddPanel}>+ Add</button>}
       </>
     )
-    // Only show chips at the library root (no collection drill-in and
-    // browsing items, not groups) — otherwise the topnav would try to
-    // filter by status while you're inside a group / artist list.
+    // Chips only render at the library root; groups/artist views suppress them.
     const chips = !activeCollectionId && subView === 'items' ? buildCategoryChips() : []
     return {
       icon: activeCollectionId ? <FolderIcon /> : <CategoryIcon id={current?.id ?? ''} />,
@@ -3060,6 +2754,10 @@ function App() {
               onEdit={openEditFromModal}
               onDuplicate={handleDuplicate}
               onNavigate={(id) => { const target = items.find((i) => i.id === id); if (target) setViewing(target) }}
+              onOpenCrossLibraryFranchise={(name) => setFranchiseTimelineOpen(name)}
+              franchiseSections={settings.franchiseSections}
+              franchiseViewMode={settings.franchiseViewMode}
+              franchiseGraphs={settings.franchiseGraphs}
               onSaveTrackLyrics={(item, trackId, lyrics) => {
                 const updated: AnyItem = { ...item, tracks: (item.tracks ?? []).map((t) => t.id === trackId ? { ...t, lyrics: lyrics.trim() || undefined } : t) }
                 setItems((prev) => prev.map((i) => i.id === item.id ? updated : i))
@@ -3292,12 +2990,6 @@ function App() {
           })()}
 
           {specialView === 'simulcastBoard' && (() => {
-            // Only anime + donghua are simulcast-relevant. An item surfaces
-            // here when it counts as currently airing (explicit
-            // airingStatus='airing', OR date window, OR season+year match
-            // via isCurrentlyAiring) AND has an airingDay picked. Items
-            // without a weekday still get counted below so the user can
-            // fill them in.
             const airing = itemsInCategory.filter((i) => isCurrentlyAiring(i) && i.airingDay)
             const byDay = new Map<string, Item[]>()
             for (const w of WEEKDAY_OPTIONS) byDay.set(w.value, [])
@@ -3844,9 +3536,6 @@ function App() {
             const p = PLUGINS.find((x) => x.slug === activePluginSlug)
             if (!p) return null
             const View = p.View
-            // Merge defaults declared by the plugin with the user's
-            // per-field overrides. `cardFields` is what the plugin
-            // ultimately checks in its card renderer.
             const overrides = settings.pluginCardFields?.[p.slug] ?? {}
             const cardFields: Record<string, boolean> = {}
             for (const f of p.cardFields ?? []) {
@@ -4060,9 +3749,7 @@ function App() {
                 )}
 
                 {settingsTab === 'libraries' && (() => {
-                  // VN is a category (has editor/save/fetcher) but visually
-                  // belongs to Extras alongside Arcade. Filter it out of the
-                  // main list; render it with the Extras toggles below.
+                  // VN is a real category but renders visually under Extras.
                   const EXTRA_CAT_IDS = new Set(['visual_novels'])
                   const mainCats = CATEGORIES.filter((c) => !EXTRA_CAT_IDS.has(c.id))
                   const extraCats = CATEGORIES.filter((c) => EXTRA_CAT_IDS.has(c.id))
@@ -5034,11 +4721,6 @@ function App() {
                   ) : layout === 'diary' ? (
                     <DiaryView items={visibleItems} onOpen={openEditPanel} />
                   ) : (() => {
-                    // Group-by wrapper: bucket the visible items when the
-                    // user picked a non-'none' groupBy, otherwise render
-                    // them flat like before. Group keys are grouped in
-                    // insertion order — sortBy still controls per-group
-                    // order because `visibleItems` was already sorted.
                     if (groupBy === 'none') {
                       return (
                         <div className={`${layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}${deleteMode ? ' delete-mode' : ''}`}>
@@ -5091,10 +4773,6 @@ function App() {
                         </div>
                       )
                     }
-                    // Grouped render — one section per group, each with
-                    // its own header + ItemCard grid/list. Collapsed
-                    // sections carry all their meta so the count line is
-                    // still meaningful without expanding.
                     const groups = groupItems(visibleItems, groupBy, activeCategory)
                     return (
                       <div className="library-groups">
@@ -5450,11 +5128,7 @@ function App() {
                         value={title}
                         onChange={(e) => {
                           const v = e.target.value
-                          // Paste-a-URL shortcut: if the new value is a
-                          // supported metadata URL and the current category
-                          // has that fetcher wired, humanize the slug into
-                          // the title field and open the fetcher so the
-                          // user goes straight to picking a result.
+                          // Paste-a-URL: recognize a fetcher URL and open its picker.
                           const available = getFetchersFor(activeCategory).map((r) => r.id)
                           const match = detectQuickAddUrl(v, available)
                           if (match) {
@@ -5558,25 +5232,6 @@ function App() {
                     )}
 
                     {isVideojuegos && (
-                      <PlaythroughsEditor
-                        playthroughs={playthroughs}
-                        onChange={setPlaythroughs}
-                      />
-                    )}
-                    {isVideojuegos && (
-                      <GameStoreEditor
-                        storeLinks={storeLinks}
-                        onStoreLinksChange={setStoreLinks}
-                        purchases={purchases}
-                        onPurchasesChange={setPurchases}
-                        deckCompat={deckCompat}
-                        onDeckCompatChange={setDeckCompat}
-                        protonRating={protonRating}
-                        onProtonRatingChange={setProtonRating}
-                      />
-                    )}
-
-                    {isVideojuegos && (
                       <GameEditorSection
                         title={title}
                         editingId={editingId}
@@ -5614,6 +5269,11 @@ function App() {
                         rewatches={rewatches} setRewatches={setRewatches}
                         relatedItems={relatedItems} setRelatedItems={setRelatedItems}
                         recommendedItems={recommendedItems} setRecommendedItems={setRecommendedItems}
+                        playthroughs={playthroughs} setPlaythroughs={setPlaythroughs}
+                        storeLinks={storeLinks} setStoreLinks={setStoreLinks}
+                        purchases={purchases} setPurchases={setPurchases}
+                        deckCompat={deckCompat} setDeckCompat={setDeckCompat}
+                        protonRating={protonRating} setProtonRating={setProtonRating}
                       />
                     )}
 
@@ -6244,10 +5904,7 @@ function App() {
       )}
 
       {artistPanelOpen && (
-        // No overlay-click dismiss — matches every other editor modal.
-        // Losing a form's worth of typed fields to a stray outside click
-        // is a worse default than an extra click on the close button.
-        // Esc still closes via the global-shortcut handler.
+        // No overlay-click dismiss — matches other editors; Esc still closes.
         <div className="modal-overlay">
           <div className="modal-panel artist-editor-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: '94vw', maxHeight: '88vh' }}>
             <div className="modal-header">
@@ -6382,8 +6039,7 @@ function App() {
             setSpecialView('none')
             setActivePluginSlug(null)
             openAddPanel()
-            // Prefill the add panel's title with the requested string
-            // on the next tick — the panel needs a paint to mount.
+            // Wait for the panel to mount before prefilling the title.
             setTimeout(() => {
               const el = document.querySelector<HTMLInputElement>('.add-panel input[name="title"], .add-panel input[type="text"]')
               if (el) { el.value = a.title; el.dispatchEvent(new Event('input', { bubbles: true })); el.focus() }
@@ -6431,9 +6087,7 @@ function App() {
             artists={musicArtists}
             onClose={() => setRoleNormalizerOpen(false)}
             onApply={(mapping) => {
-              // Rewrite roles + stint.roles across every artist. Dedupe
-              // the resulting arrays since two variants might collapse
-              // into a canonical the member already had.
+              // Dedupe: two variants may collapse into a canonical the member already had.
               let touchedArtists = 0
               setMusicArtists((prev) => prev.map((a) => {
                 if (!a.members || a.members.length === 0) return a
@@ -6491,9 +6145,7 @@ function App() {
           items={items}
           onClose={() => setGenreNormalizerOpen(false)}
           onApply={(mapping) => {
-            // Rewrite every item that carries any variant. Also dedupe the
-            // resulting genres[] because two variants might collapse into
-            // one canonical that the item already had.
+            // Dedupe: two variants may collapse into a canonical the item already had.
             let changed = 0
             setItems((prev) => prev.map((it) => {
               const g = it.genres
@@ -6640,10 +6292,6 @@ function App() {
                   <p className="hint">{brokenAssets.length} reference{brokenAssets.length === 1 ? '' : 's'} point to a file that no longer exists. Click <strong>Clear</strong> to blank the field — the item updates live, no reload needed. Then re-open the item and re-fetch cleanly.</p>
                   <div className="settings-actions" style={{ marginBottom: 12 }}>
                     <button type="button" className="secondary-btn" onClick={() => {
-                      // Update in-memory state; autosave persists to disk on
-                      // the next tick. No IPC round-trip means no risk of
-                      // "handler not registered" (stale dev main.js) or races
-                      // on shared JSON files between parallel per-ref writes.
                       brokenAssets.forEach((b) => applyClearedRefLocally(b))
                       const n = brokenAssets.length
                       setBrokenAssets([])
@@ -6720,8 +6368,7 @@ function App() {
           initialQuery={title}
           kind={sgdbOpen}
           onPick={(rel) => {
-            // Delete the previous transient asset (downloaded from a prior
-            // SGDB pick during this same edit session) so it doesn't linger.
+            // Drop the prior transient asset so re-picking doesn't leak.
             const savedCover = editingItem?.cover
             const savedBanner = editingItem?.bannerImage
             const savedLogo = editingItem?.logoImage
@@ -6748,8 +6395,6 @@ function App() {
           kind="grids"
           saveAsKind="bundle"
           onPick={(rel) => {
-            // Delete the previous bundle sub-cover if it was a transient
-            // download (present in state but not in the persisted item).
             const savedBundle = editingItem?.bundleContents?.find((b) => b.id === bundleSgdbFor.entryId)?.cover
             const currentBundle = bundleContents.find((b) => b.id === bundleSgdbFor.entryId)?.cover
             if (isLocalAssetPath(currentBundle) && currentBundle !== savedBundle && currentBundle !== rel) {
@@ -6762,10 +6407,6 @@ function App() {
         />
       )}
 
-      {/* Single registry-driven fetcher slot. `activeFetcher` holds the
-          registration id; the render function binds every per-source
-          detail (apiKey, kind, initialUrl, hints). Toast label follows
-          the registration's own `label`. */}
       {activeFetcher && (() => {
         const reg = getFetchersFor(activeCategory).find((r) => r.id === activeFetcher)
         if (!reg) return null
@@ -7035,6 +6676,26 @@ function App() {
           <CrossLibraryFranchiseModal
             franchise={franchiseTimelineOpen}
             allItems={items}
+            sections={settings.franchiseSections?.[franchiseTimelineOpen] ?? []}
+            onSaveSections={(next) => setSettings((s) => {
+              const map = { ...(s.franchiseSections ?? {}) }
+              if (next.length === 0) delete map[franchiseTimelineOpen]
+              else map[franchiseTimelineOpen] = next
+              return { ...s, franchiseSections: map }
+            })}
+            viewMode={settings.franchiseViewMode?.[franchiseTimelineOpen]}
+            onSetViewMode={(mode) => setSettings((s) => {
+              const map = { ...(s.franchiseViewMode ?? {}) }
+              map[franchiseTimelineOpen] = mode
+              return { ...s, franchiseViewMode: map }
+            })}
+            graph={settings.franchiseGraphs?.[franchiseTimelineOpen]}
+            onSaveGraph={(next) => setSettings((s) => {
+              const map = { ...(s.franchiseGraphs ?? {}) }
+              if (!next || (next.nodes.length === 0 && next.edges.length === 0)) delete map[franchiseTimelineOpen]
+              else map[franchiseTimelineOpen] = next
+              return { ...s, franchiseGraphs: map }
+            })}
             onClose={() => setFranchiseTimelineOpen(null)}
             onNavigate={(id) => {
               const target = items.find((i) => i.id === id)

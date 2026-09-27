@@ -185,8 +185,9 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
 
         const renderRow = (t: typeof item.tracks[0]) => (
           <tr key={t.id}>
+            <td className="col-fav">{t.favorite && <span className="track-fav-star" aria-label="Favourite">★</span>}</td>
             <td className="col-num">{t.number}</td>
-            <td className="col-title">{t.favorite && <span className="track-fav-star" aria-label="Favourite">★ </span>}{t.name}</td>
+            <td className="col-title">{t.name}</td>
             <td className="col-artist">
               {(() => {
                 const raw = t.artist?.trim()
@@ -221,7 +222,6 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
                 {t.lyrics ? 'View' : '+ Add'}
               </button>
             </td>
-            <td className="col-spacer"></td>
           </tr>
         )
 
@@ -237,6 +237,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
                 <table className="track-table">
                   <thead>
                     <tr>
+                      <th className="col-fav"></th>
                       <th className="col-num">#</th>
                       <th className="col-title">Title</th>
                       <th className="col-artist">Artist</th>
@@ -244,7 +245,6 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
                       <th className="col-rating">Rating</th>
                       <th className="col-listened">Listened</th>
                       <th className="col-lyrics">Lyrics</th>
-                      <th className="col-spacer"></th>
                     </tr>
                   </thead>
                   <tbody>{list.map(renderRow)}</tbody>

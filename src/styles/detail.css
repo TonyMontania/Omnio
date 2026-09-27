@@ -313,6 +313,49 @@
 }
 
 .franchise-timeline { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; }
+/* Header row above the scoped franchise strip. Holds the existing
+   "Franchise — Name" label plus a "See full franchise ↗" button that
+   opens the cross-library modal (all categories + user sections).
+   The label kept its own semantic tag so screen readers still see it
+   as the group label. */
+.franchise-strip-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.franchise-strip-open {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text-dim);
+  font-size: 11.5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.franchise-strip-open:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Sectioned view for the scoped strip — one horizontal row per section,
+   with its title above. Same look as the flat strip but stacked; keeps
+   the strip layout mostly identical when there's only one section, so
+   users who organized their franchise still see the familiar cover row
+   pattern rather than a wholly-different UI. */
+.franchise-sections-strip { display: flex; flex-direction: column; gap: 14px; }
+.franchise-section-strip { display: flex; flex-direction: column; gap: 4px; }
+.franchise-section-strip-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.franchise-section-strip-title-muted { color: var(--text-faint); font-weight: 500; }
+
+/* Per-item note surfaced inside the scoped strip. Tiny and italic so it
+   reads as a tag on the cover card rather than metadata. */
+.franchise-item .franchise-note {
+  font-size: 10.5px;
+  font-style: italic;
+  color: var(--text-faint);
+  line-height: 1.25;
+  padding: 0 6px 4px;
+}
 .franchise-item { display: flex; flex-direction: column; gap: 4px; min-width: 100px; max-width: 120px; padding: 6px; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); cursor: pointer; color: var(--text); text-align: left; }
 .franchise-item.current { border-color: var(--accent); cursor: default; }
 .franchise-item img { width: 100%; aspect-ratio: 2/3; object-fit: cover; border-radius: 3px; }
@@ -333,7 +376,7 @@
 .track-table th { text-align: left; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); padding: 5px 6px; border-bottom: 1px solid var(--border-soft); white-space: nowrap; }
 .track-table td { padding: 5px 6px; font-size: 13px; color: var(--text-dim); border-bottom: 1px solid var(--border-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-table { min-width: 720px; }
-.col-fav { width: 22px; }
+.col-fav { width: 22px; text-align: center; }
 .col-num { width: 48px; }
 .col-artist { width: 220px; }
 .col-duration { width: 72px; }
@@ -405,7 +448,7 @@
 .track-fav { background: transparent; border: none; color: var(--border); cursor: pointer; font-size: 13px; padding: 0; }
 .track-fav:hover { color: var(--text-faint); }
 .track-fav.active { color: var(--accent); }
-.track-fav-star { color: var(--accent); font-size: 12px; }
+.track-fav-star { color: var(--accent); font-size: 13px; }
 
 .tracklist-header-row { display: flex; align-items: baseline; justify-content: space-between; }
 .tracklist-total { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
@@ -721,6 +764,54 @@
 .volume-label { font-size: 13px; font-weight: 600; color: var(--text); }
 .volume-card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; border-radius: var(--radius-sm); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
 
+/* MusicBrainz "choose an edition" grid — a release-group can have a
+   dozen-plus releases (countries, formats, Deluxe/Reissue/Anniversary
+   editions), each with its own tracklist and cover. A grid keeps them
+   scannable without the long vertical scroll a plain list would need. */
+.mb-editions-modal { max-width: 760px; }
+.mb-editions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.mb-edition-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+.mb-edition-card:hover { border-color: var(--accent); }
+.mb-edition-card:disabled { opacity: 0.5; cursor: wait; }
+.mb-edition-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--surface);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.mb-edition-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.mb-edition-title { font-size: 12.5px; font-weight: 500; color: var(--text); line-height: 1.3; }
+.mb-edition-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+}
+.mb-edition-label { font-size: 11px; color: var(--text-dim); }
+
 /* -------------------------------------------------------------------------
    Wikipedia-style band timeline (see components/BandTimeline.tsx). SVG-only,
    so the only styling here is around the SVG for the surrounding legend
@@ -961,3 +1052,509 @@
 .franchise-cross-year { font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: .5px; }
 .franchise-cross-title { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .franchise-cross-cat { font-size: 11px; color: var(--text-dim); }
+/* Optional per-item note shown next to entries in the sections view
+   (e.g. "Kiryu dies", "Unreleased Kiwami 4 and 5"). Italic + dim so it
+   reads as a lore/context annotation rather than metadata. */
+.franchise-cross-note {
+  margin-top: 4px;
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+/* Franchise view mode toggle (By year / By sections) + Organize button. */
+.franchise-mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.franchise-mode-tabs {
+  display: inline-flex;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+.franchise-mode-tabs button {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.franchise-mode-tabs button:hover:not(:disabled) { color: var(--text); }
+.franchise-mode-tabs button.active { background: var(--surface); color: var(--text); }
+.franchise-mode-tabs button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Grouped view — one h3 per section with the timeline grid underneath. */
+.franchise-sections { display: flex; flex-direction: column; gap: 24px; }
+.franchise-section-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 6px;
+}
+.franchise-section-title-muted { color: var(--text-faint); font-weight: 500; }
+
+/* Organize sections modal — two-column layout: section list on the left,
+   item picker for the active section on the right. */
+.organize-sections-modal { max-width: 900px; width: 96vw; max-height: 92vh; display: flex; flex-direction: column; }
+.organize-sections-body { display: grid; grid-template-columns: 260px 1fr; gap: 16px; min-height: 400px; }
+.organize-sections-list { display: flex; flex-direction: column; gap: 8px; }
+.organize-sections-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.organize-sections-list li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+.organize-sections-list li.active {
+  background: var(--surface-2);
+  border-color: var(--accent);
+}
+.organize-section-btn {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 4px 2px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 13px;
+}
+.organize-section-name { flex: 1; }
+.organize-section-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  background: var(--surface);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.organize-section-actions { display: flex; gap: 2px; }
+.organize-section-actions button {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.organize-section-actions button:hover:not(:disabled) { color: var(--text); }
+.organize-section-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
+.organize-section-actions button.danger:hover { color: var(--danger); }
+.organize-add-row { display: flex; gap: 6px; }
+.organize-add-row input { flex: 1; }
+.organize-items-panel { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.organize-section-rename {
+  font-size: 15px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+.organize-section-rename:hover, .organize-section-rename:focus { border-color: var(--border-soft); background: var(--surface-2); }
+.organize-panel-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 8px; }
+.organize-in-section, .organize-available { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; max-height: 200px; overflow-y: auto; }
+.organize-item-row { display: flex; align-items: center; gap: 6px; padding: 4px 6px; background: var(--surface-2); border-radius: 4px; font-size: 12.5px; }
+.organize-item-move { background: transparent; border: none; color: var(--text-dim); cursor: pointer; padding: 0 2px; font-size: 11px; }
+.organize-item-move:disabled { opacity: 0.3; cursor: not-allowed; }
+.organize-item-title { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.organize-item-year { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
+.organize-item-note-toggle { background: transparent; border: 1px solid var(--border-soft); color: var(--text-dim); font-size: 10.5px; padding: 1px 6px; border-radius: 3px; cursor: pointer; }
+.organize-item-note-toggle:hover { color: var(--text); border-color: var(--border); }
+.organize-item-remove { background: transparent; border: none; color: var(--text-dim); cursor: pointer; padding: 0 4px; }
+.organize-item-remove:hover { color: var(--danger); }
+.organize-item-note-input { width: 100%; margin-top: 4px; font-size: 12px; padding: 4px 6px; }
+.organize-available-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.organize-available-item:hover { border-color: var(--accent); }
+.organize-available-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
+.organize-available-meta em { font-style: italic; color: var(--accent); }
+
+/* ---------------------------------------------------------------------
+   Franchise graph view (Sprint 2). Free-canvas @xyflow/react editor
+   for user-drawn diagrams — Zelda-style branching timelines, Yakuza
+   parallel arcs with dropouts, MGS release-vs-lore orderings, etc.
+   The canvas itself is xyflow's default rendering; we only style the
+   custom node types and the outer toolbar / sidebar. */
+.franchise-graph-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 65vh;
+  min-height: 400px;
+}
+.franchise-graph-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 4px 2px;
+}
+.franchise-graph-edit-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text); }
+.franchise-graph-hint { font-size: 11.5px; color: var(--text-faint); flex: 1; text-align: right; min-width: 240px; }
+/* Three-column layout while editing: shapes panel · canvas · sidebar.
+   View-only mode collapses to a single column so the canvas takes the
+   whole width for readability. */
+.franchise-graph-body { display: grid; grid-template-columns: 1fr; gap: 0; flex: 1; min-height: 0; border: 1px solid var(--border-soft); border-radius: var(--radius-md); overflow: hidden; }
+.franchise-graph-editing .franchise-graph-body { grid-template-columns: 160px 1fr 240px; }
+.franchise-graph-canvas { position: relative; min-height: 0; background: var(--bg); }
+.franchise-graph-canvas .react-flow__renderer { background: var(--bg); }
+/* Force xyflow's own tokens onto our palette so the canvas edges/attrib/
+   controls read against the dark background instead of white. */
+.franchise-graph-canvas .react-flow__attribution { background: transparent; color: var(--text-faint); font-size: 10px; }
+.franchise-graph-canvas .react-flow__attribution a { color: var(--text-dim); }
+.franchise-graph-canvas .react-flow__controls-button { background: var(--surface-2); border-color: var(--border-soft); color: var(--text); }
+.franchise-graph-canvas .react-flow__controls-button svg { fill: currentColor; }
+.franchise-graph-canvas .react-flow__minimap { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); }
+.franchise-graph-canvas .react-flow__background { background-color: var(--bg); }
+.franchise-graph-canvas .react-flow__edge-path { stroke-width: 2px; }
+.franchise-graph-canvas .react-flow__edge.selected .react-flow__edge-path { stroke: var(--accent) !important; }
+/* Handles: only relevant while editing. Hidden by default, tiny in edit
+   mode, prominent on node hover so the user knows where to drag from. */
+.franchise-graph-canvas .react-flow__handle { opacity: 0; width: 8px; height: 8px; background: var(--accent); border: 2px solid var(--surface); transition: opacity 0.15s; }
+.franchise-graph-editing .react-flow__handle { opacity: 0.35; }
+.franchise-graph-editing .react-flow__node:hover .react-flow__handle { opacity: 1; }
+
+/* Custom item node — cover on top, title/year/category strip below.
+   Same visual language as `franchise-cross-item` in the by-year grid
+   so switching modes doesn't feel like landing in a different app. */
+/* React Flow's node wrapper gets sized by NodeResizer; the inner div
+   fills its wrapper and scales with it. Default RF wrapper width is
+   ~140px which matches the intrinsic cover-card look. */
+.react-flow__node-item { width: 140px; }
+.franchise-graph-node {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  color: var(--text);
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+}
+.franchise-graph-node.selected, .react-flow__node.selected .franchise-graph-node { border-color: var(--accent); }
+.franchise-graph-cover { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; background: var(--bg); }
+.franchise-graph-cover.placeholder { display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-weight: 600; font-size: 28px; aspect-ratio: 3/4; }
+.franchise-graph-node-body { padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
+.franchise-graph-node-year { font-size: 10.5px; color: var(--accent); font-weight: 600; letter-spacing: .5px; }
+.franchise-graph-node-title { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.franchise-graph-node-cat { font-size: 10px; color: var(--text-dim); }
+
+/* Text-only label node — shape controlled by the inspector panel.
+   `rect` is the flat rectangle default; the other four are variants
+   the user can pick from a Style dropdown (`rounded` for a soft rect,
+   `pill` for a rounded chip, `circle` for a round badge, `diamond` for
+   an angled marker). All variants share the same dashed border + text
+   handling so switching between them keeps the label readable. */
+.franchise-graph-label {
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  padding: 4px 10px;
+  color: var(--text);
+  font-size: 12.5px;
+  min-width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+/* The inner label div takes 100% of the RF node wrapper (set by
+   NodeResizer). These min sizes act as the pre-resize default so the
+   node renders sensibly the moment it's added — the resizer then
+   overrides them by writing width/height on the RF wrapper. */
+.react-flow__node-label { min-width: 60px; }
+.franchise-graph-label-rect     { border-radius: 2px; }
+.franchise-graph-label-rounded  { border-radius: var(--radius-sm); }
+.franchise-graph-label-pill     { border-radius: 999px; padding: 4px 14px; }
+.franchise-graph-label-circle   { border-radius: 50%; min-width: 80px; min-height: 80px; padding: 6px; }
+.franchise-graph-label-diamond  { transform: rotate(45deg); min-width: 80px; min-height: 80px; padding: 6px; }
+/* Plain text — no border, no background. Behaves like an annotation
+   floating over other shapes / items. Font is a hair larger so it
+   reads as content, not a chip. */
+.franchise-graph-label-text {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 2px 6px;
+  min-width: 40px;
+}
+.franchise-graph-label-diamond > span,
+.franchise-graph-label-diamond > input { transform: rotate(-45deg); }
+.franchise-graph-label input {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  width: 100%;
+  min-width: 120px;
+  text-align: center;
+}
+
+/* Custom edge label — floats over the arrow at the bezier midpoint. */
+.franchise-graph-edge-label {
+  position: absolute;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  pointer-events: all;
+  white-space: nowrap;
+}
+.franchise-graph-edge-label input {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  width: 120px;
+}
+
+/* Right sidebar — available items to drop onto the canvas. Only shown
+   while `editing` so the read-only view uses the full canvas width. */
+.franchise-graph-sidebar {
+  background: var(--surface);
+  border-left: 1px solid var(--border-soft);
+  padding: 10px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.franchise-graph-sidebar h4 { margin: 0; font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+.franchise-graph-sidebar ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.franchise-graph-sidebar button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  font-size: 11.5px;
+  font-family: inherit;
+}
+.franchise-graph-sidebar button:hover { border-color: var(--accent); }
+.franchise-graph-sidebar button img { width: 26px; aspect-ratio: 3/4; object-fit: cover; border-radius: 2px; flex-shrink: 0; }
+.franchise-graph-side-thumb.placeholder { width: 26px; aspect-ratio: 3/4; background: var(--surface-2); border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-dim); flex-shrink: 0; font-size: 12px; }
+.franchise-graph-sidebar button span:last-child { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Toolbar polish — groups of buttons separated by subtle dividers.
+   Each group is padded by 6px on both sides so the vertical rule
+   between groups reads as a divider, not a border. */
+.franchise-graph-toolbar-group { display: inline-flex; align-items: center; gap: 2px; padding: 0 6px; border-left: 1px solid var(--border-soft); }
+.franchise-graph-toolbar-group:last-of-type { border-right: 1px solid var(--border-soft); }
+
+/* Icon buttons in the toolbar — 26×26 square, transparent by default,
+   hover surfaces the app accent. Matches the visual weight of the
+   xyflow default Controls but uses our tokens for theming. */
+.franchise-graph-icon-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+}
+.franchise-graph-icon-btn:hover:not(:disabled) { background: var(--surface-2); color: var(--accent); border-color: var(--border-soft); }
+.franchise-graph-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.franchise-graph-icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
+
+.franchise-graph-zoom-level {
+  min-width: 44px;
+  text-align: center;
+  padding: 0 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+.franchise-graph-zoom-level:hover { color: var(--accent); }
+
+.franchise-graph-inline-toggle { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--text-dim); }
+
+/* Left shapes panel — draw.io-style palette. Buttons show a preview of
+   the shape above the label so the mental model matches what will
+   drop onto the canvas. */
+.franchise-graph-shapes-panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border-soft);
+  padding: 10px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.franchise-graph-shapes-panel h4 { margin: 0 0 4px; font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+.franchise-graph-shapes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.franchise-graph-shapes-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10.5px;
+}
+.franchise-graph-shapes-grid button:hover { border-color: var(--accent); color: var(--text); }
+.shape-preview { display: block; width: 30px; height: 22px; background: var(--surface); border: 1.5px dashed var(--text-faint); }
+.shape-preview-rect     { border-radius: 2px; }
+.shape-preview-rounded  { border-radius: 5px; }
+.shape-preview-pill     { border-radius: 999px; }
+.shape-preview-circle   { border-radius: 50%; width: 22px; height: 22px; }
+.shape-preview-diamond  { transform: rotate(45deg); width: 20px; height: 20px; }
+.shape-preview-text {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+  font-family: serif;
+  font-size: 18px;
+  width: auto;
+  height: auto;
+  line-height: 1;
+}
+
+/* Right sidebar — two stacked panels (Properties + Items) with their
+   own headers. Panels scroll independently so a long items list
+   doesn't push the properties out of view. */
+.franchise-graph-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 10px 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.franchise-graph-panel:last-child { flex: 1; min-height: 0; overflow-y: auto; border-bottom: none; }
+.franchise-graph-panel h4 { margin: 0; font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; display: flex; align-items: center; gap: 6px; }
+.franchise-graph-panel .panel-count { font-family: var(--font-mono); color: var(--text-dim); font-weight: normal; }
+.franchise-graph-side-search {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+}
+.franchise-graph-side-search:focus { border-color: var(--accent); outline: none; }
+
+/* Inspector panel — replaces the "Available items" list on the right
+   sidebar whenever the user selects an edge or a label node. Keeps
+   fields tightly stacked so short screens can still show all controls
+   without scrolling. */
+.franchise-graph-inspector { display: flex; flex-direction: column; gap: 12px; }
+.inspector-header { display: flex; align-items: center; justify-content: space-between; }
+.inspector-header h4 { margin: 0; font-size: 12px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+.inspector-field { display: flex; flex-direction: column; gap: 4px; }
+.inspector-field > span { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.inspector-field select {
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12.5px;
+}
+.inspector-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.inspector-swatches .swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.inspector-swatches .swatch.active { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface); }
+.inspector-btn-row { display: flex; gap: 6px; }
+.inspector-btn-row button { flex: 1; font-size: 11.5px; padding: 4px 6px; }
+
+/* Fullscreen expansion of the whole cross-library modal when the graph
+   asks for it. Removes the outer padding/border-radius so the canvas
+   really fills the viewport. */
+.franchise-cross-panel-fullscreen { border-radius: 0 !important; }
+.franchise-cross-panel-fullscreen .franchise-graph-wrap { height: calc(100vh - 180px); }
+
+/* NodeResizer handles — the small squares at the 4 corners + 4 edges
+   that appear when a node is selected in edit mode. Keeps them tinted
+   with the app accent so they read as part of the app rather than
+   xyflow's default grey. */
+.franchise-graph-resize-line { border-color: var(--accent) !important; opacity: 0.6; }
+/* Category-scoped graph preview inline in the detail body. Fixed
+   height so it doesn't push the rest of the detail off-screen; the
+   internal ReactFlow handles fit-to-view. Read-only, so the handle
+   dots and RF attribution are hidden to keep the view clean. */
+.franchise-graph-preview { position: relative; width: 100%; height: 320px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); overflow: hidden; background: var(--bg); }
+.franchise-graph-preview .react-flow__attribution { display: none; }
+/* Read-only preview hides the handle dots but keeps them in layout —
+   React Flow reads their DOM position to compute where each edge
+   starts and ends, so `display: none` breaks the arrows entirely.
+   `visibility: hidden` keeps the geometry intact. */
+.franchise-graph-preview .react-flow__handle {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+.franchise-graph-resize-handle {
+  background: var(--accent) !important;
+  border: 2px solid var(--surface) !important;
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 2px !important;
+}

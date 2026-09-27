@@ -85,10 +85,11 @@ export const GAME_FIELD_OPTIONS: { value: GameField; label: string }[] = [
   { value: 'playTime', label: 'Time played' },
   { value: 'rating', label: 'Rating' },
   { value: 'tags', label: 'Tags' },
+  { value: 'deckCompat', label: 'Steam Deck Compatibility' },
 ]
 
 export const DEFAULT_GAME_FIELDS: Record<GameField, boolean> = {
-  title: true, status: true, playTime: true, rating: true, tags: true,
+  title: true, status: true, playTime: true, rating: true, tags: true, deckCompat: true,
 }
 
 // ---- Music ----

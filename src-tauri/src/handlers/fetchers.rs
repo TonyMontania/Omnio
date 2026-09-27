@@ -409,34 +409,71 @@ pub async fn mb_search(term: String, state: State<'_, AppState>) -> Result<Value
     Ok(result)
 }
 
+// Lists every release in a release-group — different countries, formats
+// (CD/vinyl/digital) and named editions (Deluxe, Limited, Reissue, 20th
+// Anniversary…) all live as distinct releases under one release-group,
+// which is what MB search itself returns. Without this, applying a hit
+// silently grabbed "the first Official release" and the user had no way
+// to pick e.g. the Deluxe tracklist over the original.
+#[command]
+pub async fn mb_release_group_releases(
+    releaseGroupId: String,
+    state: State<'_, AppState>,
+) -> Result<Value, ()> {
+    if releaseGroupId.is_empty() { return Ok(err("Missing release-group id")); }
+    mb_throttle().await;
+    let client = get_http_client(&state);
+    let url = format!(
+        "{MB_BASE}/release?release-group={}&fmt=json&limit=100&inc=media+labels",
+        url_encode(&releaseGroupId)
+    );
+    let opts = ProxyJsonOptions {
+        method: Method::GET, headers: mb_headers(), body: None, http_error_prefix: "HTTP",
+    };
+    match proxy_json(&client, &url, opts).await {
+        Ok(v) => Ok(ok(v.get("releases").cloned().unwrap_or(json!([])))),
+        Err(e) => Ok(err(e)),
+    }
+}
+
 #[command]
 pub async fn mb_release_group_details(
     releaseGroupId: String,
+    releaseId: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<Value, ()> {
     if releaseGroupId.is_empty() { return Ok(err("Missing release-group id")); }
     let client = get_http_client(&state);
 
-    // Step 1 — list releases in the group, prefer the first Official one.
-    mb_throttle().await;
-    let rg_url = format!(
-        "{MB_BASE}/release?release-group={}&fmt=json&limit=25",
-        url_encode(&releaseGroupId)
-    );
-    let rg_opts = ProxyJsonOptions {
-        method: Method::GET, headers: mb_headers(), body: None, http_error_prefix: "HTTP",
-    };
-    let rg = match proxy_json(&client, &rg_url, rg_opts).await {
-        Ok(v) => v,
-        Err(e) => return Ok(err(e)),
-    };
-    let releases = rg.get("releases").and_then(|r| r.as_array()).cloned().unwrap_or_default();
-    let chosen = releases.iter()
-        .find(|r| r.get("status").and_then(|s| s.as_str()) == Some("Official"))
-        .or_else(|| releases.first());
-    let chosen_id = match chosen.and_then(|c| c.get("id")).and_then(|s| s.as_str()) {
-        Some(id) => id.to_string(),
-        None => return Ok(err("No releases found in group")),
+    // When the caller already picked a specific edition (via
+    // mb_release_group_releases) we skip straight to step 2 — no need to
+    // re-list and auto-pick. Only auto-pick (first Official release, or
+    // the very first one) when no releaseId was given, e.g. a group that
+    // turned out to have just one release and never showed the picker.
+    let chosen_id = match releaseId.filter(|s| !s.is_empty()) {
+        Some(id) => id,
+        None => {
+            mb_throttle().await;
+            let rg_url = format!(
+                "{MB_BASE}/release?release-group={}&fmt=json&limit=25",
+                url_encode(&releaseGroupId)
+            );
+            let rg_opts = ProxyJsonOptions {
+                method: Method::GET, headers: mb_headers(), body: None, http_error_prefix: "HTTP",
+            };
+            let rg = match proxy_json(&client, &rg_url, rg_opts).await {
+                Ok(v) => v,
+                Err(e) => return Ok(err(e)),
+            };
+            let releases = rg.get("releases").and_then(|r| r.as_array()).cloned().unwrap_or_default();
+            let chosen = releases.iter()
+                .find(|r| r.get("status").and_then(|s| s.as_str()) == Some("Official"))
+                .or_else(|| releases.first());
+            match chosen.and_then(|c| c.get("id")).and_then(|s| s.as_str()) {
+                Some(id) => id.to_string(),
+                None => return Ok(err("No releases found in group")),
+            }
+        }
     };
 
     // Step 2 — full release payload with all the joins we can pull.
@@ -507,14 +544,23 @@ pub async fn vgmdb_search(term: String, state: State<'_, AppState>) -> Result<Va
 #[command]
 pub async fn vgmdb_album(link: String, state: State<'_, AppState>) -> Result<Value, ()> {
     if link.is_empty() { return Ok(err("Missing album link")); }
-    let clean = link.trim_start_matches('/');
-    let url = format!("{VGMDB_BASE}/{clean}?format=json");
-    let client = get_http_client(&state);
-    let opts = ProxyJsonOptions::default();
-    match proxy_json(&client, &url, opts).await {
-        Ok(v) => Ok(ok(v)),
-        Err(e) => Ok(err(e)),
-    }
+    let key = link.clone();
+    // Cached: the search picker now fetches this per top hit just to
+    // read its cover, and applying a hit fetches it again right after —
+    // caching means picking a hit the picker already thumbnailed is
+    // instant instead of a second round-trip.
+    let result = cached_search(&state, "vgmdb-album", &key, || async {
+        let clean = link.trim_start_matches('/');
+        let url = format!("{VGMDB_BASE}/{clean}?format=json");
+        let client = get_http_client(&state);
+        let opts = ProxyJsonOptions::default();
+        match proxy_json(&client, &url, opts).await {
+            Ok(v) => ok(v),
+            Err(e) => err(e),
+        }
+    })
+    .await;
+    Ok(result)
 }
 
 // ===================================================================

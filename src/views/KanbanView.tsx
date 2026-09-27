@@ -1,17 +1,7 @@
-// Kanban board view — universal across every library.
-//
-// Columns = statuses for the current category. Cards are draggable
-// between columns; dropping on a column applies the matching status
-// patch. Every library uses this same component — the only per-
-// category thing is which statuses exist and where the value lands
-// on the item (see `utils/statusUniversal.ts`).
-//
-// Why pointer events instead of HTML5 drag-and-drop: WebView2 (Tauri
-// on Windows) has repeatedly refused to fire `dragstart` / `drop`
-// reliably from these cards, even with an explicit setDragImage and
-// non-draggable child images. Rather than keep fighting it, we drive
-// the drag manually with pointer events + elementFromPoint hit-tests
-// against the columns. Works identically across every webview.
+// Universal kanban board. Columns = status enum for the current
+// category (see utils/statusUniversal.ts). Drag is driven by pointer
+// events + elementFromPoint because HTML5 drag-and-drop doesn't fire
+// reliably from these cards under WebView2 on Windows.
 
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -27,18 +17,14 @@ interface Props {
   onSetStatus: (id: string, status: string) => void
 }
 
-// A drag intent has to travel more than this many pixels before we
-// treat pointerdown → pointerup as a drag. Below the threshold the
-// gesture is a click and opens the item detail.
+// Below this pixel distance the gesture is treated as a click.
 const DRAG_THRESHOLD = 5
 
 export default function KanbanView({ items, categoryId, onOpen, onSetStatus }: Props) {
   const columns = getUniversalStatusOptions(categoryId)
 
-  // Refs (not state) for the mid-flight drag so pointermove handlers
-  // don't cause a React re-render on every mouse pixel. State is only
-  // set at gesture boundaries (start / end) so the ghost card and
-  // hover column highlight actually paint.
+  // Refs for the mid-flight drag so pointermove doesn't re-render every
+  // mouse pixel; state is set only at gesture boundaries.
   const draggingIdRef = useRef<string | null>(null)
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
   const startedDrag = useRef(false)
@@ -48,9 +34,6 @@ export default function KanbanView({ items, categoryId, onOpen, onSetStatus }: P
   const [hoverCol, setHoverCol] = useState<string | null>(null)
   const [ghost, setGhost] = useState<{ x: number; y: number; label: string; cover?: string } | null>(null)
 
-  // Bucket items by their current status. Items whose status isn't in
-  // the enum silently disappear from the view — that's rare (only
-  // happens when a legacy value survived an enum change).
   const byStatus = new Map<string, AnyItem[]>()
   for (const c of columns) byStatus.set(c.value, [])
   for (const it of items) {
@@ -58,12 +41,8 @@ export default function KanbanView({ items, categoryId, onOpen, onSetStatus }: P
     if (byStatus.has(s)) byStatus.get(s)!.push(it)
   }
 
-  // Which column (by data-col value) sits under the pointer right now?
-  // We hit-test the DOM under the cursor instead of trusting drag
-  // events, so this works even when the browser refuses to fire them.
   const colUnderPoint = useCallback((x: number, y: number): string | null => {
-    // Temporarily hide the ghost — it sits under the cursor and would
-    // always be the top element otherwise.
+    // Hide the ghost during the hit-test so it doesn't return itself.
     const g = ghostRef.current
     const prev = g?.style.display
     if (g) g.style.display = 'none'

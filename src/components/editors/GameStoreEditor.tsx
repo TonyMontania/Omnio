@@ -80,9 +80,8 @@ export default function GameStoreEditor({
           <label>Store links</label>
           <button type="button" className="secondary-btn" onClick={addStore}>+ Add store</button>
         </div>
-        <p className="hint">One row per storefront where this game lives. Clicking a link on the detail view will open it in your browser.</p>
         {storeLinks.length === 0 ? (
-          <p className="hint" style={{ opacity: 0.6 }}>No store links yet.</p>
+          <p className="hint">One row per storefront where this game lives — Steam, GOG, Nintendo eShop…</p>
         ) : (
           <ul className="game-store-list">
             {storeLinks.map((s) => (
@@ -115,9 +114,8 @@ export default function GameStoreEditor({
           <label>Purchase log</label>
           <button type="button" className="secondary-btn" onClick={addPurchase}>+ Add purchase</button>
         </div>
-        <p className="hint">One entry per time you bought this game — physical copy, Steam sale, gift, humble bundle. Nothing here is mandatory.</p>
         {purchases.length === 0 ? (
-          <p className="hint" style={{ opacity: 0.6 }}>No purchases logged yet.</p>
+          <p className="hint">One row per time you bought this game — sale, gift, bundle, physical copy.</p>
         ) : (
           <ul className="game-purchase-list">
             {purchases.map((p) => (
@@ -135,29 +133,21 @@ export default function GameStoreEditor({
         )}
       </div>
 
-      <div className="field-group">
-        <label>Steam Deck compatibility</label>
-        <div className="yesno" style={{ flexWrap: 'wrap' }}>
-          <button type="button" className={!deckCompat ? 'pill active' : 'pill'} onClick={() => onDeckCompatChange(undefined)}>—</button>
-          {DECK_OPTIONS.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              className={deckCompat === o.value ? 'pill active' : 'pill'}
-              onClick={() => onDeckCompatChange(o.value)}
-              title={o.hint}
-            >{o.label}</button>
-          ))}
+      <div className="field-row">
+        <div className="field-group">
+          <label>Steam Deck compatibility</label>
+          <select value={deckCompat ?? ''} onChange={(e) => onDeckCompatChange((e.target.value || undefined) as DeckCompat | undefined)}>
+            <option value="">— not tracked</option>
+            {DECK_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>)}
+          </select>
         </div>
-      </div>
-
-      <div className="field-group">
-        <label>ProtonDB rating</label>
-        <select value={protonRating ?? ''} onChange={(e) => onProtonRatingChange((e.target.value || undefined) as ProtonRating | undefined)}>
-          <option value="">— not tracked</option>
-          {PROTON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        <p className="hint">Linux-side compatibility as ProtonDB grades it. Leave blank if you don't play on Linux / Steam Deck.</p>
+        <div className="field-group">
+          <label>ProtonDB rating</label>
+          <select value={protonRating ?? ''} onChange={(e) => onProtonRatingChange((e.target.value || undefined) as ProtonRating | undefined)}>
+            <option value="">— not tracked</option>
+            {PROTON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
       </div>
     </div>
   )

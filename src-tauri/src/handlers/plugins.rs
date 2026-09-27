@@ -526,8 +526,9 @@ pub async fn plugin_saves_delete_all(
 //
 // Uses the shared reqwest client from `AppState` — that client has
 // keep-alive + HTTP/2 connection pooling on, so a batch of same-host
-// requests (like "check every game on F95Zone") reuses TCP + TLS
-// across the whole loop instead of paying the handshake per call.
+// requests (like checking every entry on the same fetcher site)
+// reuses TCP + TLS across the whole loop instead of paying the
+// handshake per call.
 #[command]
 pub async fn net_fetch_text(
     url: String,
@@ -535,23 +536,40 @@ pub async fn net_fetch_text(
     state: tauri::State<'_, crate::state::AppState>,
 ) -> Result<StringResult, String> {
     let client = crate::net::get_http_client(&state);
-    let mut req = client.get(&url);
+    // Force HTTP/1.1 and build headers via a HeaderMap so `insert()`
+    // replaces any client-level defaults (like a reqwest-set UA) —
+    // Cloudflare / WAFs reject duplicate headers and the HTTP/2
+    // fingerprint reqwest ships with.
+    let mut header_map = reqwest::header::HeaderMap::new();
     if let Some(h) = headers {
         for (k, v) in h {
             if let (Ok(name), Ok(value)) = (
                 reqwest::header::HeaderName::from_bytes(k.as_bytes()),
                 reqwest::header::HeaderValue::from_str(&v),
             ) {
-                req = req.header(name, value);
+                header_map.insert(name, value);
             }
         }
     }
+    let req = client
+        .get(&url)
+        .version(reqwest::Version::HTTP_11)
+        .headers(header_map);
     let resp = match req.send().await {
         Ok(r) => r,
         Err(e) => return Ok(StringResult::Err { ok: false, error: e.to_string() }),
     };
     if !resp.status().is_success() {
-        return Ok(StringResult::Err { ok: false, error: format!("HTTP {}", resp.status().as_u16()) });
+        let status = resp.status().as_u16();
+        let mut hint = String::new();
+        for name in ["server", "cf-mitigated", "cf-ray", "x-served-by", "x-cache", "x-sucuri-id", "x-sucuri-block"] {
+            if let Some(v) = resp.headers().get(name).and_then(|v| v.to_str().ok()) {
+                if !hint.is_empty() { hint.push_str("; "); }
+                hint.push_str(&format!("{name}={v}"));
+            }
+        }
+        eprintln!("[net:fetch-text] HTTP {status} from {url} — {hint}");
+        return Ok(StringResult::Err { ok: false, error: format!("HTTP {status}{}", if hint.is_empty() { String::new() } else { format!(" ({hint})") }) });
     }
     Ok(match resp.text().await {
         Ok(t) => StringResult::Ok(t),

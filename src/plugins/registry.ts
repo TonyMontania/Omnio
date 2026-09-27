@@ -14,6 +14,7 @@
 // shortcut), so a plugin the user hasn't opted into never shows up
 // anywhere in the chrome even though its code is present.
 import type { ComponentType, ReactNode } from 'react'
+import erogesPlugin from './eroges'
 
 // Meta a plugin publishes so the Omnio host chrome (title / count /
 // chips / actions in the topnav) renders it just like a native
@@ -57,4 +58,4 @@ export interface PluginDef {
 
 // All plugins compiled into the build. App.tsx decides which ones
 // appear in the UI by intersecting with `settings.unlockedPlugins`.
-export const PLUGINS: PluginDef[] = []
+export const PLUGINS: PluginDef[] = [erogesPlugin]

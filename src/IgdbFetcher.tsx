@@ -1,7 +1,6 @@
-// IGDB (Twitch) metadata fetcher for Games. One-step: search returns
-// full metadata including cover, first artwork/screenshot (as banner),
-// involved companies split into developers vs publishers, platforms,
-// genres, franchises, release date and average rating.
+// IGDB (Twitch) fetcher for Games. Single search returns full metadata,
+// cover, first artwork/screenshot as banner, dev+pub splits, platforms,
+// genres, franchises, release date and rating.
 
 import { useMemo } from 'react'
 import type { Item, AgeRating, GameSource } from './types'
@@ -21,9 +20,8 @@ interface InvolvedCompany { company?: Company; developer?: boolean; publisher?: 
 interface Named { name: string }
 interface ImageRef { image_id: string }
 interface AltName { name: string; comment?: string }
-// IGDB API v4 originally returned age_ratings as { category:number, rating:number }.
-// Recent revisions also expose { rating_category:number|string, rating:number|string }
-// and a synonym key `organization`. We accept every shape and normalize below.
+// Accepts both legacy `{category, rating}` and post-2024
+// `{organization, rating_category}` IGDB shapes.
 interface AgeRatingRef {
   category?: number | string
   rating?: number | string
@@ -53,14 +51,14 @@ interface Game {
   themes?: Named[]
   player_perspectives?: Named[]
   keywords?: Named[]
-  category?: number             // 0=main, 1=DLC, 8=remake, 9=remaster, 11=port...
+  category?: number
   parent_game?: { id: number; name: string }
   total_rating?: number
-  total_rating_count?: number   // popularity proxy — used to rank picker hits
+  total_rating_count?: number
 }
 
-// IGDB category enum → Omnio's GameSource union. Undocumented codes fall
-// through to leave the field unset instead of guessing.
+// IGDB `category` code → Omnio GameSource. Undocumented codes leave
+// the field unset rather than guessing.
 const CATEGORY_TO_SOURCE: Record<number, GameSource> = {
   0: 'original',    // main_game
   2: 'expanded',    // expansion
@@ -73,8 +71,8 @@ const CATEGORY_TO_SOURCE: Record<number, GameSource> = {
   13: 'collection', // pack
 }
 
-// Fallback: IGDB frequently mislabels Remake/Remaster as category:0 (main),
-// so infer from the title if the category didn't give us a definite answer.
+// IGDB frequently mislabels Remake/Remaster as category=0; catch those
+// via the title as a fallback.
 function inferSourceFromTitle(title: string): GameSource | undefined {
   const t = title.toLowerCase()
   if (/\bremake\b/.test(t)) return 'remake'
@@ -87,42 +85,21 @@ function inferSourceFromTitle(title: string): GameSource | undefined {
   return undefined
 }
 
-// IGDB has migrated (late 2024) from `{category, rating}` numeric enums to
-// `{organization, rating_category}` where both are IDs into separate tables.
-// We keep the legacy readers for backward compatibility and add the new
-// numeric-ID readers on top.
-//
-// Legacy `category` enum (age_rating_organizations before the migration):
-//   1=ESRB, 2=PEGI, 3=CERO, 4=USK, 5=GRAC, 6=CLASS_IND, 7=ACB
-// Legacy `rating` enum (per-organization values, ESRB range 6–12).
-//
-// New `organization` uses the same 1..7 numbering — that's why we can reuse
-// the isESRB / isPEGI checks. New `rating_category` is a GLOBAL ID space
-// where the ESRB block is 1..7 and PEGI is 8..12 (inferred from real API
-// responses — Tunic returns {organization:1, rating_category:4} for its
-// ESRB E10+ rating, {organization:2, rating_category:9} for PEGI 7).
+// Legacy schema. `category` was the org enum (1=ESRB, 2=PEGI…) and
+// `rating` was the per-org value (ESRB range 6–12, PEGI 1–5).
 const ESRB_NUM_LEGACY: Record<number, AgeRating> = {
   6: 'rp', 7: 'e', 8: 'e', 9: 'e10', 10: 't', 11: 'm', 12: 'ao',
 }
 const PEGI_NUM_LEGACY: Record<number, AgeRating> = {
   1: 'e', 2: 'e10', 3: 't', 4: 't', 5: 'm',
 }
-// New rating_category global IDs — inferred from real IGDB responses:
+// Post-2024 schema. `rating_category` is a global ID; ESRB occupies
+// 1–7 and PEGI 8–12 based on live API responses.
 const ESRB_RATING_CATEGORY: Record<number, AgeRating> = {
-  1: 'rp',   // ESRB_RP
-  2: 'e',    // ESRB_EC (Early Childhood → E)
-  3: 'e',    // ESRB_E
-  4: 'e10',  // ESRB_E10+
-  5: 't',    // ESRB_T
-  6: 'm',    // ESRB_M
-  7: 'ao',   // ESRB_AO
+  1: 'rp', 2: 'e', 3: 'e', 4: 'e10', 5: 't', 6: 'm', 7: 'ao',
 }
 const PEGI_RATING_CATEGORY: Record<number, AgeRating> = {
-  8: 'e',    // PEGI 3
-  9: 'e10',  // PEGI 7
-  10: 't',   // PEGI 12
-  11: 't',   // PEGI 16
-  12: 'm',   // PEGI 18
+  8: 'e', 9: 'e10', 10: 't', 11: 't', 12: 'm',
 }
 const ESRB_STR: Record<string, AgeRating> = {
   'rp': 'rp', 'ec': 'e', 'e': 'e', 'e10': 'e10', 'e10+': 'e10',
@@ -143,15 +120,13 @@ function isPEGI(v: number | string | undefined): boolean {
 }
 function pickAgeRating(refs?: AgeRatingRef[]): AgeRating | undefined {
   if (!refs || refs.length === 0) return undefined
-  // Prefer ESRB (US) then PEGI (EU) then anything mappable.
+  // Prefer ESRB, fall through to PEGI.
   for (const r of refs) {
     if (!isESRB(orgOf(r))) continue
-    // Try new schema first: rating_category is a global ID in the ESRB block.
     if (typeof r.rating_category === 'number') {
       const m = ESRB_RATING_CATEGORY[r.rating_category]
       if (m) return m
     }
-    // Legacy: rating is the ESRB-local enum.
     if (typeof r.rating === 'number') {
       const m = ESRB_NUM_LEGACY[r.rating]
       if (m) return m
@@ -179,9 +154,6 @@ function pickAgeRating(refs?: AgeRatingRef[]): AgeRating | undefined {
   return undefined
 }
 
-// IGDB image sizes: t_cover_big (264x374), t_720p, t_1080p, t_original,
-// t_screenshot_huge, t_screenshot_big. Cover uses t_cover_big; the banner
-// picks the first artwork or screenshot at t_1080p.
 const IMG = (imageId: string, size: string) =>
   `https://images.igdb.com/igdb/image/upload/${size}/${imageId}.jpg`
 
@@ -229,11 +201,8 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
   const search = async (q: string): Promise<FetcherResult<Game>> => {
     const r = await window.ipcRenderer.invoke('igdb:search', clientId, clientSecret, q)
     if (!r?.ok) return { ok: false, error: r?.error ?? 'Search failed' }
-    // IGDB search returns hits ordered by name-match relevance, which for a
-    // popular title puts DLC / bundle / region-variant entries above the
-    // main entry. Re-sort by IGDB's total_rating_count (popularity proxy)
-    // so the entry with the most metadata (devs, cover, etc.) surfaces
-    // first — that's usually the main game, which is what the user wants.
+    // Re-sort by rating count so the main game surfaces above DLCs /
+    // bundles / region variants that IGDB's own relevance mixes in.
     const games = (r.data as Game[]).slice().sort((a, b) => (b.total_rating_count ?? 0) - (a.total_rating_count ?? 0))
     return { ok: true, data: games }
   }
@@ -250,15 +219,9 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
       ? await downloadImageAsset( bannerUrl, 'videojuegos', 'banner', assetBasename(g.name, 'banner')) as string | null
       : null
 
-    // Dev-tools breadcrumb: DevTools' default filter hides `debug` under
-    // "10 hidden" so we use `log` here — an unmapped shape is worth being
-    // loud about. Screenshot the object and it lands in an issue.
     console.log('[IGDB] game:', g.name, '| age_ratings:', g.age_ratings, '| category:', g.category, '| parent_game:', g.parent_game)
-    // Suggest player_perspectives (First person, Third person, VR),
-    // game_modes (Single-player, Co-op, Battle royale) and keywords
-    // as tags. `themes` is deliberately excluded — the current apply
-    // path folds it into `genres`, and doubling up would flood the
-    // suggestion panel with duplicates of what just went in there.
+    // `themes` is excluded — it already goes into `genres`, adding it
+    // here would show the same values twice in the tag suggestion panel.
     const tagPool = [
       ...(g.player_perspectives ?? []).map((x) => x.name),
       ...(g.game_modes ?? []).map((x) => x.name),

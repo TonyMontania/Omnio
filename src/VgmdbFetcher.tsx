@@ -1,6 +1,5 @@
-// VGMdb metadata fetcher — game and anime soundtracks, Japanese releases.
-// Uses the community-run vgmdb.info JSON proxy of the site. No API key
-// but availability depends on the proxy; errors are surfaced as-is.
+// VGMdb fetcher for game/anime soundtracks. Routes through the
+// community-run vgmdb.info JSON proxy.
 
 import type { Item, Track } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
@@ -20,11 +19,14 @@ interface MultiName {
 }
 
 interface SearchHit {
-  link: string                    // e.g. "album/12345"
+  link: string
   titles?: MultiName
   release_date?: string
   media_format?: string
   catalog?: string
+  // Backfilled by search() below — the /search endpoint itself doesn't
+  // return covers.
+  picture_small?: string
 }
 
 interface Performer { link?: string; names?: MultiName }
@@ -52,8 +54,7 @@ interface AlbumDetails {
   discs?: AlbumDisc[]
 }
 
-// Pick the best display name from a multilingual object — English if
-// present, then romaji, then Japanese, then the first value found.
+// English → romaji → Japanese → whatever else is populated.
 function displayName(m?: MultiName): string {
   if (!m) return ''
   if (m.en) return m.en
@@ -81,10 +82,25 @@ function altsFromNames(m?: MultiName, primary?: string): string[] | undefined {
   return arr.length > 0 ? arr : undefined
 }
 
+// Only the first N hits get their heavy album endpoint fetched for
+// a thumbnail — anything below the fold isn't worth the extra RTTs
+// against a proxy with no known rate limit.
+const THUMB_FETCH_LIMIT = 8
+
 export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) {
   const search = async (q: string): Promise<FetcherResult<SearchHit>> => {
     const r = await window.ipcRenderer.invoke('vgmdb:search', q)
-    return r?.ok ? { ok: true, data: r.data as SearchHit[] } : { ok: false, error: r?.error ?? 'Search failed (vgmdb.info may be down)' }
+    if (!r?.ok) return { ok: false, error: r?.error ?? 'Search failed (vgmdb.info may be down)' }
+    const hits = r.data as SearchHit[]
+    await Promise.all(
+      hits.slice(0, THUMB_FETCH_LIMIT).map(async (h) => {
+        try {
+          const d = await window.ipcRenderer.invoke('vgmdb:album', h.link)
+          if (d?.ok) h.picture_small = (d.data as AlbumDetails).picture_small
+        } catch { /* one missing thumbnail is fine */ }
+      })
+    )
+    return { ok: true, data: hits }
   }
 
   const apply = async (hit: SearchHit) => {
@@ -98,8 +114,8 @@ export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) 
       ? await downloadImageAsset( coverUrl, 'musica', 'cover', assetBasename(albumTitle, 'cover')) as string | null
       : null
 
-    // Flatten multi-disc into one running tracklist; VGMdb often omits
-    // per-track numbers so we generate them.
+    // VGMdb often omits per-track numbers; generate them by flattening
+    // all discs into one running list.
     const tracks: Track[] = []
     let running = 0
     for (const disc of d.discs ?? []) {
@@ -114,18 +130,12 @@ export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) 
       }
     }
 
-    // Producer roles live on `organizations` (or occasionally on
-    // publisher/distributor entries themselves) — role strings VGMdb uses:
-    // "Producer", "Executive Producer", "Music Producer", "Sound Producer".
-    // Composers are surfaced separately as tags at the end so both credits
-    // survive without one clobbering the other.
     const producerOrgs = (d.organizations ?? []).filter((o) => /producer/i.test(o.role ?? ''))
     const producers: string[] = producerOrgs
       .map((o) => displayName(o.names))
       .filter(Boolean)
-    // Fallback: when VGMdb doesn't split roles, treat composers as the
-    // production credit (matches how the vast majority of game/anime OSTs
-    // are attributed — the composer IS the producer of the album).
+    // For game/anime OSTs the composer usually IS the producer, so
+    // fall back to composers when no explicit producer role is set.
     if (producers.length === 0 && d.composers && d.composers.length > 0) {
       for (const c of d.composers) {
         const n = displayName(c.names)
@@ -133,10 +143,8 @@ export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) 
       }
     }
 
-    // VGMdb release_date is ISO "YYYY-MM-DD" when the day is known and
-    // "YYYY-MM" or just "YYYY" otherwise. Keep whatever precision is
-    // available: full date to `releaseDate`, always the year to
-    // `releaseYear` so the card still shows a year on partial data.
+    // release_date is "YYYY", "YYYY-MM", or "YYYY-MM-DD"; keep whatever
+    // precision the source has.
     const dateRaw = (d.release_date ?? '').trim()
     const releaseDate = /^\d{4}-\d{2}-\d{2}$/.test(dateRaw) ? dateRaw : undefined
 
@@ -149,9 +157,6 @@ export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) 
       musicType: 'ost',
       musicSource: 'soundtrack',
       label: displayName(d.publisher?.names) || undefined,
-      // Distributor is a distinct role in VGMdb's model (the org that
-      // physically shipped the CDs, often different from the label) and
-      // maps cleanly onto Omnio's distributors field.
       distributors: d.distributor?.names ? [displayName(d.distributor.names)].filter(Boolean) : undefined,
       genres: d.categories && d.categories.length ? d.categories : undefined,
       producers: producers.length > 0 ? Array.from(new Set(producers)) : undefined,
@@ -188,6 +193,7 @@ export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) 
           key: hit.link,
           title: t || '(untitled)',
           sub: [y, hit.media_format, hit.catalog].filter(Boolean).join(' · '),
+          thumbUrl: hit.picture_small,
         }
       }}
     />

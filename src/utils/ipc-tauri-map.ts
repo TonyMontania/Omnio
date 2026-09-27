@@ -1,14 +1,7 @@
-// Channel → ordered arg-name list. Powers the Tauri IPC shim:
-// Electron's renderer sends positional args (`invoke(channel, a, b, c)`),
-// Tauri's `invoke` needs a `{ name: value }` object where the names
-// match the Rust command's parameter names (with camelCase applied to
-// snake_case names by Tauri v2's default `rename_all`).
-//
-// One entry per command declared in `src-tauri/src/main.rs`
-// `.invoke_handler(...)`. When you add a new command, update BOTH the
-// Rust side and this table — the shim silently drops args at indices
-// beyond the array length, so a missing entry looks like "the args
-// aren't reaching the backend" from the renderer's POV.
+// Channel → ordered arg-name list, mapping Electron's positional
+// `invoke(channel, a, b)` to Tauri's `{ name: value }` object shape.
+// A missing entry silently sends an empty payload, so every new
+// command needs both a Rust registration AND a row here.
 
 export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   // -- system --------------------------------------------------------
@@ -62,7 +55,7 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'updates:appimage-swap': ['newPath'],
   'updates:open-dmg': ['filePath'],
 
-  // -- fetchers (17 sources, 28 commands) ---------------------------
+  // -- fetchers -----------------------------------------------------
   'sgdb:search': ['apiKey', 'term'],
   'sgdb:assets': ['apiKey', 'kind', 'gameId'],
   'jikan:search': ['term', 'kind'],
@@ -72,7 +65,8 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'comicvine:search': ['apiKey', 'term'],
   'comicvine:volume': ['apiKey', 'id'],
   'mb:search': ['term'],
-  'mb:release-group-details': ['releaseGroupId'],
+  'mb:release-group-releases': ['releaseGroupId'],
+  'mb:release-group-details': ['releaseGroupId', 'releaseId'],
   'vgmdb:search': ['term'],
   'vgmdb:album': ['link'],
   'igdb:search': ['clientId', 'clientSecret', 'term'],
@@ -117,14 +111,8 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'net:fetch-text': ['url', 'headers'],
 }
 
-// Convert an Electron-style channel name to a Tauri command name.
-// Electron uses `:` (namespace) and `-` (hyphen) as separators; Tauri
-// commands are `snake_case` matching the Rust function name. Both
-// `[-:]` collapse to `_`.
-//
-// 'proxy:apply'          → 'proxy_apply'
-// 'storage:copy-data-to' → 'storage_copy_data_to'
-// 'asset-blob:save'      → 'asset_blob_save'
+// 'storage:copy-data-to' → 'storage_copy_data_to' — collapse both `-`
+// and `:` to the `snake_case` command name Rust exposes.
 export function tauriCommandFor(channel: string): string {
   return channel.replace(/[-:]/g, '_')
 }

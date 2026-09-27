@@ -101,7 +101,10 @@ src/                              Renderer (React + TypeScript).
                                   to Tauri commands + events.
     ipc-tauri-map.ts              Channel → Rust arg-name table for the shim.
 
-src-tauri/                        Backend (Rust). 66 commands, 8 handler modules.
+src-tauri/                        Backend (Rust). 8 handler modules under
+                                  src-tauri/src/handlers/ (data, fetchers,
+                                  images, install_scan, plugins, storage,
+                                  system, updates).
   Cargo.toml                      Deps: tauri, tokio, serde, reqwest, sha1, …
   tauri.conf.json                 Bundle config: NSIS installer, MSI, DMG,
                                   AppImage. Publisher metadata, asset protocol.
@@ -136,16 +139,16 @@ src-tauri/                        Backend (Rust). 66 commands, 8 handler modules
                                   reveal, broken-asset audit + clear-ref.
       updates.rs                  GitHub Releases poll, install-kind detect,
                                   streaming download with progress events.
-      fetchers.rs                 28 commands / 17 sources: SGDB, Jikan, Kitsu,
+      fetchers.rs                 34 commands / 19 sources: SGDB, Jikan, Kitsu,
                                   MangaDex, ComicVine, MusicBrainz, VGMdb, IGDB,
                                   TMDb, AniList, Steam, OpenLibrary, VNDB,
-                                  Discogs, lrclib, AniDB, PCGamingWiki.
+                                  Discogs, lrclib, AniDB, PCGamingWiki,
+                                  HowLongToBeat, Last.fm.
 
 docs/
   FIELDS.md                       Every field on every category, EN + ES labels.
   FETCHER_FIELDS.md               Which fields each source populates.
   FETCHER_REGISTRY.md             Renderer-side fetcher registration.
-  REDESIGN.md                     Historical design doc for the 0.3 UX pass.
 ```
 
 ## The design contract

@@ -1,8 +1,9 @@
-// MusicBrainz + Cover Art Archive metadata fetcher for Music.
-// Two-step: search release-groups, pick one, then fetch the primary
-// Official release inside it to build a tracklist. Cover art comes from
-// coverartarchive.org keyed by the chosen release's MBID.
+// MusicBrainz + Cover Art Archive fetcher. Three steps: search
+// release-groups, pick one; list every release under it so the user
+// can choose the actual edition (Deluxe, Reissue, 20th Anniversary
+// each have their own tracklist and cover); apply the picked release.
 
+import { useState } from 'react'
 import type { Item, MusicType, MusicSource, Track } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
@@ -23,6 +24,7 @@ interface ReleaseGroupHit {
   'first-release-date'?: string
   'artist-credit'?: ArtistCredit[]
   score?: number
+  disambiguation?: string
 }
 interface Recording { id: string; title: string; length?: number; 'artist-credit'?: ArtistCredit[] }
 interface MediaTrack { id: string; number: string; title: string; length?: number; 'artist-credit'?: ArtistCredit[]; recording?: Recording }
@@ -54,6 +56,17 @@ interface Release {
   }
 }
 
+interface EditionOption {
+  id: string
+  title: string
+  disambiguation?: string
+  status?: string
+  date?: string
+  country?: string
+  'label-info'?: { label?: Named; 'catalog-number'?: string }[]
+  media?: { format?: string; 'track-count'?: number }[]
+}
+
 const PRIMARY_TO_TYPE: Record<string, MusicType> = {
   Album: 'album',
   EP: 'ep',
@@ -61,9 +74,8 @@ const PRIMARY_TO_TYPE: Record<string, MusicType> = {
   Broadcast: 'live',
   Other: 'album',
 }
-// Secondary types layer on top of primary; a soundtrack-tagged Album maps
-// to OST here (Omnio treats it as a distinct type), and a live album maps
-// to Live. Compilation/Remaster/etc flow into musicSource instead.
+// A soundtrack-tagged Album maps to Omnio's distinct OST type. Live
+// covers Live-tagged. Compilation/Remaster flow into musicSource instead.
 function mbToOmnioType(primary?: string, secondary?: string[]): MusicType | undefined {
   const sec = new Set((secondary ?? []).map((s) => s.toLowerCase()))
   if (sec.has('soundtrack')) return 'ost'
@@ -84,9 +96,6 @@ function joinArtists(credit: ArtistCredit[] | undefined): string {
   return credit.map((c) => c.name).join(' ')
 }
 
-// Producer / co-producer / executive producer credits live in the release's
-// `relations` array as artist-target relations. `attributes` marks the
-// producer variant (co-producer, executive) and we surface all of them.
 function extractProducers(rel: Release): string[] {
   const rs = rel.relations ?? []
   const names = rs
@@ -96,10 +105,8 @@ function extractProducers(rel: Release): string[] {
   return Array.from(new Set(names))
 }
 
-// MB tags are user-submitted (noisy, useful as a fallback). MB genres are
-// a curated subset of tags. Prefer whichever list has more entries in the
-// richer of the two sources (release-group usually beats release), then
-// dedupe. Falls back cleanly when a release has neither.
+// Prefer curated `genres` over user-submitted `tags`; prefer the
+// release-group's lists over the release's when both exist.
 function extractGenres(rel: Release): string[] {
   const sources: MbTagLike[][] = [
     rel._releaseGroup?.genres ?? [],
@@ -111,9 +118,6 @@ function extractGenres(rel: Release): string[] {
   const out: string[] = []
   for (const src of sources) {
     if (src.length === 0) continue
-    // Sort by count desc so the most-tagged genres come first, then take
-    // this source's entries. Break once we have a reasonable list —
-    // spilling every user-submitted tag would swamp the genre field.
     const sorted = [...src].sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
     for (const t of sorted) {
       const name = t.name.trim()
@@ -124,14 +128,12 @@ function extractGenres(rel: Release): string[] {
       out.push(name)
       if (out.length >= 8) return out
     }
-    if (out.length > 0) return out    // don't dilute a curated genre list with looser tags
+    // Never dilute a curated genre list with looser tags below it.
+    if (out.length > 0) return out
   }
   return out
 }
 
-// Alternate title picks: MB aliases (both release and release-group), each
-// filtered to primary/name variants, plus the raw MB release-group title
-// if it differs from the release title picked as the main one.
 function extractAltTitles(rel: Release, primary: string): string[] {
   const aliases = [
     ...(rel.aliases ?? []),
@@ -158,38 +160,50 @@ function msToMmSs(ms?: number): string {
 }
 
 export default function MusicBrainzFetcher({ initialQuery, onApply, onClose }: Props) {
+  const [pendingRg, setPendingRg] = useState<ReleaseGroupHit | null>(null)
+  const [editions, setEditions] = useState<EditionOption[] | null>(null)
+  const [applyingEdition, setApplyingEdition] = useState<string | null>(null)
+
   const search = async (q: string): Promise<FetcherResult<ReleaseGroupHit>> => {
     const r = await window.ipcRenderer.invoke('mb:search', q)
     if (!r?.ok) return { ok: false, error: r?.error ?? 'Search failed' }
-    // MB *usually* returns hits by score, but not always — sort explicitly
-    // so the best match is always on top. Also drop obviously-off matches
-    // (score < 50) so a query for "Wolves Within" doesn't surface a
-    // Broker/Dealer ringtone just because both contain "Dig Deep".
+    // MB doesn't always return hits pre-sorted by score, and low-score
+    // matches often surface accidental keyword overlaps.
     const hits = (r.data as ReleaseGroupHit[])
       .filter((h) => (h.score ?? 0) >= 50)
       .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
     return { ok: true, data: hits }
   }
 
-  const apply = async (rg: ReleaseGroupHit) => {
-    const r = await window.ipcRenderer.invoke('mb:release-group-details', rg.id)
+  const chooseReleaseGroup = async (rg: ReleaseGroupHit) => {
+    const r = await window.ipcRenderer.invoke('mb:release-group-releases', rg.id)
+    if (!r?.ok) {
+      // Fall back to auto-pick rather than dead-ending the flow.
+      await applyRelease(rg, undefined)
+      return
+    }
+    const releases = (r.data as EditionOption[]) ?? []
+    if (releases.length <= 1) {
+      await applyRelease(rg, releases[0]?.id)
+      return
+    }
+    setPendingRg(rg)
+    setEditions(releases)
+  }
+
+  const applyRelease = async (rg: ReleaseGroupHit, wantedReleaseId: string | undefined) => {
+    const r = await window.ipcRenderer.invoke('mb:release-group-details', rg.id, wantedReleaseId)
     if (!r?.ok) return
     const rel = r.data as Release
     const releaseId = r.chosenReleaseId as string
 
-    // Cover Art Archive returns a redirect to the actual image. `front-500`
-    // is the "medium" front cover — usually enough for a music card.
     const caaUrl = `https://coverartarchive.org/release/${releaseId}/front-500`
     const coverPath = await downloadImageAsset(caaUrl, 'musica', 'cover', assetBasename(rg.title, 'cover')) as string | null
 
-    // Flatten multi-disc into one numbered tracklist. MB tracks already
-    // carry a per-medium `number` string like "1", "A1" for vinyl, etc.
     const tracks: Track[] = []
     let running = 0
-    // The release-level artist becomes the fallback so a track only carries
-    // its own `artist` when it actually differs (feature, guest vocal,
-    // various-artists comp) — otherwise the "Track artist" column stays
-    // empty and inherits the album artist visually.
+    // Only carry a track-level artist when it actually differs from the
+    // release artist — otherwise the tracklist reads as noise.
     const releaseArtist = joinArtists(rel['artist-credit'] ?? rg['artist-credit'])
     for (const media of rel.media ?? []) {
       for (const t of media.tracks ?? []) {
@@ -209,18 +223,12 @@ export default function MusicBrainzFetcher({ initialQuery, onApply, onClose }: P
     const producers = extractProducers(rel)
     const genres = extractGenres(rel)
     const altTitles = extractAltTitles(rel, title)
-    // Full ISO date if MB has one, falling back to the release group's
-    // first-release date. Empty string turns into undefined so we don't
-    // clobber a user-edited date with garbage.
     const isoDate = (rel.date ?? rg['first-release-date'] ?? '').trim()
     const patch: Partial<Item> = {
       title,
       artist: joinArtists(rel['artist-credit'] ?? rg['artist-credit']) || undefined,
       alternativeTitles: altTitles.length > 0 ? altTitles : undefined,
       releaseYear: isoDate.slice(0, 4) || undefined,
-      // releaseDate is the full ISO date; applyFetchedPatch derives releaseYear
-      // from its first 4 chars, but keeping both means the Music editor's
-      // date picker shows day/month too when MB has them.
       releaseDate: /^\d{4}-\d{2}-\d{2}$/.test(isoDate) ? isoDate : undefined,
       musicType: mbToOmnioType(rg['primary-type'], rg['secondary-types']),
       musicSource: mbToOmnioSource(rg['secondary-types']),
@@ -235,33 +243,97 @@ export default function MusicBrainzFetcher({ initialQuery, onApply, onClose }: P
     onClose()
   }
 
+  const closeEditionPicker = () => { setPendingRg(null); setEditions(null) }
+
+  const pickEdition = async (rg: ReleaseGroupHit, ed: EditionOption) => {
+    setApplyingEdition(ed.id)
+    try { await applyRelease(rg, ed.id) }
+    finally { setApplyingEdition(null) }
+  }
+
   return (
-    <FetcherModal<ReleaseGroupHit>
-      title="MusicBrainz · Music"
-      hint={
-        <>Open, community-run music database — no API key needed. Applying overwrites
-        title, artist, alternative titles, release date, type, source, label, genres,
-        producers and tracklist. Cover comes from Cover Art Archive (same project).
-        Rating, notes and listen history are left alone. Include the artist in your
-        search for sharper results (e.g. <code>in rainbows radiohead</code>). Rate
-        limit is one request per second; expect a small wait.</>
-      }
-      placeholder="Search release, e.g. 'in rainbows radiohead'…"
-      initialQuery={initialQuery}
-      onSearch={search}
-      onApply={apply}
-      onClose={onClose}
-      renderHit={(rg) => {
-        const y = (rg['first-release-date'] ?? '').slice(0, 4)
-        const artist = joinArtists(rg['artist-credit'])
-        const secondaries = rg['secondary-types']?.join(', ')
-        const scoreBadge = typeof rg.score === 'number' ? `${rg.score}%` : null
-        return {
-          key: rg.id,
-          title: rg.title,
-          sub: [artist, rg['primary-type'], secondaries, y, scoreBadge].filter(Boolean).join(' · '),
+    <>
+      <FetcherModal<ReleaseGroupHit>
+        title="MusicBrainz · Music"
+        hint={
+          <>Open, community-run music database — no API key needed. Applying overwrites
+          title, artist, alternative titles, release date, type, source, label, genres,
+          producers and tracklist. Cover comes from Cover Art Archive (same project).
+          Rating, notes and listen history are left alone. Include the artist in your
+          search for sharper results (e.g. <code>in rainbows radiohead</code>). Rate
+          limit is one request per second; expect a small wait.</>
         }
-      }}
-    />
+        placeholder="Search release, e.g. 'in rainbows radiohead'…"
+        initialQuery={initialQuery}
+        onSearch={search}
+        onApply={chooseReleaseGroup}
+        onClose={onClose}
+        renderHit={(rg) => {
+          const y = (rg['first-release-date'] ?? '').slice(0, 4)
+          const artist = joinArtists(rg['artist-credit'])
+          const secondaries = rg['secondary-types']?.join(', ')
+          const scoreBadge = typeof rg.score === 'number' ? `${rg.score}%` : null
+          return {
+            key: rg.id,
+            title: rg.title,
+            sub: [artist, rg['primary-type'], secondaries, y, scoreBadge].filter(Boolean).join(' · '),
+            desc: rg.disambiguation || undefined,
+            thumbUrl: `https://coverartarchive.org/release-group/${rg.id}/front-250`,
+          }
+        }}
+      />
+
+      {pendingRg && editions && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={closeEditionPicker}>
+          <div className="modal-panel fetch-modal mb-editions-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Choose an edition — {pendingRg.title}</h2>
+              <button type="button" className="panel-close" onClick={closeEditionPicker}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p className="hint" style={{ marginTop: 0 }}>
+                MusicBrainz has {editions.length} different releases of this album — different
+                countries, formats (CD / vinyl / digital) and named editions (Deluxe, Limited,
+                Reissue, Anniversary…), each with its own tracklist and cover. Pick the one that
+                matches what you're tracking.
+              </p>
+              <div className="mb-editions-grid">
+                {editions.map((ed) => {
+                  const formats = Array.from(new Set((ed.media ?? []).map((m) => m.format).filter(Boolean))).join(' + ')
+                  const trackCount = (ed.media ?? []).reduce((sum, m) => sum + (m['track-count'] ?? 0), 0)
+                  const label = ed['label-info']?.[0]?.label?.name
+                  const displayTitle = ed.disambiguation ? `${ed.title} (${ed.disambiguation})` : ed.title
+                  const busy = applyingEdition !== null
+                  return (
+                    <button
+                      type="button"
+                      key={ed.id}
+                      className="mb-edition-card"
+                      disabled={busy}
+                      onClick={() => pickEdition(pendingRg, ed)}
+                    >
+                      <div className="mb-edition-cover">
+                        <img
+                          src={`https://coverartarchive.org/release/${ed.id}/front-250`}
+                          alt=""
+                          loading="lazy"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      </div>
+                      <div className="mb-edition-title">{displayTitle}</div>
+                      <div className="mb-edition-meta">
+                        {[formats, trackCount ? `${trackCount} tracks` : null, ed.country, ed.date].filter(Boolean).join(' · ')}
+                      </div>
+                      {label && <div className="mb-edition-label">{label}</div>}
+                      {applyingEdition === ed.id && <span className="anilist-applying">Applying…</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

@@ -1,9 +1,6 @@
-// Shared shell for every metadata fetcher (AniList, IGDB, TMDb, Jikan, Kitsu,
-// MangaDex, ComicVine, MusicBrainz, VGMdb, SGDB later). The eight fetcher files
-// used to repeat the same modal skeleton — query/results/loading/error state,
-// Escape close handler, auto-search on mount, search-row layout and the
-// .anilist-results list markup. All of that lives here now; the callers only
-// wire up "how do you search" and "how do you apply a hit".
+// Shared shell for every metadata fetcher. Callers only wire up how to
+// search and how to apply a hit; state, loading UI, Escape handling,
+// auto-search on mount and the results list live here.
 
 import { useEffect, useState, type ReactNode } from 'react'
 
@@ -23,14 +20,14 @@ export interface FetcherResult<T> {
 
 interface Props<T> {
   title: string
-  hint?: ReactNode                   // one-line explainer above the search box
+  hint?: ReactNode
   placeholder?: string
   initialQuery: string
-  disabled?: boolean                 // e.g. no API key set yet
+  disabled?: boolean
   disabledMessage?: ReactNode
-  autoSearch?: boolean               // default: true when initialQuery is set
+  autoSearch?: boolean
   onSearch: (query: string) => Promise<FetcherResult<T>>
-  onApply: (hit: T) => Promise<void> // caller closes the modal itself
+  onApply: (hit: T) => Promise<void>
   renderHit: (hit: T) => FetcherHit
   onClose: () => void
 }
@@ -71,9 +68,8 @@ export function FetcherModal<T>({
     try { await onApply(hit) } finally { setApplyingKey(null) }
   }
 
-  // No overlay-click dismiss — losing a mid-typed search query or a
-  // picked hit to a stray outside click matches how frustrating the
-  // same behavior was on the artist editor. ✕ button + Esc still close.
+  // No overlay-click dismiss on purpose — a stray outside click while
+  // typing a search would lose the query. Esc and the ✕ still close.
   return (
     <div className="modal-overlay">
       <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
@@ -111,12 +107,20 @@ export function FetcherModal<T>({
                   <li key={m.key}>
                     <button type="button" className="anilist-hit" onClick={() => handleApply(hit)} disabled={applyingKey !== null}>
                       <div className="anilist-thumb">
-                        {m.thumbUrl ? <img src={m.thumbUrl} alt="" loading="lazy" /> : <span>{m.title.charAt(0)}</span>}
+                        <span>{m.title.charAt(0)}</span>
+                        {m.thumbUrl && (
+                          <img
+                            src={m.thumbUrl}
+                            alt=""
+                            loading="lazy"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        )}
                       </div>
                       <div className="anilist-text">
                         <div className="anilist-title">{m.title}</div>
                         {m.sub && <div className="anilist-sub">{m.sub}</div>}
-                        {m.desc && <div className="anilist-desc">{m.desc.slice(0, 180)}…</div>}
+                        {m.desc && <div className="anilist-desc">{m.desc.length > 180 ? `${m.desc.slice(0, 180)}…` : m.desc}</div>}
                       </div>
                       {applyingKey === m.key && <span className="anilist-applying">Applying…</span>}
                     </button>

@@ -991,10 +991,10 @@ fn derive_artist_album(folder_name: &str, artist_hint: Option<&str>) -> (String,
 // tokio::spawn's the initial walk so we return through the IPC boundary
 // cleanly.
 #[tauri::command]
-pub async fn music_scan_folder(rootPath: String) -> MusicScanResult {
-    let root = std::path::PathBuf::from(&rootPath);
+pub async fn music_scan_folder(root_path: String) -> MusicScanResult {
+    let root = std::path::PathBuf::from(&root_path);
     if !root.exists() {
-        return MusicScanResult::Err { ok: false, error: format!("Folder not found: {rootPath}") };
+        return MusicScanResult::Err { ok: false, error: format!("Folder not found: {root_path}") };
     }
     let mut albums: Vec<MusicAlbumOut> = Vec::new();
     scan_directory_boxed(&root, 0, None, &mut albums).await;

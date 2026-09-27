@@ -1,11 +1,5 @@
-// HowLongToBeat per-game lookup. Reads the site's rotating API token
-// out of its _app-*.js bundle (backend-side, see hltb_search in
-// fetchers.rs) and returns Main / Main+Extras / Completionist times
-// so the user can pick which one lands in `hltbHours`.
-//
-// The site has no official API — expect breakage every few months.
-// On failure the modal explains it and points at the bulk paste
-// importer as the fallback.
+// HowLongToBeat per-game lookup. No official API — the endpoint URL
+// rotates, so token discovery happens on the Rust side (hltb_search).
 
 import type { Item } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
@@ -21,12 +15,13 @@ interface HltbHit {
   game_name: string
   game_name_date?: number
   game_alias?: string
-  release_world?: number       // year
+  game_image?: string
+  release_world?: number
   profile_platform?: string
-  comp_main?: number           // seconds
-  comp_plus?: number           // seconds — main + extras
-  comp_100?: number            // seconds — completionist
-  invested_co?: number         // co-op multiplayer
+  comp_main?: number       // seconds
+  comp_plus?: number       // seconds — main + extras
+  comp_100?: number        // seconds — completionist
+  invested_co?: number     // seconds — co-op multiplayer
   comp_all_avg?: number
 }
 
@@ -52,8 +47,8 @@ export default function HltbFetcher({ initialQuery, onApply, onClose }: Props) {
   }
 
   const apply = async (h: HltbHit) => {
-    // Prefer main story hours; fall back through the ladder if the game
-    // has no main-story data (rare — usually multiplayer / co-op only).
+    // Fall through the ladder for multiplayer/co-op-only games that
+    // have no main-story data logged.
     const hours = toHours(h.comp_main)
       ?? toHours(h.comp_plus)
       ?? toHours(h.comp_100)
@@ -91,6 +86,7 @@ export default function HltbFetcher({ initialQuery, onApply, onClose }: Props) {
           `+Extras ${fmtHours(h.comp_plus)}`,
           `100% ${fmtHours(h.comp_100)}`,
         ].join(' · '),
+        thumbUrl: h.game_image ? `https://howlongtobeat.com/games/${h.game_image}` : undefined,
       })}
       onClose={onClose}
     />

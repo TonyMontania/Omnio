@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { getMangaStatus, getPublicationStatusLabel, getMangaSourceLabel, getAgeRatingLabel, getNextUnreadChapter, assetSrc } from './types'
 import { MangaStatusIcon } from './icons'
-import type { Item, AnyItem, MangaItem, Collection } from './types'
+import type { Item, AnyItem, MangaItem, Collection, FranchiseSection, FranchiseGraph } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import CoverPlaceholder from './components/CoverPlaceholder'
 import ImageLightbox from './components/ImageLightbox'
@@ -26,9 +26,13 @@ interface Props {
   onDuplicate: () => void
   onNavigate: (id: string) => void
   allItems?: AnyItem[]
+  onOpenCrossLibraryFranchise?: (franchise: string) => void
+  franchiseSections?: FranchiseSection[]
+  franchiseViewMode?: 'year' | 'sections' | 'graph'
+  franchiseGraph?: FranchiseGraph
 }
 
-export default function MangaDetailModal({ item, groups, allManga, onClose, onEdit, onDuplicate, onNavigate, allItems }: Props) {
+export default function MangaDetailModal({ item, groups, allManga, onClose, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
   const [volumeLightbox, setVolumeLightbox] = useState<number | null>(null)
   const ms = getMangaStatus(item.mangaStatus)
   const nextCh = item.hasChapters ? getNextUnreadChapter(item.chapters) : null
@@ -165,7 +169,7 @@ export default function MangaDetailModal({ item, groups, allManga, onClose, onEd
           <DetailNotes notes={item.notes} />
           <DetailHistoryTable label="Reread history" entries={item.rewatches ?? []} />
           <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} />
+          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
           <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
           <CustomFieldsView fields={item.customFields} />
 

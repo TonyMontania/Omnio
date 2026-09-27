@@ -15,7 +15,7 @@ Report privately via one of:
 1. **GitHub Security Advisories** — preferred. Go to the
    [Security tab](https://github.com/TonyMontania/Omnio/security/advisories/new)
    of the repo and click *Report a vulnerability*.
-2. **Email** — `ezebigplanet@gmail.com` with `[Omnio Security]` in the subject.
+2. **Email** — `eze.bigplanet@gmail.com` with `[Omnio Security]` in the subject.
 
 Include enough detail to reproduce the issue: Omnio version, OS, steps, and
 what the observed vs. expected behavior is. If you have a proof-of-concept
@@ -33,8 +33,12 @@ build or patch, even better.
 Omnio is a local-first Tauri app (Rust backend + React renderer).
 Realistic threat surfaces:
 
-- Path traversal / file writes via imported files (backups, MAL XML,
-  Letterboxd CSV, Kindle My Clippings, Trakt JSON, Discogs API responses, …).
+- Path traversal / file writes via imported files (backups, MAL/AniList XML,
+  Letterboxd CSV, IMDb CSV, Backloggd CSV, Serializd CSV, Spotify JSON,
+  RateYourMusic CSV, Kindle My Clippings text, StoryGraph CSV, HowLongToBeat
+  CSV, Trakt JSON, Discogs API responses, Last.fm CSV / API sync results,
+  local music folder scan of arbitrary audio + cover files, Notion / Playnite
+  / GOG / Goodreads spreadsheet presets, …).
 - XSS in the exported HTML site or in remote metadata rendered inside the app.
 - IPC channel abuse from a compromised renderer process — the Rust
   backend enforces `safe_relative` on every renderer-supplied path.

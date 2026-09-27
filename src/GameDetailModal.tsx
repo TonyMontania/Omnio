@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { getOwnershipLabel, getGameStatus, getGameSourceLabel, getAgeRatingLabel, assetSrc } from './types'
 import { GameStatusIcon } from './icons'
-import type { Item, AnyItem, GameItem, Collection } from './types'
+import type { Item, AnyItem, GameItem, Collection, FranchiseSection, FranchiseGraph } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import ImageLightbox from './components/ImageLightbox'
 import CoverPlaceholder from './components/CoverPlaceholder'
@@ -35,12 +35,16 @@ interface Props {
   onDuplicate: () => void
   onNavigate: (id: string) => void
   allItems?: AnyItem[]
+  onOpenCrossLibraryFranchise?: (franchise: string) => void
+  franchiseSections?: FranchiseSection[]
+  franchiseViewMode?: 'year' | 'sections' | 'graph'
+  franchiseGraph?: FranchiseGraph
 }
 
 const timelineSortKey = (i: Item) => i.releaseDate || i.releaseYear || ''
 const yearOf = (i: Item) => timelineSortKey(i).slice(0, 4)
 
-export default function GameDetailModal({ item, groups, allGames, onClose, onEdit, onDuplicate, onNavigate, allItems }: Props) {
+export default function GameDetailModal({ item, groups, allGames, onClose, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
   const [screenshotLightbox, setScreenshotLightbox] = useState<number | null>(null)
   const gs = getGameStatus(item.gameStatus)
   const year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null
@@ -421,7 +425,7 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             entries={derivedWorks.map((d) => ({ item: d, badge: d.gameSource ? getGameSourceLabel(d.gameSource) : undefined }))}
             onNavigate={onNavigate}
           />
-          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} />
+          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
           <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
           <CustomFieldsView fields={item.customFields} />
         </div>

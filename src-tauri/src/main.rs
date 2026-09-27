@@ -113,6 +113,7 @@ fn main() {
             handlers::fetchers::comicvine_search,
             handlers::fetchers::comicvine_volume,
             handlers::fetchers::mb_search,
+            handlers::fetchers::mb_release_group_releases,
             handlers::fetchers::mb_release_group_details,
             handlers::fetchers::vgmdb_search,
             handlers::fetchers::vgmdb_album,

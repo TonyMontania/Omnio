@@ -1,17 +1,6 @@
-// AniDB deep-metadata fetcher for anime + donghua.
-//
-// AniDB's HTTP API has no search endpoint (search is done offline via the
-// anime-titles.xml dump). To keep v1 small we skip that entirely and let
-// the user paste an AID (or an AniDB URL) directly — the "deep fetch"
-// flow assumes you already found the show on anidb.net.
-//
-// Coexists with AniList / MAL / Kitsu — none of them get replaced. AniDB
-// provides fields the others don't (weighted tags, creators per episode,
-// tighter cross-refs); when it has a better answer than what the editor
-// already holds, this fetcher fills it in.
-//
-// Rate limit: enforced main-side (one request per 2.1s), and the button
-// visually locks with a spinner so the user can't queue five fast clicks.
+// AniDB fetcher for anime / donghua. Two lookup modes: by AID (fetches
+// via AniDB's HTTP API, rate-limited server-side to 1 req / 2.1 s), or
+// by title against the locally cached anime-titles.xml dump.
 
 import { useState } from 'react'
 import type { Item, AnimeFormat, AiringStatus, Episode } from './types'
@@ -20,7 +9,7 @@ import { invoke } from './utils/ipc'
 
 interface Props {
   initialUrl?: string
-  categoryId: string       // active category so the cover lands in the right assets folder
+  categoryId: string
   onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string) => void
   onClose: () => void
   anidbClient?: string
@@ -29,11 +18,9 @@ interface Props {
 type ParsedTitle = { text: string; type?: string; lang?: string }
 type ParsedTag = { name: string; weight: number }
 
-// One episode as returned by AniDB, before mapping to Omnio's Episode
-// shape. `numeric` is the numeric portion of `<epno>` (AniDB prefixes
-// specials with 'S' — "S1", "S2" — and credits with 'C', 'T', 'P').
-// `type` tells us which of those buckets the episode falls in so the
-// user can opt to skip specials on apply.
+// AniDB prefixes non-regular episodes with a letter (S1/S2 = special,
+// C/T/P/O = credits/trailer/parody/other). `numeric` strips the prefix
+// so buckets can be sorted numerically inside each group.
 type ParsedEpisode = {
   epno: string
   numeric: string
@@ -48,7 +35,7 @@ type ParsedAnime = {
   aid: string
   mainTitle: string
   altTitles: string[]
-  type?: string           // TV Series / Movie / OVA …
+  type?: string
   episodeCount?: string
   startDate?: string
   endDate?: string
@@ -60,8 +47,7 @@ type ParsedAnime = {
   siteUrl: string
 }
 
-// AniDB URLs look like anidb.net/anime/12345 or anidb.net/a12345 — grab
-// the numeric AID from either shape (or accept the bare number).
+// Accepts a bare number, `.../anime/12345`, `.../a12345` or `aid=12345`.
 function extractAid(raw: string): string | null {
   const trimmed = raw.trim()
   if (!trimmed) return null
@@ -70,27 +56,18 @@ function extractAid(raw: string): string | null {
   return m ? m[1] : null
 }
 
-// AniDB peppers descriptions with in-line references to their own DB
-// (`http://anidb.net/cr1283 [Capcom]`, `http://anidb.net/ch46710
-// [Hokaze Kon]`, etc). Users don't get to click those — they're
-// AniDB-only ids — and the trailing bracket-label reads much better
-// on its own. Strip the URL and keep the label so the Description
-// field renders as prose. Handles both http:// and https:// and both
-// short (cr / ch / co / fi) and long (creator / character) codes.
+// AniDB descriptions embed unclickable in-house cross-refs like
+// `http://anidb.net/cr1283 [Capcom]`. Keep the bracketed label and
+// drop everything else so the field reads as prose.
 function cleanAnidbDescription(text: string): string {
   return text
-    // "http://anidb.net/foo123 [Label]" → "Label"
     .replace(/https?:\/\/anidb\.net\/[a-z]+\d+\s*\[([^\]]+)\]/gi, '$1')
-    // Any leftover bare AniDB URL — no label — gets dropped entirely.
     .replace(/https?:\/\/anidb\.net\/\S+/gi, '')
-    // Collapse the "  ." / " ," style whitespace that removals leave.
     .replace(/\s+([,.;:])/g, '$1')
     .replace(/[ \t]{2,}/g, ' ')
     .trim()
 }
 
-// AniDB's type strings ("TV Series", "Movie", "OVA", "TV Special", "Web"…)
-// map onto Omnio's AnimeFormat enum with a couple of judgment calls.
 function toAnimeFormat(type: string | undefined): AnimeFormat | undefined {
   if (!type) return undefined
   const t = type.toLowerCase()
@@ -103,9 +80,6 @@ function toAnimeFormat(type: string | undefined): AnimeFormat | undefined {
   return undefined
 }
 
-// Turn AniDB's YYYY-MM-DD start/end pair into Omnio's airingStatus. If no
-// end date, still airing; if end date passed, finished; if start in the
-// future, not yet aired.
 function toAiringStatus(start?: string, end?: string): AiringStatus | undefined {
   if (!start) return undefined
   const now = new Date()
@@ -128,10 +102,8 @@ function parseAnidbXml(xml: string, aid: string): ParsedAnime | null {
     type: n.getAttribute('type') ?? undefined,
     lang: n.getAttribute('xml:lang') ?? n.getAttribute('lang') ?? undefined,
   })).filter((t) => t.text)
-  // Main title = the one AniDB marks type="main"; fallback = first title.
   const main = titles.find((t) => t.type === 'main') ?? titles[0]
   if (!main) return null
-  // Alternative titles: everything else, deduped by text.
   const altSet = new Set<string>()
   const alt: string[] = []
   for (const t of titles) {
@@ -147,15 +119,12 @@ function parseAnidbXml(xml: string, aid: string): ParsedAnime | null {
   const rawDescription = anime.querySelector('description')?.textContent?.trim()
   const description = rawDescription ? cleanAnidbDescription(rawDescription) : undefined
   const picture = anime.querySelector('picture')?.textContent?.trim()
-  // AniDB stores studios as creators with type="Animation Work". Directors,
-  // character designers etc. all live in the same <creators> list but we
-  // only surface studios in v1 (they're what maps cleanly to Item.studios).
+  // <creators> mixes studios, directors, character designers, etc. Only
+  // the "Animation Work" entries map onto Item.studios.
   const studios = Array.from(anime.querySelectorAll('creators > name'))
     .filter((n) => (n.getAttribute('type') ?? '').toLowerCase().includes('animation work'))
     .map((n) => n.textContent?.trim() ?? '')
     .filter(Boolean)
-  // Tags: skip spoilers (spoiler="true") and low-weight cruft, then take
-  // the top 15 by weight so the editor's genres field stays sane.
   const tags: ParsedTag[] = Array.from(anime.querySelectorAll('tags > tag'))
     .filter((n) => n.getAttribute('spoiler') !== 'true')
     .map((n) => ({
@@ -165,14 +134,9 @@ function parseAnidbXml(xml: string, aid: string): ParsedAnime | null {
     .filter((t) => t.name && t.weight >= 300)
     .sort((a, b) => b.weight - a.weight)
     .slice(0, 15)
-  // Episodes. AniDB tags <epno> with a `type` attribute:
-  //   1 = regular  (1, 2, 3, ...)
-  //   2 = special  ("S1", "S2", ...)
-  //   3 = credits, 4 = trailer, 5 = parody, 6 = other
-  // We normalise to three buckets so the apply step can offer
+  // AniDB's episode type attribute: 1 regular, 2 special, 3-6 credits/
+  // trailer/parody/other. Collapsed to 3 buckets so apply() can offer
   // "regular only" vs "everything" without re-parsing.
-  // Titles inside an <episode> come in multiple languages; we pick
-  // English first, then Romaji (x-jat), then whatever else we find.
   const bucketOf = (t: string | null): 'regular' | 'special' | 'other' => {
     if (t === '1' || t === null) return 'regular'
     if (t === '2') return 'special'
@@ -200,15 +164,10 @@ function parseAnidbXml(xml: string, aid: string): ParsedAnime | null {
       } as ParsedEpisode
     })
     .filter((e) => e.epno.length > 0)
-    // Sort order:
-    //   1. Regulars (1, 2, 3…)
-    //   2. Specials (S1, S2…)
-    //   3. Other — grouped by prefix letter first (all C's, then all
-    //      T's, then all P's, then all O's), each block in ascending
-    //      numeric order.
-    // Grouping the "other" bucket by first letter matters because
-    // AniDB interleaves C1/T1/C2/T2 in the raw dump — the user wants
-    // openings/endings together, trailers together, etc.
+    // Regulars first, then specials, then the "other" bucket grouped
+    // by prefix letter (all C's then T's then P's, etc). AniDB
+    // interleaves those in the raw dump; grouping keeps openings /
+    // endings / trailers together in the editor.
     .sort((a, b) => {
       const rank = (t: ParsedEpisode['type']) => t === 'regular' ? 0 : t === 'special' ? 1 : 2
       const dr = rank(a.type) - rank(b.type)
@@ -242,13 +201,7 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<ParsedAnime | null>(null)
-  // How much of AniDB's episode listing to import. Regulars are what
-  // most trackers care about; specials + OP/ED credits are opt-in.
   const [episodeScope, setEpisodeScope] = useState<'none' | 'regular' | 'regular_specials' | 'all'>('regular')
-  // Sprint I — title-search mode. AniDB's HTTP API has no search
-  // endpoint, but they publish a title dump we can cache and search
-  // offline. Two states: whether the user is in search mode (vs. AID
-  // paste mode), the query string, results, and a download busy flag.
   const [searchMode, setSearchMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<{ aid: string; mainTitle: string; altTitles: string[] }[] | null>(null)
@@ -291,7 +244,7 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
     setInput(aid)
     setSearchMode(false)
     setSearchResults(null)
-    // Small tick so the input state settles before fetchOne reads it.
+    // Yield a tick so the setInput above lands before fetchOne reads it.
     setTimeout(() => { void fetchOne(aid) }, 0)
   }
 
@@ -308,11 +261,9 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
       if (!res.ok) { setError(res.error); setBusy(false); return }
       const parsed = parseAnidbXml(res.data, aid)
       if (!parsed) {
-        // Surface what AniDB actually sent so the user can tell a
-        // rate-limit / banned-client / maintenance-page situation
-        // apart from a genuine "no such AID". `res.data` is the raw
-        // XML string; strip whitespace and cap at 250 chars so the
-        // error doesn't blow the modal open.
+        // Surface the raw response preview so a rate-limit, banned
+        // client or maintenance page reads distinctly from a genuine
+        // "no such AID".
         const preview = res.data.trim().replace(/\s+/g, ' ').slice(0, 250)
         setError(`Could not parse AniDB response. First bytes of what AniDB sent back:\n\n${preview || '(empty response)'}\n\nCommon causes: newly-registered clients can take up to ~15 min to activate; API=UDP instead of HTTP on the client; wrong client version; rate limit exceeded ("banned" for ~24h).`)
         setBusy(false)
@@ -328,9 +279,6 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
 
   const apply = async () => {
     if (!result) return
-    // Build the Episode[] to attach, gated by the user's chosen scope.
-    // Regular / specials / others are already grouped and sorted by
-    // parseAnidbXml so the resulting order matches what AniDB shows.
     const includeType = (t: ParsedEpisode['type']) => {
       if (episodeScope === 'none') return false
       if (episodeScope === 'regular') return t === 'regular'
@@ -360,9 +308,6 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
       hasEpisodes: episodesForItem && episodesForItem.length > 0 ? true : undefined,
       episodes: episodesForItem,
     }
-    // Download the cover into assets/ so it stays local (matches every other
-    // fetcher). AniDB's image CDN is `https://cdn-eu.anidb.net/images/main/{file}`
-    // when the API returns a bare filename; a full URL is passed through.
     let coverUrl = result.pictureUrl
     if (coverUrl && !/^https?:\/\//i.test(coverUrl)) {
       coverUrl = `https://cdn-eu.anidb.net/images/main/${coverUrl}`

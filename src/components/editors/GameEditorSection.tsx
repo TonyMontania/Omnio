@@ -3,7 +3,7 @@
 // takes value + setter for every field it renders. See that file's
 // header comment for the design rationale.
 
-import type { AgeRating, DlcEntry, BundleGame, GameSource, GameStatus, Item, Ownership, Platform, RelatedItem, RewatchEntry, SaveFile, Achievement, Screenshot } from '../../types'
+import type { AgeRating, DeckCompat, DlcEntry, BundleGame, GameSource, GameStatus, Item, Ownership, Platform, Playthrough, ProtonRating, Purchase, RelatedItem, RewatchEntry, SaveFile, StoreLink, Achievement, Screenshot } from '../../types'
 import { OWNERSHIP_OPTIONS, GAME_STATUS_OPTIONS, GAME_SOURCE_OPTIONS, AGE_RATING_OPTIONS } from '../../types'
 import TagEditor from './TagEditor'
 import PlatformEditor from './PlatformEditor'
@@ -18,6 +18,8 @@ import SaveFilesEditor from './SaveFilesEditor'
 import AchievementListEditor from './AchievementListEditor'
 import ScreenshotsGallery from './ScreenshotsGallery'
 import AnimeItemPicker from './AnimeItemPicker'
+import PlaythroughsEditor from './PlaythroughsEditor'
+import GameStoreEditor from './GameStoreEditor'
 
 type Setter<T> = (updater: T | ((prev: T) => T)) => void
 
@@ -62,6 +64,11 @@ export interface GameEditorSectionProps {
   rewatches: RewatchEntry[];            setRewatches: Setter<RewatchEntry[]>
   relatedItems: RelatedItem[];          setRelatedItems: Setter<RelatedItem[]>
   recommendedItems: string[];           setRecommendedItems: Setter<string[]>
+  playthroughs: Playthrough[];          setPlaythroughs: Setter<Playthrough[]>
+  storeLinks: StoreLink[];              setStoreLinks: Setter<StoreLink[]>
+  purchases: Purchase[];                setPurchases: Setter<Purchase[]>
+  deckCompat?: DeckCompat;              setDeckCompat: (v: DeckCompat | undefined) => void
+  protonRating?: ProtonRating;          setProtonRating: (v: ProtonRating | undefined) => void
 }
 
 export default function GameEditorSection(props: GameEditorSectionProps) {
@@ -98,13 +105,18 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
     rewatches, setRewatches,
     relatedItems, setRelatedItems,
     recommendedItems, setRecommendedItems,
+    playthroughs, setPlaythroughs,
+    storeLinks, setStoreLinks,
+    purchases, setPurchases,
+    deckCompat, setDeckCompat,
+    protonRating, setProtonRating,
   } = props
 
   return (
     <>
       <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Game details</span>
-        <span className="form-section-hint">Devs, publishers, platforms, franchise</span>
+        <span className="form-section-title">Identity</span>
+        <span className="form-section-hint">Devs, publishers, platforms, release date</span>
       </div>
       <TagEditor
         label="Developers"
@@ -120,16 +132,6 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
         onAdd={(v) => setPublishers((prev) => prev.includes(v) ? prev : [...prev, v])}
         onRemove={(i) => setPublishers((prev) => prev.filter((_, idx) => idx !== i))}
       />
-      <div className="field-row">
-        <div className="field-group">
-          <label>Achievements unlocked</label>
-          <input placeholder="0" value={achievementsUnlocked} onChange={(e) => setAchievementsUnlocked(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
-        </div>
-        <div className="field-group">
-          <label>Achievements total</label>
-          <input placeholder="0" value={achievementsTotal} onChange={(e) => setAchievementsTotal(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
-        </div>
-      </div>
       <div className="field-group">
         <label>Release date</label>
         <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
@@ -144,96 +146,12 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Ownership</label>
+          <label>Copy type</label>
           <select value={ownership} onChange={(e) => setOwnership(e.target.value as Ownership | '')}>
             <option value="">Unspecified</option>
             {OWNERSHIP_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
-        <div className="field-group">
-          <label>Status</label>
-          <select value={gameStatus} onChange={(e) => setGameStatus(e.target.value as GameStatus)}>
-            {GAME_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-        </div>
-      </div>
-      <div className="form-section-header" data-belongs-to="progress">
-        <span className="form-section-title">Progress</span>
-        <span className="form-section-hint">Time played · DLC · addons · bundle contents · achievements</span>
-      </div>
-      <div className="field-group">
-        <label>Time played (hours.minutes)</label>
-        <input placeholder="e.g. 22.49" value={playTime} onChange={(e) => handlePlayTimeChange(e.target.value)} inputMode="decimal" />
-      </div>
-      {setHltbHours && (
-        <div className="field-group">
-          <label>Estimated hours to beat (HowLongToBeat)</label>
-          <input placeholder="e.g. 40" value={hltbHours ?? ''} onChange={(e) => {
-            const v = e.target.value
-            if (/^\d*\.?\d{0,2}$/.test(v)) setHltbHours(v)
-          }} inputMode="decimal" />
-        </div>
-      )}
-      <GameSubItems
-        question="Has DLC or expansions?"
-        placeholder="DLC/expansion name"
-        enabled={hasDlc}
-        onToggle={(v) => { setHasDlc(v); if (!v) setDlcList([]) }}
-        entries={dlcList}
-        onAdd={(name) => setDlcList((prev) => [...prev, { id: crypto.randomUUID(), name, status: 'backlog' }])}
-        onRemove={(id) => setDlcList((prev) => prev.filter((d) => d.id !== id))}
-        onStatusChange={(id, s) => setDlcList((prev) => prev.map((d) => (d.id === id ? { ...d, status: s } : d)))}
-      />
-      <GameSubItems
-        question="Has addons or packs?"
-        placeholder="Addon/pack name"
-        enabled={hasAddons}
-        onToggle={(v) => { setHasAddons(v); if (!v) setAddonsList([]) }}
-        entries={addonsList}
-        onAdd={(name) => setAddonsList((prev) => [...prev, { id: crypto.randomUUID(), name, status: 'backlog' }])}
-        onRemove={(id) => setAddonsList((prev) => prev.filter((d) => d.id !== id))}
-        onStatusChange={(id, s) => setAddonsList((prev) => prev.map((d) => (d.id === id ? { ...d, status: s } : d)))}
-        showStatus={false}
-      />
-      <BundleGamesEditor
-        enabled={isBundle}
-        onToggle={(v) => { setIsBundle(v); if (!v) setBundleContents([]) }}
-        entries={bundleContents}
-        onChange={setBundleContents}
-        onRequestSgdb={(entryId, title) => setBundleSgdbFor({ entryId, title })}
-      />
-      <PcgwSavePaths
-        gameTitle={title}
-        pcgwPage={pcgwPage}
-        onPageMatched={setPcgwPage}
-      />
-      <SaveFilesEditor
-        gameTitle={title}
-        categoryId={activeCategory}
-        saveFiles={saveFiles}
-        onChange={setSaveFiles}
-      />
-      <AchievementListEditor entries={achievementsList} onChange={setAchievementsList} />
-      <ScreenshotsGallery
-        gameTitle={title}
-        categoryId={activeCategory}
-        screenshots={screenshots}
-        onChange={setScreenshots}
-      />
-      <div className="form-section-header" data-belongs-to="overview">
-        <span className="form-section-title">Rating &amp; completion</span>
-      </div>
-      <div className="field-group">
-        <label>Rating</label>
-        <RatingPicker value={rating} onChange={setRating} />
-      </div>
-      <div className="field-group">
-        <label>Completion date</label>
-        <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
-      </div>
-      <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Extended identity</span>
-        <span className="form-section-hint">Alt titles, genres, source, edition, age rating, franchise</span>
       </div>
       <TagEditor
         label="Alternative titles"
@@ -294,6 +212,95 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
         <label>Franchise</label>
         <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. The Legend of Zelda" />
       </div>
+
+      <div className="form-section-header" data-belongs-to="identity">
+        <span className="form-section-title">Ownership</span>
+        <span className="form-section-hint">Store links · purchases · Deck &amp; Proton compat</span>
+      </div>
+      <GameStoreEditor
+        storeLinks={storeLinks}
+        onStoreLinksChange={setStoreLinks}
+        purchases={purchases}
+        onPurchasesChange={setPurchases}
+        deckCompat={deckCompat}
+        onDeckCompatChange={setDeckCompat}
+        protonRating={protonRating}
+        onProtonRatingChange={setProtonRating}
+      />
+
+      <div className="form-section-header" data-belongs-to="progress">
+        <span className="form-section-title">Progress</span>
+        <span className="form-section-hint">Status · time played · HowLongToBeat · achievements · save files</span>
+      </div>
+      <div className="field-group">
+        <label>Status</label>
+        <select value={gameStatus} onChange={(e) => setGameStatus(e.target.value as GameStatus)}>
+          {GAME_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+      </div>
+      <div className="field-group">
+        <label>Time played (hours.minutes)</label>
+        <input placeholder="e.g. 22.49" value={playTime} onChange={(e) => handlePlayTimeChange(e.target.value)} inputMode="decimal" />
+      </div>
+      {setHltbHours && (
+        <div className="field-group">
+          <label>Estimated hours to beat (HowLongToBeat)</label>
+          <input placeholder="e.g. 40" value={hltbHours ?? ''} onChange={(e) => {
+            const v = e.target.value
+            if (/^\d*\.?\d{0,2}$/.test(v)) setHltbHours(v)
+          }} inputMode="decimal" />
+        </div>
+      )}
+      <div className="field-row">
+        <div className="field-group">
+          <label>Achievements unlocked</label>
+          <input placeholder="0" value={achievementsUnlocked} onChange={(e) => setAchievementsUnlocked(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
+        </div>
+        <div className="field-group">
+          <label>Achievements total</label>
+          <input placeholder="0" value={achievementsTotal} onChange={(e) => setAchievementsTotal(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
+        </div>
+      </div>
+      <AchievementListEditor entries={achievementsList} onChange={setAchievementsList} />
+      <PcgwSavePaths
+        gameTitle={title}
+        pcgwPage={pcgwPage}
+        onPageMatched={setPcgwPage}
+      />
+      <SaveFilesEditor
+        gameTitle={title}
+        categoryId={activeCategory}
+        saveFiles={saveFiles}
+        onChange={setSaveFiles}
+      />
+      <PlaythroughsEditor
+        playthroughs={playthroughs}
+        onChange={setPlaythroughs}
+      />
+
+      <div className="form-section-header" data-belongs-to="media">
+        <span className="form-section-title">Screenshots</span>
+        <span className="form-section-hint">Personal screenshot gallery for this game</span>
+      </div>
+      <ScreenshotsGallery
+        gameTitle={title}
+        categoryId={activeCategory}
+        screenshots={screenshots}
+        onChange={setScreenshots}
+      />
+
+      <div className="form-section-header" data-belongs-to="overview">
+        <span className="form-section-title">Rating &amp; completion</span>
+      </div>
+      <div className="field-group">
+        <label>Rating</label>
+        <RatingPicker value={rating} onChange={setRating} />
+      </div>
+      <div className="field-group">
+        <label>Completion date</label>
+        <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
+      </div>
+
       <div className="form-section-header" data-belongs-to="notes">
         <span className="form-section-title">Review</span>
         <span className="form-section-hint">Your take on this game · with optional spoiler toggle</span>
@@ -325,8 +332,36 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
       </div>
       <div className="form-section-header" data-belongs-to="related">
         <span className="form-section-title">Related &amp; recommendations</span>
-        <span className="form-section-hint">Sequels, prequels, franchise, hand-picked recs</span>
+        <span className="form-section-hint">DLC, expansions, bundles, sequels, hand-picked recs</span>
       </div>
+      <GameSubItems
+        question="Has DLC or expansions?"
+        placeholder="DLC/expansion name"
+        enabled={hasDlc}
+        onToggle={(v) => { setHasDlc(v); if (!v) setDlcList([]) }}
+        entries={dlcList}
+        onAdd={(name) => setDlcList((prev) => [...prev, { id: crypto.randomUUID(), name, status: 'backlog' }])}
+        onRemove={(id) => setDlcList((prev) => prev.filter((d) => d.id !== id))}
+        onStatusChange={(id, s) => setDlcList((prev) => prev.map((d) => (d.id === id ? { ...d, status: s } : d)))}
+      />
+      <GameSubItems
+        question="Has addons or packs?"
+        placeholder="Addon/pack name"
+        enabled={hasAddons}
+        onToggle={(v) => { setHasAddons(v); if (!v) setAddonsList([]) }}
+        entries={addonsList}
+        onAdd={(name) => setAddonsList((prev) => [...prev, { id: crypto.randomUUID(), name, status: 'backlog' }])}
+        onRemove={(id) => setAddonsList((prev) => prev.filter((d) => d.id !== id))}
+        onStatusChange={(id, s) => setAddonsList((prev) => prev.map((d) => (d.id === id ? { ...d, status: s } : d)))}
+        showStatus={false}
+      />
+      <BundleGamesEditor
+        enabled={isBundle}
+        onToggle={(v) => { setIsBundle(v); if (!v) setBundleContents([]) }}
+        entries={bundleContents}
+        onChange={setBundleContents}
+        onRequestSgdb={(entryId, title) => setBundleSgdbFor({ entryId, title })}
+      />
       <div className="field-group">
         <label>Related games</label>
         <RelatedListEditor

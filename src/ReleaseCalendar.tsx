@@ -1,13 +1,5 @@
-// Upcoming-releases view. Reads every date-bearing field on every item
-// (releaseDate for games/movies/albums, startDate for anime/manga,
-// airedFrom for anime, endDate on manga volumes if present) and renders
-// two things: a "Coming up" list of everything in the future, sorted
-// ascending, plus a compact month grid you can page through.
-//
-// No fetch, no network — just a projection of what's already saved.
-// Items live in your backlog with real dates from AniList / TMDb / IGDB
-// / MangaDex fetches, and this view surfaces the ones you'll want to
-// know about instead of scrolling each library looking for them.
+// Upcoming-releases view. Reads date fields off every item and renders
+// a "Coming up" list plus a paginated month grid. No network calls.
 
 import { useMemo, useState } from 'react'
 import type { Item } from './types'
@@ -45,14 +37,13 @@ function parseYear(y?: string): Date | null {
   return new Date(parseInt(y, 10), 0, 1)
 }
 
-// Weekday name → JS getDay() index (0 = Sunday).
+// 0 = Sunday to match JS Date.getDay().
 const WEEKDAY_INDEX: Record<string, number> = {
   sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
   thursday: 4, friday: 5, saturday: 6,
 }
 
-// Roll `base` forward until it lands on `weekdayIndex` (0-6, 0=Sun).
-// Returns a copy — never mutates the input.
+// Roll `base` forward to the next occurrence of `weekdayIndex`. Copy.
 function nextWeekday(base: Date, weekdayIndex: number): Date {
   const d = new Date(base.getFullYear(), base.getMonth(), base.getDate())
   const delta = (weekdayIndex - d.getDay() + 7) % 7
@@ -60,11 +51,8 @@ function nextWeekday(base: Date, weekdayIndex: number): Date {
   return d
 }
 
-// Emit one entry per upcoming episode of a currently-airing anime /
-// donghua / series. Requires an anchor date (airedFrom preferred, else
-// airingDay from today) and a way to know how many episodes are left.
-// Caps at 60 events per item so a long-running Detective Conan doesn't
-// silently generate hundreds of years of weekly VEVENTs.
+// Capped at 60 events per item so long-runners (Detective Conan…)
+// don't dump hundreds of years of weekly events into the calendar.
 function collectEpisodeEntries(items: Item[], today: Date): Entry[] {
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const out: Entry[] = []
@@ -142,13 +130,8 @@ function collectEpisodeEntries(items: Item[], today: Date): Entry[] {
   return out
 }
 
-// Pick every candidate date on an item and return the ones in the future
-// (or today). Same item can produce multiple entries — e.g. an anime with
-// airedFrom (season starts) shows separately from its releaseDate. `startDate`
-// is the "I started this" personal marker for anime/manga/books/series and
-// isn't a public release, so it's intentionally excluded. Music-only items
-// with just a releaseYear (no full date) get promoted via parseYear as a
-// year-precision entry so albums still appear in the calendar.
+// `startDate` is the personal "I started this" marker — excluded here
+// because it isn't a public release date.
 function collectEntries(items: Item[], today: Date): Entry[] {
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const out: Entry[] = []
@@ -180,12 +163,8 @@ function fmtMonthYear(d: Date): string {
   return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 }
 
-// Emits an RFC-5545 iCalendar document from the future entries. Each
-// entry is a whole-day VEVENT keyed by item id + source so re-imports
-// don't create duplicates. Categories are stamped as CATEGORIES so
-// Google/Outlook clients can color-code by library. Line folding is
-// skipped — modern parsers handle long lines fine, and it keeps the
-// generator small.
+// Whole-day VEVENTs keyed by item id + source so re-imports dedupe
+// cleanly. CATEGORIES lets Google / Outlook color-code by library.
 function toICS(entries: Entry[]): string {
   const dt = (d: Date) => d.getFullYear().toString().padStart(4, '0') + (d.getMonth() + 1).toString().padStart(2, '0') + d.getDate().toString().padStart(2, '0')
   const now = new Date()

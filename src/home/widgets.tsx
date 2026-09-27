@@ -1,6 +1,5 @@
-// Built-in home widgets. Kept in one file for the prototype — each is
-// tiny and moving them to separate files later is a rename operation.
-// Importing this module registers every widget for its side effect.
+// Built-in home widgets. Importing the module registers each one as a
+// side effect via `registerHomeWidget`.
 
 import React from 'react'
 import type { Item } from '../types'
@@ -10,9 +9,6 @@ import { isCurrentlyAiring } from '../utils/airing'
 import { CATEGORIES } from '../categories'
 import { CategoryIcon, CalendarIcon, InsightsIcon } from '../icons'
 import { registerHomeWidget, type WidgetSize } from './registry'
-
-// ---- Shared helpers (copied from the legacy Home; will move into a
-// per-widget file once the prototype settles) ----
 
 function recencyScore(it: Item): number {
   const f = it.finishedAt ? new Date(it.finishedAt).getTime() : 0
@@ -64,14 +60,6 @@ function summarizeCategory(catId: string, list: Item[]): string {
   }
 }
 
-// ---- Widget: Libraries (rich portals) ----
-//
-// Legacy layout — cover strip, summary line, recent titles. The compact
-// chip variant and the KPI-tile "Library totals" widget were retired
-// once the persistent sidebar landed (both were pure duplication of
-// the sidebar's own library list). This rich portal view stays as an
-// opt-in for users who want the busier, cover-heavy dashboard.
-
 registerHomeWidget({
   id: 'libraries',
   label: 'Libraries (rich portals)',
@@ -120,7 +108,6 @@ registerHomeWidget({
   },
 })
 
-// ---- Widget: Currently in progress ----
 
 registerHomeWidget({
   id: 'currently',
@@ -156,7 +143,6 @@ registerHomeWidget({
   },
 })
 
-// ---- Widget: Upcoming (next 30 days) ----
 
 registerHomeWidget({
   id: 'upcoming',
@@ -209,7 +195,6 @@ registerHomeWidget({
   },
 })
 
-// ---- Widget: Recently rated highly ----
 
 registerHomeWidget({
   id: 'recently-rated',
@@ -247,8 +232,6 @@ registerHomeWidget({
 // tiles just added noise for anyone with more than a handful of
 // libraries enabled.)
 
-// ---- Widget: 1cc / bullet-hell placeholder ----
-//
 // Deliberately a placeholder — the feature itself isn't built yet, but
 // having the widget registered validates that "new feature = drop-in
 // widget" is the actual shape of the board. When 1cc lands, this file
@@ -274,8 +257,6 @@ registerHomeWidget({
   },
 })
 
-// ---- Widget: Big number tiles ----
-//
 // A row of scrapbook-style totals — no comparisons, no deltas, no
 // "you did less than last month" framing (per the design note that
 // insights never guilt-trip). Just current-state accumulators the
@@ -335,8 +316,6 @@ registerHomeWidget({
   },
 })
 
-// ---- Widget: Upcoming (this week — 7-day horizon) ----
-//
 // Companion to the 30-day `upcoming` widget. Same data source, tighter
 // window — for users who want the "what's imminent" row instead of the
 // whole month.
@@ -384,8 +363,6 @@ registerHomeWidget({
   },
 })
 
-// ---- Widget: Currently airing ----
-//
 // Anime / donghua / series flagged as `airing` (or series with
 // `seriesStatus === 'ongoing'`) that you've marked as watching or
 // backlogged. Distinct from "upcoming" — this is stuff that's ALREADY
@@ -429,8 +406,6 @@ registerHomeWidget({
   },
 })
 
-// ---- Widget: Quick add ----
-//
 // Inline stub-creation form. Fills only the required minimum
 // (title + categoryId + createdAt); the user flesh-fills the rest in
 // the Add panel later. Bound to `ctx.onQuickAdd` which is wired up in
@@ -482,8 +457,6 @@ registerHomeWidget({
   render: (ctx) => <QuickAddWidget ctx={ctx} />,
 })
 
-// ---- Widget: Cover carousel ----
-//
 // Decorative auto-scrolling strip of covers pulled from the whole
 // library. Duplicated once so the CSS marquee loop reads seamless.
 // Purely visual — clicking a cover opens the item.
@@ -522,8 +495,6 @@ registerHomeWidget({
   },
 })
 
-// ---- Widget: On this day ----
-//
 // Anniversary flashback: items you finished on today's month + day in
 // past years. Groups by "N year(s) ago". Reads `finishedAt` (ISO
 // yyyy-mm-dd) — anything without a date is skipped, and if nothing
@@ -623,7 +594,6 @@ registerHomeWidget({
   },
 })
 
-// ---- Widget: Empty-state hint (only appears when the board is empty) ----
 
 registerHomeWidget({
   id: 'empty-hint',

@@ -617,6 +617,7 @@
 .anilist-hit:hover { border-color: var(--accent); }
 .anilist-hit:disabled { opacity: 0.5; cursor: wait; }
 .anilist-thumb {
+  position: relative;
   width: 60px;
   height: 84px;
   flex-shrink: 0;
@@ -630,7 +631,12 @@
   font-family: var(--font-display);
   font-size: 24px;
 }
-.anilist-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* The letter fallback always renders underneath — the thumbnail image
+   sits on top and covers it once loaded. If the image 404s (common for
+   sources like Cover Art Archive, which doesn't have art for every
+   release) it hides itself via onError and the letter shows through
+   instead of a broken-image icon. */
+.anilist-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .anilist-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .anilist-title { font-size: 14.5px; color: var(--text); font-weight: 500; }
 .anilist-sub {

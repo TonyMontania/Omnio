@@ -99,7 +99,7 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 
 **Discover**
 
-- **One-click metadata + covers** from 14 sources (see below). Cached locally for 24 h
+- **One-click metadata + covers** from 16 sources (see below). Cached locally for 24 h
 - **Quick-add via URL** — paste an IGDB / TMDb / AniList / VNDB / Steam URL into the title field, the fetcher opens pre-filled
 - **Global search (Ctrl+K)** across every library with operator syntax (`favorite:true`, `year:>2020`, `status:playing`)
 - **Home widget board** — customizable dashboard with "in progress" / "upcoming" / "recently rated" / "on this day" + per-library portals. Drag & drop reorder in edit mode.
@@ -165,7 +165,8 @@ Sources are grouped by the library they feed. Anything marked *No key* works out
 
 | Source | What it fills | Auth |
 | --- | --- | --- |
-| [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Title, artist, tracklist, producers, cover art | No key |
+| [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Title, artist, tracklist, producers, cover art, per-edition picker | No key |
+| [VGMdb](https://vgmdb.net/) (via [vgmdb.info](https://vgmdb.info/) JSON proxy) | Game / anime soundtracks — title, composers, tracklist, cover art | No key |
 | [lrclib](https://lrclib.net/) | Per-track lyrics (synced when available) | No key |
 | [Last.fm](https://www.last.fm/) | Sync your top-scrobbled albums (marks matches as listened) | Free API key + username |
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { getSeriesStatus, getSeriesFormatLabel, getSeasonWatchedCount, getSeasonTotalEpisodes, assetSrc } from './types'
 import { AnimeStatusIcon } from './icons'
-import type { Item, AnyItem, SeriesItem, Collection } from './types'
+import type { Item, AnyItem, SeriesItem, Collection, FranchiseSection, FranchiseGraph } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import CoverPlaceholder from './components/CoverPlaceholder'
 import { exportItemAsJson } from './utils/files'
@@ -25,9 +25,13 @@ interface Props {
   onDuplicate: () => void
   onNavigate: (id: string) => void
   allItems?: AnyItem[]
+  onOpenCrossLibraryFranchise?: (franchise: string) => void
+  franchiseSections?: FranchiseSection[]
+  franchiseViewMode?: 'year' | 'sections' | 'graph'
+  franchiseGraph?: FranchiseGraph
 }
 
-export default function SeriesDetailModal({ item, groups, allSeries, onClose, onEdit, onDuplicate, onNavigate, allItems }: Props) {
+export default function SeriesDetailModal({ item, groups, allSeries, onClose, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
   const [openSeason, setOpenSeason] = useState<string | null>(null)
   const ss = getSeriesStatus(item.seriesStatus)
   const franchiseItems = item.franchise
@@ -168,7 +172,7 @@ export default function SeriesDetailModal({ item, groups, allSeries, onClose, on
           <DetailReview review={item.seriesReview} hasSpoilers={item.hasSpoilers} />
           <DetailHistoryTable label="Rewatch history" entries={item.rewatches ?? []} />
           <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} />
+          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
           <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
           <CustomFieldsView fields={item.customFields} />
 

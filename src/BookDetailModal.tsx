@@ -1,6 +1,6 @@
 import { getBookStatus, getBookFormatLabel, getBookSourceLabel, getPublicationStatusLabel, getAgeRatingLabel, assetSrc } from './types'
 import { MangaStatusIcon } from './icons'  // Book status uses the same visual language as Manga (plan/reading/completed/paused/dropped).
-import type { Item, AnyItem, Collection, MangaStatus, BookItem } from './types'
+import type { Item, AnyItem, Collection, MangaStatus, BookItem, FranchiseSection, FranchiseGraph } from './types'
 import DetailTopbar from './components/detail/DetailTopbar'
 import CoverPlaceholder from './components/CoverPlaceholder'
 import { exportItemAsJson } from './utils/files'
@@ -24,9 +24,13 @@ interface Props {
   onDuplicate: () => void
   onNavigate: (id: string) => void
   allItems?: AnyItem[]
+  onOpenCrossLibraryFranchise?: (franchise: string) => void
+  franchiseSections?: FranchiseSection[]
+  franchiseViewMode?: 'year' | 'sections' | 'graph'
+  franchiseGraph?: FranchiseGraph
 }
 
-export default function BookDetailModal({ item, groups, allBooks, onClose, onEdit, onDuplicate, onNavigate, allItems }: Props) {
+export default function BookDetailModal({ item, groups, allBooks, onClose, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
   const bs = getBookStatus(item.bookStatus)
   // Same franchise/related/recommended shape as every other detail view —
   // Books share the code path so behaviour is identical.
@@ -193,7 +197,7 @@ export default function BookDetailModal({ item, groups, allBooks, onClose, onEdi
           <DetailNotes notes={item.notes} />
           <DetailHistoryTable label="Reread history" entries={item.rewatches ?? []} />
           <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} />
+          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
           <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
           <CustomFieldsView fields={item.customFields} />
         </div>

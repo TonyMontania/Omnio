@@ -1,6 +1,7 @@
 /* Sprint F — Games polish: store links, purchase log, compat flags. */
 
 .game-store-editor {
+  flex: 1 1 100%;
   display: flex;
   flex-direction: column;
   gap: 18px;

@@ -182,7 +182,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
             {item.airingDay ? `Airs ${item.airingDay.slice(0, 3)}` : 'Airing'}
           </p>
         )}
-        {isGame && item.deckCompat && item.deckCompat !== 'unknown' && (
+        {isGame && gf!.deckCompat && item.deckCompat && item.deckCompat !== 'unknown' && (
           <p
             className={`deck-chip deck-${item.deckCompat}`}
             title={`Steam Deck: ${item.deckCompat}`}

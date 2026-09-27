@@ -1,11 +1,6 @@
-// VNDB metadata fetcher for Visual Novels. Free, no API key.
-// One POST to /kana/vn returns title + aliases + description + released +
-// languages + platforms + length + tags + staff + characters + relations
-// + screenshots + editions + community rating in a single response. A
-// second POST to /kana/release pulls every release edition (multi-cover
-// gallery + per-country publishers) — VNDB stores publishers per release,
-// not per VN, so this is the only way to get "Frontwing 🇯🇵 · Sekai
-// Project 🇺🇸".
+// VNDB fetcher for Visual Novels. Two POSTs — /kana/vn for the main
+// metadata, /kana/release for the per-release edition gallery (VNDB
+// stores publishers per-release, not per-VN).
 
 import type {
   Item, VnLength, VnStaffMember, VnStaffRole, VnCharacter, VnCharacterRole,
@@ -20,23 +15,22 @@ interface Props {
   onClose: () => void
 }
 
-// Shape matches the fields listed in src-tauri/src/handlers/fetchers.rs (VNDB_VN_FIELDS).
-// Only what the fetcher reads is typed; anything else is left loose.
+// Mirrors VNDB_VN_FIELDS in src-tauri/src/handlers/fetchers.rs.
 interface VndbVnHit {
-  id: string                          // "v17"
-  title: string                       // typically the transliterated (romaji) title
-  alttitle?: string                   // original-script title, e.g. Japanese kanji
+  id: string
+  title: string
+  alttitle?: string
   aliases?: string[]
-  description?: string                // BBCode-flavored — we strip loosely below
-  released?: string                   // "2004-08-27" or "TBA"
-  olang?: string                      // original language code
+  description?: string               // BBCode-flavored
+  released?: string
+  olang?: string
   languages?: string[]
-  platforms?: string[]                // "win", "lin", "mac", "swi", "ps4", …
-  length?: 1 | 2 | 3 | 4 | 5          // VNDB length bucket
-  length_minutes?: number             // community-averaged minutes
+  platforms?: string[]
+  length?: 1 | 2 | 3 | 4 | 5
+  length_minutes?: number
   length_votes?: number
   devstatus?: 0 | 1 | 2               // 0 finished, 1 in dev, 2 cancelled
-  rating?: number                     // community score /100
+  rating?: number                     // /100
   votecount?: number
   image?: { url?: string; sexual?: number; violence?: number }
   tags?: { name: string; category: 'cont' | 'ero' | 'tech'; spoiler: 0 | 1 | 2; rating: number }[]
@@ -52,7 +46,6 @@ interface VndbVnHit {
   relations?: { id: string; title: string; relation: string }[]
 }
 
-// Shape matches VNDB_CHARACTER_FIELDS. Sent from /character, not /vn.
 interface VndbCharacterHit {
   id: string
   name: string
@@ -64,8 +57,8 @@ interface VndbCharacterHit {
 }
 
 // Shape matches VNDB_RELEASE_FIELDS. Note `images` is plural — VNDB's
-// release entity carries an array of typed images (box front, box back,
-// disc, digital cover), not a single `image` object like `/vn` does.
+// /release exposes a typed image array (box front, back, disc, digital
+// cover), unlike /vn which returns a single `image`.
 interface VndbReleaseImage {
   url: string
   type?: 'pkgfront' | 'pkgmed' | 'pkgback' | 'pkgcontent' | 'dig' | string
@@ -95,9 +88,6 @@ const DEVSTATUS_MAP: Record<number, VnDevStatus> = {
   0: 'finished', 1: 'in_development', 2: 'cancelled',
 }
 
-// VNDB descriptions carry BBCode-style markup: [url=…]…[/url], [spoiler], [i]…[/i].
-// Strip aggressively — the app renders plain text with a simple markdown
-// pass, so anything else here just looks ugly.
 function stripBBCode(v?: string): string | undefined {
   if (!v) return undefined
   return v
@@ -107,9 +97,8 @@ function stripBBCode(v?: string): string | undefined {
     .trim()
 }
 
-// VNDB tags come with a category (cont = content, ero = erotic, tech = technical)
-// and a spoiler tier (0 = free, 1 = minor, 2 = major). Filter to non-spoiler
-// content tags with a decent community score so the tag pool stays focused.
+// Keep non-spoiler content-category tags with a decent community score.
+// Categories: cont(ent) / ero(tic) / tech(nical). Spoiler tier: 0/1/2.
 function pickTags(hit: VndbVnHit): string[] {
   const raw = hit.tags ?? []
   return raw
@@ -119,9 +108,6 @@ function pickTags(hit: VndbVnHit): string[] {
     .map((t) => t.name)
 }
 
-// VNDB staff roles are lowercase strings like "director", "chardesign",
-// "art", "music", "songs", "staff", "translator", "editor". Collapse to
-// the six roles the editor knows about.
 function mapStaffRole(role: string): VnStaffRole {
   const r = role.toLowerCase()
   if (r === 'scenario' || r === 'writer') return 'writer'
@@ -134,12 +120,9 @@ function mapStaffRole(role: string): VnStaffRole {
 
 function toStaff(hit: VndbVnHit): VnStaffMember[] {
   const raw = hit.staff ?? []
-  // VNDB uses role="staff" as a catch-all for "credited but no specific
-  // job". These entries duplicate names that also appear under a proper
-  // role (writer / art / …) and clutter the panel — drop them.
+  // role="staff" is VNDB's "credited but no specific job" catch-all;
+  // those entries usually duplicate a proper credit elsewhere.
   const filtered = raw.filter((s) => s.role.toLowerCase() !== 'staff')
-  // Dedupe (name, role) — some VNs have the same person credited with the
-  // same role multiple times because of import merges.
   const seen = new Set<string>()
   const out: VnStaffMember[] = []
   for (const s of filtered) {
@@ -157,9 +140,7 @@ function toStaff(hit: VndbVnHit): VnStaffMember[] {
   return out
 }
 
-// Map VNDB's per-VN role ("main" / "primary" / "side" / "appears") to
-// our own VnCharacterRole vocab. In VNDB, "main" is the protagonist and
-// "primary" is a main heroine — collapse to what the editor understands.
+// VNDB's "main" is the protagonist, "primary" is a main heroine.
 function mapCharRole(role?: string): VnCharacterRole {
   if (role === 'main') return 'protagonist'
   if (role === 'primary') return 'main'
@@ -168,13 +149,9 @@ function mapCharRole(role?: string): VnCharacterRole {
   return 'main'
 }
 
-// Build the character list from the /character endpoint (rich metadata:
-// image, description, gender, per-VN role) and merge in seiyuu names
-// from the /vn endpoint's va[] array.
 function toCharacters(vnHit: VndbVnHit, characters: VndbCharacterHit[]): VnCharacter[] {
-  // Map character id -> primary VA name from va[]. A character may have
-  // multiple VAs (age variants, route splits); keep the first as the
-  // headline seiyuu.
+  // Multi-VA characters (age variants, route splits) keep the first
+  // entry as the headline seiyuu.
   const vaByChar = new Map<string, { staff: string; note?: string }>()
   for (const v of vnHit.va ?? []) {
     if (!v.character?.id) continue
@@ -208,9 +185,8 @@ function toEditions(hit: VndbVnHit): VnEdition[] {
   }))
 }
 
-// Collapse every release's producer list into unique (publisher, language)
-// rows. VNDB lets a producer be both developer and publisher on a given
-// release — we track that as `role` so the editor can tell them apart.
+// Unique (publisher, language) rows. A producer can be both dev and
+// publisher on a release; track that as `role` = 'both'.
 function toPublishers(releases: VndbReleaseHit[]): VnPublisher[] {
   const seen = new Map<string, VnPublisher>()
   for (const rel of releases) {

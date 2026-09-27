@@ -1,7 +1,7 @@
 {
   "name": "Omnio",
   "private": true,
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Local-first desktop app to track your hobbies — games, music, movies, series, anime and comics — all in one place.",
   "author": "Omnio",
   "type": "module",
@@ -21,6 +21,7 @@
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.7.3",
     "@tauri-apps/plugin-shell": "^2.3.6",
+    "@xyflow/react": "^12.12.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "undici": "^6.28.0",

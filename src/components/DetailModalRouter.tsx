@@ -5,7 +5,7 @@
 // and hands the matching item to the right modal.
 
 import { lazy, Suspense } from 'react'
-import type { AnyItem, Collection, Track, MusicArtist } from '../types'
+import type { AnyItem, Collection, Track, MusicArtist, FranchiseSection, FranchiseGraph } from '../types'
 import {
   isGameItem, isMusicItem, isMangaItem, isAnimeItem,
   isMovieItem, isSeriesItem, isBookItem, isVnItem,
@@ -30,6 +30,10 @@ export interface DetailModalRouterProps {
   onEdit: () => void
   onDuplicate: () => void
   onNavigate: (id: string) => void
+  onOpenCrossLibraryFranchise?: (franchise: string) => void
+  franchiseSections?: Record<string, FranchiseSection[]>
+  franchiseViewMode?: Record<string, 'year' | 'sections' | 'graph'>
+  franchiseGraphs?: Record<string, FranchiseGraph>
   onSaveTrackLyrics: (item: AnyItem, trackId: string, lyrics: string) => void
 }
 
@@ -38,8 +42,12 @@ function groupsFor(item: AnyItem, collections: Collection[]): Collection[] {
 }
 
 export default function DetailModalRouter(props: DetailModalRouterProps) {
-  const { viewing, items, collections, onClose, onEdit, onDuplicate, onNavigate, onSaveTrackLyrics } = props
+  const { viewing, items, collections, onClose, onEdit, onDuplicate, onNavigate, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraphs, onSaveTrackLyrics } = props
   if (!viewing) return null
+  const ox = onOpenCrossLibraryFranchise
+  const secs = viewing.franchise ? franchiseSections?.[viewing.franchise] : undefined
+  const mode = viewing.franchise ? franchiseViewMode?.[viewing.franchise] : undefined
+  const graph = viewing.franchise ? franchiseGraphs?.[viewing.franchise] : undefined
 
   const wrap = (child: React.ReactElement) => <Suspense fallback={null}>{child}</Suspense>
 
@@ -54,6 +62,10 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
         allItems={items}
+        onOpenCrossLibraryFranchise={ox}
+        franchiseSections={secs}
+        franchiseViewMode={mode}
+        franchiseGraph={graph}
       />,
     )
   }
@@ -85,6 +97,10 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
         allItems={items}
+        onOpenCrossLibraryFranchise={ox}
+        franchiseSections={secs}
+        franchiseViewMode={mode}
+        franchiseGraph={graph}
       />,
     )
   }
@@ -100,6 +116,10 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
         allItems={items}
+        onOpenCrossLibraryFranchise={ox}
+        franchiseSections={secs}
+        franchiseViewMode={mode}
+        franchiseGraph={graph}
       />,
     )
   }
@@ -115,6 +135,10 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
         allItems={items}
+        onOpenCrossLibraryFranchise={ox}
+        franchiseSections={secs}
+        franchiseViewMode={mode}
+        franchiseGraph={graph}
       />,
     )
   }
@@ -130,6 +154,10 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
         allItems={items}
+        onOpenCrossLibraryFranchise={ox}
+        franchiseSections={secs}
+        franchiseViewMode={mode}
+        franchiseGraph={graph}
       />,
     )
   }
@@ -145,6 +173,10 @@ export default function DetailModalRouter(props: DetailModalRouterProps) {
         onDuplicate={onDuplicate}
         onNavigate={onNavigate}
         allItems={items}
+        onOpenCrossLibraryFranchise={ox}
+        franchiseSections={secs}
+        franchiseViewMode={mode}
+        franchiseGraph={graph}
       />,
     )
   }

@@ -1,47 +1,23 @@
-// Field-map dispatch for merging a fetched metadata `Partial<AnyItem>`
-// patch into the editor form (Fase 3.1). Before this file, App.tsx held
-// a 200-line `applyFetchedPatch` that was ~60 `if (patch.X) setX(patch.X)`
-// lines with a scattering of guards and transforms — adding a new field
-// meant editing the middle of App.tsx and hoping nothing collided.
-//
-// Now every routing lives here as one row in `PATCH_ROUTES`. The runner
-// walks the table once per patch and applies the matching side effect.
-// Rust port becomes a `match key { ... }` block or a `HashMap<&str, Fn>`.
-//
-// What stays in App.tsx: things that need renderer-only context
-// (`editingItem`, `items`, `window.ipcRenderer`, `setToast`) — cover /
-// banner cleanup, franchise sibling counting for the toast, IGDB parent-
-// game lookup, and VNDB relation resolution. Those live in the wrapper
-// that calls `applyPatchFieldsToForm`.
+// Table-driven merge of a fetched metadata Partial<AnyItem> patch into
+// the editor form. Each row consumes one patch key. Anything that
+// needs renderer-only context (existing item lookups, IPC calls,
+// toasts, cover/banner cleanup) stays in the App.tsx wrapper.
 
 import type { AnyItem } from '../types'
 import { assertNever, isAnimeLikeCategory, isMangaLikeCategory } from '../categories'
 import type { CategoryId } from '../types/items'
 import type { FormSetters } from './formActions'
 
-// Renderer context each route can read. Kept minimal on purpose — if a
-// route needs more, prefer keeping that logic in the App.tsx wrapper and
-// passing the result through the patch rather than plumbing extra state
-// into every row.
 export interface PatchContext {
   activeCategory: CategoryId
 }
 
-// A single routing rule. Each row declares which patch key it consumes
-// (`from`, kept for docs / grep) and an `apply` closure that runs the
-// side effect. Guards (truthy / defined / category-gated) are baked in
-// by the helper builders below so rows stay one-liners.
 export interface PatchRoute {
   from: keyof AnyItem
   apply: (patch: Partial<AnyItem>, s: FormSetters, ctx: PatchContext) => void
 }
 
-// -- Route builders ---------------------------------------------------
-//
-// `truthy` mirrors the old `if (patch.X) setX(patch.X)` idiom: skip
-// falsy (undefined, empty string, empty array) values. Most fetcher
-// fields fall into this bucket — a source that has no value for a field
-// just leaves it undefined.
+// `if (patch.X) apply(patch.X)` — skip empty/undefined values.
 function truthy<K extends keyof AnyItem>(
   from: K,
   apply: (v: NonNullable<AnyItem[K]>, s: FormSetters, ctx: PatchContext) => void,
@@ -55,11 +31,8 @@ function truthy<K extends keyof AnyItem>(
   }
 }
 
-// `defined` mirrors `if (patch.X !== undefined) setX(patch.X ?? '')`:
-// applies even when the value is an empty string or null so a fetcher
-// can *clear* a field it previously filled. Used for the small handful
-// of fields (network, country, franchise, isbn, …) where "no value" is
-// a meaningful override.
+// `if (patch.X !== undefined) apply(patch.X)` — applies even for empty
+// string / null so a fetcher can clear a field it previously filled.
 function defined<K extends keyof AnyItem>(
   from: K,
   apply: (v: AnyItem[K], s: FormSetters, ctx: PatchContext) => void,
@@ -72,10 +45,7 @@ function defined<K extends keyof AnyItem>(
   }
 }
 
-// `truthyIf` is the category-gated variant: only fires when `onlyIf`
-// returns true for the current context. Used for the `tags` route,
-// which only applies to Visual Novels — every other category has its
-// own tag editor that should be user-driven, not fetcher-driven.
+// Same as `truthy` but only when `onlyIf` returns true for the ctx.
 function truthyIf<K extends keyof AnyItem>(
   from: K,
   onlyIf: (ctx: PatchContext) => boolean,
@@ -90,12 +60,8 @@ function truthyIf<K extends keyof AnyItem>(
   }
 }
 
-// -- The route table --------------------------------------------------
-//
-// Grouped by fetcher family for readability, not by execution order —
-// the runner walks the array top-to-bottom, so if two rows want to touch
-// the same setter (see `description` vs the per-category description
-// rows) put the more specific one first.
+// Route table. Runner walks top-to-bottom, so put more specific rows
+// (per-category description, etc.) before their generic fallback.
 export const PATCH_ROUTES: PatchRoute[] = [
   // -- Universal -----------------------------------------------------
   truthy('title', (v, s) => s.setTitle(v)),
@@ -146,8 +112,6 @@ export const PATCH_ROUTES: PatchRoute[] = [
   defined('endYear', (v, s) => s.setEndYear(v ?? '')),
   defined('hasSeasons', (v, s) => s.setHasSeasons(v ?? false)),
   truthy('seasons', (v, s) => s.setSeasons(v)),
-  // Anime / Series individual episode list — Sprint H, hooked so
-  // AniDB's <episodes> block auto-fills the item's Episodes section.
   defined('hasEpisodes', (v, s) => s.setHasEpisodes(v ?? false)),
   truthy('episodes', (v, s) => s.setEpisodes(v)),
 
@@ -169,11 +133,6 @@ export const PATCH_ROUTES: PatchRoute[] = [
   truthy('gameSource', (v, s) => s.setGameSource(v)),
 
   // -- Manga family (ComicVine, MangaDex) ----------------------------
-  //
-  // `authors` unconditionally routes to the manga-authors setter — the
-  // pre-refactor code branched on `activeCategory === 'libros'` but
-  // both branches ended in the same setter call, so the guard was a
-  // no-op.
   truthy('authors', (v, s) => s.setMangaAuthors(v)),
   truthy('mangaArtists', (v, s) => s.setMangaArtists(v)),
   truthy('mangaDescription', (v, s) => s.setMangaDescription(v)),
@@ -194,18 +153,9 @@ export const PATCH_ROUTES: PatchRoute[] = [
   truthy('bookSource', (v, s) => s.setBookSource(v)),
   defined('translator', (v, s) => s.setTranslator(v ?? '')),
 
-  // -- Description dispatch ------------------------------------------
-  //
-  // Fetchers that don't know which category they're feeding pass the
-  // description through the generic `description` key; we route it to
-  // the right per-category setter based on the active library. Ordered
-  // AFTER the explicit `animeDescription` / `movieDescription` /
-  // `seriesDescription` / `mangaDescription` rows so an explicit field
-  // wins if both are present.
+  // Ordered AFTER the per-category description rows so an explicit
+  // key wins over a generic one when both are present.
   truthy('description', (v, s, ctx) => {
-    // Exhaustive dispatch on CategoryId — every case is handled below,
-    // and the `assertNever` tail forces TypeScript to error at compile
-    // time if a new category joins the union without a routing here.
     const cat = ctx.activeCategory
     if (isAnimeLikeCategory(cat)) { s.setAnimeDescription(v); return }
     if (isMangaLikeCategory(cat)) { s.setMangaDescription(v); return }
@@ -239,17 +189,11 @@ export const PATCH_ROUTES: PatchRoute[] = [
   defined('vndbId', (v, s) => s.setVndbId(v ?? '')),
   defined('nsfw', (v, s) => s.setNsfw(!!v)),
   truthy('visualNovelStatus', (v, s) => s.setVisualNovelStatus(v)),
-  // VNDB drops content tags into `patch.tags`; every other library's
-  // tags stay user-driven, so gate this to VN.
+  // Only VN accepts tags from a fetcher; every other library's tags
+  // stay user-driven.
   truthyIf('tags', (ctx) => ctx.activeCategory === 'visual_novels', (v, s) => s.setTags(v)),
 ]
 
-// -- Runner -----------------------------------------------------------
-//
-// Walk every route once against the incoming patch. Routes are pure
-// (side effects go only through the setters passed in), so order-of-
-// evaluation only matters when two rows can touch the same setter —
-// see the `description` note above.
 export function applyPatchFieldsToForm(
   patch: Partial<AnyItem>,
   setters: FormSetters,
