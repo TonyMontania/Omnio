@@ -568,7 +568,7 @@ pub async fn net_fetch_text(
                 hint.push_str(&format!("{name}={v}"));
             }
         }
-        eprintln!("[net:fetch-text] HTTP {status} from {url} — {hint}");
+        eprintln!("[net:fetch-text] HTTP {status} from {} — {hint}", crate::net::redact_url_for_log_public(&url));
         return Ok(StringResult::Err { ok: false, error: format!("HTTP {status}{}", if hint.is_empty() { String::new() } else { format!(" ({hint})") }) });
     }
     Ok(match resp.text().await {

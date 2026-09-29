@@ -98,6 +98,47 @@ pub struct ClearRefInput {
 static DATA_URL_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^data:([^;]+);base64,(.+)$").expect("DATA_URL_RE"));
 
+// Strip EXIF / XMP / other metadata blocks from an in-memory image
+// buffer. Non-destructive on the pixel data — img-parts operates on the
+// container-level chunks (JPEG APPn segments, PNG ancillary chunks,
+// WebP RIFF chunks) without re-encoding, so quality is preserved. On
+// any unknown format or parse failure we fall back to the original
+// buffer so a save never fails because of the sanitizer.
+fn strip_image_metadata(mime: &str, buf: Vec<u8>) -> Vec<u8> {
+    use img_parts::{jpeg::Jpeg, png::Png, webp::WebP, Bytes, ImageEXIF, ImageICC};
+
+    let bytes = Bytes::from(buf.clone());
+    let m = mime.to_ascii_lowercase();
+    let out: Result<Vec<u8>, ()> = (|| {
+        if m == "image/jpeg" || m == "image/jpg" {
+            let mut jpeg = Jpeg::from_bytes(bytes).map_err(|_| ())?;
+            jpeg.set_exif(None);
+            jpeg.set_icc_profile(None);
+            let mut out = Vec::with_capacity(buf.len());
+            jpeg.encoder().write_to(&mut out).map_err(|_| ())?;
+            return Ok(out);
+        }
+        if m == "image/png" {
+            let mut png = Png::from_bytes(bytes).map_err(|_| ())?;
+            png.set_exif(None);
+            png.set_icc_profile(None);
+            let mut out = Vec::with_capacity(buf.len());
+            png.encoder().write_to(&mut out).map_err(|_| ())?;
+            return Ok(out);
+        }
+        if m == "image/webp" {
+            let mut webp = WebP::from_bytes(bytes).map_err(|_| ())?;
+            webp.set_exif(None);
+            webp.set_icc_profile(None);
+            let mut out = Vec::with_capacity(buf.len());
+            webp.encoder().write_to(&mut out).map_err(|_| ())?;
+            return Ok(out);
+        }
+        Err(())
+    })();
+    out.unwrap_or(buf)
+}
+
 // Sanitize category / kind name to alphanumerics + dash + underscore.
 // Same char class the TS side uses (`/[^a-z0-9_-]/gi`).
 static NAME_ALLOW: Lazy<Regex> =
@@ -123,7 +164,11 @@ pub async fn image_save(
     let mime = caps.get(1)?.as_str();
     let payload = caps.get(2)?.as_str();
     let ext = ext_from_mime(mime).unwrap_or("bin");
-    let buf = B64.decode(payload).ok()?;
+    let raw = B64.decode(payload).ok()?;
+    // Drop EXIF / XMP / ICC before hitting disk so covers people export
+    // later can't leak GPS or hardware fingerprints from the source
+    // photo. No-op on unknown formats.
+    let buf = strip_image_metadata(mime, raw);
 
     let safe_category = safe_dir_fragment(paths::asset_folder_for_category(&categoryId));
     let safe_kind = safe_dir_fragment(&kind);

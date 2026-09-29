@@ -6,7 +6,7 @@
 
 import { memo } from 'react'
 import type { ErogeItem } from './types'
-import { engineClass } from './constants'
+import { engineClass, BACKLOG_LABELS } from './constants'
 
 interface Props {
   game: ErogeItem
@@ -34,7 +34,7 @@ function ErogeRowImpl({ game, onOpen, onToggleFav, cardFields }: Props) {
         {showVn && game.vn && <span className="er-tag eng-vn">VN</span>}
         {showEngine && game.engine && <span className={`er-tag eng-${engineClass(game.engine)}`}>{game.engine}</span>}
         {showStatus && game.status && <span className={`er-tag st-${game.status.toLowerCase()}`}>{game.status}</span>}
-        {game.backlogStatus && <span className={`er-tag bl-${game.backlogStatus}`}>{game.backlogStatus}</span>}
+        {game.backlogStatus && <span className={`er-tag bl-${game.backlogStatus}`}>{BACKLOG_LABELS[game.backlogStatus] ?? game.backlogStatus}</span>}
       </div>
       <div className="er-row-title">
         {showTitle && <span className="er-row-name">{game.name}</span>}

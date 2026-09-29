@@ -44,6 +44,7 @@ interface Props {
   onOpenStats: () => void
   onOpenSettings: () => void
   onOpenSearch: () => void
+  onOpenQuickAdd?: () => void
   onOpenRandomizer?: () => void
   onOpenArcade: () => void
   onOpenPlaylists?: () => void
@@ -65,7 +66,7 @@ function isActiveSpecial(active: SidebarView, id: 'calendar' | 'stats' | 'settin
 export default function Sidebar(props: Props) {
   const {
     items, enabledCategories, arcadeEnabled, active, collapsed, onToggleCollapsed,
-    onOpenHome, onOpenLibrary, onOpenCalendar, onOpenStats, onOpenSettings, onOpenSearch, onOpenRandomizer, onOpenArcade,
+    onOpenHome, onOpenLibrary, onOpenCalendar, onOpenStats, onOpenSettings, onOpenSearch, onOpenQuickAdd, onOpenRandomizer, onOpenArcade,
     onOpenPlaylists,
     onDropItemOnLibrary,
     pluginCounts, onOpenPlugin, visiblePlugins,
@@ -240,6 +241,14 @@ export default function Sidebar(props: Props) {
           </span>
           <span className="sidebar-label">Search</span>
         </button>
+        {onOpenQuickAdd && (
+          <button type="button" className="sidebar-item" onClick={onOpenQuickAdd} title="Quick add — drop a stub into any library">
+            <span className="sidebar-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </span>
+            <span className="sidebar-label">Quick add</span>
+          </button>
+        )}
         <button
           type="button"
           className={isActiveSpecial(active, 'calendar') ? 'sidebar-item active' : 'sidebar-item'}

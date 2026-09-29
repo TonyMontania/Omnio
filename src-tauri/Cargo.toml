@@ -1,6 +1,6 @@
 [package]
 name = "omnio"
-version = "0.5.5"
+version = "0.5.6"
 edition = "2021"
 description = "Local-first hobby tracker — Rust POC of the Tauri backend"
 authors = ["Tony <eze.bigplanet@gmail.com>"]
@@ -47,6 +47,7 @@ uuid = { version = "1", features = ["v4"] }
 # Base64 decoder for data-URL image saves. Same encoding the renderer
 # emits from the file picker (image:save).
 base64 = "0.22"
+img-parts = "0.3"
 
 # HTTP client for image:download + updates:download + fetchers. Uses
 # schannel on Windows (default-tls feature) so we don't drag an OpenSSL

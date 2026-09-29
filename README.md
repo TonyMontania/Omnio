@@ -36,7 +36,7 @@ Grab the build for your OS from the [latest release](https://github.com/TonyMont
 | --- | --- | --- | --- |
 | **NSIS installer** | `Omnio_<version>_x64-setup.exe` | double-click | Per-user, no admin. Recommended default. |
 | **MSI installer** | `Omnio_<version>_x64_en-US.msi` | `msiexec /i Omnio_<version>_x64_en-US.msi /qb` | For group-policy / SCCM / Intune rollouts. |
-| **Portable ZIP** | `Omnio_<version>_windows-portable.zip` | extract, run `omnio.exe` | Needs [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) (installed by default on Windows 10 21H2+ and every Windows 11). |
+| **Portable ZIP** | `Omnio_<version>_windows-portable.zip` | extract, run `omnio.exe` | Windows 10 21H2+ and every Windows 11 already have WebView2. On older builds install the [Evergreen runtime](https://developer.microsoft.com/microsoft-edge/webview2/) once; otherwise `omnio.exe` closes immediately with no window. |
 | **winget** | — | `winget install TonyMontania.Omnio` | Ships the NSIS build. Available after the manifest lands in [`microsoft/winget-pkgs`](https://github.com/microsoft/winget-pkgs). |
 
 Data lives under `%APPDATA%\com.omnio.app\`.
@@ -48,7 +48,14 @@ Data lives under `%APPDATA%\com.omnio.app\`.
 | **DMG (Apple Silicon)** | `Omnio_<version>_aarch64.dmg` | drag to Applications | For M1 / M2 / M3 / M4 Macs. |
 | **DMG (Intel)** | `Omnio_<version>_x64.dmg` | drag to Applications | For pre-Apple-Silicon Macs. |
 
-First launch: right-click **Open** → **Open** (this bypasses Gatekeeper for unsigned apps).
+First launch on macOS 14 Sonoma or earlier: right-click **Open** → **Open**. On macOS 15 Sequoia the right-click bypass is gone, so run once from the Terminal:
+
+```bash
+xattr -cr /Applications/Omnio.app
+open /Applications/Omnio.app
+```
+
+The `xattr -cr` clears the quarantine flag Gatekeeper set on the download. Same command works on older macOS if you'd rather skip the right-click flow.
 
 Data lives under `~/Library/Application Support/com.omnio.app/`.
 
@@ -56,7 +63,7 @@ Data lives under `~/Library/Application Support/com.omnio.app/`.
 
 | Package | File | Command | Notes |
 | --- | --- | --- | --- |
-| **AppImage** | `omnio_<version>_amd64.AppImage` | `chmod +x omnio_<version>_amd64.AppImage && ./omnio_<version>_amd64.AppImage` | Universal. May need `libfuse2` on Debian / Ubuntu 22.04+. |
+| **AppImage** | `omnio_<version>_amd64.AppImage` | `chmod +x omnio_<version>_amd64.AppImage && ./omnio_<version>_amd64.AppImage` | Universal. Debian / Ubuntu 22.04+ need `libfuse2` (`sudo apt install libfuse2`). No FUSE? Run with `./omnio_<version>_amd64.AppImage --appimage-extract-and-run`. |
 | **Debian package** | `omnio_<version>_amd64.deb` | `sudo dpkg -i omnio_<version>_amd64.deb` | Debian, Ubuntu, Mint, Pop!_OS, elementary. |
 | **RPM package** | `omnio-<version>-1.x86_64.rpm` | `sudo dnf install ./omnio-<version>-1.x86_64.rpm` | Fedora, RHEL, CentOS Stream, Rocky, Alma, openSUSE. |
 | **AUR** | — | `yay -S omnio-bin` (or your AUR helper) | Arch, Manjaro, EndeavourOS. Repackages the upstream `.deb`. |

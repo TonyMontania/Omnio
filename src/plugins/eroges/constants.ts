@@ -20,6 +20,11 @@ export const ENGINES = [
 
 export const STATUSES = ['OnGoing', 'Completed', 'OnHold', 'Abandoned'] as const
 export const BACKLOG_STATUSES = ['playing', 'backlog', 'played'] as const
+export const BACKLOG_LABELS: Record<string, string> = {
+  playing: 'Playing',
+  backlog: 'Backlog',
+  played:  'Played',
+}
 
 export function engineClass(engine?: string): string {
   if (!engine) return ''

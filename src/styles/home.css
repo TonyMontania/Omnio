@@ -335,11 +335,16 @@
 .home-widget {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px;
-  background: var(--surface);
+  gap: 12px;
+  padding: 18px 20px 20px;
+  background: linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 92%, #000 8%) 100%);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset, 0 6px 16px rgba(0, 0, 0, 0.18);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.home-widget:hover {
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--border-soft) 80%);
 }
 .home-widget.editing {
   border-color: var(--accent);
@@ -388,10 +393,23 @@
 }
 .home-widget-header h2 {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   margin: 0;
   color: var(--text);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.home-widget-header h2::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 2px;
 }
 .home-widget-controls {
   margin-left: auto;
@@ -563,83 +581,569 @@
    wraps to two rows on narrower widget slots. */
 .home-bignum-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
 }
+/* Full-width slot: 4 tiles side-by-side. Medium slot: cap tile width so
+   the four tiles wrap 2x2 instead of stretching into ugly wide bars. */
+.home-bignum-grid-large { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.home-bignum-grid-medium { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.home-bignum-grid-small { grid-template-columns: 1fr; }
 .home-bignum-tile {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  position: relative;
+  background: linear-gradient(140deg,
+    color-mix(in srgb, var(--accent) 10%, var(--surface-2) 90%) 0%,
+    var(--surface-2) 100%);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border) 80%);
   border-radius: var(--radius-md);
-  padding: 18px 20px;
+  padding: 22px 22px 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
   min-width: 0;
+  overflow: hidden;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.home-bignum-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.6;
+}
+.home-bignum-tile:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 .home-bignum-value {
   font-family: var(--font-display);
-  font-size: 32px;
+  font-size: 40px;
   font-weight: 700;
   color: var(--accent);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 .home-bignum-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* Quick add — popover fired from the sidebar footer, matching the rest
+   of the app's modal panels. */
+.quick-add-panel { max-width: 520px; width: 92vw; }
+.quick-add-panel .modal-body { padding: 16px 22px 10px; }
+.quick-add-panel .modal-actions { padding: 12px 22px 18px; }
+.quick-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  width: 100%;
+  margin-top: 12px;
+}
+.quick-add-cat {
+  flex-shrink: 0;
+  max-width: 45%;
+  min-width: 130px;
+}
+.quick-add-input { flex: 1; min-width: 0; }
+
+/* Currently hero — the top in-progress item gets a big cover-forward
+   card with a blurred-cover backdrop, followed by a compact strip of
+   the rest of the in-progress items. Only used at `large` size. */
+.home-currently-hero-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.home-currently-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 20px;
+  padding: 20px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  min-height: 210px;
+  align-items: center;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.home-currently-hero:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+.home-currently-hero-bg {
+  position: absolute;
+  inset: 0;
+  background-image: var(--hero-cover);
+  background-size: cover;
+  background-position: center;
+  filter: blur(40px) saturate(1.2);
+  opacity: 0.35;
+  z-index: 0;
+  pointer-events: none;
+}
+.home-currently-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--surface) 92%, transparent) 0%,
+    color-mix(in srgb, var(--surface) 70%, transparent) 55%,
+    color-mix(in srgb, var(--surface) 40%, transparent) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+.home-currently-hero-cover,
+.home-currently-hero-body { position: relative; z-index: 2; }
+.home-currently-hero-cover {
+  width: 140px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 40px;
+  color: var(--text-faint);
+}
+.home-currently-hero-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-currently-hero-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.home-currently-hero-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #1a1408;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.home-currently-hero-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.home-currently-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: 12.5px;
+}
+.home-currently-hero-dot { color: var(--text-faint); }
+.home-currently-rest {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+/* "Pick from your backlog" — decision-help widget with a reshuffle
+   button and a compact vertical stack of horizontal cards. */
+.home-backlog-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.home-backlog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.home-backlog-reshuffle {
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  color: var(--text-dim);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s, color 0.12s, transform 0.3s;
+}
+.home-backlog-reshuffle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: rotate(180deg);
+}
+.home-backlog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.home-backlog-card {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  transition: border-color 0.12s, transform 0.12s;
+}
+.home-backlog-card:hover {
+  border-color: var(--accent);
+  transform: translateX(2px);
+}
+.home-backlog-cover {
+  width: 44px;
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+.home-backlog-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-backlog-body { min-width: 0; }
+.home-backlog-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-backlog-cat {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+/* Rating spread — 5 horizontal bar rows, best-to-worst. */
+.home-rating-spread {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.home-rating-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 50px;
+  align-items: center;
+  gap: 10px;
+}
+.home-rating-star {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  line-height: 1;
+}
+.home-rating-star-dim { color: var(--text-faint); }
+.home-rating-track {
+  height: 8px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.home-rating-bar {
+  height: 100%;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 70%, transparent),
+    var(--accent));
+  border-radius: 4px;
+  transition: width 0.3s;
+  min-width: 2px;
+}
+.home-rating-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.home-rating-footer {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: right;
+}
+
+/* Genre spotlight — one row per genre with a mini cover strip. */
+.home-genre-spotlight {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.home-genre-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.home-genre-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.home-genre-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-genre-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.home-genre-covers {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+.home-genre-cover {
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-faint);
+  font-family: var(--font-display);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+.home-genre-cover:hover { transform: translateY(-2px); }
+.home-genre-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Weekly airing schedule — one column per weekday. Today gets an accent
+   left border + label pill. Small covers stack vertically inside each
+   column so 7 days fit comfortably on a large slot. */
+.home-weekly-airing {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.home-weekly-airing-medium { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.home-weekly-day {
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  transition: border-color 0.12s;
+}
+.home-weekly-day.today {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface-2) 94%);
+}
+.home-weekly-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.home-weekly-day-name {
   font-family: var(--font-mono);
   font-size: 10.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-dim);
 }
-
-/* Quick add — inline single-row form (category select + title input +
-   button). Meant to sit in a `small` slot; the three children flex to
-   fill the widget. */
-.home-quickadd {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-  width: 100%;
-}
-.home-quickadd-cat {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  padding: 8px 10px;
-  font-size: 13px;
-  cursor: pointer;
-  flex-shrink: 0;
-  max-width: 45%;
-}
-.home-quickadd-input {
-  flex: 1;
-  min-width: 0;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  padding: 8px 12px;
-  font-size: 13px;
-}
-.home-quickadd-input:focus {
-  border-color: var(--accent);
-  outline: none;
-}
-.home-quickadd-btn {
-  background: var(--accent);
-  border: none;
-  border-radius: var(--radius-sm);
+.home-weekly-day.today .home-weekly-day-name { color: var(--accent); font-weight: 700; }
+.home-weekly-day-badge {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: #1a1408;
-  padding: 8px 14px;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.14s;
-  flex-shrink: 0;
+  background: var(--accent);
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 700;
 }
-.home-quickadd-btn:hover:not(:disabled) { background: var(--accent-hover, var(--accent)); }
-.home-quickadd-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.home-weekly-day-empty {
+  color: var(--text-faint);
+  font-size: 12px;
+  text-align: center;
+  padding: 14px 0;
+}
+.home-weekly-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.home-weekly-card {
+  background: transparent;
+  border: 0;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background 0.12s;
+}
+.home-weekly-card:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.home-weekly-cover {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-family: var(--font-display);
+  font-size: 18px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+}
+.home-weekly-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-weekly-title {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 28px;
+}
+
+/* Continue where you left off — cover on the left with a subtle play
+   glyph, then title + explicit "Episode N of X" callout. Actionable
+   feel: the card should read as "resume this". */
+.home-continue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.home-continue-card {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  transition: border-color 0.12s, transform 0.12s;
+}
+.home-continue-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+.home-continue-cover {
+  position: relative;
+  width: 64px;
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-family: var(--font-display);
+  font-size: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+.home-continue-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-continue-arrow {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 90%, transparent);
+  color: #1a1408;
+  font-size: 9px;
+  line-height: 20px;
+  text-align: center;
+  padding-left: 2px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.home-continue-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.home-continue-title {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-continue-next {
+  font-size: 12px;
+  color: var(--text);
+}
+.home-continue-next-label { color: var(--accent); font-weight: 600; }
+.home-continue-next-sub { color: var(--text-dim); }
+.home-continue-cat {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
 
 /* Cover carousel — infinite auto-scrolling marquee of cover images.
    The track holds two copies of the strip so translateX(-50%) loops

@@ -4,6 +4,40 @@ All notable changes to Omnio are documented here. Format loosely follows [Keep a
 
 Each `## v<version>` section is the body of that tag's [GitHub Release](https://github.com/TonyMontania/Omnio/releases). Only user-visible changes land here — new features, fixes and behavior changes you'll actually notice while using the app.
 
+## v0.5.6 — 2026-09-29
+
+### Added
+
+- **Home board rebuilt with new widgets.** The dashboard is now cover-forward and dense:
+  - **Currently — hero mode.** The top in-progress item shows as a big card with the cover, a blurred-cover backdrop, status pill, and progress meta ("Episode 5 of 12", "12.4h played"). Everything else in progress follows below as regular cards.
+  - **Continue where you left off.** One card per in-progress series / anime / manga / book, showing the concrete next unit — Episode 6, Chapter 42, Page 187. Skips items already at the total.
+  - **This week (airing).** 7-column grid of anime, donghua and series airing each weekday, with today highlighted. Replaces the old flat "Currently airing" list in the default layout.
+  - **Pick from your backlog.** Random shuffle of 2–5 items sitting in a backlog / plan-to status, with a ↻ reshuffle button. Breaks decision paralysis without shaming.
+  - **Random from favorites.** Same shuffle mechanic but scoped to ★5 items — rediscovery of stuff you loved.
+  - **Rating spread.** Horizontal bar chart of how many items you rated at each star level.
+  - **Finished this week.** Items you marked completed in the last 7 days, with a "Today / Yesterday / 3d ago" badge on the cover.
+  - **Top of the year (so far).** ★4+ items you finished in the current calendar year. Hides itself when the list is empty.
+  - **Genre spotlight.** Your top 5 genres by count, each with a mini cover strip of representative items.
+- **Quick add popover.** Moved out of the Home widgets and into a permanent button in the sidebar footer — pick a library, type a title, hit Enter. Works from any view.
+- **EXIF stripped from uploaded covers.** JPEG, PNG and WebP covers you drop into the editor now have EXIF, XMP and ICC metadata removed before landing on disk. Pixel quality is preserved (no re-encoding). If you later export or share a cover, no GPS coordinates, camera make or serial number travel with it.
+
+### Changed
+
+- **Home widget frames redesigned.** Cards now use a subtle top-down gradient, a stronger shadow, and an accent bar next to each title. Hover tints the border. Big numbers tiles got a bolder look — 40px value, accent gradient background, hover lift.
+- **Fixed Big numbers "stretch" bug.** When the widget was set to medium next to another medium, its four tiles used to stretch into ugly wide bars. It now wraps into a 2×2 grid at medium and stays as 4 across at large.
+- **"Libraries (rich portals)" widget removed** from the default layout. The sidebar already lists your libraries with counts, and the widget was mostly duplicated real estate.
+- **Global scrollbar redesigned.** Thumb picks up an accent tint on hover; track is transparent with a hairline separator. Consistent across library, sidebar, modals and Home.
+- **README install docs updated.** macOS Sequoia 15 doesn't accept the classic right-click Open bypass for unsigned apps anymore — the guide now points at `xattr -cr /Applications/Omnio.app`. AppImage FUSE requirement is spelled out ("`sudo apt install libfuse2` on Ubuntu 22.04+", plus the `--appimage-extract-and-run` fallback). Portable ZIP warning about WebView2 is now unmissable.
+
+### Fixed
+
+- **AppImage: `Permission denied` on first launch.** The v0.5.5 AppImage shipped without the executable bit on `AppRun.wrapped`, so firejail-based launchers (Ubuntu's default) couldn't even open the window. The release workflow now repacks the AppImage after Tauri's bundler runs, chmod-ing every launcher script and the main binary. Downstream catalogs (probonopd/AppImages) accept it.
+
+### Security
+
+- **DevTools blocked in release builds.** F12, Ctrl+Shift+I / J / C / K, Ctrl+U, Ctrl+P and right-click on non-input elements no longer open developer tooling or the save-as-page menu in the packaged app. Dev builds are unaffected.
+- **API keys and tokens no longer appear in error logs.** Query-string params matching `api_key`, `client_secret`, `token`, `authorization`, `password`, `secret` and friends are redacted to `***` before any failing-URL diagnostic hits stderr. Applies to every metadata fetcher and to plugin HTTP calls.
+
 ## v0.5.5 — 2026-09-26
 
 ### Added

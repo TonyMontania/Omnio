@@ -100,6 +100,37 @@ impl<'a> Default for ProxyJsonOptions<'a> {
     }
 }
 
+// Strip credential-carrying query params (api_key, client_secret, token,
+// authorization…) from a URL before it hits a log line. Anything the
+// user or a fetcher writes into a secret slot never appears verbatim in
+// stderr / a crash report / a support paste.
+pub fn redact_url_for_log_public(url: &str) -> String { redact_url_for_log(url) }
+
+fn redact_url_for_log(url: &str) -> String {
+    const SECRET_KEYS: &[&str] = &[
+        "api_key", "apikey", "key",
+        "client_secret", "client_id",
+        "token", "access_token", "auth", "authorization",
+        "password", "secret",
+    ];
+    let (base, query) = match url.split_once('?') {
+        Some(v) => v,
+        None => return url.to_string(),
+    };
+    let redacted: Vec<String> = query
+        .split('&')
+        .map(|pair| {
+            let (k, _) = pair.split_once('=').unwrap_or((pair, ""));
+            if SECRET_KEYS.iter().any(|s| k.eq_ignore_ascii_case(s)) {
+                format!("{k}=***")
+            } else {
+                pair.to_string()
+            }
+        })
+        .collect();
+    format!("{base}?{}", redacted.join("&"))
+}
+
 pub async fn proxy_json(
     client: &Client,
     url: &str,
@@ -122,16 +153,12 @@ pub async fn proxy_json(
     }
 
     let resp = req.send().await.map_err(|e| {
-        // reqwest wraps every network failure (DNS, connection reset,
-        // TLS handshake, socket hang up, …); the surface message is
-        // usually enough. If a `source()` chain is present, walk it —
-        // matches the "err.message (err.cause.message)" the TS logs.
         let mut msg = e.to_string();
         let mut src: Option<&(dyn std::error::Error + 'static)> = std::error::Error::source(&e);
         if let Some(inner) = src.take() {
             msg = format!("{msg} ({inner})");
         }
-        eprintln!("[proxy_json] {url} — {msg}");
+        eprintln!("[proxy_json] {} — {msg}", redact_url_for_log(url));
         msg
     })?;
 

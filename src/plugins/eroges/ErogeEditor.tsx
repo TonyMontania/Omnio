@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import type { ErogeItem, ErogeCollection, BacklogStatus, F95Status } from './types'
-import { ENGINES, STATUSES, BACKLOG_STATUSES } from './constants'
+import { ENGINES, STATUSES, BACKLOG_STATUSES, BACKLOG_LABELS } from './constants'
 import { f95Fetch, f95DownloadCover } from './f95Api'
 import { ryuuFetch, ryuuDownloadCover } from './ryuuApi'
 import { assetSaveDataUrl, assetDelete } from './ipc'
@@ -50,9 +50,18 @@ const empty = (): ErogeItem => ({
   link: '', description: '', coverFile: '', favorite: false,
 })
 
+type EditorTab = 'overview' | 'identity' | 'progress' | 'links'
+const TABS: { value: EditorTab; label: string }[] = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'identity', label: 'Identity' },
+  { value: 'progress', label: 'Progress' },
+  { value: 'links',    label: 'Links' },
+]
+
 export default function ErogeEditor({ initial, collections, allGames, f95Cookie, onSave, onCancel }: Props) {
   const isEdit = !!initial
   const [game, setGame] = useState<ErogeItem>(initial ? { ...initial } : empty())
+  const [activeTab, setActiveTab] = useState<EditorTab>('overview')
   const [f95Url, setF95Url] = useState('')
   const [f95Status, setF95Status] = useState('')
   const [importing, setImporting] = useState(false)
@@ -302,106 +311,151 @@ export default function ErogeEditor({ initial, collections, allGames, f95Cookie,
           </div>
         </div>
       )}
-      <div className="er-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{isEdit ? 'Edit game' : 'New game'}</h2>
-        <div className="er-f95-import">
-          <input type="text" placeholder="Paste the F95 link and press Import"
-            value={f95Url} onChange={(e) => setF95Url(e.target.value)} />
-          <button type="button" className="er-btn" onClick={importFromF95} disabled={importing}>F95</button>
+      <div className="er-modal er-modal-tabbed" onClick={(e) => e.stopPropagation()}>
+        <div className="er-modal-header">
+          <h2>{isEdit ? 'Edit game' : 'New game'}</h2>
         </div>
-        <div className="er-f95-status">{f95Status}</div>
-        <div className="er-f95-import">
-          <input type="text" placeholder="Paste the Ryuugames link to add metadata"
-            value={ryuuUrl} onChange={(e) => setRyuuUrl(e.target.value)} />
-          <button type="button" className="er-btn" onClick={importFromRyuu} disabled={importingRyuu}>Ryuugames</button>
-        </div>
-        <div className="er-f95-status">{ryuuStatus}</div>
-        <form onSubmit={submit}>
-          <label>Name <input type="text" required value={game.name} onChange={(e) => set('name', e.target.value)} /></label>
-          <label>Original title <input type="text" value={game.originalTitle ?? ''} onChange={(e) => set('originalTitle', e.target.value)} placeholder="蒼海のレディ・スパイ" /></label>
-          <label>Version <input type="text" value={game.version ?? ''} onChange={(e) => set('version', e.target.value)} placeholder="v0.7" /></label>
-          <label>Creator <input type="text" value={game.creator ?? ''} onChange={(e) => set('creator', e.target.value)} /></label>
-          <label>Language <input type="text" value={game.language ?? ''} onChange={(e) => set('language', e.target.value)} placeholder="Japanese, English" /></label>
-          <label>Engine
-            <select value={game.engine ?? ''} onChange={(e) => set('engine', e.target.value)}>
-              <option value="">-</option>
-              {ENGINES.map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
-            </select>
-          </label>
-          <label className="er-checkbox">
-            <input type="checkbox" checked={!!game.vn} onChange={(e) => set('vn', e.target.checked)} /> Visual Novel (VN)
-          </label>
-          <label>Status
-            <select value={game.status ?? ''} onChange={(e) => set('status', e.target.value as F95Status)}>
-              <option value="">-</option>
-              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </label>
-          <label>My progress
-            <select value={game.backlogStatus ?? ''} onChange={(e) => set('backlogStatus', e.target.value as BacklogStatus)}>
-              <option value="">-</option>
-              {BACKLOG_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </label>
-          <label>Release date (YY/MM/DD) <input type="text" value={game.releaseDate ?? ''} onChange={(e) => set('releaseDate', e.target.value)} placeholder="24/06/02" /></label>
-          <label>DLSITE ID <input type="text" value={game.dlsiteId ?? ''} onChange={(e) => set('dlsiteId', e.target.value)} placeholder="RJ01234567" /></label>
-          <label>DLSITE URL <input type="text" value={game.dlsiteUrl ?? ''} onChange={(e) => set('dlsiteUrl', e.target.value)} placeholder="https://www.dlsite.com/..." /></label>
-          <label>Steam URL <input type="text" value={game.steamUrl ?? ''} onChange={(e) => set('steamUrl', e.target.value)} placeholder="https://store.steampowered.com/app/..." /></label>
-          <label>itch.io URL <input type="text" value={game.itchUrl ?? ''} onChange={(e) => set('itchUrl', e.target.value)} placeholder="https://<creator>.itch.io/<game>" /></label>
-          <label>Ryuugames URL <input type="text" value={game.ryuugamesUrl ?? ''} onChange={(e) => set('ryuugamesUrl', e.target.value)} placeholder="https://www.ryuugames.com/..." /></label>
-          <label>F95 link <input type="text" value={game.link ?? ''} onChange={(e) => set('link', e.target.value)} placeholder="https://f95zone.to/..." /></label>
-          <label>Description <textarea rows={5} value={game.description ?? ''} onChange={(e) => set('description', e.target.value)} /></label>
-          <label>Cover
-            <div className="er-form-cover">
-              <input ref={coverInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onCoverFileChosen} />
-              <button type="button" className="er-btn" onClick={() => coverInputRef.current?.click()}>Choose file</button>
-              {game.coverFile && <button type="button" className="er-btn er-btn-danger er-btn-sm" onClick={removeCover}>Remove</button>}
-              <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{game.coverFile || 'No image'}</span>
-            </div>
-          </label>
-          <div className="er-form-section">
-            <div className="er-form-section-head">
-              <span className="er-form-section-title">Favorite</span>
-            </div>
+        <div className="er-editor-tabs" role="tablist">
+          {TABS.map((t) => (
             <button
+              key={t.value}
               type="button"
-              className={`er-toggle-pill${game.favorite ? ' active' : ''}`}
-              onClick={() => set('favorite', !game.favorite)}
-              aria-pressed={!!game.favorite}
-            >
-              <span className="er-toggle-star" aria-hidden>★</span>
-              <span>{game.favorite ? 'Marked as favorite' : 'Mark as favorite'}</span>
-            </button>
-          </div>
+              role="tab"
+              className={activeTab === t.value ? 'er-editor-tab active' : 'er-editor-tab'}
+              onClick={() => setActiveTab(t.value)}
+            >{t.label}</button>
+          ))}
+        </div>
+        <form className="er-form" onSubmit={submit}>
+          <div className="er-form-body">
+            {activeTab === 'overview' && (
+              <>
+                <div className="er-form-section er-form-section-first">
+                  <div className="er-form-section-head">
+                    <span className="er-form-section-title">Fetch metadata</span>
+                    <span className="er-form-section-hint">Paste a link and auto-fill fields</span>
+                  </div>
+                  <div className="er-f95-import">
+                    <input type="text" placeholder="Paste the F95 link and press Import"
+                      value={f95Url} onChange={(e) => setF95Url(e.target.value)} />
+                    <button type="button" className="er-btn" onClick={importFromF95} disabled={importing}>F95</button>
+                  </div>
+                  {f95Status && <div className="er-f95-status">{f95Status}</div>}
+                  <div className="er-f95-import">
+                    <input type="text" placeholder="Paste the Ryuugames link to add metadata"
+                      value={ryuuUrl} onChange={(e) => setRyuuUrl(e.target.value)} />
+                    <button type="button" className="er-btn" onClick={importFromRyuu} disabled={importingRyuu}>Ryuugames</button>
+                  </div>
+                  {ryuuStatus && <div className="er-f95-status">{ryuuStatus}</div>}
+                </div>
 
-          <div className="er-form-section">
-            <div className="er-form-section-head">
-              <span className="er-form-section-title">Collections</span>
-              {collections.length > 0 && (
-                <span className="er-form-section-count">{selectedColls.length}/{collections.length}</span>
-              )}
-            </div>
-            {collections.length === 0 ? (
-              <p className="er-empty-hint">No collections yet — create one from the sidebar first.</p>
-            ) : (
-              <div className="er-coll-grid">
-                {[...collections].sort((a, b) => a.name.localeCompare(b.name)).map((c) => {
-                  const on = selectedColls.includes(c.id)
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className={`er-coll-chip${on ? ' active' : ''}`}
-                      onClick={() => setSelectedColls((prev) => on ? prev.filter((x) => x !== c.id) : [...prev, c.id])}
-                      aria-pressed={on}
-                    >
-                      <span className="er-coll-check" aria-hidden>{on ? '✓' : ''}</span>
-                      <span className="er-coll-name">{c.name}</span>
-                    </button>
-                  )
-                })}
-              </div>
+                <label>Name <input type="text" required value={game.name} onChange={(e) => set('name', e.target.value)} /></label>
+                <label>Cover
+                  <div className="er-form-cover">
+                    <input ref={coverInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onCoverFileChosen} />
+                    <button type="button" className="er-btn" onClick={() => coverInputRef.current?.click()}>Choose file</button>
+                    {game.coverFile && <button type="button" className="er-btn er-btn-danger er-btn-sm" onClick={removeCover}>Remove</button>}
+                    <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{game.coverFile || 'No image'}</span>
+                  </div>
+                </label>
+
+                <div className="er-form-section">
+                  <div className="er-form-section-head">
+                    <span className="er-form-section-title">Favorite</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`er-toggle-pill${game.favorite ? ' active' : ''}`}
+                    onClick={() => set('favorite', !game.favorite)}
+                    aria-pressed={!!game.favorite}
+                  >
+                    <span className="er-toggle-star" aria-hidden>★</span>
+                    <span>{game.favorite ? 'Marked as favorite' : 'Mark as favorite'}</span>
+                  </button>
+                </div>
+
+                <div className="er-form-section">
+                  <div className="er-form-section-head">
+                    <span className="er-form-section-title">Collections</span>
+                    {collections.length > 0 && (
+                      <span className="er-form-section-count">{selectedColls.length}/{collections.length}</span>
+                    )}
+                  </div>
+                  {collections.length === 0 ? (
+                    <p className="er-empty-hint">No collections yet — create one from the sidebar first.</p>
+                  ) : (
+                    <div className="er-coll-grid">
+                      {[...collections].sort((a, b) => a.name.localeCompare(b.name)).map((c) => {
+                        const on = selectedColls.includes(c.id)
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className={`er-coll-chip${on ? ' active' : ''}`}
+                            onClick={() => setSelectedColls((prev) => on ? prev.filter((x) => x !== c.id) : [...prev, c.id])}
+                            aria-pressed={on}
+                          >
+                            <span className="er-coll-check" aria-hidden>{on ? '✓' : ''}</span>
+                            <span className="er-coll-name">{c.name}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
+
+            {activeTab === 'identity' && (
+              <>
+                <label>Original title <input type="text" value={game.originalTitle ?? ''} onChange={(e) => set('originalTitle', e.target.value)} placeholder="蒼海のレディ・スパイ" /></label>
+                <label>Creator <input type="text" value={game.creator ?? ''} onChange={(e) => set('creator', e.target.value)} /></label>
+                <label>Language <input type="text" value={game.language ?? ''} onChange={(e) => set('language', e.target.value)} placeholder="Japanese, English" /></label>
+                <label>Engine
+                  <select value={game.engine ?? ''} onChange={(e) => set('engine', e.target.value)}>
+                    <option value="">—</option>
+                    {ENGINES.map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
+                  </select>
+                </label>
+                <label>Version <input type="text" value={game.version ?? ''} onChange={(e) => set('version', e.target.value)} placeholder="v0.7" /></label>
+                <label>Release date (YY/MM/DD) <input type="text" value={game.releaseDate ?? ''} onChange={(e) => set('releaseDate', e.target.value)} placeholder="24/06/02" /></label>
+                <label className="er-checkbox">
+                  <input type="checkbox" checked={!!game.vn} onChange={(e) => set('vn', e.target.checked)} /> Visual Novel (VN)
+                </label>
+                <label>Description
+                  <textarea rows={8} value={game.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Your notes or the fetched description…" />
+                </label>
+              </>
+            )}
+
+            {activeTab === 'progress' && (
+              <>
+                <label>Development status
+                  <select value={game.status ?? ''} onChange={(e) => set('status', e.target.value as F95Status)}>
+                    <option value="">—</option>
+                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </label>
+                <label>My progress
+                  <select value={game.backlogStatus ?? ''} onChange={(e) => set('backlogStatus', e.target.value as BacklogStatus)}>
+                    <option value="">—</option>
+                    {BACKLOG_STATUSES.map((s) => <option key={s} value={s}>{BACKLOG_LABELS[s]}</option>)}
+                  </select>
+                </label>
+              </>
+            )}
+
+            {activeTab === 'links' && (
+              <>
+                <label>DLSITE ID <input type="text" value={game.dlsiteId ?? ''} onChange={(e) => set('dlsiteId', e.target.value)} placeholder="RJ01234567" /></label>
+                <label>DLSITE URL <input type="text" value={game.dlsiteUrl ?? ''} onChange={(e) => set('dlsiteUrl', e.target.value)} placeholder="https://www.dlsite.com/..." /></label>
+                <label>Steam URL <input type="text" value={game.steamUrl ?? ''} onChange={(e) => set('steamUrl', e.target.value)} placeholder="https://store.steampowered.com/app/..." /></label>
+                <label>itch.io URL <input type="text" value={game.itchUrl ?? ''} onChange={(e) => set('itchUrl', e.target.value)} placeholder="https://<creator>.itch.io/<game>" /></label>
+                <label>Ryuugames URL <input type="text" value={game.ryuugamesUrl ?? ''} onChange={(e) => set('ryuugamesUrl', e.target.value)} placeholder="https://www.ryuugames.com/..." /></label>
+                <label>F95 link <input type="text" value={game.link ?? ''} onChange={(e) => set('link', e.target.value)} placeholder="https://f95zone.to/..." /></label>
+              </>
+            )}
+
           </div>
           <div className="er-modal-actions">
             <button type="button" className="er-btn" onClick={onCancel}>Cancel</button>

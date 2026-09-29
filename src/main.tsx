@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import { installIpcShim } from './utils/ipc-shim'
+import { installClientHardening } from './utils/hardenClient'
 import FolderPickerHost from './components/FolderPickerHost'
 
 // Install the Tauri IPC shim BEFORE React mounts so any
@@ -9,6 +10,7 @@ import FolderPickerHost from './components/FolderPickerHost'
 // router (under Tauri) or the untouched Electron preload API (under
 // Electron; the shim is a no-op there).
 async function boot() {
+  installClientHardening()
   await installIpcShim()
 
   ReactDOM.createRoot(document.getElementById('root')!).render(

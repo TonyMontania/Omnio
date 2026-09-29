@@ -63,14 +63,20 @@ export function listHomeWidgets(): HomeWidget[] {
 // Home is now pure content: what you're doing, what's coming, what you
 // loved recently.
 export const DEFAULT_HOME_LAYOUT: readonly HomeWidgetSlot[] = [
-  { id: 'big-numbers',    size: 'large' },
-  { id: 'currently',      size: 'large' },
-  { id: 'cover-carousel', size: 'medium' },
-  { id: 'upcoming-week',  size: 'medium' },
-  { id: 'currently-airing', size: 'medium' },
-  { id: 'on-this-day',    size: 'medium' },
-  { id: 'quick-add',      size: 'small'  },
-  { id: 'recently-rated', size: 'medium' },
+  { id: 'big-numbers',        size: 'large' },
+  { id: 'currently',          size: 'large' },
+  { id: 'continue-watching',  size: 'large' },
+  { id: 'weekly-airing',      size: 'large' },
+  { id: 'cover-carousel',     size: 'large' },
+  { id: 'upcoming-week',      size: 'medium' },
+  { id: 'pick-from-backlog',  size: 'medium' },
+  { id: 'finished-this-week', size: 'medium' },
+  { id: 'top-of-year',        size: 'large' },
+  { id: 'recently-rated',     size: 'large' },
+  { id: 'rating-spread',      size: 'medium' },
+  { id: 'genre-spotlight',    size: 'medium' },
+  { id: 'on-this-day',        size: 'medium' },
+  { id: 'random-favorites',   size: 'medium' },
 ]
 
 export function _clearHomeRegistryForTests(): void {

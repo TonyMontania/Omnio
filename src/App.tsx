@@ -68,6 +68,7 @@ import type { LibraryCustomFieldDef } from './types/customFields'
 import LibraryCustomFieldsEditor from './components/LibraryCustomFieldsEditor'
 import LibraryCustomFieldsSection from './components/LibraryCustomFieldsSection'
 import { useFolderPicker } from './components/FolderPickerHost'
+import QuickAddPopover from './components/QuickAddPopover'
 import ApiRegistrationGuide from './components/ApiRegistrationGuide'
 import type { ApiGuideId } from './components/ApiRegistrationGuide'
 import ServiceLogo from './components/ServiceLogo'
@@ -680,6 +681,7 @@ function App() {
   const [tagHierarchyOpen, setTagHierarchyOpen] = useState(false)
   const [imageGuideOpen, setImageGuideOpen] = useState(false)
   const [randomizerOpen, setRandomizerOpen] = useState(false)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [auditOpen, setAuditOpen] = useState(false)
   const [brokenAssets, setBrokenAssets] = useState<{ itemId: string; itemTitle: string; category: string; field: string; rel: string }[]>([])
 
@@ -2690,6 +2692,7 @@ function App() {
           onOpenStats={() => { setActivePluginSlug(null); setSpecialView('stats'); closePanel(); closeAllDetailViews() }}
           onOpenSettings={() => { setActivePluginSlug(null); setSpecialView('settings'); closePanel(); closeAllDetailViews() }}
           onOpenSearch={() => setSearchOpen(true)}
+          onOpenQuickAdd={() => setQuickAddOpen(true)}
           onOpenRandomizer={() => setRandomizerOpen(true)}
           onOpenArcade={() => { setSpecialView('arcade'); setActivePluginSlug(null); closePanel(); closeAllDetailViews() }}
           onOpenPlaylists={() => { setSpecialView('playlists'); setActivePluginSlug(null); closePanel(); closeAllDetailViews() }}
@@ -6079,6 +6082,25 @@ function App() {
             onClose={() => setRandomizerOpen(false)}
           />
         </Suspense>
+      )}
+
+      {quickAddOpen && (
+        <QuickAddPopover
+          enabledCategories={settings.enabledCategories ?? CATEGORIES.map((c) => c.id)}
+          onSubmit={(categoryId, title) => {
+            const stub: AnyItem = {
+              id: crypto.randomUUID(),
+              categoryId,
+              title,
+              cover: '',
+              tags: [],
+              createdAt: Date.now(),
+            }
+            setItems((prev) => [...prev, stub])
+            setToast(`Added "${title}"`)
+          }}
+          onClose={() => setQuickAddOpen(false)}
+        />
       )}
 
       {roleNormalizerOpen && (

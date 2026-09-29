@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ErogeItem, ErogeCollection, ErogeData, BacklogStatus } from './types'
 import type { PluginViewProps } from '../registry'
 import { SLUG } from './constants'
-import { loadData, saveData, savesRenameFolder, assetRename } from './ipc'
+import { loadData, saveData, savesRenameFolder, assetRename, assetDelete, savesDeleteAll } from './ipc'
 import { f95CheckVersion } from './f95Api'
 import { reportPluginCount } from '../counts'
 import ErogeCard from './ErogeCard'
@@ -184,6 +184,12 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
   }, [])
 
   function deleteGame(id: string) {
+    const target = data.games.find((g) => g.id === id)
+    if (target) {
+      const coverBase = `${target.name || 'game'} cover`
+      void assetDelete('cover', coverBase)
+      void savesDeleteAll(target.name || '')
+    }
     setData((d) => ({
       ...d,
       games: d.games.filter((g) => g.id !== id),

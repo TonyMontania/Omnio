@@ -155,6 +155,63 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
+      # Tauri v2's AppImage bundler ships without the executable bit on
+      # `AppRun.wrapped`. Firejail-based launchers (Ubuntu's default) hit
+      # `Permission denied` and the app never opens a window. Rebuild the
+      # AppImage locally with the exec bits set so downstream catalogs
+      # (probonopd/AppImages, appimage.github.io) accept it. Also chown
+      # AppRun / AppRun.wrapped inside the squashfs so no user-side
+      # firejail rewrite is needed.
+      - name: Repack AppImage with executable bits
+        if: matrix.platform == 'ubuntu-22.04'
+        shell: bash
+        run: |
+          set -euo pipefail
+          appimage=$(ls src-tauri/target/release/bundle/appimage/*.AppImage 2>/dev/null | head -1 || true)
+          if [ -z "$appimage" ]; then
+            echo "No AppImage found — skipping repack."
+            exit 0
+          fi
+          echo "Repacking $appimage"
+          # Grab a fresh appimagetool. The one in target/ is bundled by
+          # Tauri but sometimes gets stale between runs.
+          curl -fsSL -o /tmp/appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+          chmod +x /tmp/appimagetool
+
+          workdir=$(mktemp -d)
+          cp "$appimage" "$workdir/original.AppImage"
+          chmod +x "$workdir/original.AppImage"
+          pushd "$workdir" > /dev/null
+          ./original.AppImage --appimage-extract > /dev/null
+          # Set exec on every launcher script + the main binary. Belt-and-
+          # suspenders: match all common launcher shapes so future Tauri
+          # bundler tweaks don't silently un-fix this.
+          for f in squashfs-root/AppRun squashfs-root/AppRun.wrapped squashfs-root/usr/bin/*; do
+            if [ -f "$f" ]; then chmod +x "$f"; fi
+          done
+          rm -f original.AppImage
+          # Repack — `--appimage-extract-and-run` avoids needing FUSE.
+          /tmp/appimagetool --appimage-extract-and-run squashfs-root repacked.AppImage
+          popd > /dev/null
+          cp "$workdir/repacked.AppImage" "$appimage"
+          chmod +x "$appimage"
+          echo "Repacked → $appimage"
+          ls -la "$appimage"
+
+      - name: Re-upload fixed AppImage to release
+        if: matrix.platform == 'ubuntu-22.04'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          appimage=$(ls src-tauri/target/release/bundle/appimage/*.AppImage 2>/dev/null | head -1 || true)
+          if [ -z "$appimage" ]; then
+            echo "No AppImage to upload."
+            exit 0
+          fi
+          gh release upload "$GITHUB_REF_NAME" "$appimage" \
+            --repo "${{ github.repository }}" --clobber
+
       # Tauri v2 doesn't produce a single-file portable EXE like
       # electron-builder did. Ship the raw binary as a zip alongside
       # the installers — needs WebView2 on the host (installed by

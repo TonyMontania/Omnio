@@ -29,15 +29,28 @@ body {
 }
 
 ::-webkit-scrollbar { width: 12px; height: 12px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb {
-  background: var(--text-dim);
-  border-radius: 8px;
-  border: 2px solid var(--surface);
-  min-height: 40px;
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-left: 1px solid var(--border-soft);
 }
-::-webkit-scrollbar-thumb:hover { background: var(--text); }
-* { scrollbar-color: var(--text-dim) var(--surface); }
+::-webkit-scrollbar-track:horizontal {
+  border-left: 0;
+  border-top: 1px solid var(--border-soft);
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-dim) 55%, transparent);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  min-height: 40px;
+  transition: background 0.15s;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner { background: transparent; }
+* { scrollbar-color: color-mix(in srgb, var(--text-dim) 55%, transparent) transparent; }
 
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: 2px solid var(--accent);

@@ -21,8 +21,9 @@ Description: |-
   Omnio is a local desktop app to track every hobby you follow — games, music,
   movies, series, anime, donghua, manga family, books and visual novels — in
   one place. No accounts, no cloud, no telemetry. Your library lives in a
-  data/ folder you own. One-click metadata + covers from 13 sources
-  (IGDB / TMDb / AniList / VNDB / MangaDex / MusicBrainz / OpenLibrary / …).
+  data/ folder you own. One-click metadata + covers from 16 sources
+  (IGDB / TMDb / AniList / VNDB / MangaDex / MusicBrainz / VGMdb /
+  OpenLibrary / HowLongToBeat / Last.fm / …).
 Moniker: omnio
 Tags:
   - backlog
