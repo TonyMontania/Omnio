@@ -27,7 +27,7 @@ export default function FirstRunWizard({ onImport, onAddFirst, onOpenIntegration
           <img src="omnio-logo.svg" alt="" className="first-run-logo" />
           <h1>Welcome to Omnio</h1>
           <p className="first-run-tagline">
-            One local library for every hobby you track — games, music, movies, series, anime, donghua, manga family and books. No accounts, no cloud, no telemetry. Your data lives next to the app.
+            One local library for every hobby you track — games, music, movies, series, anime, donghua, manga family and books. No accounts, no cloud, no telemetry. Your data stays on your computer.
           </p>
         </div>
 
