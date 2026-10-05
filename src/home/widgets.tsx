@@ -4,7 +4,7 @@
 import React from 'react'
 import type { Item, Weekday } from '../types'
 import { assetSrc, WEEKDAY_OPTIONS } from '../types'
-import { isCurrentlyAiring } from '../utils/airing'
+import { airingWeekday, isCurrentlyAiring } from '../utils/airing'
 import { CATEGORIES } from '../categories'
 import { CalendarIcon, InsightsIcon } from '../icons'
 import { registerHomeWidget, type WidgetSize } from './registry'
@@ -310,11 +310,11 @@ registerHomeWidget({
   sizesSupported: ['medium', 'large'],
   render: (ctx, size) => {
     const AIRING_CATS = new Set(['anime', 'donghua', 'series'])
-    const airing = ctx.items.filter((i) => AIRING_CATS.has(i.categoryId) && isCurrentlyAiring(i) && i.airingDay)
+    const airing = ctx.items.filter((i) => AIRING_CATS.has(i.categoryId) && isCurrentlyAiring(i) && airingWeekday(i))
     if (airing.length === 0) return <p className="hint">Nothing airing on a set weekday. Add <b>Airs on</b> in the anime / series editor to fill this grid.</p>
     const buckets = new Map<Weekday, Item[]>()
     for (const w of WEEKDAY_OPTIONS) buckets.set(w.value, [])
-    for (const item of airing) buckets.get(item.airingDay!)?.push(item)
+    for (const item of airing) buckets.get(airingWeekday(item)!)?.push(item)
     for (const list of buckets.values()) list.sort((a, b) => a.title.localeCompare(b.title))
 
     const todayIdx = new Date().getDay()

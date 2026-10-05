@@ -16,7 +16,7 @@
 // Returns 'airing' when the item counts, `undefined` otherwise so
 // callers can render nothing when a show clearly isn't relevant.
 
-import type { AnyItem, AnimeSeason } from '../types'
+import type { AnyItem, AnimeSeason, Weekday } from '../types'
 
 // Northern-hemisphere anime seasons matching AniDB / AniList /
 // Kitsu conventions. Jan/Feb/Mar = Winter, etc.
@@ -65,4 +65,21 @@ export function isCurrentlyAiring(item: AnyItem, now: Date = new Date()): boolea
   }
 
   return false
+}
+
+const WEEKDAYS_BY_INDEX: Weekday[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+// Weekday of a `YYYY-MM-DD` date, read as a local calendar day so the
+// result never shifts across a timezone boundary.
+export function weekdayFromDate(iso?: string): Weekday | undefined {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? '')
+  if (!m) return undefined
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return Number.isNaN(d.getTime()) ? undefined : WEEKDAYS_BY_INDEX[d.getDay()]
+}
+
+// The weekday new episodes air on: the one the user picked, otherwise
+// the weekday of the first air date.
+export function airingWeekday(item: AnyItem): Weekday | undefined {
+  return item.airingDay || weekdayFromDate(item.airedFrom)
 }

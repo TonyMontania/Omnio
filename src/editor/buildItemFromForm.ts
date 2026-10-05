@@ -15,6 +15,7 @@
 
 import { seasonsDerivedCounts, isAlbumLikeMusic, isMangaLike } from '../types'
 import { isAnimeLikeCategory } from '../categories'
+import { weekdayFromDate } from '../utils/airing'
 import type { CategoryId } from '../types/items'
 import type {
   AnyItem, CustomField, Track, DlcEntry, BundleGame, SaveFile,
@@ -349,7 +350,7 @@ export function buildItemFromForm(id: string, createdAt: number, f: FormSnapshot
       genres: f.genres.length > 0 ? f.genres : undefined,
       animeFormat: f.animeFormat || undefined,
       airingStatus: f.airingStatus || undefined,
-      airingDay: f.airingStatus === 'airing' && f.airingDay ? f.airingDay : undefined,
+      airingDay: f.airingStatus === 'airing' ? (f.airingDay || weekdayFromDate(f.airedFrom)) : undefined,
       watchStatus: f.watchStatus,
       episodesWatched: derivedWatched,
       totalEpisodes: derivedTotal,

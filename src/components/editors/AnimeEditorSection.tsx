@@ -13,6 +13,7 @@ import {
   ANIME_SOURCE_OPTIONS, AGE_RATING_OPTIONS,
 } from '../../types'
 import { isAnimeLikeCategory } from '../../categories'
+import { weekdayFromDate } from '../../utils/airing'
 import TagEditor from './TagEditor'
 import RatingPicker from './RatingPicker'
 import RewatchListEditor from './RewatchListEditor'
@@ -150,7 +151,11 @@ export default function AnimeEditorSection(props: AnimeEditorSectionProps) {
         </div>
         <div className="field-group">
           <label>Airing status</label>
-          <select value={airingStatus} onChange={(e) => setAiringStatus(e.target.value as AiringStatus | '')}>
+          <select value={airingStatus} onChange={(e) => {
+            const next = e.target.value as AiringStatus | ''
+            setAiringStatus(next)
+            if (next === 'airing' && !airingDay) setAiringDay(weekdayFromDate(airedFrom) ?? '')
+          }}>
             <option value="">Unknown</option>
             {AIRING_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
@@ -226,7 +231,11 @@ export default function AnimeEditorSection(props: AnimeEditorSectionProps) {
         </div>
         <div className="field-group">
           <label>Aired from</label>
-          <input type="date" value={airedFrom} onChange={(e) => setAiredFrom(e.target.value)} />
+          <input type="date" value={airedFrom} onChange={(e) => {
+            setAiredFrom(e.target.value)
+            const day = weekdayFromDate(e.target.value)
+            if (day) setAiringDay(day)
+          }} />
         </div>
         <div className="field-group">
           <label>Aired to</label>

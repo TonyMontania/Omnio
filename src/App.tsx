@@ -60,7 +60,7 @@ import KanbanView from './views/KanbanView'
 import DiaryView from './views/DiaryView'
 import TimelineView from './views/TimelineView'
 import { patchItemStatus, getUniversalStatusOptions } from './utils/statusUniversal'
-import { isCurrentlyAiring } from './utils/airing'
+import { airingWeekday, isCurrentlyAiring } from './utils/airing'
 import { applyAutoStatus } from './utils/autoStatus'
 import { matchAction } from './utils/keyboardActions'
 import ShortcutsEditor from './components/ShortcutsEditor'
@@ -2605,7 +2605,7 @@ function App() {
       return { icon: <CategoryIcon id="visual_novels" />, title: label, count: { n, unit: n === 1 ? 'VN' : 'VNs' }, onBack: backToLibrary, actions: viewToggleBtns }
     }
     if (specialView === 'simulcastBoard') {
-      const airing = itemsInCategory.filter((i) => i.airingStatus === 'airing' && i.airingDay)
+      const airing = itemsInCategory.filter((i) => i.airingStatus === 'airing' && airingWeekday(i))
       return { icon: <CategoryIcon id={activeCategory} />, title: 'This season', count: { n: airing.length, unit: airing.length === 1 ? 'show' : 'shows' }, onBack: backToLibrary }
     }
     const count: PageCount = showFolderListing
@@ -2993,10 +2993,10 @@ function App() {
           })()}
 
           {specialView === 'simulcastBoard' && (() => {
-            const airing = itemsInCategory.filter((i) => isCurrentlyAiring(i) && i.airingDay)
+            const airing = itemsInCategory.filter((i) => isCurrentlyAiring(i) && airingWeekday(i))
             const byDay = new Map<string, Item[]>()
             for (const w of WEEKDAY_OPTIONS) byDay.set(w.value, [])
-            for (const item of airing) byDay.get(item.airingDay!)?.push(item)
+            for (const item of airing) byDay.get(airingWeekday(item)!)?.push(item)
             for (const list of byDay.values()) list.sort((a, b) => a.title.localeCompare(b.title))
             const totalAiring = itemsInCategory.filter((i) => isCurrentlyAiring(i)).length
             const missingDay = totalAiring - airing.length

@@ -17,6 +17,7 @@ Each `## v<version>` section is the body of that tag's [GitHub Release](https://
 
 ### Changed
 
+- **"Airs on" fills itself from "Aired from".** Setting the first air date of an anime or donghua picks the matching weekday, so the show lands in the right column of This season without choosing the day by hand. Shows already in your library that have an air date but no weekday now appear there too. You can still change the day manually.
 - **Library toolbar reorganized.** Search, view controls (smart list, grouping, sort, filters) and actions (delete, export) now sit in clear groups, and every control has the same height.
 - **Top-bar buttons share one size** across all libraries.
 - **Home widgets fill their whole row.** Card widgets — Continue where you left off, Currently, Recently rated, Currently airing, Finished this week, Top of the year — show only complete rows, sized to the space they have at medium or full width, so there are no half-empty rows.
