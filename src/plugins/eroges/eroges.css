@@ -163,16 +163,6 @@
 }
 .er-view .er-update-info .er-uc-when { color: var(--text-faint); margin-left: 8px; font-size: 12px; }
 
-.er-view .er-colls-bar {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding: 8px 12px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); font-size: 12px; color: var(--text-dim);
-}
-.er-view .er-colls-bar .er-coll-chip {
-  background: var(--surface-2); color: var(--text);
-  padding: 3px 8px; border-radius: 12px; font-size: 12px;
-}
-
 .er-view .er-detail-desc {
   white-space: pre-line; padding: 18px 20px;
   background: var(--surface); border-radius: var(--radius-sm);
@@ -259,6 +249,29 @@
   text-overflow: ellipsis; white-space: nowrap;
   font-family: var(--font-mono, monospace); font-size: 12px;
 }
+
+.er-view .er-other-games {
+  background: var(--surface); padding: 14px 16px;
+  border-radius: var(--radius-md); border: 1px solid var(--border);
+}
+.er-view .er-other-games h3 {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 10px; color: var(--text); font-size: 15px; font-weight: 600;
+}
+.er-view .er-other-count {
+  font-family: var(--font-mono, monospace); font-size: 11px; font-weight: 500;
+  color: var(--text-dim); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px;
+}
+.er-view .er-other-hint { color: var(--text-faint); font-size: 13px; padding: 4px 0; }
+.er-view .er-other-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.er-view .er-other-card {
+  padding: 0; font: inherit; text-align: left; text-decoration: none; color: inherit;
+}
+.er-view .er-other-f95 { opacity: 0.7; }
 
 .er-view .er-detail-saves {
   background: var(--surface); padding: 14px 16px;
@@ -432,7 +445,7 @@
   margin-bottom: 14px;
 }
 
-/* Section blocks (Favorite / Collections) — bring the plugin editor's
+/* Section blocks (Favorite) — bring the plugin editor's
    miscellaneous toggles in line with the rest of the app: a small
    accent-tinted title, a hairline separator, and pressable chips
    instead of raw checkboxes. */
@@ -463,12 +476,6 @@
   text-transform: none;
   font-family: inherit;
 }
-.er-modal .er-form-section-count {
-  font-size: 11px;
-  color: var(--text-faint);
-  font-variant-numeric: tabular-nums;
-}
-.er-modal .er-empty-hint { color: var(--text-faint); font-size: 12px; margin: 0; }
 
 /* Favorite toggle: full-width pill that clearly reads its state. */
 .er-modal .er-toggle-pill {
@@ -493,51 +500,5 @@
   color: var(--accent);
 }
 .er-modal .er-toggle-pill.active .er-toggle-star { color: var(--accent); }
-
-/* Collections grid — chips laid out on a soft grid so long names don't
-   crowd short ones. Active chips get accent-tinted background + a check. */
-.er-modal .er-coll-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 6px;
-}
-.er-modal .er-coll-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-sm);
-  color: var(--text-dim);
-  font-size: 12.5px;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
-}
-.er-modal .er-coll-chip:hover { border-color: var(--border); background: var(--surface-hover); color: var(--text); }
-.er-modal .er-coll-chip.active {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.er-modal .er-coll-check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  border: 1px solid var(--border);
-  color: var(--accent);
-  font-size: 10px;
-  flex-shrink: 0;
-}
-.er-modal .er-coll-chip.active .er-coll-check {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
-}
-.er-modal .er-coll-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .er-modal .er-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }

@@ -3751,18 +3751,13 @@ function App() {
                   </>
                 )}
 
-                {settingsTab === 'libraries' && (() => {
-                  // VN is a real category but renders visually under Extras.
-                  const EXTRA_CAT_IDS = new Set(['visual_novels'])
-                  const mainCats = CATEGORIES.filter((c) => !EXTRA_CAT_IDS.has(c.id))
-                  const extraCats = CATEGORIES.filter((c) => EXTRA_CAT_IDS.has(c.id))
-                  return (
+                {settingsTab === 'libraries' && (
                   <>
                     <div className="field-group">
                       <label>Enabled libraries</label>
                       <p className="hint">Uncheck a library to hide it from Home and insights. Your data is preserved even if you disable one.</p>
                       <div className="library-toggle-list">
-                        {mainCats.map((cat) => {
+                        {CATEGORIES.map((cat) => {
                           const enabled = !settings.enabledCategories || settings.enabledCategories.includes(cat.id)
                           return (
                             <label key={cat.id} className="library-toggle-row">
@@ -3802,24 +3797,6 @@ function App() {
                           </span>
                           <span>Arcade</span>
                         </label>
-                        {extraCats.map((cat) => {
-                          const enabled = !settings.enabledCategories || settings.enabledCategories.includes(cat.id)
-                          return (
-                            <label key={cat.id} className="library-toggle-row">
-                              <input
-                                type="checkbox"
-                                checked={enabled}
-                                onChange={() => setSettings((s) => {
-                                  const current = s.enabledCategories ?? CATEGORIES.map((c) => c.id)
-                                  const next = enabled ? current.filter((id) => id !== cat.id) : [...current, cat.id]
-                                  return { ...s, enabledCategories: next }
-                                })}
-                              />
-                              <span className="library-toggle-icon"><CategoryIcon id={cat.id} /></span>
-                              <span>{cat.label}</span>
-                            </label>
-                          )
-                        })}
                       </div>
                     </div>
                     {unlockedPluginDefs.length > 0 && (
@@ -3852,8 +3829,7 @@ function App() {
                       </div>
                     )}
                   </>
-                  )
-                })()}
+                )}
 
                 {settingsTab === 'cards' && (
                   <div className="settings-grid-card">
@@ -4251,7 +4227,7 @@ function App() {
                       <p className="hint">Feeds the "Sync from Last.fm" importer — maps your top-scrobbled albums onto the Music library and pre-fills playcounts.</p>
                     </div>
 
-                    <p className="hint" style={{ marginTop: -6 }}>AniList, Kitsu, MangaDex, MusicBrainz, MyAnimeList and VGMdb need no key — they work out of the box.</p>
+                    <p className="hint" style={{ marginTop: -6 }}>AniList, Kitsu, MangaDex, MusicBrainz and MyAnimeList need no key — they work out of the box.</p>
 
                     <div className="settings-section-title">Updates</div>
                     <div className="field-group">
@@ -4566,137 +4542,138 @@ function App() {
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
-                    <div className={`smart-list-toolbar${activeSmartListId ? ' has-active' : ''}`}>
+                    <div className="toolbar-group">
+                      <div className={`smart-list-toolbar${activeSmartListId ? ' has-active' : ''}`}>
+                        <select
+                          className="smart-list-toolbar-select"
+                          value={activeSmartListId ?? ''}
+                          onChange={(e) => setActiveSmartListId(e.target.value || null)}
+                          title="Apply a saved smart list"
+                        >
+                          <option value="">All items</option>
+                          {smartLists
+                            .filter((l) => l.categoryId === 'all' || l.categoryId === activeCategory)
+                            .map((l) => (
+                              <option key={l.id} value={l.id}>★ {l.name}</option>
+                            ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="smart-list-toolbar-manage"
+                          onClick={() => setSmartListsModalOpen(true)}
+                          title="Manage smart lists"
+                          aria-label="Manage smart lists"
+                        >⚙</button>
+                      </div>
                       <select
-                        className="smart-list-toolbar-select"
-                        value={activeSmartListId ?? ''}
-                        onChange={(e) => setActiveSmartListId(e.target.value || null)}
-                        title="Apply a saved smart list"
+                        className="sort-select"
+                        value={groupBy}
+                        onChange={(e) => setGroupBy(e.target.value as GroupBy)}
+                        title="Group items visually"
+                        disabled={layout === 'kanban' || layout === 'timeline' || layout === 'diary'}
                       >
-                        <option value="">All items</option>
-                        {smartLists
-                          .filter((l) => l.categoryId === 'all' || l.categoryId === activeCategory)
-                          .map((l) => (
-                            <option key={l.id} value={l.id}>★ {l.name}</option>
-                          ))}
+                        <option value="none">No grouping</option>
+                        <option value="year">Group by year</option>
+                        <option value="decade">Group by decade</option>
+                        <option value="status">Group by status</option>
+                        <option value="rating">Group by rating</option>
                       </select>
+                      <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
+                        <option value="recent">Most recent</option>
+                        <option value="alpha">Alphabetical</option>
+                        <option value="rating">Rating</option>
+                        <option value="custom">{activeCollection ? 'Manual order' : 'Custom order'}</option>
+                        {activeCategory === 'videojuegos' && <>
+                          <option value="time">Time played</option>
+                          <option value="hltbAsc">Shortest to beat</option>
+                          <option value="hltbDesc">Longest to beat</option>
+                          <option value="status">Status</option>
+                          <option value="releaseAsc">Release date ↑</option>
+                          <option value="releaseDesc">Release date ↓</option>
+                        </>}
+                        {activeCategory === 'musica' && <>
+                          <option value="artist">By artist</option>
+                          <option value="yearAsc">Release year ↑</option>
+                          <option value="yearDesc">Release year ↓</option>
+                          <option value="duration">Duration (longest)</option>
+                        </>}
+                        {activeCategory === 'peliculas' && <>
+                          <option value="yearAsc">Release year ↑</option>
+                          <option value="yearDesc">Release year ↓</option>
+                          <option value="duration">Runtime (longest)</option>
+                        </>}
+                        {activeCategory === 'series' && <>
+                          <option value="seriesStatus">Status</option>
+                          <option value="episodes">Episodes watched</option>
+                          <option value="yearAsc">Year ↑</option>
+                          <option value="yearDesc">Year ↓</option>
+                        </>}
+                        {(activeCategory === 'anime' || activeCategory === 'donghua') && <>
+                          <option value="animeStatus">Status</option>
+                          <option value="episodes">Episodes watched</option>
+                          <option value="yearAsc">Year ↑</option>
+                          <option value="yearDesc">Year ↓</option>
+                        </>}
+                        {(activeCategory === 'manga' || activeCategory === 'manhwa' || activeCategory === 'manhua' || activeCategory === 'comics_west') && <>
+                          <option value="mangaStatus">Status</option>
+                          <option value="chapters">Chapters read</option>
+                        </>}
+                      </select>
+                      <FiltersDropdown
+                        availableTags={availableTags}
+                        filterTags={filterTags}
+                        onToggleTag={(t) => setFilterTags((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t])}
+                        showStatus={showStatusFilter}
+                        filterStatus={filterStatus}
+                        onToggleStatus={(s) => setFilterStatus((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])}
+                        showPlatform={isVideojuegos}
+                        availablePlatforms={availablePlatforms}
+                        filterPlatforms={filterPlatforms}
+                        onTogglePlatform={(p) => setFilterPlatforms((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p])}
+                        showGenre={activeCategory === 'musica'}
+                        availableGenres={availableGenres}
+                        filterGenres={filterGenres}
+                        onToggleGenre={(g) => setFilterGenres((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g])}
+                        minRating={minRating}
+                        onSetMinRating={setMinRating}
+                        onClear={() => { setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]); setMinRating(0) }}
+                        tagTree={settings.tagTree}
+                      />
+                    </div>
+                    <span className="toolbar-divider" aria-hidden />
+                    <div className="toolbar-group">
                       <button
                         type="button"
-                        className="smart-list-toolbar-manage"
-                        onClick={() => setSmartListsModalOpen(true)}
-                        title="Manage smart lists"
-                        aria-label="Manage smart lists"
-                      >⚙</button>
+                        className={deleteMode ? 'sort-select delete-mode-btn active' : 'sort-select delete-mode-btn'}
+                        onClick={() => setDeleteMode((v) => !v)}
+                        title={deleteMode ? 'Exit delete mode' : 'Enter delete mode — cards show a red ✕ to remove'}
+                      >
+                        {deleteMode ? '← Exit delete' : '✕ Delete'}
+                      </button>
+                      <select
+                        className="sort-select"
+                        value=""
+                        onChange={(e) => {
+                          const kind = e.target.value
+                          e.currentTarget.value = ''
+                          if (!kind || visibleItems.length === 0) return
+                          const activeList = activeSmartListId ? smartLists.find((l) => l.id === activeSmartListId) : null
+                          const stem = activeList
+                            ? `omnio-${activeList.name.replace(/\s+/g, '-')}`
+                            : `omnio-${activeCategory}`
+                          if (kind === 'csv') {
+                            void saveExportInApp(buildSingleCsv(visibleItems as Item[]), stem, 'csv', 'CSV')
+                          } else if (kind === 'json') {
+                            void saveExportInApp(JSON.stringify(visibleItems, null, 2), stem, 'json', 'JSON')
+                          }
+                        }}
+                        title="Export the items currently on screen"
+                      >
+                        <option value="">↓ Export shown…</option>
+                        <option value="csv">As CSV ({visibleItems.length})</option>
+                        <option value="json">As JSON ({visibleItems.length})</option>
+                      </select>
                     </div>
-                    <select
-                      className="sort-select"
-                      value={groupBy}
-                      onChange={(e) => setGroupBy(e.target.value as GroupBy)}
-                      title="Group items visually"
-                      disabled={layout === 'kanban' || layout === 'timeline' || layout === 'diary'}
-                    >
-                      <option value="none">No grouping</option>
-                      <option value="year">Group by year</option>
-                      <option value="decade">Group by decade</option>
-                      <option value="status">Group by status</option>
-                      <option value="rating">Group by rating</option>
-                    </select>
-                    <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
-                      <option value="recent">Most recent</option>
-                      <option value="alpha">Alphabetical</option>
-                      <option value="rating">Rating</option>
-                      <option value="custom">{activeCollection ? 'Manual order' : 'Custom order'}</option>
-                      {activeCategory === 'videojuegos' && <>
-                        <option value="time">Time played</option>
-                        <option value="hltbAsc">Shortest to beat</option>
-                        <option value="hltbDesc">Longest to beat</option>
-                        <option value="status">Status</option>
-                        <option value="releaseAsc">Release date ↑</option>
-                        <option value="releaseDesc">Release date ↓</option>
-                      </>}
-                      {activeCategory === 'musica' && <>
-                        <option value="artist">By artist</option>
-                        <option value="yearAsc">Release year ↑</option>
-                        <option value="yearDesc">Release year ↓</option>
-                        <option value="duration">Duration (longest)</option>
-                      </>}
-                      {activeCategory === 'peliculas' && <>
-                        <option value="yearAsc">Release year ↑</option>
-                        <option value="yearDesc">Release year ↓</option>
-                        <option value="duration">Runtime (longest)</option>
-                      </>}
-                      {activeCategory === 'series' && <>
-                        <option value="seriesStatus">Status</option>
-                        <option value="episodes">Episodes watched</option>
-                        <option value="yearAsc">Year ↑</option>
-                        <option value="yearDesc">Year ↓</option>
-                      </>}
-                      {(activeCategory === 'anime' || activeCategory === 'donghua') && <>
-                        <option value="animeStatus">Status</option>
-                        <option value="episodes">Episodes watched</option>
-                        <option value="yearAsc">Year ↑</option>
-                        <option value="yearDesc">Year ↓</option>
-                      </>}
-                      {(activeCategory === 'manga' || activeCategory === 'manhwa' || activeCategory === 'manhua' || activeCategory === 'comics_west') && <>
-                        <option value="mangaStatus">Status</option>
-                        <option value="chapters">Chapters read</option>
-                      </>}
-                    </select>
-                    <FiltersDropdown
-                      availableTags={availableTags}
-                      filterTags={filterTags}
-                      onToggleTag={(t) => setFilterTags((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t])}
-                      showStatus={showStatusFilter}
-                      filterStatus={filterStatus}
-                      onToggleStatus={(s) => setFilterStatus((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])}
-                      showPlatform={isVideojuegos}
-                      availablePlatforms={availablePlatforms}
-                      filterPlatforms={filterPlatforms}
-                      onTogglePlatform={(p) => setFilterPlatforms((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p])}
-                      showGenre={activeCategory === 'musica'}
-                      availableGenres={availableGenres}
-                      filterGenres={filterGenres}
-                      onToggleGenre={(g) => setFilterGenres((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g])}
-                      minRating={minRating}
-                      onSetMinRating={setMinRating}
-                      onClear={() => { setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]); setMinRating(0) }}
-                      tagTree={settings.tagTree}
-                    />
-                    <button
-                      type="button"
-                      className={deleteMode ? 'sort-select delete-mode-btn active' : 'sort-select delete-mode-btn'}
-                      onClick={() => setDeleteMode((v) => !v)}
-                      title={deleteMode ? 'Exit delete mode' : 'Enter delete mode — cards show a red ✕ to remove'}
-                    >
-                      {deleteMode ? '← Exit delete' : '✕ Delete'}
-                    </button>
-                    {/* Sprint G — quick export of the current view. Downloads
-                        only what's visible after search / tags / smart list
-                        filtering, so a saved smart list becomes a shareable
-                        spreadsheet in two clicks. */}
-                    <select
-                      className="sort-select"
-                      value=""
-                      onChange={(e) => {
-                        const kind = e.target.value
-                        e.currentTarget.value = ''
-                        if (!kind || visibleItems.length === 0) return
-                        const activeList = activeSmartListId ? smartLists.find((l) => l.id === activeSmartListId) : null
-                        const stem = activeList
-                          ? `omnio-${activeList.name.replace(/\s+/g, '-')}`
-                          : `omnio-${activeCategory}`
-                        if (kind === 'csv') {
-                          void saveExportInApp(buildSingleCsv(visibleItems as Item[]), stem, 'csv', 'CSV')
-                        } else if (kind === 'json') {
-                          void saveExportInApp(JSON.stringify(visibleItems, null, 2), stem, 'json', 'JSON')
-                        }
-                      }}
-                      title="Export the items currently on screen"
-                    >
-                      <option value="">↓ Export shown…</option>
-                      <option value="csv">As CSV ({visibleItems.length})</option>
-                      <option value="json">As JSON ({visibleItems.length})</option>
-                    </select>
                   </div>
 
                   <div className="content-scroll">
@@ -5809,7 +5786,7 @@ function App() {
             ) : welcomeStep === 'keys' ? (
               <>
                 <p className="modal-message">
-                  API keys for metadata sources — optional but they unlock the ↗ Fetch buttons in the editors. All free, keyless sources (AniList, MAL, Kitsu, MangaDex, MusicBrainz, VGMdb, OpenLibrary) work out of the box.
+                  API keys for metadata sources — optional but they unlock the ↗ Fetch buttons in the editors. All free, keyless sources (AniList, MAL, Kitsu, MangaDex, MusicBrainz, OpenLibrary) work out of the box.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

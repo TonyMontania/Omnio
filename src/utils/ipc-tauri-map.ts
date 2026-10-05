@@ -98,6 +98,7 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'plugin:data-save': ['slug', 'data'],
   'plugin:asset-download': ['slug', 'kind', 'url', 'basename', 'referer', 'cookie'],
   'plugin:asset-save-data-url': ['slug', 'kind', 'dataUrl', 'basename'],
+  'plugin:asset-read-data-url': ['slug', 'kind', 'filename'],
   'plugin:asset-save-from-file': ['slug', 'kind', 'sourcePath', 'basename'],
   'plugin:asset-delete': ['slug', 'kind', 'basename'],
   'plugin:asset-rename': ['slug', 'kind', 'oldBasename', 'newBasename'],

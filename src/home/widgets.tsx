@@ -8,6 +8,7 @@ import { isCurrentlyAiring } from '../utils/airing'
 import { CATEGORIES } from '../categories'
 import { CalendarIcon, InsightsIcon } from '../icons'
 import { registerHomeWidget, type WidgetSize } from './registry'
+import FillGrid from './FillGrid'
 
 function recencyScore(it: Item): number {
   const f = it.finishedAt ? new Date(it.finishedAt).getTime() : 0
@@ -64,10 +65,9 @@ registerHomeWidget({
     if (rows.length === 0) return <p className="hint">Nothing in progress right now.</p>
 
     if (size === 'medium') {
-      const list = rows.slice(0, 4)
       return (
-        <div className="home-current-list">
-          {list.map(({ item, label }) => (
+        <FillGrid items={rows} minWidth={140} gap={14} rows={2} className="home-current-list">
+          {({ item, label }) => (
             <button key={item.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(item)} title={`${item.title} — ${label}`}>
               <div className="home-current-cover">
                 {item.cover
@@ -77,12 +77,12 @@ registerHomeWidget({
               </div>
               <div className="home-current-title">{item.title}</div>
             </button>
-          ))}
-        </div>
+          )}
+        </FillGrid>
       )
     }
 
-    const [hero, ...rest] = rows.slice(0, 7)
+    const [hero, ...rest] = rows
     const heroProgress = currentProgressLine(hero.item)
     const heroCat = CATEGORIES.find((c) => c.id === hero.item.categoryId)?.label
     return (
@@ -110,8 +110,8 @@ registerHomeWidget({
           </div>
         </button>
         {rest.length > 0 && (
-          <div className="home-currently-rest">
-            {rest.map(({ item, label }) => (
+          <FillGrid items={rest} minWidth={130} gap={12} rows={1} className="home-currently-rest">
+            {({ item, label }) => (
               <button key={item.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(item)} title={`${item.title} — ${label}`}>
                 <div className="home-current-cover">
                   {item.cover
@@ -121,8 +121,8 @@ registerHomeWidget({
                 </div>
                 <div className="home-current-title">{item.title}</div>
               </button>
-            ))}
-          </div>
+            )}
+          </FillGrid>
         )}
       </div>
     )
@@ -189,15 +189,13 @@ registerHomeWidget({
   defaultSize: 'medium',
   sizesSupported: ['small', 'medium', 'large'],
   render: (ctx, size) => {
-    const cap = size === 'small' ? 3 : size === 'medium' ? 6 : 10
     const list = ctx.items
       .filter((i) => (i.rating ?? 0) >= 4)
       .sort((a, b) => recencyScore(b) - recencyScore(a))
-      .slice(0, cap)
     if (list.length === 0) return <p className="hint">Rate some items ★ 4 or higher to see them here.</p>
     return (
-      <div className="home-current-list">
-        {list.map((it) => (
+      <FillGrid items={list} minWidth={140} gap={14} rows={size === 'small' ? 1 : 2} className="home-current-list">
+        {(it) => (
           <button key={it.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(it)} title={`${it.title} — ★${it.rating}`}>
             <div className="home-current-cover">
               {it.cover
@@ -207,8 +205,8 @@ registerHomeWidget({
             </div>
             <div className="home-current-title">{it.title}</div>
           </button>
-        ))}
-      </div>
+        )}
+      </FillGrid>
     )
   },
 })
@@ -403,7 +401,7 @@ registerHomeWidget({
   description: 'The next episode / chapter / page for each series, anime, manga and book you have in progress.',
   defaultSize: 'large',
   sizesSupported: ['medium', 'large'],
-  render: (ctx, size) => {
+  render: (ctx) => {
     const rows: { item: Item; next: { label: string; sub?: string } }[] = []
     for (const it of ctx.items) {
       if (!inProgressLabel(it)) continue
@@ -412,12 +410,10 @@ registerHomeWidget({
       rows.push({ item: it, next })
     }
     rows.sort((a, b) => recencyScore(b.item) - recencyScore(a.item))
-    const cap = size === 'medium' ? 4 : 8
-    const list = rows.slice(0, cap)
-    if (list.length === 0) return <p className="hint">Nothing with a next-unit set yet. Fill in <b>Episodes watched</b> / <b>Chapters read</b> / <b>Pages read</b> to see resumable items here.</p>
+    if (rows.length === 0) return <p className="hint">Nothing with a next-unit set yet. Fill in <b>Episodes watched</b> / <b>Chapters read</b> / <b>Pages read</b> to see resumable items here.</p>
     return (
-      <div className="home-continue-grid">
-        {list.map(({ item, next }) => {
+      <FillGrid items={rows} minWidth={240} gap={12} rows={2} stretch className="home-continue-grid">
+        {({ item, next }) => {
           const cat = CATEGORIES.find((c) => c.id === item.categoryId)?.label
           return (
             <button
@@ -443,8 +439,8 @@ registerHomeWidget({
               </div>
             </button>
           )
-        })}
-      </div>
+        }}
+      </FillGrid>
     )
   },
 })
@@ -597,12 +593,10 @@ registerHomeWidget({
       // calendar quarter, the show still shows up here.
       .filter((i) => isCurrentlyAiring(i))
       .sort((a, b) => recencyScore(b) - recencyScore(a))
-    const cap = size === 'medium' ? 4 : 8
-    const cut = list.slice(0, cap)
-    if (cut.length === 0) return <p className="hint">Nothing airing in your library right now.</p>
+    if (list.length === 0) return <p className="hint">Nothing airing in your library right now.</p>
     return (
-      <div className="home-current-list">
-        {cut.map((it) => (
+      <FillGrid items={list} minWidth={140} gap={14} rows={size === 'medium' ? 1 : 2} className="home-current-list">
+        {(it) => (
           <button key={it.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(it)} title={it.title}>
             <div className="home-current-cover">
               {it.cover
@@ -612,8 +606,8 @@ registerHomeWidget({
             </div>
             <div className="home-current-title">{it.title}</div>
           </button>
-        ))}
-      </div>
+        )}
+      </FillGrid>
     )
   },
 })
@@ -818,12 +812,10 @@ registerHomeWidget({
       rows.push({ item: it, when: t })
     }
     rows.sort((a, b) => b.when - a.when)
-    const cap = size === 'small' ? 3 : size === 'medium' ? 6 : 10
-    const list = rows.slice(0, cap)
-    if (list.length === 0) return <p className="hint">Nothing marked finished in the last 7 days.</p>
+    if (rows.length === 0) return <p className="hint">Nothing marked finished in the last 7 days.</p>
     return (
-      <div className="home-current-list">
-        {list.map(({ item, when }) => {
+      <FillGrid items={rows} minWidth={140} gap={14} rows={size === 'small' ? 1 : 2} className="home-current-list">
+        {({ item, when }) => {
           const d = new Date(when)
           const relDays = Math.max(0, Math.round((now - when) / (24 * 60 * 60 * 1000)))
           const rel = relDays === 0 ? 'Today' : relDays === 1 ? 'Yesterday' : `${relDays}d ago`
@@ -838,8 +830,8 @@ registerHomeWidget({
               <div className="home-current-title">{item.title}</div>
             </button>
           )
-        })}
-      </div>
+        }}
+      </FillGrid>
     )
   },
 })
@@ -853,7 +845,7 @@ registerHomeWidget({
   description: 'Items you rated ★4+ and finished this year. Hides itself when the list is empty.',
   defaultSize: 'medium',
   sizesSupported: ['medium', 'large'],
-  render: (ctx, size) => {
+  render: (ctx) => {
     const year = new Date().getFullYear()
     const rows = ctx.items.filter((it) => {
       if ((it.rating ?? 0) < 4) return false
@@ -862,11 +854,9 @@ registerHomeWidget({
     })
     if (rows.length === 0) return null
     rows.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || recencyScore(b) - recencyScore(a))
-    const cap = size === 'medium' ? 6 : 12
-    const list = rows.slice(0, cap)
     return (
-      <div className="home-current-list">
-        {list.map((it) => (
+      <FillGrid items={rows} minWidth={140} gap={14} rows={2} className="home-current-list">
+        {(it) => (
           <button key={it.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(it)} title={`${it.title} — ★${it.rating}`}>
             <div className="home-current-cover">
               {it.cover
@@ -876,8 +866,8 @@ registerHomeWidget({
             </div>
             <div className="home-current-title">{it.title}</div>
           </button>
-        ))}
-      </div>
+        )}
+      </FillGrid>
     )
   },
 })

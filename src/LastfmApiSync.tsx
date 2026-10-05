@@ -45,7 +45,7 @@ function normalize(s: string): string {
   return s.toLowerCase()
     // Strip common bracket suffixes ("[Deluxe]", "(Remastered 2022)")
     // so a scrobbled Deluxe Edition matches the plain library entry.
-    .replace(/[\[(][^)\]]{1,30}[\])]/g, ' ')
+    .replace(/[[(][^)\]]{1,30}[\])]/g, ' ')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
 }

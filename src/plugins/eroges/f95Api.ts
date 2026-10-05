@@ -7,6 +7,7 @@
 import { fetchText, assetDownload } from './ipc'
 import { parseF95Title } from './parseF95Title'
 import type { Parsed } from './parseF95Title'
+import type { OtherGame } from './types'
 
 function decodeEntities(s: string): string {
   if (!s) return ''
@@ -73,6 +74,63 @@ export interface F95FetchResult extends Parsed {
   // editor surfaces this to the user so they know to fall back to
   // the Ryuugames importer.
   storeLinksHidden: boolean
+  otherGamesCreator: string
+  otherGamesFromPost: OtherGame[]
+}
+
+export function f95ThreadId(url: string | undefined): number | null {
+  if (!url) return null
+  const m = url.match(/\/threads\/(?:[^/]*?\.)?(\d+)(?:\/|$|[?#])/)
+  return m ? Number(m[1]) : null
+}
+
+export const f95ThreadUrl = (threadId: number): string => `https://f95zone.to/threads/${threadId}/`
+
+// The "Other Games" line is free text: a creator-filtered latest_alpha
+// link, direct thread links, or a forum search. Only the first two carry
+// usable data.
+function parseOtherGames(html: string): { creator: string; threads: OtherGame[] } {
+  const start = html.search(/Other\s*Games\s*(?:<\/[a-z]+>)?\s*:/i)
+  if (start === -1) return { creator: '', threads: [] }
+  const rest = html.slice(start)
+  const end = rest.search(/<br\s*\/?>\s*(?:<[^>]+>\s*)*[A-Z][\w -]{1,30}(?:<\/[a-z]+>)?\s*:/)
+  const segment = rest.slice(0, end > 0 ? end : 2000)
+  let creator = ''
+  const threads: OtherGame[] = []
+  for (const m of segment.matchAll(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi)) {
+    const href = decodeEntities(m[1])
+    const creatorMatch = href.match(/latest_alpha\/#\/.*\bcreator=([^/&]+)/)
+    if (creatorMatch) {
+      try { creator = decodeURIComponent(creatorMatch[1]).trim() } catch { creator = creatorMatch[1].trim() }
+      continue
+    }
+    const id = f95ThreadId(href)
+    const title = stripHtml(m[2])
+    if (id && title) threads.push({ threadId: id, title })
+  }
+  return { creator, threads }
+}
+
+// latest_data's creator filter is a fuzzy contains-match, so results are
+// narrowed to the exact (case-insensitive) creator here.
+export async function f95GamesByCreator(creator: string): Promise<OtherGame[]> {
+  const name = creator.trim()
+  if (!name) return []
+  const want = name.toLowerCase()
+  const out: OtherGame[] = []
+  for (let page = 1; page <= 10; page++) {
+    const url = `https://f95zone.to/sam/latest_alpha/latest_data.php?cmd=list&cat=games&page=${page}&creator=${encodeURIComponent(name)}`
+    const json = JSON.parse(await fetchText(url, { 'User-Agent': UA, 'Accept': 'application/json' }))
+    if (json?.status !== 'ok' || !Array.isArray(json.msg?.data)) break
+    for (const g of json.msg.data as { thread_id: number; title: string; creator: string }[]) {
+      if (String(g.creator).trim().toLowerCase() === want) {
+        out.push({ threadId: Number(g.thread_id), title: decodeEntities(String(g.title)) })
+      }
+    }
+    const pag = json.msg.pagination
+    if (!pag || pag.page >= pag.total) break
+  }
+  return out
 }
 
 export async function f95Fetch(url: string, cookie?: string): Promise<F95FetchResult> {
@@ -300,7 +358,12 @@ export async function f95Fetch(url: string, cookie?: string): Promise<F95FetchRe
   const coverFallbacks = candidates.slice(1)
 
   const storeLinksHidden = !dlsiteUrl && !steamUrl && !itchUrl && /messageHide--link/i.test(html)
-  return { ...parsed, description, releaseDate, coverUrl, coverFallbacks, originalTitle, language, dlsiteUrl, dlsiteId, steamUrl, itchUrl, storeLinksHidden }
+  const other = parseOtherGames(bodyHtml || html)
+  return {
+    ...parsed, description, releaseDate, coverUrl, coverFallbacks, originalTitle, language,
+    dlsiteUrl, dlsiteId, steamUrl, itchUrl, storeLinksHidden,
+    otherGamesCreator: other.creator, otherGamesFromPost: other.threads,
+  }
 }
 
 export interface F95Version {

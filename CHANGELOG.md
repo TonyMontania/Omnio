@@ -4,6 +4,24 @@ All notable changes to Omnio are documented here. Format loosely follows [Keep a
 
 Each `## v<version>` section is the body of that tag's [GitHub Release](https://github.com/TonyMontania/Omnio/releases). Only user-visible changes land here — new features, fixes and behavior changes you'll actually notice while using the app.
 
+## v0.5.7 — 2026-10-05
+
+### Fixed
+
+- **AppImage opens on every launcher.** The AppImage shipped with folders and launch scripts that only the build user could read or run, so firejail-based launchers and the AppImage catalog stopped with `Permission denied`. Every file and folder inside it is now readable, the launchers are executable, and each release is checked for this before it's published.
+- **Installed builds keep your library in the right place.** The Windows installer, MSI, macOS app, AppImage, `.deb` and `.rpm` used to store `data/` and `assets/` next to the program itself — a folder that is read-only on several platforms or replaced on every update. They now use the system's app-data folder (`%APPDATA%\com.omnio.app` on Windows, `~/Library/Application Support/com.omnio.app` on macOS, `~/.local/share/com.omnio.app` on Linux). An existing library is moved there automatically the first time you open 0.5.7. The portable ZIP still keeps everything next to `omnio.exe`.
+- **MusicBrainz now fills in producers.** Most albums credit producers per track rather than on the album itself, so the field almost always came back empty. Album-wide producers are listed first, followed by per-track producers ordered by how many tracks they produced.
+- **Scrollbars use the app's style everywhere.** Most views were falling back to the plain system scrollbar.
+- **Anime and Donghua match the other libraries.** The "This season" button made the top bar taller, pushing the whole page down a few pixels.
+- **Visual Novels moved to Enabled libraries** in Settings, next to the other libraries, instead of sitting under Extras.
+
+### Changed
+
+- **Library toolbar reorganized.** Search, view controls (smart list, grouping, sort, filters) and actions (delete, export) now sit in clear groups, and every control has the same height.
+- **Top-bar buttons share one size** across all libraries.
+- **Home widgets fill their whole row.** Card widgets — Continue where you left off, Currently, Recently rated, Currently airing, Finished this week, Top of the year — show only complete rows, sized to the space they have at medium or full width, so there are no half-empty rows.
+- **VGMdb removed from the list of metadata sources.** Its public API has been offline, so it is no longer advertised as available.
+
 ## v0.5.6 — 2026-09-29
 
 ### Added
@@ -28,10 +46,6 @@ Each `## v<version>` section is the body of that tag's [GitHub Release](https://
 - **"Libraries (rich portals)" widget removed** from the default layout. The sidebar already lists your libraries with counts, and the widget was mostly duplicated real estate.
 - **Global scrollbar redesigned.** Thumb picks up an accent tint on hover; track is transparent with a hairline separator. Consistent across library, sidebar, modals and Home.
 - **README install docs updated.** macOS Sequoia 15 doesn't accept the classic right-click Open bypass for unsigned apps anymore — the guide now points at `xattr -cr /Applications/Omnio.app`. AppImage FUSE requirement is spelled out ("`sudo apt install libfuse2` on Ubuntu 22.04+", plus the `--appimage-extract-and-run` fallback). Portable ZIP warning about WebView2 is now unmissable.
-
-### Fixed
-
-- **AppImage: `Permission denied` on first launch.** The v0.5.5 AppImage shipped without the executable bit on `AppRun.wrapped`, so firejail-based launchers (Ubuntu's default) couldn't even open the window. The release workflow now repacks the AppImage after Tauri's bundler runs, chmod-ing every launcher script and the main binary. Downstream catalogs (probonopd/AppImages) accept it.
 
 ### Security
 

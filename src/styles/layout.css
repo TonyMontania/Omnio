@@ -81,7 +81,31 @@
 
 .add-btn:hover { background: var(--accent-hover); }
 
-.toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.toolbar {
+  --control-h: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.toolbar-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.toolbar-divider { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
+.toolbar .search-input,
+.toolbar .sort-select,
+.toolbar .smart-list-toolbar,
+.toolbar .filters-btn,
+.toolbar .delete-mode-btn,
+.toolbar .secondary-btn {
+  box-sizing: border-box;
+  height: var(--control-h);
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 13px;
+}
+.toolbar .smart-list-toolbar-select { height: 100%; padding-top: 0; padding-bottom: 0; }
+.toolbar .filters-btn,
+.toolbar .delete-mode-btn { color: var(--text); }
 
 .search-input {
   flex: 1;

@@ -32,14 +32,15 @@ export interface ErogeItem {
   updateAvailable?: boolean
   createdAt?: number
   updatedAt?: number
-  collectionIds?: string[]     // denormalized for filter perf
+  otherGamesCreator?: string   // canonical creator name from F95's "Other Games" link
+  otherGamesFromPost?: OtherGame[]
+  otherGames?: OtherGame[]     // creator's catalogue from F95's latest_data endpoint
+  otherGamesFetchedAt?: number
 }
 
-export interface ErogeCollection {
-  id: string
-  name: string
-  itemIds: string[]
-  createdAt?: number
+export interface OtherGame {
+  threadId: number
+  title: string
 }
 
 export interface ErogeSettings {
@@ -52,6 +53,5 @@ export interface ErogeSettings {
 
 export interface ErogeData {
   games: ErogeItem[]
-  collections: ErogeCollection[]
   settings?: ErogeSettings
 }

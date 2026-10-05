@@ -225,6 +225,18 @@
   transition: background 0.12s;
 }
 .topnav-page-actions .add-btn:hover { background: var(--accent-hover); }
+.topnav-page-actions .add-btn,
+.topnav-page-actions .secondary-btn,
+.topnav-page-actions .view-drop-trigger,
+.topnav-page-actions .view-toggle {
+  box-sizing: border-box;
+  height: 30px;
+  font-size: 12.5px;
+}
+.topnav-page-actions .add-btn,
+.topnav-page-actions .secondary-btn { padding: 0 12px; }
+.topnav-page-actions .view-toggle { padding: 2px; align-items: stretch; }
+.topnav-page-actions .view-toggle button { padding: 0 10px; }
 
 .topnav-utils {
   display: flex;

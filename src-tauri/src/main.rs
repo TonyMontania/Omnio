@@ -51,6 +51,7 @@ fn main() {
             // first `data:load` sees the migrated files.
             let root = paths::get().storage_root.clone();
             tauri::async_runtime::block_on(async move {
+                paths::migrate_from_install_dir(&root).await;
                 let _ = migrate_from_electron::migrate_if_needed(&root).await;
             });
             Ok(())
@@ -145,6 +146,7 @@ fn main() {
             handlers::plugins::plugin_data_save,
             handlers::plugins::plugin_asset_download,
             handlers::plugins::plugin_asset_save_data_url,
+            handlers::plugins::plugin_asset_read_data_url,
             handlers::plugins::plugin_asset_save_from_file,
             handlers::plugins::plugin_asset_delete,
             handlers::plugins::plugin_asset_rename,

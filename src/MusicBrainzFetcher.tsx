@@ -26,16 +26,16 @@ interface ReleaseGroupHit {
   score?: number
   disambiguation?: string
 }
-interface Recording { id: string; title: string; length?: number; 'artist-credit'?: ArtistCredit[] }
-interface MediaTrack { id: string; number: string; title: string; length?: number; 'artist-credit'?: ArtistCredit[]; recording?: Recording }
-interface Media { format?: string; 'track-count'?: number; tracks?: MediaTrack[] }
-interface MbTagLike { name: string; count?: number }
 interface MbRelation {
   type: string
   'target-type'?: string
   artist?: { id: string; name: string }
   attributes?: string[]
 }
+interface Recording { id: string; title: string; length?: number; 'artist-credit'?: ArtistCredit[]; relations?: MbRelation[] }
+interface MediaTrack { id: string; number: string; title: string; length?: number; 'artist-credit'?: ArtistCredit[]; recording?: Recording }
+interface Media { format?: string; 'track-count'?: number; tracks?: MediaTrack[] }
+interface MbTagLike { name: string; count?: number }
 interface MbAlias { name: string; type?: string; primary?: boolean }
 interface Release {
   id: string
@@ -49,6 +49,7 @@ interface Release {
   genres?: MbTagLike[]
   relations?: MbRelation[]
   aliases?: MbAlias[]
+  'release-group'?: { relations?: MbRelation[] }
   _releaseGroup?: {
     tags?: MbTagLike[]
     genres?: MbTagLike[]
@@ -96,13 +97,28 @@ function joinArtists(credit: ArtistCredit[] | undefined): string {
   return credit.map((c) => c.name).join(' ')
 }
 
-function extractProducers(rel: Release): string[] {
-  const rs = rel.relations ?? []
-  const names = rs
+function producerNames(relations: MbRelation[] | undefined): string[] {
+  return (relations ?? [])
     .filter((r) => r['target-type'] === 'artist' && /producer/i.test(r.type))
     .map((r) => r.artist?.name)
     .filter((n): n is string => !!n)
-  return Array.from(new Set(names))
+}
+
+// MusicBrainz credits producers on the release, the release group or each
+// recording. Album-wide credits come first; per-track producers follow,
+// ordered by how many tracks they produced.
+function extractProducers(rel: Release): string[] {
+  const albumWide = [...producerNames(rel.relations), ...producerNames(rel['release-group']?.relations)]
+  const perTrack = new Map<string, number>()
+  for (const media of rel.media ?? []) {
+    for (const t of media.tracks ?? []) {
+      for (const name of new Set(producerNames(t.recording?.relations))) {
+        perTrack.set(name, (perTrack.get(name) ?? 0) + 1)
+      }
+    }
+  }
+  const byTracks = [...perTrack.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name)
+  return Array.from(new Set([...albumWide, ...byTracks]))
 }
 
 // Prefer curated `genres` over user-submitted `tags`; prefer the

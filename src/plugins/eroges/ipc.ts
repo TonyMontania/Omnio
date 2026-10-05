@@ -5,7 +5,7 @@
 // libraries use (see src/utils/ipc-shim.ts + ipc-tauri-map.ts).
 
 import { SLUG } from './constants'
-import type { ErogeData } from './types'
+import type { ErogeData, ErogeItem } from './types'
 
 // Under Tauri, src/utils/ipc-shim.ts installs `window.ipcRenderer`.
 // Under Electron the same global is provided by preload.
@@ -19,12 +19,13 @@ function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 
 export async function loadData(): Promise<ErogeData> {
   const raw = await invoke<ErogeData | null>('plugin:data-load', SLUG)
-  if (!raw || !Array.isArray(raw.games)) return { games: [], collections: [] }
-  return {
-    games: raw.games,
-    collections: Array.isArray(raw.collections) ? raw.collections : [],
-    settings: raw.settings ?? {},
-  }
+  if (!raw || !Array.isArray(raw.games)) return { games: [] }
+  const games = raw.games.map((g) => {
+    const rest: ErogeItem & { collectionIds?: unknown } = { ...g }
+    delete rest.collectionIds
+    return rest as ErogeItem
+  })
+  return { games, settings: raw.settings ?? {} }
 }
 
 export async function saveData(data: ErogeData): Promise<void> {
@@ -47,11 +48,53 @@ function toAssetResult(v: unknown): AssetResult {
   return { ok: false, error: 'unknown' }
 }
 
+const isAvif = (s: string): boolean => /\.avif$/i.test(s) || /^data:image\/avif/i.test(s)
+
+// F95's CDN only serves AVIF. Re-encode through the webview's own decoder
+// to JPEG (PNG when the image has transparency). null = keep the original.
+export async function avifDataUrlToStandard(dataUrl: string): Promise<string | null> {
+  try {
+    const img = new Image()
+    img.src = dataUrl
+    await img.decode()
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx || !canvas.width || !canvas.height) return null
+    ctx.drawImage(img, 0, 0)
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    let hasAlpha = false
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] < 255) { hasAlpha = true; break }
+    }
+    return hasAlpha ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.92)
+  } catch {
+    return null
+  }
+}
+
+export async function transcodeStoredAvif(kind: string, filename: string): Promise<AssetResult> {
+  const keep: AssetResult = { ok: true, filename }
+  const src = await invoke<string | RawErr>('plugin:asset-read-data-url', SLUG, kind, filename)
+  if (typeof src !== 'string') return keep
+  const converted = await avifDataUrlToStandard(src)
+  if (!converted) return keep
+  const saved = await saveDataUrlRaw(kind, converted, filename.replace(/\.avif$/i, ''))
+  return saved.ok ? saved : keep
+}
+
 export async function assetDownload(kind: string, url: string, basename: string, referer?: string, cookie?: string): Promise<AssetResult> {
-  return toAssetResult(await invoke('plugin:asset-download', SLUG, kind, url, basename, referer, cookie))
+  const res = toAssetResult(await invoke('plugin:asset-download', SLUG, kind, url, basename, referer, cookie))
+  if (!res.ok || !isAvif(res.filename)) return res
+  return transcodeStoredAvif(kind, res.filename)
+}
+async function saveDataUrlRaw(kind: string, dataUrl: string, basename: string): Promise<AssetResult> {
+  return toAssetResult(await invoke('plugin:asset-save-data-url', SLUG, kind, dataUrl, basename))
 }
 export async function assetSaveDataUrl(kind: string, dataUrl: string, basename: string): Promise<AssetResult> {
-  return toAssetResult(await invoke('plugin:asset-save-data-url', SLUG, kind, dataUrl, basename))
+  const input = isAvif(dataUrl) ? (await avifDataUrlToStandard(dataUrl)) ?? dataUrl : dataUrl
+  return saveDataUrlRaw(kind, input, basename)
 }
 export async function assetSaveFromFile(kind: string, sourcePath: string, basename: string): Promise<AssetResult> {
   return toAssetResult(await invoke('plugin:asset-save-from-file', SLUG, kind, sourcePath, basename))

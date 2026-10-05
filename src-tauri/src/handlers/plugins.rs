@@ -264,6 +264,7 @@ pub async fn plugin_asset_save_data_url(
         "image/webp" => "webp",
         "image/jpeg" | "image/jpg" => "jpg",
         "image/bmp" => "bmp",
+        "image/avif" => "avif",
         _ => "bin",
     };
     let bytes = match B64.decode(payload) {
@@ -281,6 +282,33 @@ pub async fn plugin_asset_save_data_url(
         return StringResult::Err { ok: false, error: e.to_string() };
     }
     StringResult::Ok(filename)
+}
+
+// Return a stored asset as a data URL so the renderer can transcode it
+// on a canvas (data URLs don't taint the canvas; asset:// URLs would).
+#[command]
+pub async fn plugin_asset_read_data_url(slug: String, kind: String, filename: String) -> StringResult {
+    use base64::{engine::general_purpose::STANDARD as B64, Engine};
+
+    let Some(root) = plugin_asset_root(&slug) else {
+        return StringResult::Err { ok: false, error: "invalid slug".into() };
+    };
+    let safe_kind = safe_segment(&kind);
+    let safe_file = safe_segment(&filename);
+    if safe_kind.is_empty() || safe_file.is_empty() {
+        return StringResult::Err { ok: false, error: "invalid kind/filename".into() };
+    }
+    let path = root.join(&safe_kind).join(&safe_file);
+    let bytes = match fs::read(&path).await {
+        Ok(b) => b,
+        Err(e) => return StringResult::Err { ok: false, error: e.to_string() },
+    };
+    let mime = if safe_file.to_ascii_lowercase().ends_with(".avif") {
+        "image/avif".to_string()
+    } else {
+        mime_guess::from_path(&path).first_or_octet_stream().as_ref().to_string()
+    };
+    StringResult::Ok(format!("data:{mime};base64,{}", B64.encode(bytes)))
 }
 
 // Copy a local file (picked from a dialog) into the plugin's asset

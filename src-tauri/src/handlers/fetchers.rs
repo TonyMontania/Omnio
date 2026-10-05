@@ -479,7 +479,7 @@ pub async fn mb_release_group_details(
     // Step 2 — full release payload with all the joins we can pull.
     mb_throttle().await;
     let rel_url = format!(
-        "{MB_BASE}/release/{chosen_id}?fmt=json&inc=recordings+artist-credits+labels+release-groups+media+tags+genres+artist-rels+release-group-rels"
+        "{MB_BASE}/release/{chosen_id}?fmt=json&inc=recordings+artist-credits+labels+release-groups+media+tags+genres+artist-rels+release-group-rels+recording-level-rels+release-group-level-rels"
     );
     let rel_opts = ProxyJsonOptions {
         method: Method::GET, headers: mb_headers(), body: None, http_error_prefix: "HTTP",

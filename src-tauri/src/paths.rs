@@ -21,7 +21,7 @@
 // `as const` tuples. Anywhere we iterate categories (data.ts today,
 // storage.ts next) reads them from here.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use tauri::{AppHandle, Manager};
 
@@ -130,40 +130,93 @@ impl Paths {
     }
 }
 
-// Compute the storage root exactly the way the Electron `getStorageRoot`
-// does — portable envelope wins, packaged install wins next, dev / SDK
-// falls back to Tauri's app_data_dir (roughly equivalent to Electron's
-// userData path on all three platforms).
+pub enum WindowsInstall {
+    Msi,
+    Nsis,
+    Winget,
+}
+
+pub fn windows_install_kind(exe: &Path) -> Option<WindowsInstall> {
+    let p = exe.to_string_lossy().to_lowercase().replace('/', "\\");
+    if p.contains("\\program files\\") || p.contains("\\program files (x86)\\") {
+        Some(WindowsInstall::Msi)
+    } else if p.contains("\\appdata\\local\\programs\\") {
+        Some(WindowsInstall::Nsis)
+    } else if p.contains("\\appdata\\local\\microsoft\\winget\\") {
+        Some(WindowsInstall::Winget)
+    } else {
+        None
+    }
+}
+
+fn is_dev_binary(exe: &Path) -> bool {
+    exe.components().any(|c| c.as_os_str() == "target")
+}
+
+fn portable_dir() -> Option<PathBuf> {
+    if let Ok(dir) = std::env::var("PORTABLE_EXECUTABLE_DIR") {
+        if !dir.is_empty() {
+            return Some(PathBuf::from(dir));
+        }
+    }
+    if !cfg!(target_os = "windows") {
+        return None;
+    }
+    let exe = std::env::current_exe().ok()?;
+    if is_dev_binary(&exe) || windows_install_kind(&exe).is_some() {
+        return None;
+    }
+    exe.parent().map(Path::to_path_buf)
+}
+
+// Only the Windows portable ZIP keeps its library next to the executable.
+// Installed builds live in folders that are read-only (Program Files,
+// /usr/bin, a mounted AppImage), replaced on update (Omnio.app) or wiped
+// on uninstall, so they use the OS app-data directory instead.
 fn compute_storage_root(app: &AppHandle) -> Result<PathBuf, String> {
-    // Portable builds set `PORTABLE_EXECUTABLE_DIR`. Preserved so a
-    // Tauri portable build behaves identically to the current Electron
-    // one — same USB-stick semantics, no state left in %AppData%.
-    if let Ok(portable) = std::env::var("PORTABLE_EXECUTABLE_DIR") {
-        if !portable.is_empty() {
-            return Ok(PathBuf::from(portable));
-        }
+    if let Some(dir) = portable_dir() {
+        return Ok(dir);
     }
-    // Packaged builds pin the install dir. `current_exe()` returns the
-    // bundled binary path; parent is the install dir.
-    if let Ok(exe) = std::env::current_exe() {
-        // Rust doesn't have the equivalent of `app.isPackaged`. We
-        // approximate it by treating the dev binary (running under
-        // Cargo's `target/` tree) as unpackaged and everything else as
-        // installed. Fragile but scoped to a single boot-time check;
-        // the fallback below handles the wrong-guess case.
-        let is_dev = exe.components().any(|c| c.as_os_str() == "target");
-        if !is_dev {
-            if let Some(parent) = exe.parent() {
-                return Ok(parent.to_path_buf());
-            }
-        }
-    }
-    // Dev / SDK / anything unclear — Tauri's app_data_dir (roughly
-    // %APPDATA%/<identifier> on Windows, ~/Library/Application Support/
-    // <identifier> on macOS, XDG_DATA_HOME/<identifier>/ on Linux).
     app.path()
         .app_data_dir()
         .map_err(|e| format!("app_data_dir: {e}"))
+}
+
+// Builds up to 0.5.6 stored the library next to the executable on every
+// platform. Move it into the app-data root the first time a newer build
+// starts, unless that root already holds a library.
+pub async fn migrate_from_install_dir(root: &Path) {
+    let Ok(exe) = std::env::current_exe() else { return };
+    let Some(old_root) = exe.parent() else { return };
+    if old_root == root || is_dev_binary(&exe) {
+        return;
+    }
+    let old_data = old_root.join("data");
+    if tokio::fs::metadata(&old_data).await.is_err() || tokio::fs::metadata(root.join("data")).await.is_ok() {
+        return;
+    }
+    if let Err(e) = tokio::fs::create_dir_all(root).await {
+        eprintln!("[paths] cannot create {}: {e}", root.display());
+        return;
+    }
+    for name in ["data", "assets"] {
+        let src = old_root.join(name);
+        if tokio::fs::metadata(&src).await.is_err() {
+            continue;
+        }
+        let dst = root.join(name);
+        if tokio::fs::rename(&src, &dst).await.is_ok() {
+            continue;
+        }
+        if let Err(e) = crate::util::copy_dir_recursive(&src, &dst).await {
+            eprintln!("[paths] moving {} failed: {e}", src.display());
+            if name == "data" {
+                let _ = tokio::fs::remove_dir_all(&dst).await;
+                return;
+            }
+        }
+    }
+    eprintln!("[paths] moved library from {} to {}", old_root.display(), root.display());
 }
 
 // -- Init + accessor ----------------------------------------------

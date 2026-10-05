@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
-import type { ErogeItem, ErogeCollection, BacklogStatus, F95Status } from './types'
+import type { ErogeItem, BacklogStatus, F95Status } from './types'
 import { ENGINES, STATUSES, BACKLOG_STATUSES, BACKLOG_LABELS } from './constants'
 import { f95Fetch, f95DownloadCover } from './f95Api'
 import { ryuuFetch, ryuuDownloadCover } from './ryuuApi'
@@ -8,10 +8,9 @@ import { fileToDataUrl } from '../../utils/files'
 
 interface Props {
   initial?: ErogeItem | null
-  collections: ErogeCollection[]
   allGames: ErogeItem[]
   f95Cookie?: string
-  onSave: (game: ErogeItem, collectionIds: string[]) => void
+  onSave: (game: ErogeItem) => void
   onCancel: () => void
 }
 
@@ -58,7 +57,7 @@ const TABS: { value: EditorTab; label: string }[] = [
   { value: 'links',    label: 'Links' },
 ]
 
-export default function ErogeEditor({ initial, collections, allGames, f95Cookie, onSave, onCancel }: Props) {
+export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCancel }: Props) {
   const isEdit = !!initial
   const [game, setGame] = useState<ErogeItem>(initial ? { ...initial } : empty())
   const [activeTab, setActiveTab] = useState<EditorTab>('overview')
@@ -76,9 +75,6 @@ export default function ErogeEditor({ initial, collections, allGames, f95Cookie,
     url: string
     duplicate: ErogeItem
   } | null>(null)
-  const [selectedColls, setSelectedColls] = useState<string[]>(
-    collections.filter((c) => c.itemIds.includes(game.id)).map((c) => c.id),
-  )
 
   useEffect(() => {
     if (initial?.link && !f95Url) setF95Url(initial.link)
@@ -108,6 +104,9 @@ export default function ErogeEditor({ initial, collections, allGames, f95Cookie,
       itchUrl: target.itchUrl || res.itchUrl,
       link: url,
       latestVersion: res.version || target.latestVersion,
+      otherGamesCreator: res.otherGamesCreator || target.otherGamesCreator,
+      otherGamesFromPost: res.otherGamesFromPost.length ? res.otherGamesFromPost : target.otherGamesFromPost,
+      otherGamesFetchedAt: undefined,
     }
   }
 
@@ -168,8 +167,7 @@ export default function ErogeEditor({ initial, collections, allGames, f95Cookie,
         // Save the merged metadata straight into the existing game
         // and close the editor — the parent already has that game
         // in its list.
-        const existingColls = collections.filter((c) => c.itemIds.includes(mode.mergeInto.id)).map((c) => c.id)
-        onSave({ ...outcome.patched, updatedAt: Date.now() }, existingColls)
+        onSave({ ...outcome.patched, updatedAt: Date.now() })
       }
     } catch (err) {
       setF95Status(`Error: ${(err as Error).message}`)
@@ -238,8 +236,7 @@ export default function ErogeEditor({ initial, collections, allGames, f95Cookie,
         const post = findDuplicate(allGames, game.id, { dlsiteId: outcome.res.dlsiteId, dlsiteUrl: outcome.res.dlsiteUrl })
         setRyuuStatus(post ? `✓ Imported (⚠ already exists as "${post.name}")` : '✓ Imported')
       } else {
-        const existingColls = collections.filter((c) => c.itemIds.includes(mode.mergeInto.id)).map((c) => c.id)
-        onSave({ ...outcome.patched, updatedAt: Date.now() }, existingColls)
+        onSave({ ...outcome.patched, updatedAt: Date.now() })
       }
     } catch (err) {
       setRyuuStatus(`Error: ${(err as Error).message}`)
@@ -273,7 +270,7 @@ export default function ErogeEditor({ initial, collections, allGames, f95Cookie,
       name: game.name.trim(),
       updatedAt: now,
       createdAt: game.createdAt || now,
-    }, selectedColls)
+    })
   }
 
   const runDupChoice = async (choice: 'add' | 'merge') => {
@@ -374,35 +371,6 @@ export default function ErogeEditor({ initial, collections, allGames, f95Cookie,
                   </button>
                 </div>
 
-                <div className="er-form-section">
-                  <div className="er-form-section-head">
-                    <span className="er-form-section-title">Collections</span>
-                    {collections.length > 0 && (
-                      <span className="er-form-section-count">{selectedColls.length}/{collections.length}</span>
-                    )}
-                  </div>
-                  {collections.length === 0 ? (
-                    <p className="er-empty-hint">No collections yet — create one from the sidebar first.</p>
-                  ) : (
-                    <div className="er-coll-grid">
-                      {[...collections].sort((a, b) => a.name.localeCompare(b.name)).map((c) => {
-                        const on = selectedColls.includes(c.id)
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            className={`er-coll-chip${on ? ' active' : ''}`}
-                            onClick={() => setSelectedColls((prev) => on ? prev.filter((x) => x !== c.id) : [...prev, c.id])}
-                            aria-pressed={on}
-                          >
-                            <span className="er-coll-check" aria-hidden>{on ? '✓' : ''}</span>
-                            <span className="er-coll-name">{c.name}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
               </>
             )}
 

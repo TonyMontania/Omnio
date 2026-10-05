@@ -50,7 +50,6 @@ body {
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-corner { background: transparent; }
-* { scrollbar-color: color-mix(in srgb, var(--text-dim) 55%, transparent) transparent; }
 
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: 2px solid var(--accent);

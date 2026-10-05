@@ -5,10 +5,10 @@
 // own separate header row.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { ErogeItem, ErogeCollection, ErogeData, BacklogStatus } from './types'
+import type { ErogeItem, ErogeData, BacklogStatus } from './types'
 import type { PluginViewProps } from '../registry'
 import { SLUG } from './constants'
-import { loadData, saveData, savesRenameFolder, assetRename, assetDelete, savesDeleteAll } from './ipc'
+import { loadData, saveData, savesRenameFolder, assetRename, assetDelete, savesDeleteAll, transcodeStoredAvif } from './ipc'
 import { f95CheckVersion } from './f95Api'
 import { reportPluginCount } from '../counts'
 import ErogeCard from './ErogeCard'
@@ -21,21 +21,14 @@ type Tab =
   | { kind: 'all' }
   | { kind: 'backlog'; value: BacklogStatus }
   | { kind: 'updates' }
-  | { kind: 'collection'; id: string }
 
-type SubView = 'items' | 'groups'
 type Layout = 'grid' | 'list'
 
-const emptyData: ErogeData = { games: [], collections: [] }
+const emptyData: ErogeData = { games: [] }
 
 const HeartIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-  </svg>
-)
-const FolderIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
   </svg>
 )
 
@@ -43,18 +36,31 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
   const [data, setData] = useState<ErogeData>(emptyData)
   const [loaded, setLoaded] = useState(false)
   const [tab, setTab] = useState<Tab>({ kind: 'all' })
-  const [subView, setSubView] = useState<SubView>('items')
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<'az' | 'creator' | 'status' | 'engine' | 'releaseDate' | 'updated'>('az')
-  const [newCollName, setNewCollName] = useState('')
   const [layout, setLayout] = useState<Layout>('grid')
   const [checkingAll, setCheckingAll] = useState<{ done: number; total: number } | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)   // 'new' | game.id
-  const [addingCollFor, setAddingCollFor] = useState<string | null>(null)
 
   useEffect(() => { void (async () => { setData(await loadData()); setLoaded(true) })() }, [])
+
+  // One-time sweep: covers downloaded before AVIF transcoding existed.
+  useEffect(() => {
+    if (!loaded) return
+    const pending = data.games.filter((g) => g.coverFile && /\.avif$/i.test(g.coverFile))
+    if (pending.length === 0) return
+    void (async () => {
+      for (const g of pending) {
+        const res = await transcodeStoredAvif('cover', g.coverFile!)
+        if (res.ok && res.filename !== g.coverFile) {
+          setData((d) => ({ ...d, games: d.games.map((x) => x.id === g.id ? { ...x, coverFile: res.filename } : x) }))
+        }
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded])
   useEffect(() => { if (loaded) void saveData(data) }, [data, loaded])
   useEffect(() => { reportPluginCount(SLUG, data.games.length) }, [data.games.length])
 
@@ -71,15 +77,14 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
     updates: data.games.filter((g) => g.updateAvailable).length,
   }), [data.games])
 
+  const tabGames = useMemo(() => {
+    if (tab.kind === 'backlog') return data.games.filter((g) => g.backlogStatus === tab.value)
+    if (tab.kind === 'updates') return data.games.filter((g) => g.updateAvailable)
+    return data.games
+  }, [data.games, tab])
+
   const visible = useMemo(() => {
-    let list = data.games
-    if (tab.kind === 'backlog') list = list.filter((g) => g.backlogStatus === tab.value)
-    if (tab.kind === 'updates') list = list.filter((g) => g.updateAvailable)
-    if (tab.kind === 'collection') {
-      const c = data.collections.find((x) => x.id === tab.id)
-      const ids = new Set(c?.itemIds ?? [])
-      list = list.filter((g) => ids.has(g.id))
-    }
+    let list = tabGames
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter((g) => g.name.toLowerCase().includes(q) || (g.creator ?? '').toLowerCase().includes(q))
@@ -92,7 +97,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
     else if (sort === 'releaseDate') s.sort((a, b) => (b.releaseDate ?? '').localeCompare(a.releaseDate ?? ''))
     else if (sort === 'updated') s.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
     return s
-  }, [data, tab, search, sort])
+  }, [tabGames, search, sort])
 
   // -- publish pageMeta into Omnio's topnav -----------------------
   const detailGame = detailId ? data.games.find((g) => g.id === detailId) ?? null : null
@@ -105,24 +110,18 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
       })
       return
     }
-    const inColl = tab.kind === 'collection' ? data.collections.find((c) => c.id === tab.id) : null
     const chips = [
-      { key: 'playing', label: 'Playing', count: counts.playing, active: tab.kind === 'backlog' && tab.value === 'playing', onClick: () => { setSubView('items'); setTab({ kind: 'backlog', value: 'playing' }) } },
-      { key: 'backlog', label: 'Backlog', count: counts.backlog, active: tab.kind === 'backlog' && tab.value === 'backlog', onClick: () => { setSubView('items'); setTab({ kind: 'backlog', value: 'backlog' }) } },
-      { key: 'played', label: 'Played', count: counts.played, active: tab.kind === 'backlog' && tab.value === 'played', onClick: () => { setSubView('items'); setTab({ kind: 'backlog', value: 'played' }) } },
-      { key: 'updates', label: 'Updates', count: counts.updates, active: tab.kind === 'updates', onClick: () => { setSubView('items'); setTab({ kind: 'updates' }) } },
+      { key: 'playing', label: 'Playing', count: counts.playing, active: tab.kind === 'backlog' && tab.value === 'playing', onClick: () => { setTab({ kind: 'backlog', value: 'playing' }) } },
+      { key: 'backlog', label: 'Backlog', count: counts.backlog, active: tab.kind === 'backlog' && tab.value === 'backlog', onClick: () => { setTab({ kind: 'backlog', value: 'backlog' }) } },
+      { key: 'played', label: 'Played', count: counts.played, active: tab.kind === 'backlog' && tab.value === 'played', onClick: () => { setTab({ kind: 'backlog', value: 'played' }) } },
+      { key: 'updates', label: 'Updates', count: counts.updates, active: tab.kind === 'updates', onClick: () => { setTab({ kind: 'updates' }) } },
     ]
     // Title changes when a filter chip is active — same pattern as
     // Omnio's board views (click "Playing" → title becomes "Playing"
     // and the count reflects only that subset).
     const activeChip = chips.find((c) => c.active)
-    const title = inColl ? inColl.name : activeChip ? activeChip.label : 'Eroges'
-    const icon = inColl ? <FolderIcon /> : <HeartIcon />
-    const onBack = inColl
-      ? () => { setTab({ kind: 'all' }); setSubView('groups') }
-      : activeChip
-        ? () => setTab({ kind: 'all' })
-        : undefined
+    const title = activeChip ? activeChip.label : 'Eroges'
+    const onBack = activeChip ? () => setTab({ kind: 'all' }) : undefined
     const actions = (
       <>
         <div className="view-toggle">
@@ -131,24 +130,24 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
         </div>
         <button className="secondary-btn" onClick={() => setShowSettings(true)} title="Settings (F95 cookies)">⚙</button>
         <button className="secondary-btn" onClick={checkAllUpdates} disabled={!!checkingAll}
-          title="Check updates for every game with an F95 link">
+          title={`Check updates for the games in ${title} with an F95 link`}>
           {checkingAll ? `Checking ${checkingAll.done}/${checkingAll.total}…` : '↻ Update'}
         </button>
         <button className="add-btn" onClick={() => setEditingId('new')}>+ Add</button>
       </>
     )
     setPageMeta({
-      icon, title,
+      icon: <HeartIcon />, title,
       count: { n: visible.length, unit: visible.length === 1 ? 'item' : 'items' },
       onBack,
-      chips: inColl ? undefined : chips,
+      chips,
       actions,
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detailGame, tab, counts, visible.length, data.collections, setPageMeta, layout, checkingAll])
+  }, [detailGame, tab, tabGames, counts, visible.length, setPageMeta, layout, checkingAll])
 
   // -- mutations ---------------------------------------------------
-  function upsertGame(g: ErogeItem, collectionIds: string[]) {
+  function upsertGame(g: ErogeItem) {
     setData((d) => {
       const prev = d.games.find((x) => x.id === g.id)
       const games = prev ? d.games.map((x) => x.id === g.id ? g : x) : [...d.games, g]
@@ -158,20 +157,18 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
         })
         void savesRenameFolder(prev.name, g.name)
       }
-      const collections = d.collections.map((c) => {
-        const should = collectionIds.includes(c.id)
-        const has = c.itemIds.includes(g.id)
-        if (should && !has) return { ...c, itemIds: [...c.itemIds, g.id] }
-        if (!should && has) return { ...c, itemIds: c.itemIds.filter((x) => x !== g.id) }
-        return c
-      })
-      return { ...d, games, collections }
+      return { ...d, games }
     })
     setEditingId(null)
   }
 
   function patchGame(id: string, patch: Partial<ErogeItem>) {
     setData((d) => ({ ...d, games: d.games.map((g) => g.id === id ? { ...g, ...patch, updatedAt: Date.now() } : g) }))
+  }
+
+  // Cached lookups aren't user edits — leave updatedAt alone.
+  function cacheGameFields(id: string, patch: Partial<ErogeItem>) {
+    setData((d) => ({ ...d, games: d.games.map((g) => g.id === id ? { ...g, ...patch } : g) }))
   }
 
   // Stable callbacks for the grid — passing an inline arrow per card
@@ -190,27 +187,8 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
       void assetDelete('cover', coverBase)
       void savesDeleteAll(target.name || '')
     }
-    setData((d) => ({
-      ...d,
-      games: d.games.filter((g) => g.id !== id),
-      collections: d.collections.map((c) => ({ ...c, itemIds: c.itemIds.filter((x) => x !== id) })),
-    }))
+    setData((d) => ({ ...d, games: d.games.filter((g) => g.id !== id) }))
     setDetailId(null)
-  }
-
-  function toggleInCollection(collId: string, gameId: string) {
-    setData((d) => ({
-      ...d,
-      collections: d.collections.map((c) => c.id !== collId ? c
-        : c.itemIds.includes(gameId)
-          ? { ...c, itemIds: c.itemIds.filter((x) => x !== gameId) }
-          : { ...c, itemIds: [...c.itemIds, gameId] }),
-    }))
-  }
-
-  function createCollection(name: string) {
-    if (!name.trim()) return
-    setData((d) => ({ ...d, collections: [...d.collections, { id: crypto.randomUUID(), name: name.trim(), itemIds: [], createdAt: Date.now() }] }))
   }
 
   // Check F95 for updates across every game with a matching link.
@@ -233,8 +211,8 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
   // is roughly a 6–8× speedup end-to-end.
   const UPDATE_CHECK_CONCURRENCY = 4
   async function checkAllUpdates() {
-    const targets = data.games.filter((g) => g.link && /f95zone/i.test(g.link))
-    if (targets.length === 0) { alert('No games with an F95 link.'); return }
+    const targets = tabGames.filter((g) => g.link && /f95zone/i.test(g.link))
+    if (targets.length === 0) { alert('No games with an F95 link in this view.'); return }
     setCheckingAll({ done: 0, total: targets.length })
     const norm = (v: string) => v.replace(/\s+/g, '').toLowerCase()
     const cookie = data.settings?.f95Cookie
@@ -272,11 +250,6 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
     setCheckingAll(null)
   }
 
-  function deleteCollection(id: string) {
-    setData((d) => ({ ...d, collections: d.collections.filter((c) => c.id !== id) }))
-    if (tab.kind === 'collection' && tab.id === id) setTab({ kind: 'all' })
-  }
-
   // -- render ------------------------------------------------------
   const editingGame = editingId && editingId !== 'new' ? data.games.find((g) => g.id === editingId) : null
 
@@ -285,96 +258,59 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
       {detailGame ? (
         <ErogeDetailView
           game={detailGame}
-          collections={data.collections}
           f95Cookie={data.settings?.f95Cookie}
           onEdit={() => setEditingId(detailGame.id)}
           onDelete={() => { if (confirm(`Delete "${detailGame.name}"?`)) deleteGame(detailGame.id) }}
-          onOpenAddToCollection={() => setAddingCollFor(detailGame.id)}
           onUpdateGame={(patch) => patchGame(detailGame.id, patch)}
+          onCacheFields={(patch) => cacheGameFields(detailGame.id, patch)}
+          allGames={data.games}
+          onOpenGame={openDetail}
         />
       ) : (
         <>
-          <div className="sub-tabs">
-            <button
-              className={subView === 'items' && tab.kind !== 'collection' ? 'sub-tab active' : 'sub-tab'}
-              onClick={() => { setSubView('items'); setTab({ kind: 'all' }) }}
-            >All Eroges</button>
-            <button
-              className={subView === 'groups' || tab.kind === 'collection' ? 'sub-tab active' : 'sub-tab'}
-              onClick={() => { setSubView('groups'); setTab({ kind: 'all' }) }}
-            >Groups</button>
+          <div className="toolbar">
+            <input
+              className="search-input"
+              placeholder="Search by title... (Ctrl+F)"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <select className="sort-select" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+              <option value="az">Alphabetical</option>
+              <option value="creator">By creator</option>
+              <option value="updated">Most recent</option>
+              <option value="status">Status</option>
+              <option value="engine">Engine</option>
+              <option value="releaseDate">Release date</option>
+            </select>
           </div>
 
-          {subView === 'groups' && tab.kind !== 'collection' ? (
-            <div className="content-scroll">
-              <div className="new-collection">
-                <input
-                  placeholder="New group name"
-                  value={newCollName}
-                  onChange={(e) => setNewCollName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && newCollName.trim()) { createCollection(newCollName); setNewCollName('') } }}
+          {visible.length === 0 ? (
+            <div className="er-empty">No games in this view.</div>
+          ) : layout === 'list' ? (
+            <div className="er-list">
+              {visible.map((g) => (
+                <ErogeRow
+                  key={g.id}
+                  game={g}
+                  onOpen={openDetail}
+                  onToggleFav={toggleFavorite}
+                  cardFields={cardFields}
                 />
-                <button type="button" onClick={() => { if (newCollName.trim()) { createCollection(newCollName); setNewCollName('') } }}>+ Create group</button>
-              </div>
-              <div className="folder-grid">
-                {data.collections.length === 0 && <p className="empty">You haven't created any groups here yet.</p>}
-                {data.collections.map((c) => (
-                  <div key={c.id} className="folder-card" onClick={() => setTab({ kind: 'collection', id: c.id })}>
-                    <button className="delete" onClick={(e) => { e.stopPropagation(); if (confirm(`Delete collection "${c.name}"?`)) deleteCollection(c.id) }}>✕</button>
-                    <span className="folder-icon"><FolderIcon /></span>
-                    <h3>{c.name}</h3>
-                    <span className="folder-count">{c.itemIds.length} {c.itemIds.length === 1 ? 'item' : 'items'}</span>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           ) : (
-            <>
-              <div className="toolbar">
-                <input
-                  className="search-input"
-                  placeholder="Search by title... (Ctrl+F)"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+            <div className="er-grid">
+              {visible.map((g) => (
+                <ErogeCard
+                  key={g.id}
+                  game={g}
+                  onOpen={openDetail}
+                  onToggleFav={toggleFavorite}
+                  cardFields={cardFields}
                 />
-                <select className="sort-select" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
-                  <option value="az">Alphabetical</option>
-                  <option value="creator">By creator</option>
-                  <option value="updated">Most recent</option>
-                  <option value="status">Status</option>
-                  <option value="engine">Engine</option>
-                  <option value="releaseDate">Release date</option>
-                </select>
-              </div>
-
-              {visible.length === 0 ? (
-                <div className="er-empty">No games in this view.</div>
-              ) : layout === 'list' ? (
-                <div className="er-list">
-                  {visible.map((g) => (
-                    <ErogeRow
-                      key={g.id}
-                      game={g}
-                      onOpen={openDetail}
-                      onToggleFav={toggleFavorite}
-                      cardFields={cardFields}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="er-grid">
-                  {visible.map((g) => (
-                    <ErogeCard
-                      key={g.id}
-                      game={g}
-                      onOpen={openDetail}
-                      onToggleFav={toggleFavorite}
-                      cardFields={cardFields}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
+              ))}
+            </div>
           )}
         </>
       )}
@@ -382,7 +318,6 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
       {editingId && (
         <ErogeEditor
           initial={editingGame}
-          collections={data.collections}
           allGames={data.games}
           f95Cookie={data.settings?.f95Cookie}
           onSave={upsertGame}
@@ -420,15 +355,6 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
         />
       )}
 
-      {addingCollFor && (
-        <AddToCollectionModal
-          gameId={addingCollFor}
-          collections={data.collections}
-          onToggle={(collId) => toggleInCollection(collId, addingCollFor)}
-          onDeleteCollection={deleteCollection}
-          onClose={() => setAddingCollFor(null)}
-        />
-      )}
 
     </div>
   )
@@ -471,7 +397,7 @@ function SettingsModal({ initial, onSave, onCancel }: {
           />
         </label>
         <p style={{ color: 'var(--text-faint)', fontSize: 11, margin: '0 0 12px' }}>
-          Saved only in your portable folder (<code>data/plugins/eroges.json</code>). It never leaves your machine.
+          Saved only in your Omnio data folder (<code>data/plugins/eroges.json</code>). It never leaves your machine.
         </p>
         <div className="er-modal-actions">
           <button className="er-btn" onClick={onCancel}>Cancel</button>
@@ -482,35 +408,3 @@ function SettingsModal({ initial, onSave, onCancel }: {
     </div>
   )
 }
-
-function AddToCollectionModal({
-  gameId, collections, onToggle, onDeleteCollection, onClose,
-}: {
-  gameId: string
-  collections: ErogeCollection[]
-  onToggle: (collId: string) => void
-  onDeleteCollection: (id: string) => void
-  onClose: () => void
-}) {
-  return (
-    <div className="er-modal-backdrop" onClick={onClose}>
-      <div className="er-modal" onClick={(e) => e.stopPropagation()} style={{ width: 420 }}>
-        <h2>Add to collection</h2>
-        {collections.length === 0 && <div style={{ color: 'var(--text-dim)' }}>No collections yet.</div>}
-        {collections.map((c) => (
-          <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0' }}>
-            <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text)', fontSize: 13 }}>
-              <input type="checkbox" checked={c.itemIds.includes(gameId)} onChange={() => onToggle(c.id)} />
-              {c.name} <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>({c.itemIds.length})</span>
-            </label>
-            <button className="er-btn er-btn-sm er-btn-danger" onClick={() => { if (confirm(`Delete collection "${c.name}"?`)) onDeleteCollection(c.id) }}>×</button>
-          </div>
-        ))}
-        <div className="er-modal-actions">
-          <button className="er-btn" onClick={onClose}>Close</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-

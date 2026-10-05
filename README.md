@@ -1,23 +1,41 @@
+<div align="center">
+
+<img src="public/omnio-logo.svg" width="96" alt="Omnio logo">
+
 # Omnio
 
-<img src="public/omnio-logo.svg" width="80" align="right" alt="Omnio logo">
+**Every hobby you track, in one app that lives on your computer.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-c9a227.svg)](LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/TonyMontania/Omnio?color=c9a227)](https://github.com/TonyMontania/Omnio/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/TonyMontania/Omnio/total.svg?color=c9a227)](https://github.com/TonyMontania/Omnio/releases)
+Games · Music · Movies · Series · Anime · Donghua · Manga · Manhwa · Manhua · Comics · Books · Visual Novels
+
+[![Download](https://img.shields.io/badge/Download-latest%20release-c9a227?style=for-the-badge)](https://github.com/TonyMontania/Omnio/releases/latest)
+
+[![Latest release](https://img.shields.io/github/v/release/TonyMontania/Omnio?color=c9a227&label=release)](https://github.com/TonyMontania/Omnio/releases/latest)
+[![Release date](https://img.shields.io/github/release-date/TonyMontania/Omnio?color=c9a227&label=released)](https://github.com/TonyMontania/Omnio/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/TonyMontania/Omnio/total?color=c9a227)](https://github.com/TonyMontania/Omnio/releases)
 [![Tests](https://github.com/TonyMontania/Omnio/actions/workflows/test.yml/badge.svg)](https://github.com/TonyMontania/Omnio/actions/workflows/test.yml)
-![Platform: Windows · macOS · Linux](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-informational.svg)
-![Local-first](https://img.shields.io/badge/local--first-yes-success.svg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-c9a227)](LICENSE)
 
-**Omnio** is a local desktop app to track every hobby you follow — games, music, movies, series, anime, donghua, manga family, books and visual novels — in one place. No accounts, no cloud, no telemetry. Your library lives in a `data/` folder you own.
+![Platform: Windows · macOS · Linux](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-informational)
+![Local-first](https://img.shields.io/badge/local--first-no%20account%20%C2%B7%20no%20telemetry-success)
+[![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-24C8DB?logo=tauri&logoColor=white)](https://tauri.app/)
+[![GitHub stars](https://img.shields.io/github/stars/TonyMontania/Omnio?style=social)](https://github.com/TonyMontania/Omnio/stargazers)
+
+</div>
+
+- **12 libraries, one app** — stop juggling a site per hobby.
+- **One-click metadata from 15 sources** — covers, descriptions, tracklists, cast, tags.
+- **Yours, offline** — no accounts, no cloud, no telemetry. Your library is a folder of JSON files you own.
+
+<p align="center">
+  <img width="1280" height="720" alt="Adding a game: search IGDB, apply the metadata and cover, save" src="https://github.com/user-attachments/assets/79944c47-09fe-4747-b103-98f8f550fa03" />
+</p>
 
 ## Contents
 
 - [Install](#install)
-  - [Windows](#windows)
-  - [macOS](#macos)
-  - [Linux](#linux)
 - [See it in action](#see-it-in-action)
+- [Why Omnio?](#why-omnio)
 - [Features](#features)
 - [Metadata sources](#metadata-sources)
 - [Storage](#storage)
@@ -28,20 +46,30 @@
 
 ## Install
 
-Grab the build for your OS from the [latest release](https://github.com/TonyMontania/Omnio/releases/latest). Every build is unsigned — Windows SmartScreen and macOS Gatekeeper show a one-time first-launch warning that clears with one confirmation.
+| OS | Quickest way |
+| --- | --- |
+| **Windows** | [`-setup.exe` installer](https://github.com/TonyMontania/Omnio/releases/latest) — or the portable `.zip` |
+| **macOS** | [`.dmg`](https://github.com/TonyMontania/Omnio/releases/latest) — `aarch64` for Apple Silicon, `x64` for Intel |
+| **Linux** | [`.AppImage`](https://github.com/TonyMontania/Omnio/releases/latest), `.deb` or `.rpm` |
 
-### Windows
+Builds are unsigned, so Windows SmartScreen and macOS Gatekeeper show a one-time warning on first launch. Details for every package are below.
+
+<details>
+<summary><b>Windows — all packages</b></summary>
 
 | Package | File | Command | Notes |
 | --- | --- | --- | --- |
 | **NSIS installer** | `Omnio_<version>_x64-setup.exe` | double-click | Per-user, no admin. Recommended default. |
 | **MSI installer** | `Omnio_<version>_x64_en-US.msi` | `msiexec /i Omnio_<version>_x64_en-US.msi /qb` | For group-policy / SCCM / Intune rollouts. |
 | **Portable ZIP** | `Omnio_<version>_windows-portable.zip` | extract, run `omnio.exe` | Windows 10 21H2+ and every Windows 11 already have WebView2. On older builds install the [Evergreen runtime](https://developer.microsoft.com/microsoft-edge/webview2/) once; otherwise `omnio.exe` closes immediately with no window. |
-| **winget** | — | `winget install TonyMontania.Omnio` | Ships the NSIS build. Available after the manifest lands in [`microsoft/winget-pkgs`](https://github.com/microsoft/winget-pkgs). |
+| **winget** | — | `winget install TonyMontania.Omnio` | Ships the NSIS build. Available once the manifest lands in [`microsoft/winget-pkgs`](https://github.com/microsoft/winget-pkgs). |
 
-Data lives under `%APPDATA%\com.omnio.app\`.
+Data lives under `%APPDATA%\com.omnio.app\` (the portable build keeps it next to `omnio.exe`).
 
-### macOS
+</details>
+
+<details>
+<summary><b>macOS — all packages</b></summary>
 
 | Package | File | Command | Notes |
 | --- | --- | --- | --- |
@@ -59,31 +87,48 @@ The `xattr -cr` clears the quarantine flag Gatekeeper set on the download. Same 
 
 Data lives under `~/Library/Application Support/com.omnio.app/`.
 
-### Linux
+</details>
+
+<details>
+<summary><b>Linux — all packages</b></summary>
 
 | Package | File | Command | Notes |
 | --- | --- | --- | --- |
 | **AppImage** | `omnio_<version>_amd64.AppImage` | `chmod +x omnio_<version>_amd64.AppImage && ./omnio_<version>_amd64.AppImage` | Universal. Debian / Ubuntu 22.04+ need `libfuse2` (`sudo apt install libfuse2`). No FUSE? Run with `./omnio_<version>_amd64.AppImage --appimage-extract-and-run`. |
 | **Debian package** | `omnio_<version>_amd64.deb` | `sudo dpkg -i omnio_<version>_amd64.deb` | Debian, Ubuntu, Mint, Pop!_OS, elementary. |
 | **RPM package** | `omnio-<version>-1.x86_64.rpm` | `sudo dnf install ./omnio-<version>-1.x86_64.rpm` | Fedora, RHEL, CentOS Stream, Rocky, Alma, openSUSE. |
-| **AUR** | — | `yay -S omnio-bin` (or your AUR helper) | Arch, Manjaro, EndeavourOS. Repackages the upstream `.deb`. |
+| **AUR** | — | `yay -S omnio-bin` (or your AUR helper) | Arch, Manjaro, EndeavourOS. Repackages the upstream `.deb`. Coming soon. |
 
-Data lives under `~/.config/com.omnio.app/`.
+Data lives under `~/.local/share/com.omnio.app/`.
+
+</details>
 
 Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#running-locally).
 
 ## See it in action
 
-<!-- Prefer a short GIF here (add → fetch metadata → save flow). Replace this comment with an <img> once recorded. -->
+<img width="1696" height="1000" alt="Omnio — Home dashboard" src="https://github.com/user-attachments/assets/824f474b-ce75-4266-a8af-faa594288dfb" />
 
-![Omnio — Home dashboard](https://github.com/user-attachments/assets/b5173ea8-5ed1-4c59-81e0-fa54bc5f04ba)
-*Home dashboard — customizable widget board with per-library portals + "in progress" / "upcoming" / "recently rated" widgets.*
+*Home dashboard — a customizable board of widgets you can drag, resize and rearrange: what you're in the middle of, what's airing, a cover carousel, big numbers, on this day and more.*
 
-![Omnio — Games library grid](https://github.com/user-attachments/assets/f16b4de2-d0b5-4d6e-972d-86fa5ae57f7c)
-*Library grid — cover-first browsing with filters, tag hierarchy, custom sort, and bulk actions.*
+<img width="1919" height="1031" alt="Omnio — Library grid" src="https://github.com/user-attachments/assets/e89e97e9-46ce-4400-8fb4-92cf627aecd7" />
+
+*Library grid — cover-first browsing with status chips, smart lists, grouping, sorting, filters and bulk actions.*
 
 ![Omnio — Tabbed editor with live preview](https://github.com/user-attachments/assets/ffba12f6-f3b2-44b2-a531-91d16c804204)
-*Tabbed editor (Overview / Identity / Progress / Media / History / Related / Notes) with live preview + one-click metadata fetch from 14 sources.*
+*Tabbed editor (Overview / Identity / Progress / Media / History / Related / Notes) with live preview + one-click metadata fetch from 15 sources.*
+
+## Why Omnio?
+
+| | Tracking websites | Spreadsheets | **Omnio** |
+| --- | :---: | :---: | :---: |
+| Every hobby in one place | One site per hobby | ✓ | ✓ |
+| Covers and metadata filled for you | ✓ | — | ✓ |
+| Works offline | — | ✓ | ✓ |
+| No account needed | — | ✓ | ✓ |
+| Your data stays on your disk | — | ✓ | ✓ |
+| Import from MAL, AniList, Steam, Letterboxd, Goodreads… | Partly | — | ✓ |
+| Free and open source | Varies | — | ✓ |
 
 ## Features
 
@@ -106,10 +151,10 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 
 **Discover**
 
-- **One-click metadata + covers** from 16 sources (see below). Cached locally for 24 h
+- **One-click metadata + covers** from 15 sources (see below). Cached locally for 24 h
 - **Quick-add via URL** — paste an IGDB / TMDb / AniList / VNDB / Steam URL into the title field, the fetcher opens pre-filled
 - **Global search (Ctrl+K)** across every library with operator syntax (`favorite:true`, `year:>2020`, `status:playing`)
-- **Home widget board** — customizable dashboard with "in progress" / "upcoming" / "recently rated" / "on this day" + per-library portals. Drag & drop reorder in edit mode.
+- **Home widget board** — Continue where you left off, Currently airing, Upcoming this week, Cover carousel, Big numbers, On this day, Rating spread, Top of the year, Genre spotlight, Pick from your backlog and more. Drag & drop, resize, and quick-add from the sidebar
 - **Statistics view** — per-category distribution + activity heatmap, cross-library genre matrix, monthly added-vs-finished chart, top rated / artists / genres / labels / devs / publishers / platforms
 - **Arcade section** — score / 1cc tracker for shmups and arcade games. Grid mode adapted from [doopu/1ccTracker](https://github.com/doopu/1ccTracker)
 
@@ -173,7 +218,6 @@ Sources are grouped by the library they feed. Anything marked *No key* works out
 | Source | What it fills | Auth |
 | --- | --- | --- |
 | [MusicBrainz](https://musicbrainz.org/) + [Cover Art Archive](https://coverartarchive.org/) | Title, artist, tracklist, producers, cover art, per-edition picker | No key |
-| [VGMdb](https://vgmdb.net/) (via [vgmdb.info](https://vgmdb.info/) JSON proxy) | Game / anime soundtracks — title, composers, tracklist, cover art | No key |
 | [lrclib](https://lrclib.net/) | Per-track lyrics (synced when available) | No key |
 | [Last.fm](https://www.last.fm/) | Sync your top-scrobbled albums (marks matches as listened) | Free API key + username |
 
@@ -200,6 +244,7 @@ data/
   manga.json  manhwa.json  manhua.json  comics_west.json
   books.json  visual_novels.json
   collections.json  artists.json  arcadeGames.json
+  smartLists.json  playlists.json
   settings.json  customOrders.json
   cache/searches.json    ← 24 h TTL of metadata search results
   backups/1..5/          ← 5 rotating snapshots
@@ -215,8 +260,7 @@ Each library is its own JSON — editing one game only rewrites `games.json`, so
 
 - **Ctrl+K** — global search across every library
 - **Ctrl+F** — search inside the current library
-- **Ctrl+H** — Home dashboard
-- **Ctrl+Z / Ctrl+Shift+Z** — undo / redo
+- **Ctrl+Z / Ctrl+Shift+Z** (or **Ctrl+Y**) — undo / redo
 - **F5** — reload data from disk
 - **?** — full shortcut cheatsheet
 - **Right-click** — quick actions on any card
@@ -239,6 +283,12 @@ Each library is its own JSON — editing one game only rewrites `games.json`, so
 [MIT](LICENSE) — feel free to fork, modify and distribute.
 
 ---
+
+<div align="center">
+
+**If Omnio is useful to you, a ⭐ on the repo helps other people find it.**
+
+</div>
 
 - Bugs / feature requests → [issues](https://github.com/TonyMontania/Omnio/issues)
 - Want to contribute? → [CONTRIBUTING.md](CONTRIBUTING.md) · [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)

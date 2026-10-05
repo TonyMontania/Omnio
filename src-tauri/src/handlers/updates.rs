@@ -291,24 +291,11 @@ fn detect_windows_install_kind() -> (&'static str, &'static str) {
         Ok(p) => p,
         Err(_) => return ("win-portable", "windows-portable.zip"),
     };
-    let path_lower = exe.to_string_lossy().to_lowercase();
-    // MSI's default target on Windows is `%ProgramFiles%` — treat both
-    // 32-bit and 64-bit Program Files trees as MSI installs. The asset
-    // suffix is `.msi` alone so the match is locale-tolerant (the
-    // artifact ships as `Omnio_<version>_x64_en-US.msi` today, but a
-    // future locale swap wouldn't break the hint).
-    if path_lower.contains("\\program files\\") || path_lower.contains("\\program files (x86)\\") {
-        return ("win-msi", ".msi");
+    match crate::paths::windows_install_kind(&exe) {
+        Some(crate::paths::WindowsInstall::Msi) => ("win-msi", ".msi"),
+        Some(crate::paths::WindowsInstall::Nsis) => ("win-nsis", "-setup.exe"),
+        _ => ("win-portable", "windows-portable.zip"),
     }
-    // NSIS's default target is `%LOCALAPPDATA%\Programs\<ProductName>`.
-    // (The path may resolve to `\users\<name>\appdata\local\programs\…`.)
-    if path_lower.contains("\\appdata\\local\\programs\\") {
-        return ("win-nsis", "-setup.exe");
-    }
-    // Anywhere else the exe lives (Desktop, C:\Tools\Omnio, an external
-    // drive, …) means the user ran the portable zip. Match the release
-    // asset `Omnio_<version>_windows-portable.zip`.
-    ("win-portable", "windows-portable.zip")
 }
 
 fn detect_linux_install_kind() -> (&'static str, &'static str) {

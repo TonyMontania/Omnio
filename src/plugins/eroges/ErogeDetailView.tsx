@@ -1,20 +1,30 @@
-import React, { useEffect, useState, useCallback } from 'react'
-import type { ErogeItem, ErogeCollection } from './types'
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import type { ErogeItem } from './types'
 import { assetUrl, savesList, savesAdd, savesDelete, savesOpenFolder, savesReveal, savesDeleteAll } from './ipc'
 import type { SaveInfo } from './ipc'
-import { f95CheckVersion } from './f95Api'
+import { f95CheckVersion, f95GamesByCreator, f95ThreadId, f95ThreadUrl } from './f95Api'
 import { engineClass } from './constants'
 import ServiceLogo from '../../components/ServiceLogo'
 
 interface Props {
   game: ErogeItem
-  collections: ErogeCollection[]
   f95Cookie?: string
   onEdit: () => void
   onDelete: () => void
-  onOpenAddToCollection: () => void
   onUpdateGame: (patch: Partial<ErogeItem>) => void
+  onCacheFields: (patch: Partial<ErogeItem>) => void
+  allGames: ErogeItem[]
+  onOpenGame: (id: string) => void
 }
+
+interface OtherGameRow {
+  key: string
+  title: string
+  libGame?: ErogeItem
+  url?: string
+}
+
+const OTHER_GAMES_STALE_MS = 7 * 24 * 60 * 60 * 1000
 
 const BACKLOG_LABEL: Record<string, string> = {
   playing: 'Playing', backlog: 'Backlog', played: 'Played',
@@ -81,17 +91,67 @@ function renderDescription(desc: string): React.ReactNode[] {
   return nodes
 }
 
-export default function ErogeDetailView({ game, collections, f95Cookie, onEdit, onDelete, onOpenAddToCollection, onUpdateGame }: Props) {
+export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onUpdateGame, onCacheFields, allGames, onOpenGame }: Props) {
   const [saves, setSaves] = useState<SaveInfo[]>([])
   const [checking, setChecking] = useState(false)
   const [flash, setFlash] = useState('')
+  const [loadingOthers, setLoadingOthers] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   const refreshSaves = useCallback(async () => { setSaves(await savesList(game.name)) }, [game.name])
   useEffect(() => { void refreshSaves() }, [refreshSaves])
 
+  useEffect(() => {
+    rootRef.current?.closest('.er-view')?.scrollTo({ top: 0 })
+  }, [game.id])
+
   const cover = game.coverFile ? assetUrl('cover', game.coverFile) : null
-  const inColls = collections.filter((c) => c.itemIds.includes(game.id))
   const isF95 = !!game.link && /f95zone/i.test(game.link)
+
+  const creatorName = (game.otherGamesCreator || game.creator || '').trim()
+  const shouldLookup = !!creatorName && (isF95 || !!game.otherGamesCreator)
+
+  useEffect(() => {
+    if (!shouldLookup) return
+    if (game.otherGamesFetchedAt && Date.now() - game.otherGamesFetchedAt < OTHER_GAMES_STALE_MS) return
+    let cancelled = false
+    setLoadingOthers(true)
+    f95GamesByCreator(creatorName)
+      .then((list) => { if (!cancelled) onCacheFields({ otherGames: list, otherGamesFetchedAt: Date.now() }) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoadingOthers(false) })
+    return () => { cancelled = true; setLoadingOthers(false) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.id, creatorName, shouldLookup, game.otherGamesFetchedAt])
+
+  const otherGames = useMemo<OtherGameRow[]>(() => {
+    const selfThread = f95ThreadId(game.link)
+    const libByThread = new Map<number, ErogeItem>()
+    for (const g of allGames) {
+      const id = f95ThreadId(g.link)
+      if (id) libByThread.set(id, g)
+    }
+    const rows: OtherGameRow[] = []
+    const seenThreads = new Set<number>()
+    const seenGames = new Set<string>([game.id])
+    for (const o of [...(game.otherGames ?? []), ...(game.otherGamesFromPost ?? [])]) {
+      if (o.threadId === selfThread || seenThreads.has(o.threadId)) continue
+      seenThreads.add(o.threadId)
+      const lib = libByThread.get(o.threadId)
+      if (lib && seenGames.has(lib.id)) continue
+      if (lib) seenGames.add(lib.id)
+      rows.push({ key: `t${o.threadId}`, title: lib?.name ?? o.title, libGame: lib, url: f95ThreadUrl(o.threadId) })
+    }
+    const creatorKey = (game.creator ?? '').trim().toLowerCase()
+    if (creatorKey) {
+      for (const g of allGames) {
+        if (seenGames.has(g.id) || (g.creator ?? '').trim().toLowerCase() !== creatorKey) continue
+        seenGames.add(g.id)
+        rows.push({ key: `g${g.id}`, title: g.name, libGame: g })
+      }
+    }
+    return rows.sort((a, b) => Number(!!b.libGame) - Number(!!a.libGame) || a.title.localeCompare(b.title))
+  }, [game.id, game.link, game.creator, game.otherGames, game.otherGamesFromPost, allGames])
 
   async function copyLink() {
     if (!game.link) return
@@ -121,7 +181,7 @@ export default function ErogeDetailView({ game, collections, f95Cookie, onEdit, 
   }
 
   return (
-    <div className="er-detail">
+    <div className="er-detail" ref={rootRef}>
       <div className="er-detail-head">
         {game.vn && <span className="er-tag eng-vn">VN</span>}
         {game.engine && <span className={`er-tag eng-${engineClass(game.engine)}`}>{game.engine}</span>}
@@ -134,7 +194,6 @@ export default function ErogeDetailView({ game, collections, f95Cookie, onEdit, 
         <div className="er-detail-actions">
           {game.link && <button className="er-btn" onClick={copyLink}>Copy F95</button>}
           {isF95 && <button className="er-btn" onClick={checkUpdate} disabled={checking}>{checking ? 'Checking…' : 'Check update'}</button>}
-          <button className="er-btn" onClick={onOpenAddToCollection}>+ Collection</button>
           <button className="er-btn" onClick={onEdit}>Edit</button>
           <button className="er-btn er-btn-danger" onClick={onDelete}>Delete</button>
         </div>
@@ -166,13 +225,6 @@ export default function ErogeDetailView({ game, collections, f95Cookie, onEdit, 
       )}
 
       {flash && <div style={{ color: 'var(--text-dim)', fontSize: 12 }}>{flash}</div>}
-
-      {inColls.length > 0 && (
-        <div className="er-colls-bar">
-          <b style={{ color: 'var(--text)', fontWeight: 600 }}>Collections:</b>
-          {inColls.map((c) => <span key={c.id} className="er-coll-chip">{c.name}</span>)}
-        </div>
-      )}
 
       {game.description && (
         <div className="er-detail-desc">{renderDescription(game.description)}</div>
@@ -209,6 +261,38 @@ export default function ErogeDetailView({ game, collections, f95Cookie, onEdit, 
               <span className="er-link-icon" title="Ryuugames" aria-hidden="true"><ServiceLogo service="ryuugames" size={22} /></span>
               <span className="er-link-url">{game.ryuugamesUrl}</span>
             </a>
+          )}
+        </div>
+      )}
+
+      {(otherGames.length > 0 || loadingOthers) && (
+        <div className="er-other-games">
+          <h3>
+            More from {creatorName || game.creator}
+            {otherGames.length > 0 && <span className="er-other-count">{otherGames.length}</span>}
+          </h3>
+          {otherGames.length === 0 ? (
+            <div className="er-other-hint">Looking up other games on F95…</div>
+          ) : (
+            <div className="er-other-grid">
+              {otherGames.map((row) => row.libGame ? (
+                <button key={row.key} type="button" className="er-card er-other-card" onClick={() => onOpenGame(row.libGame!.id)} title={row.title}>
+                  <div className="gc-banner">
+                    {row.libGame.coverFile
+                      ? <img src={assetUrl('cover', row.libGame.coverFile)} alt="" loading="lazy" />
+                      : <div className="gc-nocover">No cover</div>}
+                  </div>
+                  <div className="gc-info"><div className="gc-name">{row.title}</div></div>
+                </button>
+              ) : (
+                <a key={row.key} className="er-card er-other-card" href={row.url} target="_blank" rel="noreferrer" title={`${row.title} — open on F95Zone`}>
+                  <div className="gc-banner">
+                    <div className="gc-nocover er-other-f95"><ServiceLogo service="f95" size={44} /></div>
+                  </div>
+                  <div className="gc-info"><div className="gc-name">{row.title}</div></div>
+                </a>
+              ))}
+            </div>
           )}
         </div>
       )}

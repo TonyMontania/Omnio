@@ -253,7 +253,7 @@ export default function DiscogsImporter({ existingItems, onImport, onClose }: Pr
             Reads your Discogs collection (folder 0 — "All"). Public collections work with just your
             username. Private collections need a <b>Personal Access Token</b> from
             <b> discogs.com/settings/developers</b> (click "Generate new token", paste it below).
-            Cover URLs stay remote — re-fetch on-disk copies later via MusicBrainz / VGMdb if you
+            Cover URLs stay remote — re-fetch on-disk copies later via MusicBrainz if you
             want them portable.
           </p>
 
