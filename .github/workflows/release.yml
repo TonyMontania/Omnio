@@ -123,7 +123,8 @@ jobs:
             file \
             libssl-dev \
             rpm \
-            squashfs-tools
+            squashfs-tools \
+            zsync
 
       - name: npm install
         run: npm ci
@@ -162,6 +163,9 @@ jobs:
       # every user but the builder. `--appimage-extract` also recreates
       # directories as 0700, so the whole tree is normalized to
       # world-readable dirs/files with exec preserved, then repacked.
+      # The repack also embeds update information and writes a .zsync
+      # next to the AppImage, so AppImageUpdate-style tools can fetch only
+      # the changed blocks from the latest GitHub release.
       - name: Repack AppImage with world-readable permissions
         if: matrix.platform == 'ubuntu-22.04'
         shell: bash
@@ -187,13 +191,18 @@ jobs:
           chmod -R u+rwX,go+rX,go-w squashfs-root
           chmod 755 squashfs-root/AppRun squashfs-root/AppRun.wrapped
           rm -f original.AppImage
+          name=$(basename "$appimage")
+          version="${GITHUB_REF_NAME#v}"
+          update_info="gh-releases-zsync|${GITHUB_REPOSITORY_OWNER}|${GITHUB_REPOSITORY#*/}|latest|${name/$version/*}.zsync"
+          echo "Update information: $update_info"
           # Repack — `--appimage-extract-and-run` avoids needing FUSE.
-          /tmp/appimagetool --appimage-extract-and-run squashfs-root repacked.AppImage
+          /tmp/appimagetool --appimage-extract-and-run -u "$update_info" squashfs-root "$name"
           popd > /dev/null
-          cp "$workdir/repacked.AppImage" "$appimage"
+          cp "$workdir/$name" "$appimage"
+          cp "$workdir/$name.zsync" "$appimage.zsync"
           chmod +x "$appimage"
           echo "Repacked → $appimage"
-          ls -la "$appimage"
+          ls -la "$appimage" "$appimage.zsync"
 
       # Reads modes straight from the packed squashfs (extracting would
       # rewrite them) and refuses to publish an AppImage that a
@@ -213,6 +222,10 @@ jobs:
             END { exit bad }
           ' /tmp/appimage-listing.txt
           grep -E "squashfs-root(/AppRun(\.wrapped)?|/usr/bin/[^/]+)?$" /tmp/appimage-listing.txt
+          info=$("$appimage" --appimage-updateinformation)
+          echo "Embedded update information: $info"
+          case "$info" in gh-releases-zsync\|*) ;; *) echo "missing update information"; exit 1 ;; esac
+          test -s "$appimage.zsync" || { echo "missing $appimage.zsync"; exit 1; }
 
       - name: Re-upload fixed AppImage to release
         if: matrix.platform == 'ubuntu-22.04'
@@ -225,7 +238,7 @@ jobs:
             echo "No AppImage to upload."
             exit 0
           fi
-          gh release upload "$GITHUB_REF_NAME" "$appimage" \
+          gh release upload "$GITHUB_REF_NAME" "$appimage" "$appimage.zsync" \
             --repo "${{ github.repository }}" --clobber
 
       # Tauri v2 doesn't produce a single-file portable EXE like
