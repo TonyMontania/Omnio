@@ -108,6 +108,15 @@ export type SteamLibraryResult = { ok: true; xml: string } | { ok: false; error:
 export type FetcherHitsEnvelope = Envelope<unknown[]>
 export type FetcherObjectEnvelope = Envelope<Record<string, unknown>>
 
+export interface ArtistImageHit {
+  source: 'deezer' | 'theaudiodb'
+  kind: 'photo' | 'wide' | 'fanart' | 'banner'
+  url: string
+  thumb: string
+  artist: string
+  detail: string
+}
+
 export type LrclibResult = Envelope<{ lyrics: string; synced: boolean }>
 export type AnidbResult = Envelope<string>
 export type PcgwSearchResult = Envelope<{ title: string; url: string }[]>
@@ -289,6 +298,8 @@ export type IpcContract = {
     { args: [apiKey: string, username: string, limit: number, period: string]; result: FetcherObjectEnvelope }
   'lastfm:album_info':
     { args: [apiKey: string, username: string, artist: string, album: string]; result: FetcherObjectEnvelope }
+  'artist:images-search':
+    { args: [name: string]; result: Envelope<ArtistImageHit[]> }
 }
 
 // Helpers for narrowing to a single channel's arg / result types.

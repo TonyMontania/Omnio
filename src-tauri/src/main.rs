@@ -139,6 +139,7 @@ fn main() {
             handlers::fetchers::hltb_search,
             handlers::fetchers::lastfm_top_albums,
             handlers::fetchers::lastfm_album_info,
+            handlers::fetchers::artist_images_search,
             // Plugin sandbox — generic infra for locally-installed
             // renderer overlays under `src/categories/<slug>/`.
             handlers::install_scan::install_scan,

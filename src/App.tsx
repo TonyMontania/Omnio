@@ -97,6 +97,7 @@ import { PLUGINS } from './plugins/registry'
 import type { PluginDef, PluginPageMeta } from './plugins/registry'
 import { subscribePluginCounts } from './plugins/counts'
 const ArtistDetailView  = lazy(() => import('./ArtistDetailView'))
+const ArtistImagePicker = lazy(() => import('./ArtistImagePicker'))
 const DetailModalRouter = lazy(() => import('./components/DetailModalRouter'))
 const DuplicatesModal   = lazy(() => import('./DuplicatesModal'))
 const GenreNormalizerModal = lazy(() => import('./GenreNormalizerModal'))
@@ -633,6 +634,7 @@ function App() {
   const [artistEditorTab, setArtistEditorTab] = useState<'overview' | 'details' | 'members' | 'concerts'>('overview')
   const [artistNameField, setArtistNameField] = useState('')
   const [artistPhotoField, setArtistPhotoField] = useState('')
+  const [artistImageSearch, setArtistImageSearch] = useState<'photo' | 'banner' | null>(null)
   const [artistBannerField, setArtistBannerField] = useState('')
   const [artistOrigin, setArtistOrigin] = useState('')
   const [artistBandStatus, setArtistBandStatus] = useState<BandStatus | ''>('')
@@ -5919,6 +5921,7 @@ function App() {
                       />
                       <div className="upload-row">
                         <button type="button" className="upload-btn" onClick={() => artistPhotoFileInputRef.current?.click()}>Upload from PC</button>
+                        <button type="button" className="upload-btn" onClick={() => setArtistImageSearch('photo')}>Search online</button>
                         {artistPhotoField && <button type="button" className="upload-btn clear" onClick={() => setArtistPhotoField('')}>Clear</button>}
                       </div>
                       <input type="file" accept="image/*" ref={artistPhotoFileInputRef} style={{ display: 'none' }} onChange={handleArtistPhotoFile} />
@@ -5932,10 +5935,21 @@ function App() {
                       />
                       <div className="upload-row">
                         <button type="button" className="upload-btn" onClick={() => artistBannerFileInputRef.current?.click()}>Upload from PC</button>
+                        <button type="button" className="upload-btn" onClick={() => setArtistImageSearch('banner')}>Search online</button>
                         {artistBannerField && <button type="button" className="upload-btn clear" onClick={() => setArtistBannerField('')}>Clear</button>}
                       </div>
                       <input type="file" accept="image/*" ref={artistBannerFileInputRef} style={{ display: 'none' }} onChange={handleArtistBannerFile} />
                     </div>
+                    {artistImageSearch && (
+                      <Suspense fallback={null}>
+                        <ArtistImagePicker
+                          artistName={artistNameField.trim()}
+                          target={artistImageSearch}
+                          onPick={artistImageSearch === 'photo' ? setArtistPhotoField : setArtistBannerField}
+                          onClose={() => setArtistImageSearch(null)}
+                        />
+                      </Suspense>
+                    )}
                   </>
                 )}
                 {artistEditorTab === 'details' && (

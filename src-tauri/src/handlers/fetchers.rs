@@ -1825,9 +1825,113 @@ pub async fn lastfm_album_info(
 }
 
 
+// -- Artist images (Deezer + TheAudioDB) --------------------------------
+//
+// Last.fm stopped serving artist images through its API, so artist
+// photos and banners come from two keyless sources instead:
+//   - Deezer: square 1000×1000 photos, one per matching artist.
+//   - TheAudioDB: photo, wide thumb, fanart backdrops and a banner.
+//     `123` is its public free-tier key.
+
+const DEEZER_BASE: &str = "https://api.deezer.com";
+const AUDIODB_BASE: &str = "https://www.theaudiodb.com/api/v1/json/123";
+
+fn json_headers() -> Vec<(&'static str, &'static str)> {
+    vec![("User-Agent", OMNIO_UA), ("Accept", "application/json")]
+}
+
+fn artist_image(source: &str, kind: &str, url: &str, thumb: &str, artist: &str, detail: String) -> Value {
+    json!({ "source": source, "kind": kind, "url": url, "thumb": thumb, "artist": artist, "detail": detail })
+}
+
+fn deezer_artist_images(data: &Value) -> Vec<Value> {
+    let empty = Vec::new();
+    data.get("data").and_then(|d| d.as_array()).unwrap_or(&empty).iter().filter_map(|a| {
+        let url = a.get("picture_xl")?.as_str()?;
+        if url.contains("/artist//") { return None; }
+        let name = a.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        let thumb = a.get("picture_medium").and_then(|v| v.as_str()).unwrap_or(url);
+        let fans = a.get("nb_fan").and_then(|v| v.as_u64()).unwrap_or(0);
+        Some(artist_image("deezer", "photo", url, thumb, name, format!("{fans} fans")))
+    }).collect()
+}
+
+fn audiodb_artist_images(data: &Value) -> Vec<Value> {
+    const FIELDS: &[(&str, &str, &str)] = &[
+        ("strArtistThumb", "photo", "Photo"),
+        ("strArtistWideThumb", "wide", "Wide"),
+        ("strArtistFanart", "fanart", "Fanart"),
+        ("strArtistFanart2", "fanart", "Fanart"),
+        ("strArtistFanart3", "fanart", "Fanart"),
+        ("strArtistFanart4", "fanart", "Fanart"),
+        ("strArtistBanner", "banner", "Banner"),
+    ];
+    let empty = Vec::new();
+    let mut out = Vec::new();
+    for a in data.get("artists").and_then(|d| d.as_array()).unwrap_or(&empty) {
+        let name = a.get("strArtist").and_then(|v| v.as_str()).unwrap_or("");
+        for (field, kind, label) in FIELDS {
+            if let Some(url) = a.get(*field).and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
+                out.push(artist_image("theaudiodb", kind, url, &format!("{url}/preview"), name, (*label).to_string()));
+            }
+        }
+    }
+    out
+}
+
+#[command]
+pub async fn artist_images_search(name: String, state: State<'_, AppState>) -> Result<Value, ()> {
+    let term = name.trim().to_string();
+    if term.is_empty() { return Ok(err("Missing artist name")); }
+    let result = cached_search(&state, "artist-images", &term, || async {
+        let client = get_http_client(&state);
+        let deezer_url = format!("{DEEZER_BASE}/search/artist?q={}&limit=6", url_encode(&term));
+        let audiodb_url = format!("{AUDIODB_BASE}/search.php?s={}", url_encode(&term));
+        let opts = || ProxyJsonOptions { method: Method::GET, headers: json_headers(), body: None, http_error_prefix: "HTTP" };
+        let (deezer, audiodb) = tokio::join!(
+            proxy_json(&client, &deezer_url, opts()),
+            proxy_json(&client, &audiodb_url, opts()),
+        );
+        if let (Err(a), Err(b)) = (&deezer, &audiodb) {
+            return err(format!("Deezer: {a} · TheAudioDB: {b}"));
+        }
+        let mut images = deezer.map(|v| deezer_artist_images(&v)).unwrap_or_default();
+        images.extend(audiodb.map(|v| audiodb_artist_images(&v)).unwrap_or_default());
+        ok(Value::Array(images))
+    })
+    .await;
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn artist_images_parse_both_sources() {
+        let deezer = json!({ "data": [
+            { "name": "Radiohead", "nb_fan": 4104393, "picture_xl": "https://cdn/x/1000.jpg", "picture_medium": "https://cdn/x/250.jpg" },
+            { "name": "No Photo", "nb_fan": 1, "picture_xl": "https://cdn-images.dzcdn.net/images/artist//1000x1000.jpg" }
+        ]});
+        let d = deezer_artist_images(&deezer);
+        assert_eq!(d.len(), 1);
+        assert_eq!(d[0]["kind"], "photo");
+        assert_eq!(d[0]["thumb"], "https://cdn/x/250.jpg");
+        assert_eq!(d[0]["detail"], "4104393 fans");
+
+        let audiodb = json!({ "artists": [{
+            "strArtist": "Radiohead",
+            "strArtistThumb": "https://r2/thumb.jpg",
+            "strArtistFanart": "https://r2/fan.jpg",
+            "strArtistFanart2": "",
+            "strArtistBanner": "https://r2/banner.jpg"
+        }]});
+        let a = audiodb_artist_images(&audiodb);
+        let kinds: Vec<&str> = a.iter().map(|v| v["kind"].as_str().unwrap()).collect();
+        assert_eq!(kinds, ["photo", "fanart", "banner"]);
+        assert_eq!(a[1]["thumb"], "https://r2/fan.jpg/preview");
+        assert!(audiodb_artist_images(&json!({ "artists": null })).is_empty());
+    }
 
     #[test]
     fn hltb_seconds_conversion() {

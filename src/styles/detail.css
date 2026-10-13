@@ -1558,3 +1558,46 @@
   height: 10px !important;
   border-radius: 2px !important;
 }
+
+.artist-img-modal { max-width: 860px; width: 94vw; }
+.artist-img-search { display: flex; gap: 8px; margin-bottom: 12px; }
+.artist-img-search .search-input { flex: 1; }
+.artist-img-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.artist-img-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.artist-img-grid.banner { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.artist-img-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.artist-img-card:hover { border-color: var(--accent); }
+.artist-img-card:disabled { opacity: 0.5; cursor: wait; }
+.artist-img-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--surface);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.artist-img-grid.banner .artist-img-thumb { aspect-ratio: 16 / 9; }
+.artist-img-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.artist-img-name { font-size: 12.5px; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.artist-img-meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); letter-spacing: 0.02em; }
