@@ -163,6 +163,7 @@ import BandMembersEditor from './components/editors/BandMembersEditor'
 import FiltersDropdown from './components/editors/FiltersDropdown'
 import { invoke } from './utils/ipc'
 import { buildItemFromForm as buildItemFromFormImpl } from './editor/buildItemFromForm'
+import { withSidecarFields } from './editor/sidecar'
 import { resetForm as resetFormImpl, loadItemIntoForm as loadItemIntoFormImpl, type FormSetters } from './editor/formActions'
 import { applyPatchFieldsToForm } from './editor/applyPatch'
 
@@ -261,7 +262,7 @@ interface Settings {
   franchiseGraphs?: Record<string, FranchiseGraph>
   // Empty array [] means the user explicitly cleared the Home layout;
   // missing means "use the default set of widgets".
-  homeWidgets?: { id: string; size: 'small' | 'medium' | 'large' }[]
+  homeWidgets?: { id: string; size: 'small' | 'medium' | 'large'; categories?: string[] }[]
   sidebarCollapsed?: boolean
   arcadeEnabled?: boolean
   // Plugins whose slug the user has unlocked via the Home keyboard listener.
@@ -2212,7 +2213,7 @@ function App() {
     if (editingId) {
       const oldItem = items.find((it) => it.id === editingId)
       const createdAt = oldItem?.createdAt ?? Date.now()
-      const built = withEfinishPolish(withGamePolish(withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(editingId, createdAt)))))))
+      const built = withSidecarFields(oldItem, withEfinishPolish(withGamePolish(withVnEndings(withPlaythroughs(withLibraryCustom(withBasedOn(buildItemFromForm(editingId, createdAt))))))))
       const withAuto = applyAutoStatus(oldItem ?? null, built, autoStatusOpts)
       const updated = await persistItemImages(withAuto)
       findOrphanedItemAssets(oldItem, updated).forEach(deleteAssetFile)
@@ -2256,6 +2257,11 @@ function App() {
 
   const handleDeleteFromPanel = () => { if (editingItem) handleDelete(editingItem) }
 
+  const togglePinned = (item: AnyItem) => {
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, pinnedAt: i.pinnedAt ? undefined : Date.now() } as AnyItem : i)))
+    setToast(item.pinnedAt ? `Unpinned "${item.title}"` : `Pinned "${item.title}" to Home`)
+  }
+
   const buildCardMenu = (item: AnyItem): CardMenuAction[] => {
     const dup = () => {
       const copy: AnyItem = { ...item, id: crypto.randomUUID(), title: `${item.title} (Copy)`, createdAt: Date.now() }
@@ -2282,6 +2288,7 @@ function App() {
         else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
       } },
       { divider: true, label: '', onClick: () => {} },
+      { label: item.pinnedAt ? 'Unpin from Home' : 'Pin to Home', onClick: () => togglePinned(item) },
       { label: 'Move to library…', onClick: () => setLibraryPickerFor(item) },
       { label: 'Add to playlist…', onClick: () => setPlaylistPickerFor(item) },
       { divider: true, label: '', onClick: () => {} },
@@ -3482,6 +3489,7 @@ function App() {
             <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
               <Home
                 items={items}
+                arcadeGames={arcadeGames}
                 enabledCategories={settings.enabledCategories}
                 layout={settings.homeWidgets}
                 onSaveLayout={(next) => setSettings((s) => ({ ...s, homeWidgets: next }))}
@@ -3489,6 +3497,7 @@ function App() {
                 onOpenItem={navigateToItem}
                 onOpenCalendar={() => { setSpecialView('calendar'); closePanel(); closeAllDetailViews() }}
                 onOpenStats={() => { setSpecialView('stats'); closePanel(); closeAllDetailViews() }}
+                onOpenArcade={() => { setSpecialView('arcade'); closePanel(); closeAllDetailViews() }}
                 onOpenSettings={() => { setSpecialView('settings'); closePanel(); closeAllDetailViews() }}
                 onOpenSearch={() => setSearchOpen(true)}
                 onOpenRandomizer={() => setRandomizerOpen(true)}

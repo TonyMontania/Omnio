@@ -6,6 +6,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item } from '../types'
+import type { ArcadeGame } from '../types/arcade'
 import type { CategoryId } from '../types/items'
 import { CATEGORIES } from '../categories'
 import './widgets'         // side-effect: registers built-in widgets
@@ -16,6 +17,7 @@ import {
 
 interface Props {
   items: Item[]
+  arcadeGames: ArcadeGame[]
   enabledCategories?: string[]
   layout?: readonly HomeWidgetSlot[]      // undefined = fall back to default
   onSaveLayout: (next: HomeWidgetSlot[]) => void
@@ -23,6 +25,7 @@ interface Props {
   onOpenItem: (item: Item) => void
   onOpenCalendar: () => void
   onOpenStats: () => void
+  onOpenArcade: () => void
   onOpenSettings: () => void
   onOpenSearch: () => void
   onOpenRandomizer?: () => void
@@ -37,8 +40,8 @@ const SIZE_SPAN: Record<WidgetSize, number> = { small: 1, medium: 2, large: 4 }
 
 export default function HomeBoard(props: Props) {
   const {
-    items, enabledCategories, layout, onSaveLayout,
-    onOpenCategory, onOpenItem, onOpenCalendar, onOpenStats,
+    items, arcadeGames, enabledCategories, layout, onSaveLayout,
+    onOpenCategory, onOpenItem, onOpenCalendar, onOpenStats, onOpenArcade,
     onQuickAdd,
   } = props
 
@@ -50,6 +53,7 @@ export default function HomeBoard(props: Props) {
   // are null when nothing is being dragged.
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+  const [filterIdx, setFilterIdx] = useState<number | null>(null)
 
   const today = useMemo(() => new Date(), [])
   const greeting = useMemo(() => {
@@ -68,9 +72,20 @@ export default function HomeBoard(props: Props) {
   const cats = enabledCategories ?? CATEGORIES.map((c) => c.id)
 
   const ctx: HomeContext = {
-    items, enabledCategories: cats,
-    onOpenItem, onOpenCategory, onOpenCalendar, onOpenStats,
+    items, arcadeGames, enabledCategories: cats,
+    onOpenItem, onOpenCategory, onOpenCalendar, onOpenStats, onOpenArcade,
     onQuickAdd,
+  }
+  const libraryOptions = CATEGORIES.filter((c) => cats.includes(c.id))
+  const ctxFor = (slot: HomeWidgetSlot): HomeContext => {
+    if (!slot.categories || slot.categories.length === 0) return ctx
+    const only = new Set(slot.categories)
+    return { ...ctx, items: items.filter((i) => only.has(i.categoryId)) }
+  }
+  const filterLabel = (slot: HomeWidgetSlot): string | null => {
+    if (!slot.categories || slot.categories.length === 0) return null
+    const names = slot.categories.map((id) => CATEGORIES.find((c) => c.id === id)?.label ?? id)
+    return names.length <= 2 ? names.join(' · ') : `${names.length} libraries`
   }
 
   const commit = (next: HomeWidgetSlot[]) => onSaveLayout(next)
@@ -88,6 +103,16 @@ export default function HomeBoard(props: Props) {
   }
   const resize = (idx: number, size: WidgetSize) => {
     const next = effectiveLayout.map((s, i) => i === idx ? { ...s, size } : s)
+    commit(next)
+  }
+  const toggleLibrary = (idx: number, categoryId: string) => {
+    const next = effectiveLayout.map((s, i) => {
+      if (i !== idx) return s
+      const current = new Set(s.categories ?? [])
+      if (current.has(categoryId)) current.delete(categoryId)
+      else current.add(categoryId)
+      return { ...s, categories: current.size > 0 ? Array.from(current) : undefined }
+    })
     commit(next)
   }
   // Move a slot from `from` to just before `to`. `to` is expressed in
@@ -151,7 +176,8 @@ export default function HomeBoard(props: Props) {
           {effectiveLayout.map((slot, idx) => {
             const w = getHomeWidget(slot.id)
             if (!w) return null
-            const body = w.render(ctx, slot.size)
+            const body = w.render(ctxFor(slot), slot.size)
+            const filtered = filterLabel(slot)
             // Widgets that opt into self-hiding (like "On this day")
             // return null when they have nothing to show. Skip the
             // whole card outside of edit mode so the board stays
@@ -207,6 +233,7 @@ export default function HomeBoard(props: Props) {
                   <h2>
                     {editing && <span className="home-widget-grip" title="Drag to reorder" aria-hidden>⋮⋮</span>}
                     {w.label}
+                    {filtered && <span className="home-widget-filter-tag">{filtered}</span>}
                   </h2>
                   {editing && (
                     <div className="home-widget-controls">
@@ -221,10 +248,25 @@ export default function HomeBoard(props: Props) {
                           <option key={s} value={s}>{SIZE_LABELS[s]}</option>
                         ))}
                       </select>
+                      {w.libraryFilter !== false && (
+                        <button type="button" title="Choose which libraries this widget shows" className={filtered ? 'active' : ''} onClick={() => setFilterIdx(filterIdx === idx ? null : idx)}>Libraries</button>
+                      )}
                       <button type="button" className="danger" title="Remove" onClick={() => remove(idx)}>✕</button>
                     </div>
                   )}
                 </header>
+                {editing && filterIdx === idx && (
+                  <div className="home-widget-libraries">
+                    <span className="hint">Show items from:</span>
+                    {libraryOptions.map((c) => (
+                      <label key={c.id}>
+                        <input type="checkbox" checked={slot.categories?.includes(c.id) ?? false} onChange={() => toggleLibrary(idx, c.id)} />
+                        {c.label}
+                      </label>
+                    ))}
+                    <span className="hint">{filtered ? '' : 'Nothing checked = every library.'}</span>
+                  </div>
+                )}
                 <div className="home-widget-body">{body ?? <p className="hint">Nothing to show right now — will appear on the right day.</p>}</div>
               </section>
             )

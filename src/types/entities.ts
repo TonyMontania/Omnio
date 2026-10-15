@@ -430,6 +430,8 @@ export interface AnyItem {
   title: string
   // Item-level favorite. Distinct from Track.favorite (per-song).
   favorite?: boolean
+  // Set when the item is pinned to Home; the timestamp keeps pin order.
+  pinnedAt?: number
   cover?: string
   bannerImage?: string
   logoImage?: string

@@ -6,8 +6,9 @@ import type { Item, Weekday } from '../types'
 import { assetSrc, WEEKDAY_OPTIONS } from '../types'
 import { airingWeekday, isCurrentlyAiring } from '../utils/airing'
 import { CATEGORIES } from '../categories'
-import { CalendarIcon, InsightsIcon } from '../icons'
+import { CalendarIcon } from '../icons'
 import { registerHomeWidget, type WidgetSize } from './registry'
+import { RUN_FLAG_OPTIONS } from '../types/arcade'
 import FillGrid from './FillGrid'
 
 function recencyScore(it: Item): number {
@@ -445,21 +446,104 @@ registerHomeWidget({
   },
 })
 
+function relativeDay(ms: number, now: number): string {
+  const days = Math.max(0, Math.floor((now - ms) / (24 * 60 * 60 * 1000)))
+  return days === 0 ? 'Today' : days === 1 ? 'Yesterday' : days < 30 ? `${days}d ago` : new Date(ms).toLocaleDateString()
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+function CoverCard({ item, badge, onOpen }: { item: Item; badge?: string; onOpen: (item: Item) => void }) {
+  return (
+    <button type="button" className="home-current-card" onClick={() => onOpen(item)} title={item.title}>
+      <div className="home-current-cover">
+        {item.cover
+          ? <img src={assetSrc(item.cover)} alt="" loading="lazy" />
+          : <span>{item.title.charAt(0).toUpperCase()}</span>}
+        {badge && <span className="home-current-badge">{badge}</span>}
+      </div>
+      <div className="home-current-title">{item.title}</div>
+    </button>
+  )
+}
+
+registerHomeWidget({
+  id: 'recently-added',
+  label: 'Recently added',
+  description: 'The newest items in your libraries, newest first.',
+  defaultSize: 'large',
+  sizesSupported: ['small', 'medium', 'large'],
+  render: (ctx, size) => {
+    const list = [...ctx.items].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+    if (list.length === 0) return <p className="hint">Nothing added yet.</p>
+    const now = Date.now()
+    return (
+      <FillGrid items={list} minWidth={140} gap={14} rows={size === 'small' ? 1 : 2} className="home-current-list">
+        {(it) => <CoverCard key={it.id} item={it} badge={relativeDay(it.createdAt, now)} onOpen={ctx.onOpenItem} />}
+      </FillGrid>
+    )
+  },
+})
+
+registerHomeWidget({
+  id: 'pinned',
+  label: 'Pinned',
+  description: 'Items you pinned from the right-click menu, in the order you pinned them.',
+  defaultSize: 'large',
+  sizesSupported: ['small', 'medium', 'large'],
+  render: (ctx, size) => {
+    const list = ctx.items.filter((i) => i.pinnedAt).sort((a, b) => (a.pinnedAt ?? 0) - (b.pinnedAt ?? 0))
+    if (list.length === 0) return <p className="hint">Right-click any card and choose <b>Pin to Home</b> to keep it here.</p>
+    return (
+      <FillGrid items={list} minWidth={140} gap={14} rows={size === 'small' ? 1 : 3} className="home-current-list">
+        {(it) => <CoverCard key={it.id} item={it} onOpen={ctx.onOpenItem} />}
+      </FillGrid>
+    )
+  },
+})
+
 registerHomeWidget({
   id: 'shmup-1cc',
-  label: '1cc tracker (placeholder)',
-  description: 'Preview of the upcoming shmup / bullet-hell 1cc log widget. No data yet.',
+  label: 'Recent 1cc clears',
+  description: 'Your latest one-credit clears logged in Arcade.',
   defaultSize: 'medium',
   sizesSupported: ['small', 'medium', 'large'],
-  render: () => {
+  libraryFilter: false,
+  render: (ctx, size) => {
+    const clears = ctx.arcadeGames.flatMap((g) => g.runs
+      .filter((r) => r.flags.includes('1cc'))
+      .map((r) => ({ game: g, run: r })))
+    if (clears.length === 0) {
+      return <p className="hint">Log a run with the <b>1cc</b> flag in Arcade and it shows up here.</p>
+    }
+    clears.sort((a, b) => (b.run.date ?? '').localeCompare(a.run.date ?? ''))
+    const games = new Set(clears.map((c) => c.game.id)).size
+    const cap = size === 'small' ? 3 : size === 'medium' ? 5 : 8
     return (
-      <div className="home-placeholder-widget">
-        <div className="home-placeholder-icon"><InsightsIcon /></div>
-        <div className="home-placeholder-title">1cc log — coming soon</div>
-        <div className="home-placeholder-sub">
-          Track credits, character, difficulty, and 1cc / no-miss / no-bomb runs per shmup.
-          This tile is here so the widget board can already reserve its slot.
+      <div className="home-1cc">
+        <div className="home-1cc-total">
+          <b>{clears.length}</b> 1cc {clears.length === 1 ? 'clear' : 'clears'} across <b>{games}</b> {games === 1 ? 'game' : 'games'}
         </div>
+        <ul className="home-1cc-list">
+          {clears.slice(0, cap).map(({ game, run }) => (
+            <li key={run.id}>
+              <button type="button" onClick={ctx.onOpenArcade}>
+                <span className="home-1cc-logo">
+                  {game.logo ? <img src={game.logo} alt="" /> : <span>{(game.abbreviation || game.title).slice(0, 4)}</span>}
+                </span>
+                <span className="home-1cc-body">
+                  <span className="home-1cc-title">{game.title}</span>
+                  <span className="home-1cc-meta">
+                    {[run.character, run.difficulty, run.score ? run.score.toLocaleString() : ''].filter(Boolean).join(' · ')}
+                  </span>
+                </span>
+                <span className="home-1cc-flags">
+                  {run.flags.filter((f) => f !== '1cc').map((f) => <span key={f}>{RUN_FLAG_OPTIONS.find((o) => o.value === f)?.short ?? f}</span>)}
+                </span>
+                <span className="home-1cc-date">{run.date}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
     )
   },
@@ -1002,6 +1086,7 @@ registerHomeWidget({
   description: 'Shown when the layout has no widgets — points to Edit layout.',
   defaultSize: 'large',
   sizesSupported: ['large'],
+  libraryFilter: false,
   render: () => (
     <div className="home-empty-hint">
       <h3>Your home board is empty.</h3>

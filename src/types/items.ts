@@ -88,6 +88,8 @@ export interface BaseItem {
   title: string
   createdAt: number
   favorite?: boolean
+  // Set when the item is pinned to Home; the timestamp keeps pin order.
+  pinnedAt?: number
   cover?: string
   bannerImage?: string
   logoImage?: string

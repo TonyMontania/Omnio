@@ -8,17 +8,20 @@
 
 import type { ReactElement } from 'react'
 import type { Item } from '../types'
+import type { ArcadeGame } from '../types/arcade'
 import type { CategoryId } from '../types/items'
 
 export type WidgetSize = 'small' | 'medium' | 'large'
 
 export interface HomeContext {
   items: Item[]
+  arcadeGames: ArcadeGame[]
   enabledCategories: readonly string[]
   onOpenItem: (item: Item) => void
   onOpenCategory: (categoryId: CategoryId) => void
   onOpenCalendar: () => void
   onOpenStats: () => void
+  onOpenArcade: () => void
   // Quick-add creates a minimal stub item (title + category) — the
   // widget uses it to skip the full Add panel for fast entry. App.tsx
   // wires this to a lightweight `setItems` push.
@@ -31,6 +34,9 @@ export interface HomeWidget {
   description: string
   defaultSize: WidgetSize
   sizesSupported: readonly WidgetSize[]
+  // Widgets built from library items can be narrowed to some libraries
+  // from the board's edit mode. Off for widgets fed by other data.
+  libraryFilter?: boolean
   render: (ctx: HomeContext, size: WidgetSize) => ReactElement | null
 }
 
@@ -40,6 +46,8 @@ export interface HomeWidget {
 export interface HomeWidgetSlot {
   id: string
   size: WidgetSize
+  // Library ids this widget is limited to. Missing or empty = all.
+  categories?: string[]
 }
 
 const registry = new Map<string, HomeWidget>()
@@ -66,6 +74,7 @@ export const DEFAULT_HOME_LAYOUT: readonly HomeWidgetSlot[] = [
   { id: 'big-numbers',        size: 'large' },
   { id: 'currently',          size: 'large' },
   { id: 'continue-watching',  size: 'large' },
+  { id: 'recently-added',     size: 'large' },
   { id: 'weekly-airing',      size: 'large' },
   { id: 'cover-carousel',     size: 'large' },
   { id: 'upcoming-week',      size: 'medium' },
