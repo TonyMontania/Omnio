@@ -166,6 +166,7 @@ import FiltersDropdown from './components/editors/FiltersDropdown'
 import { invoke } from './utils/ipc'
 import { buildItemFromForm as buildItemFromFormImpl } from './editor/buildItemFromForm'
 import { withSidecarFields } from './editor/sidecar'
+import { buildSettingsFile, mergeImportedSettings, mergeSmartLists, parseSettingsFile } from './utils/settingsTransfer'
 import { newEpisodes, noticeMessages } from './utils/episodeNotices'
 import { syncAiring, syncSeriesAiring, type AiringApi, type SeriesApi, type TmdbShow } from './utils/airingSync'
 import { aniListAnimePatch, aniListCover, aniListTitle, weekdayOfTimestamp, type AniListMedia } from './utils/anilist'
@@ -635,6 +636,8 @@ function App() {
   const [artistPhotoField, setArtistPhotoField] = useState('')
   const [artistImageSearch, setArtistImageSearch] = useState<'photo' | 'banner' | null>(null)
   const [seasonBrowserOpen, setSeasonBrowserOpen] = useState(false)
+  const [includeKeysInExport, setIncludeKeysInExport] = useState(false)
+  const settingsFileInputRef = useRef<HTMLInputElement>(null)
   const [artistBannerField, setArtistBannerField] = useState('')
   const [artistOrigin, setArtistOrigin] = useState('')
   const [artistBandStatus, setArtistBandStatus] = useState<BandStatus | ''>('')
@@ -4190,6 +4193,43 @@ function App() {
                         }}><ServiceLogo service="mal" /><span>Export Manga (MAL XML)</span></button>
                       </div>
                       <p className="hint">Bulk-load titles from other places. MAL/AniList uses the XML export; the generic importer takes an .xlsx, .csv (including Notion database exports), .tsv or .txt file with one title per line.</p>
+                    </div>
+                    <div className="field-group">
+                      <label>Settings file</label>
+                      <p className="hint">Move your setup to another computer: theme, Home layout, card fields, shortcuts, templates, custom fields, tag tree and smart lists. Your library itself isn't included — use a backup for that.</p>
+                      <div className="upload-row">
+                        <label className="settings-check">
+                          <input type="checkbox" checked={includeKeysInExport} onChange={(e) => setIncludeKeysInExport(e.target.checked)} />
+                          Include API keys and proxy
+                        </label>
+                        <button type="button" className="secondary-btn" onClick={() => void saveExportInApp(
+                          JSON.stringify(buildSettingsFile(settings, smartLists, includeKeysInExport), null, 2),
+                          'omnio-settings', 'json', 'settings',
+                        )}>Export settings…</button>
+                        <button type="button" className="secondary-btn" onClick={() => settingsFileInputRef.current?.click()}>Import settings…</button>
+                        <input
+                          ref={settingsFileInputRef}
+                          type="file"
+                          accept=".json,application/json"
+                          style={{ display: 'none' }}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            e.target.value = ''
+                            if (!file) return
+                            try {
+                              const parsed = parseSettingsFile(await file.text())
+                              askConfirm('Replace your current settings with the ones in this file? Your library and backups stay as they are.', () => {
+                                setSettings((s) => mergeImportedSettings(s, parsed))
+                                setSmartLists((lists) => mergeSmartLists(lists, parsed.smartLists))
+                                setToast('Settings imported')
+                              })
+                            } catch (err) {
+                              setToast((err as Error).message)
+                            }
+                          }}
+                        />
+                      </div>
+                      {includeKeysInExport && <p className="hint">Keep that file private: anyone with it can use your API keys.</p>}
                     </div>
                     <div className="field-group">
                       <label>Share your library</label>
