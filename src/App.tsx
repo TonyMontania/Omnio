@@ -165,7 +165,7 @@ import FiltersDropdown from './components/editors/FiltersDropdown'
 import { invoke } from './utils/ipc'
 import { buildItemFromForm as buildItemFromFormImpl } from './editor/buildItemFromForm'
 import { withSidecarFields } from './editor/sidecar'
-import { syncAiring, type AiringApi } from './utils/airingSync'
+import { syncAiring, syncSeriesAiring, type AiringApi, type SeriesApi, type TmdbShow } from './utils/airingSync'
 import { aniListAnimePatch, aniListCover, aniListTitle, weekdayOfTimestamp, type AniListMedia } from './utils/anilist'
 import { resetForm as resetFormImpl, loadItemIntoForm as loadItemIntoFormImpl, type FormSetters } from './editor/formActions'
 import { applyPatchFieldsToForm } from './editor/applyPatch'
@@ -1263,6 +1263,8 @@ function App() {
 
   const itemsRef = useRef(items)
   itemsRef.current = items
+  const tmdbKeyRef = useRef(settings.tmdbApiKey)
+  tmdbKeyRef.current = settings.tmdbApiKey
   useEffect(() => {
     if (!loaded) return
     let cancelled = false
@@ -1272,11 +1274,18 @@ function App() {
       airing: (ids) => window.ipcRenderer.invoke('anilist:airing', ids),
       sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
     }
+    const seriesApi = (key: string): SeriesApi => ({
+      search: (title) => window.ipcRenderer.invoke('tmdb:search', key, title, 'tv') as Promise<{ ok: true; data: TmdbShow[] } | { ok: false; error: string }>,
+      details: (id) => window.ipcRenderer.invoke('tmdb:details', key, 'tv', id) as Promise<{ ok: true; data: TmdbShow } | { ok: false; error: string }>,
+      sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+    })
     const run = async () => {
       if (running) return
       running = true
       try {
         const patches = await syncAiring(itemsRef.current, api)
+        const key = tmdbKeyRef.current?.trim()
+        if (key) patches.push(...await syncSeriesAiring(itemsRef.current, seriesApi(key)))
         if (cancelled || patches.length === 0) return
         const byId = new Map(patches.map((p) => [p.id, p.patch]))
         skipHistoryRef.current = true

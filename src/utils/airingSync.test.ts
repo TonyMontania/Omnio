@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { AnyItem } from '../types'
 import type { AniListMedia } from './anilist'
 import { formatCountdown, matchAniListMedia } from './anilist'
-import { syncAiring, tracksAiring, type AiringApi } from './airingSync'
+import { syncAiring, syncSeriesAiring, tracksAiring, type AiringApi, type SeriesApi, type TmdbShow } from './airingSync'
 
 const NOW = Date.UTC(2026, 9, 15, 12)
 const anime = (fields: Partial<AnyItem>): AnyItem => ({ id: 'a', categoryId: 'anime', title: 'Frieren', createdAt: 0, airingStatus: 'airing', ...fields }) as AnyItem
@@ -71,5 +71,44 @@ describe('formatCountdown', () => {
     expect(formatCountdown(NOW / 1000 + 3 * 86400 + 4 * 3600, NOW)).toBe('3d 4h')
     expect(formatCountdown(NOW / 1000 + 5 * 3600 + 12 * 60, NOW)).toBe('5h 12m')
     expect(formatCountdown(NOW / 1000 - 100, NOW)).toBe('0m')
+  })
+})
+
+describe('syncSeriesAiring', () => {
+  const series = (fields: Partial<AnyItem>): AnyItem => ({ id: 's', categoryId: 'series', title: 'Severance', createdAt: 0, seriesStatus: 'watching', startYear: '2022', ...fields }) as AnyItem
+  const show = { id: 95396, name: 'Severance', first_air_date: '2022-02-17', status: 'Returning Series', next_episode_to_air: { air_date: '2026-10-20', episode_number: 4, season_number: 3 } }
+
+  function api(results: TmdbShow[], details: TmdbShow) {
+    const calls = { search: 0, details: 0 }
+    const a: SeriesApi = {
+      search: async () => { calls.search++; return { ok: true, data: results } },
+      details: async () => { calls.details++; return { ok: true, data: details } },
+      sleep: async () => {},
+    }
+    return { a, calls }
+  }
+
+  it('links by title and year, then stores the next episode as a local date', async () => {
+    const { a } = api([{ ...show, id: 1, first_air_date: '1999-01-01' }, show], show)
+    const [p] = await syncSeriesAiring([series({})], a, { now: NOW })
+    expect(p.patch.tmdbId).toBe(95396)
+    expect(p.patch.nextAiring).toMatchObject({ episode: 4, season: 3, dateOnly: true })
+    expect(new Date(p.patch.nextAiring!.airingAt * 1000).getDate()).toBe(20)
+  })
+
+  it('keeps a date-only episode fresh for its whole air day', async () => {
+    const airDay = new Date(2026, 9, 20).getTime() / 1000
+    const now = airDay * 1000 + 12 * 3600 * 1000
+    const item = series({ tmdbId: 95396, nextAiring: { episode: 4, airingAt: airDay, checkedAt: now - 3600 * 1000, dateOnly: true } })
+    const { a, calls } = api([], show)
+    await syncSeriesAiring([item], a, { now })
+    expect(calls.details).toBe(0)
+  })
+
+  it('clears the countdown when the show ends', async () => {
+    const item = series({ tmdbId: 95396, nextAiring: { episode: 9, airingAt: 1, checkedAt: 1 } })
+    const { a } = api([], { ...show, status: 'Ended', next_episode_to_air: null })
+    const [p] = await syncSeriesAiring([item], a, { now: NOW })
+    expect(p.patch).toEqual({ nextAiring: undefined })
   })
 })

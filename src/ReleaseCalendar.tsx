@@ -51,6 +51,27 @@ function nextWeekday(base: Date, weekdayIndex: number): Date {
   return d
 }
 
+// Episodes from the exact next air date AniList or TMDb reported,
+// repeated weekly. TMDb only knows the next one, so series stop there.
+function scheduledEpisodes(it: Item, next: NonNullable<Item['nextAiring']>, startOfToday: Date): Entry[] {
+  const out: Entry[] = []
+  const total = parseInt(it.totalEpisodes ?? '', 10)
+  const weekly = it.categoryId !== 'series'
+  const hardCap = new Date(startOfToday); hardCap.setFullYear(hardCap.getFullYear() + 1)
+  const first = new Date(next.airingAt * 1000)
+  for (let k = 0; k < 60; k++) {
+    const episode = next.episode + k
+    if (Number.isFinite(total) && total > 0 && episode > total) break
+    const date = new Date(first.getFullYear(), first.getMonth(), first.getDate() + 7 * k, first.getHours(), first.getMinutes())
+    if (date > hardCap) break
+    const name = next.season ? `S${next.season}E${episode}` : `Episode ${episode}`
+    const time = next.dateOnly ? '' : ` · ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
+    out.push({ item: it, date, label: `${name}${time}`, source: 'episode', episodeNumber: episode })
+    if (!weekly) break
+  }
+  return out
+}
+
 // Capped at 60 events per item so long-runners (Detective Conan…)
 // don't dump hundreds of years of weekly events into the calendar.
 function collectEpisodeEntries(items: Item[], today: Date): Entry[] {
@@ -62,6 +83,12 @@ function collectEpisodeEntries(items: Item[], today: Date): Entry[] {
     const isAnimeLike = it.categoryId === 'anime' || it.categoryId === 'donghua'
     const isSeries = it.categoryId === 'series'
     if (!isAnimeLike && !isSeries) continue
+
+    const next = it.nextAiring
+    if (next && next.airingAt * 1000 >= startOfToday.getTime()) {
+      out.push(...scheduledEpisodes(it, next, startOfToday))
+      continue
+    }
 
     // Only currently-airing items. Anime uses airingStatus; series has
     // no equivalent enum, so fall back to seriesStatus === 'watching'

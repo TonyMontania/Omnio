@@ -27,7 +27,8 @@ export function tracksAiring(item: AnyItem, now = new Date()): boolean {
 function isStale(item: AnyItem, now: number): boolean {
   const next = item.nextAiring
   if (!next) return true
-  return now - next.checkedAt > AIRING_REFRESH_MS || next.airingAt * 1000 <= now
+  const airedAt = next.airingAt * 1000 + (next.dateOnly ? 24 * HOUR : 0)
+  return now - next.checkedAt > AIRING_REFRESH_MS || airedAt <= now
 }
 
 export function airingPatchFor(item: AnyItem, media: AniListMedia, now: number): Partial<AnyItem> {
@@ -81,4 +82,87 @@ export async function syncAiring(items: AnyItem[], api: AiringApi, opts: { now?:
   }
 
   return Array.from(patches, ([id, patch]) => ({ id, patch }))
+}
+
+// ---- Series via TMDb ----
+
+export interface TmdbShow {
+  id: number
+  name?: string
+  original_name?: string
+  first_air_date?: string
+  status?: string
+  next_episode_to_air?: { air_date?: string; episode_number?: number; season_number?: number } | null
+}
+
+export interface SeriesApi {
+  search: (title: string) => Promise<Envelope<TmdbShow[]>>
+  details: (id: number) => Promise<Envelope<TmdbShow>>
+  sleep: (ms: number) => Promise<void>
+}
+
+const TMDB_GAP_MS = 300
+const ENDED = new Set(['Ended', 'Canceled'])
+
+export function tracksSeries(item: AnyItem): boolean {
+  if (item.categoryId !== 'series') return false
+  if (item.seriesStatus === 'dropped' || item.seriesStatus === 'completed') return false
+  return item.seriesFormat !== 'ended' || !!item.nextAiring
+}
+
+function localMidnight(isoDate: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate)
+  if (!m) return null
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime() / 1000
+}
+
+export function seriesPatchFor(item: AnyItem, show: TmdbShow, now: number): Partial<AnyItem> {
+  const next = show.next_episode_to_air
+  const at = next?.air_date ? localMidnight(next.air_date) : null
+  if (next && at !== null && next.episode_number) {
+    return {
+      nextAiring: { episode: next.episode_number, season: next.season_number, airingAt: at, checkedAt: now, dateOnly: true },
+      ...(item.airingDay ? {} : { airingDay: weekdayOfTimestamp(at) }),
+    }
+  }
+  if (item.nextAiring || (show.status && ENDED.has(show.status))) return { nextAiring: undefined }
+  return {}
+}
+
+function pickShow(results: TmdbShow[], item: AnyItem): TmdbShow | undefined {
+  const norm = (s?: string) => (s ?? '').toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, '')
+  const titles = new Set([item.title, ...(item.alternativeTitles ?? [])].map(norm).filter(Boolean))
+  const year = item.startYear?.slice(0, 4)
+  const matches = results.filter((r) => titles.has(norm(r.name)) || titles.has(norm(r.original_name)))
+  return matches.find((r) => year && r.first_air_date?.startsWith(year)) ?? (matches.length === 1 ? matches[0] : undefined)
+}
+
+export async function syncSeriesAiring(items: AnyItem[], api: SeriesApi, opts: { now?: number; maxRequests?: number } = {}): Promise<ItemPatch[]> {
+  const now = opts.now ?? Date.now()
+  let budget = opts.maxRequests ?? 20
+  const patches: ItemPatch[] = []
+  for (const item of items.filter(tracksSeries)) {
+    if (budget <= 0) break
+    let id = item.tmdbId
+    const patch: Partial<AnyItem> = {}
+    if (!id) {
+      if (id === 0 && item.tmdbCheckedAt && now - item.tmdbCheckedAt < LOOKUP_RETRY_MS) continue
+      budget--
+      const r = await api.search(item.title)
+      if (!r.ok) break
+      const show = pickShow(r.data, item)
+      patch.tmdbId = show?.id ?? 0
+      patch.tmdbCheckedAt = now
+      id = show?.id
+      await api.sleep(TMDB_GAP_MS)
+    }
+    if (id && (!item.tmdbId || isStale(item, now)) && budget > 0) {
+      budget--
+      const r = await api.details(id)
+      if (r.ok) Object.assign(patch, seriesPatchFor(item, r.data, now))
+      await api.sleep(TMDB_GAP_MS)
+    }
+    if (Object.keys(patch).length > 0) patches.push({ id: item.id, patch })
+  }
+  return patches
 }

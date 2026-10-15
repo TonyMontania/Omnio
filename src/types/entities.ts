@@ -436,8 +436,12 @@ export interface AnyItem {
   // no match; `anilistCheckedAt` spaces out retries.
   anilistId?: number
   anilistCheckedAt?: number
-  // Next episode as reported by AniList (unix seconds).
-  nextAiring?: { episode: number; airingAt: number; checkedAt: number }
+  // TMDb link for series, resolved the same way.
+  tmdbId?: number
+  tmdbCheckedAt?: number
+  // Next episode as reported by AniList or TMDb (unix seconds). TMDb only
+  // knows the day, so `dateOnly` marks a local-midnight timestamp.
+  nextAiring?: { episode: number; airingAt: number; checkedAt: number; season?: number; dateOnly?: boolean }
   cover?: string
   bannerImage?: string
   logoImage?: string
