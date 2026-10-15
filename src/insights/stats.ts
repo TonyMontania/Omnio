@@ -212,3 +212,84 @@ export function getDistribution(categoryId: string, list: Item[]): DistSlice[] {
     { label: 'Not started', value: none, color: 'var(--status-backlog)' },
   ]
 }
+
+// ---- Time invested ----
+
+export interface TimeInvested {
+  categoryId: string
+  minutes: number
+  units: { count: number; label: string } | null
+}
+
+const toInt = (v?: string): number => {
+  const n = parseInt(v ?? '', 10)
+  return Number.isFinite(n) && n > 0 ? n : 0
+}
+
+// "3:45" / "1:02:30" → minutes.
+function trackMinutes(duration?: string): number {
+  if (!duration) return 0
+  const parts = duration.split(':').map((p) => parseInt(p, 10))
+  if (parts.some((p) => !Number.isFinite(p))) return 0
+  const seconds = parts.reduce((acc, p) => acc * 60 + p, 0)
+  return seconds / 60
+}
+
+// Free-text VN play time ("42h", "42.5", "12h 30m") → minutes.
+function vnPlayMinutes(v?: string): number {
+  const m = /(\d+(?:[.,]\d+)?)\s*h?(?:\s*(\d+)\s*m)?/i.exec(v ?? '')
+  if (!m) return 0
+  return parseFloat(m[1].replace(',', '.')) * 60 + (m[2] ? parseInt(m[2], 10) : 0)
+}
+
+const MANGA_LIKE = new Set(['manga', 'manhwa', 'manhua', 'comics_west'])
+
+// Running totals per library. Time where it's known; for libraries
+// that only count progress (chapters, pages) the unit count instead.
+export function getTimeInvested(categoryId: string, list: Item[]): TimeInvested {
+  let minutes = 0
+  let units: TimeInvested['units'] = null
+  if (categoryId === 'videojuegos') {
+    minutes = list.reduce((acc, i) => acc + parsePlayTime(i.playTime), 0)
+  } else if (categoryId === 'peliculas') {
+    minutes = list.reduce((acc, i) => {
+      if (!i.consumed) return acc
+      const times = Math.max(toInt(i.timesWatched) || 1, 1 + (i.rewatches?.length ?? 0))
+      return acc + toInt(i.duration) * times
+    }, 0)
+  } else if (categoryId === 'series' || categoryId === 'anime' || categoryId === 'donghua') {
+    let episodes = 0
+    for (const i of list) {
+      const eps = toInt(i.episodesWatched)
+      episodes += eps
+      minutes += eps * toInt(i.episodeDuration)
+    }
+    units = { count: episodes, label: episodes === 1 ? 'episode' : 'episodes' }
+  } else if (MANGA_LIKE.has(categoryId)) {
+    const chapters = list.reduce((acc, i) => acc + (i.hasChapters && i.chapters ? i.chapters.filter((c) => c.read).length : toInt(i.chaptersRead)), 0)
+    units = { count: chapters, label: chapters === 1 ? 'chapter' : 'chapters' }
+  } else if (categoryId === 'libros') {
+    const pages = list.reduce((acc, i) => acc + (toInt(i.pagesRead) || (i.bookStatus === 'completed' ? toInt(i.totalPages) : 0)), 0)
+    units = { count: pages, label: pages === 1 ? 'page' : 'pages' }
+  } else if (categoryId === 'musica') {
+    minutes = list.reduce((acc, i) => {
+      if (!i.consumed) return acc
+      return acc + (i.tracks ?? []).reduce((t, tr) => t + trackMinutes(tr.duration), 0)
+    }, 0)
+  } else if (categoryId === 'visual_novels') {
+    minutes = list.reduce((acc, i) => {
+      const own = vnPlayMinutes(i.playTime)
+      if (own > 0) return acc + own
+      const len = parseFloat(String(i.vnLengthHours ?? ''))
+      return acc + (i.visualNovelStatus === 'completed' && len > 0 ? len * 60 : 0)
+    }, 0)
+  }
+  return { categoryId, minutes: Math.round(minutes), units }
+}
+
+export function formatHours(minutes: number): string {
+  const hours = minutes / 60
+  if (hours >= 100) return `${Math.round(hours).toLocaleString()}h`
+  if (hours >= 1) return `${hours.toFixed(1).replace(/\.0$/, '')}h`
+  return `${minutes}m`
+}

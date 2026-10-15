@@ -51,7 +51,7 @@ import {
   getTopMusicLabels, getTopMangaAuthors, getTopMangaArtists, getTopMagazines,
   getMonthlyActivity, getAnimeEpisodesPerMonth, getSeriesEpisodesPerMonth,
   getMoviesWatchedPerMonth, getMangaChaptersPerMonth, getMusicListensPerMonth,
-  getDistribution,
+  getDistribution, getTimeInvested, formatHours,
 } from './insights/stats'
 // Detail modals + heavy pages are lazy-loaded so the initial bundle
 // stays lean; users only pay for a modal's JS on first open.
@@ -3047,6 +3047,32 @@ function App() {
           {specialView === 'stats' && (
             <>
               <div className="content-scroll">
+              {(() => {
+                const enabledCats = CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id))
+                const rows = enabledCats.map((c) => getTimeInvested(c.id, items.filter((i) => i.categoryId === c.id)))
+                const totalMinutes = rows.reduce((acc, r) => acc + r.minutes, 0)
+                return (
+                  <section className="time-invested">
+                    <header>
+                      <h3 className="insights-subheading">Time invested</h3>
+                      <span className="time-invested-total">{formatHours(totalMinutes)} across your libraries</span>
+                    </header>
+                    <div className="time-invested-grid">
+                      {rows.filter((r) => r.minutes > 0 || (r.units && r.units.count > 0)).map((r) => {
+                        const cat = enabledCats.find((c) => c.id === r.categoryId)!
+                        return (
+                          <button key={r.categoryId} type="button" className={statsCategory === r.categoryId ? 'time-invested-tile active' : 'time-invested-tile'} onClick={() => setStatsCategory(cat.id)}>
+                            <span className="time-invested-icon"><CategoryIcon id={cat.id} /></span>
+                            <span className="time-invested-label">{cat.label}</span>
+                            <span className="time-invested-value">{r.minutes > 0 ? formatHours(r.minutes) : `${r.units!.count.toLocaleString()} ${r.units!.label}`}</span>
+                            {r.minutes > 0 && r.units && r.units.count > 0 && <span className="time-invested-sub">{r.units.count.toLocaleString()} {r.units.label}</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </section>
+                )
+              })()}
               <div className="sub-tabs">
                 {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((cat) => (
                   <button key={cat.id} className={statsCategory === cat.id ? 'sub-tab active' : 'sub-tab'} onClick={() => setStatsCategory(cat.id)}>
