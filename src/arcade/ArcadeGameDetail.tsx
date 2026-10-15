@@ -7,6 +7,7 @@ import type { ArcadeGame, Run } from '../types/arcade'
 import ArcadeRunEditor from './ArcadeRunEditor'
 import ArcadeMiniGrid from './ArcadeMiniGrid'
 import GridEditor from './GridEditor'
+import ScoreChart from './ScoreChart'
 
 interface Props {
   game: ArcadeGame
@@ -89,6 +90,13 @@ export default function ArcadeGameDetail(props: Props) {
             : <div className="arcade-detail-grid-wrap">
                 <ArcadeMiniGrid game={game} onOpen={() => { /* already in detail */ }} />
               </div>}
+        </section>
+      )}
+
+      {game.runs.some((r) => typeof r.score === 'number') && (
+        <section className="arcade-section">
+          <h3>Score progression</h3>
+          <ScoreChart runs={game.runs} />
         </section>
       )}
 
