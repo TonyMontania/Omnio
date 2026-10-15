@@ -2,9 +2,13 @@
 // show a picker of matches, and hand back a shaped Partial<Item> the
 // caller can merge into its editor state.
 
-import type { Item, AnimeFormat, AnimeSource, AiringStatus, PublicationStatus, Demographic } from './types'
+import type { Item } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import {
+  type AniListMedia as Media, type StaffEdge,
+  aniListCommonPatch, aniListAnimePatch, aniListCover, aniListThemeTags, aniListTitle, stripAniListHtml, PUB_STATUS_MAP,
+} from './utils/anilist'
 
 type MediaType = 'ANIME' | 'MANGA'
 
@@ -14,35 +18,6 @@ interface Props {
   categoryId: string
   onApply: (patch: Partial<Item>, coverPath?: string, bannerPath?: string, hints?: { suggestedTags?: string[] }) => void
   onClose: () => void
-}
-
-interface FuzzyDate { year?: number; month?: number; day?: number }
-interface StaffEdge { role?: string; node?: { name?: { full?: string } } }
-interface Media {
-  id: number
-  title: { romaji?: string; english?: string; native?: string }
-  format?: string
-  status?: string
-  episodes?: number
-  chapters?: number
-  volumes?: number
-  duration?: number
-  season?: string
-  seasonYear?: number
-  startDate?: FuzzyDate
-  endDate?: FuzzyDate
-  description?: string
-  genres?: string[]
-  studios?: { nodes?: { name: string }[] }
-  staff?: { edges?: StaffEdge[] }
-  source?: string
-  countryOfOrigin?: string
-  coverImage?: { extraLarge?: string; large?: string }
-  bannerImage?: string
-  synonyms?: string[]
-  averageScore?: number
-  siteUrl?: string
-  tags?: { name: string; rank?: number; isMediaSpoiler?: boolean; isGeneralSpoiler?: boolean }[]
 }
 
 // AniList staff roles are free-text — "Story", "Art", "Story & Art", "Original
@@ -67,61 +42,6 @@ function splitMangaStaff(staff?: { edges?: StaffEdge[] }): { authors: string[]; 
   return { authors, artists }
 }
 
-function formatDate(d?: FuzzyDate): string | undefined {
-  if (!d?.year) return undefined
-  const m = d.month ? String(d.month).padStart(2, '0') : '01'
-  const day = d.day ? String(d.day).padStart(2, '0') : '01'
-  return `${d.year}-${m}-${day}`
-}
-
-const FORMAT_MAP: Record<string, AnimeFormat> = {
-  TV: 'tv', TV_SHORT: 'tv', MOVIE: 'movie', OVA: 'ova', ONA: 'ona',
-  SPECIAL: 'special', MUSIC: 'music',
-}
-
-const SOURCE_MAP_ANIME: Record<string, AnimeSource> = {
-  ORIGINAL: 'original', MANGA: 'manga', LIGHT_NOVEL: 'light_novel',
-  WEB_NOVEL: 'web_novel', NOVEL: 'novel', VIDEO_GAME: 'game',
-  VISUAL_NOVEL: 'visual_novel', OTHER: 'other',
-}
-const AIRING_STATUS_MAP: Record<string, AiringStatus> = {
-  RELEASING: 'airing',
-  FINISHED: 'finished',
-  NOT_YET_RELEASED: 'not_yet_aired',
-  CANCELLED: 'cancelled',
-  HIATUS: 'airing',   // no dedicated hiatus bucket — treat as still airing
-}
-// AniList reuses the same MediaStatus for manga — map into pubStatus.
-const PUB_STATUS_MAP: Record<string, PublicationStatus> = {
-  RELEASING: 'publishing',
-  FINISHED: 'finished',
-  NOT_YET_RELEASED: 'not_yet_released',
-  CANCELLED: 'cancelled',
-  HIATUS: 'hiatus',
-}
-
-// AniList doesn't carry a dedicated demographic field, but Shounen /
-// Seinen / Shoujo / Josei show up in the free-text `genres` list. Pull
-// the first hit — the remaining genres stay in the tag pool.
-const DEMOGRAPHIC_FROM_GENRE: Record<string, Demographic> = {
-  shounen: 'shonen', shonen: 'shonen',
-  shoujo: 'shojo', shojo: 'shojo',
-  seinen: 'seinen', josei: 'josei',
-}
-function inferDemographic(genres?: string[]): Demographic | undefined {
-  if (!genres) return undefined
-  for (const g of genres) {
-    const d = DEMOGRAPHIC_FROM_GENRE[g.toLowerCase()]
-    if (d) return d
-  }
-  return undefined
-}
-
-function stripHtml(s?: string): string | undefined {
-  if (!s) return undefined
-  return s.replace(/<br\s*\/?>(?=\s|$)/gi, '\n').replace(/<[^>]+>/g, '').trim()
-}
-
 export default function AniListFetcher({ initialQuery, kind, categoryId, onApply, onClose }: Props) {
   const search = async (q: string): Promise<FetcherResult<Media>> => {
     const r = await window.ipcRenderer.invoke('anilist:search', q, kind)
@@ -129,38 +49,16 @@ export default function AniListFetcher({ initialQuery, kind, categoryId, onApply
   }
 
   const apply = async (m: Media) => {
-    const title = m.title.english || m.title.romaji || m.title.native || ''
-    const cover = m.coverImage?.extraLarge || m.coverImage?.large
-    const banner = m.bannerImage
+    const title = aniListTitle(m)
+    const cover = aniListCover(m)
     const coverPath = cover
-      ? await downloadImageAsset( cover, categoryId, 'cover', assetBasename(title, 'cover'))
+      ? await downloadImageAsset(cover, categoryId, 'cover', assetBasename(title, 'cover'))
       : undefined
-    const bannerPath = banner
-      ? await downloadImageAsset( banner, categoryId, 'banner', assetBasename(title, 'banner'))
+    const bannerPath = m.bannerImage
+      ? await downloadImageAsset(m.bannerImage, categoryId, 'banner', assetBasename(title, 'banner'))
       : undefined
-    const desc = stripHtml(m.description)
-    const patch: Partial<Item> = {
-      title,
-      // Detail views render the category-specific description field. Writing
-      // to the generic `description` was silently no-op'd in Anime/Manga.
-      ...(kind === 'ANIME' ? { animeDescription: desc } : { mangaDescription: desc }),
-      alternativeTitles: Array.from(new Set([m.title.romaji, m.title.english, m.title.native, ...(m.synonyms ?? [])].filter(Boolean).filter((t) => t !== title))) as string[],
-      genres: m.genres,
-      demographic: inferDemographic(m.genres),
-      releaseDate: formatDate(m.startDate),
-      seasonYear: m.seasonYear ? String(m.seasonYear) : undefined,
-      season: (m.season?.toLowerCase() as Item['season']),
-      airedFrom: formatDate(m.startDate),
-      airedTo: formatDate(m.endDate),
-      episodeDuration: m.duration ? String(m.duration) : undefined,
-      studios: m.studios?.nodes?.map((n) => n.name),
-    }
-    if (kind === 'ANIME') {
-      patch.animeFormat = m.format ? FORMAT_MAP[m.format] : undefined
-      patch.totalEpisodes = m.episodes ? String(m.episodes) : undefined
-      patch.animeSource = m.source ? SOURCE_MAP_ANIME[m.source] : undefined
-      patch.airingStatus = m.status ? AIRING_STATUS_MAP[m.status] : undefined
-    } else {
+    const patch: Partial<Item> = kind === 'ANIME' ? aniListAnimePatch(m) : aniListCommonPatch(m, 'MANGA')
+    if (kind === 'MANGA') {
       patch.totalChapters = m.chapters ? String(m.chapters) : undefined
       patch.totalVolumes = m.volumes ? String(m.volumes) : undefined
       const { authors, artists } = splitMangaStaff(m.staff)
@@ -168,15 +66,7 @@ export default function AniListFetcher({ initialQuery, kind, categoryId, onApply
       if (artists.length) patch.mangaArtists = artists
       if (m.status && PUB_STATUS_MAP[m.status]) patch.pubStatus = PUB_STATUS_MAP[m.status]
     }
-    // AniList exposes a rich thematic-tag graph per title (Time Loop,
-    // Foreign, Dark Fantasy, Iyashikei, …). Take the top 12 non-spoiler
-    // tags ranked by community score — that's the useful signal
-    // without flooding the editor.
-    const themeTags = (m.tags ?? [])
-      .filter((t) => !t.isMediaSpoiler && !t.isGeneralSpoiler)
-      .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0))
-      .slice(0, 12)
-      .map((t) => t.name)
+    const themeTags = aniListThemeTags(m)
     onApply(patch, coverPath || undefined, bannerPath || undefined, themeTags.length > 0 ? { suggestedTags: themeTags } : undefined)
     onClose()
   }
@@ -203,7 +93,7 @@ export default function AniListFetcher({ initialQuery, kind, categoryId, onApply
           kind === 'ANIME' ? (m.episodes ? `${m.episodes} eps` : null) : (m.chapters ? `${m.chapters} ch` : null),
           m.averageScore ? `★ ${(m.averageScore / 10).toFixed(1)}` : null,
         ].filter(Boolean).join(' · ')
-        return { key: m.id, title: t, sub, thumbUrl: m.coverImage?.large, desc: stripHtml(m.description) }
+        return { key: m.id, title: t, sub, thumbUrl: m.coverImage?.large, desc: stripAniListHtml(m.description) }
       }}
     />
   )

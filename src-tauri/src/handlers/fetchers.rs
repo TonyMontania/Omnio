@@ -711,10 +711,7 @@ pub async fn tmdb_details(
 // ===================================================================
 // AniList — GraphQL, no API key.
 // ===================================================================
-const ANILIST_QUERY: &str = r#"
-query ($search: String, $type: MediaType) {
-  Page(page: 1, perPage: 12) {
-    media(search: $search, type: $type) {
+const ANILIST_MEDIA_FIELDS: &str = r#"
       id
       title { romaji english native }
       format status episodes chapters volumes duration
@@ -729,9 +726,65 @@ query ($search: String, $type: MediaType) {
       coverImage { extraLarge large }
       bannerImage synonyms averageScore siteUrl
       tags { name rank isMediaSpoiler isGeneralSpoiler }
+      nextAiringEpisode { episode airingAt }
+"#;
+
+fn anilist_query() -> String {
+    format!(
+        "query ($search: String, $type: MediaType) {{ Page(page: 1, perPage: 12) {{ media(search: $search, type: $type) {{ {ANILIST_MEDIA_FIELDS} }} }} }}"
+    )
+}
+
+async fn anilist_post(state: &State<'_, AppState>, query: &str, variables: Value) -> Value {
+    let body = json!({ "query": query, "variables": variables }).to_string();
+    let client = get_http_client(state);
+    let opts = ProxyJsonOptions {
+        method: Method::POST,
+        headers: vec![("Content-Type", "application/json"), ("Accept", "application/json"), ("User-Agent", OMNIO_UA)],
+        body: Some(body),
+        http_error_prefix: "HTTP",
+    };
+    match proxy_json(&client, "https://graphql.anilist.co", opts).await {
+        Ok(v) => {
+            if let Some(msg) = v.pointer("/errors/0/message").and_then(|m| m.as_str()) {
+                return err(msg);
+            }
+            ok(v.pointer("/data/Page/media").cloned().unwrap_or(json!([])))
+        }
+        Err(e) => err(e),
     }
-  }
-}"#;
+}
+
+// Next episode for a batch of AniList ids. Never cached: the point is a
+// fresh countdown.
+#[command]
+pub async fn anilist_airing(ids: Vec<i64>, state: State<'_, AppState>) -> Result<Value, ()> {
+    if ids.is_empty() { return Ok(ok(json!([]))); }
+    let query = "query ($ids: [Int]) { Page(page: 1, perPage: 50) { media(id_in: $ids, type: ANIME) { id status episodes nextAiringEpisode { episode airingAt } } } }";
+    let mut all = Vec::new();
+    for chunk in ids.chunks(50) {
+        let r = anilist_post(&state, query, json!({ "ids": chunk })).await;
+        match r.get("data").and_then(|d| d.as_array()) {
+            Some(list) => all.extend(list.iter().cloned()),
+            None => return Ok(r),
+        }
+    }
+    Ok(ok(Value::Array(all)))
+}
+
+// One page of a season's anime, most popular first.
+#[command]
+pub async fn anilist_season(season: String, year: i64, page: i64, state: State<'_, AppState>) -> Result<Value, ()> {
+    let key = format!("{season}-{year}-{page}");
+    let result = cached_search(&state, "anilist-season", &key, || async {
+        let query = format!(
+            "query ($season: MediaSeason, $year: Int, $page: Int) {{ Page(page: $page, perPage: 50) {{ media(season: $season, seasonYear: $year, type: ANIME, isAdult: false, sort: POPULARITY_DESC) {{ {ANILIST_MEDIA_FIELDS} }} }} }}"
+        );
+        anilist_post(&state, &query, json!({ "season": season.to_uppercase(), "year": year, "page": page })).await
+    })
+    .await;
+    Ok(result)
+}
 
 #[command]
 pub async fn anilist_search(term: String, kind: String, state: State<'_, AppState>) -> Result<Value, ()> {
@@ -739,30 +792,7 @@ pub async fn anilist_search(term: String, kind: String, state: State<'_, AppStat
     let source = format!("anilist:{kind}");
     let key = term.clone();
     let result = cached_search(&state, &source, &key, || async {
-        let body = json!({
-            "query": ANILIST_QUERY,
-            "variables": { "search": term.trim(), "type": kind },
-        }).to_string();
-        let client = get_http_client(&state);
-        let opts = ProxyJsonOptions {
-            method: Method::POST,
-            headers: vec![("Content-Type", "application/json"), ("Accept", "application/json")],
-            body: Some(body),
-            http_error_prefix: "HTTP",
-        };
-        match proxy_json(&client, "https://graphql.anilist.co", opts).await {
-            Ok(v) => {
-                // Soft error: `{ errors: [{ message }] }`
-                if let Some(errs) = v.get("errors").and_then(|e| e.as_array()) {
-                    if let Some(msg) = errs.first().and_then(|e| e.get("message")).and_then(|s| s.as_str()) {
-                        return err(msg);
-                    }
-                }
-                let media = v.pointer("/data/Page/media").cloned().unwrap_or(json!([]));
-                ok(media)
-            }
-            Err(e) => err(e),
-        }
+        anilist_post(&state, &anilist_query(), json!({ "search": term.trim(), "type": kind })).await
     })
     .await;
     Ok(result)

@@ -1601,3 +1601,37 @@
 .artist-img-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .artist-img-name { font-size: 12.5px; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .artist-img-meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); letter-spacing: 0.02em; }
+
+.season-browser { max-width: 1000px; width: 95vw; }
+.season-browser-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.season-browser-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.season-card {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.season-card-cover { position: relative; aspect-ratio: 2 / 3; border-radius: 4px; overflow: hidden; background: var(--surface); }
+.season-card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.season-card-next {
+  position: absolute; left: 6px; bottom: 6px;
+  padding: 2px 7px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72); color: #fff;
+  font-family: var(--font-mono); font-size: 10.5px;
+}
+.season-card-title { font-size: 12.5px; font-weight: 600; color: var(--text); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.season-card-meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); }
+.season-card .secondary-btn { justify-content: center; margin-top: auto; }
+.season-card-owned {
+  margin-top: auto; text-align: center; padding: 5px 0;
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: var(--radius-sm);
+}

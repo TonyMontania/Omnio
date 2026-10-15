@@ -73,6 +73,8 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'tmdb:search': ['apiKey', 'term', 'kind'],
   'tmdb:details': ['apiKey', 'kind', 'id'],
   'anilist:search': ['term', 'kind'],
+  'anilist:airing': ['ids'],
+  'anilist:season': ['season', 'year', 'page'],
   'steam:library': ['profileInput'],
   'openlibrary:search': ['term'],
   'openlibrary:work': ['workKey'],

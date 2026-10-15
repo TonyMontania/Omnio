@@ -98,6 +98,7 @@ import type { PluginDef, PluginPageMeta } from './plugins/registry'
 import { subscribePluginCounts } from './plugins/counts'
 const ArtistDetailView  = lazy(() => import('./ArtistDetailView'))
 const ArtistImagePicker = lazy(() => import('./ArtistImagePicker'))
+const SeasonBrowser = lazy(() => import('./SeasonBrowser'))
 const DetailModalRouter = lazy(() => import('./components/DetailModalRouter'))
 const DuplicatesModal   = lazy(() => import('./DuplicatesModal'))
 const GenreNormalizerModal = lazy(() => import('./GenreNormalizerModal'))
@@ -164,6 +165,8 @@ import FiltersDropdown from './components/editors/FiltersDropdown'
 import { invoke } from './utils/ipc'
 import { buildItemFromForm as buildItemFromFormImpl } from './editor/buildItemFromForm'
 import { withSidecarFields } from './editor/sidecar'
+import { syncAiring, type AiringApi } from './utils/airingSync'
+import { aniListAnimePatch, aniListCover, aniListTitle, weekdayOfTimestamp, type AniListMedia } from './utils/anilist'
 import { resetForm as resetFormImpl, loadItemIntoForm as loadItemIntoFormImpl, type FormSetters } from './editor/formActions'
 import { applyPatchFieldsToForm } from './editor/applyPatch'
 
@@ -628,6 +631,7 @@ function App() {
   const [artistNameField, setArtistNameField] = useState('')
   const [artistPhotoField, setArtistPhotoField] = useState('')
   const [artistImageSearch, setArtistImageSearch] = useState<'photo' | 'banner' | null>(null)
+  const [seasonBrowserOpen, setSeasonBrowserOpen] = useState(false)
   const [artistBannerField, setArtistBannerField] = useState('')
   const [artistOrigin, setArtistOrigin] = useState('')
   const [artistBandStatus, setArtistBandStatus] = useState<BandStatus | ''>('')
@@ -1256,6 +1260,37 @@ function App() {
     }
     prevSnapRef.current = { items, collections, artists: musicArtists }
   }, [items, collections, musicArtists, loaded])
+
+  const itemsRef = useRef(items)
+  itemsRef.current = items
+  useEffect(() => {
+    if (!loaded) return
+    let cancelled = false
+    let running = false
+    const api: AiringApi = {
+      search: (title) => window.ipcRenderer.invoke('anilist:search', title, 'ANIME') as Promise<{ ok: true; data: AniListMedia[] } | { ok: false; error: string }>,
+      airing: (ids) => window.ipcRenderer.invoke('anilist:airing', ids),
+      sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+    }
+    const run = async () => {
+      if (running) return
+      running = true
+      try {
+        const patches = await syncAiring(itemsRef.current, api)
+        if (cancelled || patches.length === 0) return
+        const byId = new Map(patches.map((p) => [p.id, p.patch]))
+        skipHistoryRef.current = true
+        setItems((prev) => prev.map((i) => (byId.has(i.id) ? { ...i, ...byId.get(i.id) } as AnyItem : i)))
+      } catch (err) {
+        console.warn('[airing] sync failed', err)
+      } finally {
+        running = false
+      }
+    }
+    void run()
+    const timer = window.setInterval(() => void run(), 30 * 60 * 1000)
+    return () => { cancelled = true; window.clearInterval(timer) }
+  }, [loaded])
 
   const undo = () => {
     const prev = historyRef.current.pop()
@@ -2257,6 +2292,28 @@ function App() {
 
   const handleDeleteFromPanel = () => { if (editingItem) handleDelete(editingItem) }
 
+  const addFromAniList = async (m: AniListMedia) => {
+    const categoryId = activeCategory === 'donghua' ? 'donghua' : 'anime'
+    const title = aniListTitle(m)
+    const coverUrl = aniListCover(m)
+    const cover = coverUrl ? await downloadImageAsset(coverUrl, categoryId, 'cover', assetBasename(title, 'cover')) : null
+    const next = m.nextAiringEpisode
+    const item = {
+      ...aniListAnimePatch(m),
+      id: crypto.randomUUID(),
+      categoryId,
+      title,
+      createdAt: Date.now(),
+      watchStatus: 'plan_to_watch',
+      cover: cover ?? undefined,
+      anilistCheckedAt: Date.now(),
+      nextAiring: next ? { episode: next.episode, airingAt: next.airingAt, checkedAt: Date.now() } : undefined,
+      airingDay: next ? weekdayOfTimestamp(next.airingAt) : undefined,
+    } as AnyItem
+    setItems((prev) => [...prev, item])
+    setToast(`Added "${title}" to ${categoryId === 'donghua' ? 'Donghua' : 'Anime'}`)
+  }
+
   const togglePinned = (item: AnyItem) => {
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, pinnedAt: i.pinnedAt ? undefined : Date.now() } as AnyItem : i)))
     setToast(item.pinnedAt ? `Unpinned "${item.title}"` : `Pinned "${item.title}" to Home`)
@@ -2603,7 +2660,8 @@ function App() {
     }
     if (specialView === 'simulcastBoard') {
       const airing = itemsInCategory.filter((i) => i.airingStatus === 'airing' && airingWeekday(i))
-      return { icon: <CategoryIcon id={activeCategory} />, title: 'This season', count: { n: airing.length, unit: airing.length === 1 ? 'show' : 'shows' }, onBack: backToLibrary }
+      const browse = <button className="secondary-btn" onClick={() => setSeasonBrowserOpen(true)} title="See this season on AniList and add shows">Browse season</button>
+      return { icon: <CategoryIcon id={activeCategory} />, title: 'This season', count: { n: airing.length, unit: airing.length === 1 ? 'show' : 'shows' }, onBack: backToLibrary, actions: browse }
     }
     const count: PageCount = showFolderListing
       ? { n: categoryCollections.length, unit: categoryCollections.length === 1 ? 'group' : 'groups' }
@@ -2994,7 +3052,9 @@ function App() {
             const byDay = new Map<string, Item[]>()
             for (const w of WEEKDAY_OPTIONS) byDay.set(w.value, [])
             for (const item of airing) byDay.get(airingWeekday(item)!)?.push(item)
-            for (const list of byDay.values()) list.sort((a, b) => a.title.localeCompare(b.title))
+            const airTime = (i: Item) => (i.nextAiring ? new Date(i.nextAiring.airingAt * 1000) : null)
+            const minuteOfDay = (i: Item) => { const d = airTime(i); return d ? d.getHours() * 60 + d.getMinutes() : 24 * 60 }
+            for (const list of byDay.values()) list.sort((a, b) => minuteOfDay(a) - minuteOfDay(b) || a.title.localeCompare(b.title))
             const totalAiring = itemsInCategory.filter((i) => isCurrentlyAiring(i)).length
             const missingDay = totalAiring - airing.length
             return (
@@ -5902,6 +5962,17 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {seasonBrowserOpen && (activeCategory === 'anime' || activeCategory === 'donghua') && (
+        <Suspense fallback={null}>
+          <SeasonBrowser
+            categoryId={activeCategory}
+            items={items}
+            onAdd={addFromAniList}
+            onClose={() => setSeasonBrowserOpen(false)}
+          />
+        </Suspense>
       )}
 
       {artistPanelOpen && (

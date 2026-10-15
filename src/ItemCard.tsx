@@ -7,6 +7,7 @@ import type { LibraryCustomFieldDef } from './types/customFields'
 import { displayLibraryCustomValue } from './types/customFields'
 import { OMNIO_ITEM_DRAG_TYPE } from './Sidebar'
 import { airingWeekday, isCurrentlyAiring } from './utils/airing'
+import { formatCountdown } from './utils/anilist'
 
 interface Props {
   item: AnyItem
@@ -178,10 +179,14 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
         {showMovieStatus && <p className="item-status">{item.consumed ? 'Watched' : 'Not watched'}</p>}
         {(isAnime || isSeries) && isCurrentlyAiring(item) && (() => {
           const day = airingWeekday(item)
+          const next = item.nextAiring && item.nextAiring.airingAt * 1000 > Date.now() ? item.nextAiring : null
+          const title = next
+            ? `Episode ${next.episode} airs ${new Date(next.airingAt * 1000).toLocaleString(undefined, { weekday: 'long', hour: '2-digit', minute: '2-digit' })}`
+            : day ? `New episodes on ${day}` : 'Currently airing'
           return (
-            <p className="airing-chip" title={day ? `New episodes on ${day}` : 'Currently airing'}>
+            <p className="airing-chip" title={title}>
               <span className="airing-dot" aria-hidden />
-              {day ? `Airs ${day.slice(0, 3)}` : 'Airing'}
+              {next ? `Ep ${next.episode} · ${formatCountdown(next.airingAt)}` : day ? `Airs ${day.slice(0, 3)}` : 'Airing'}
             </p>
           )
         })()}

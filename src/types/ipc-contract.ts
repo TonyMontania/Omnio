@@ -1,3 +1,4 @@
+import type { AniListMedia } from '../utils/anilist'
 // Single source of truth for every IPC channel's args and return shape.
 // Adding a channel needs an entry here plus a row in ipc-tauri-map.ts,
 // a #[tauri::command] under src-tauri/src/handlers/, and a line in
@@ -264,6 +265,10 @@ export type IpcContract = {
     { args: [apiKey: string, kind: 'movie' | 'tv', id: number | string]; result: FetcherObjectEnvelope }
   'anilist:search':
     { args: [term: string, kind: 'ANIME' | 'MANGA']; result: FetcherHitsEnvelope }
+  'anilist:airing':
+    { args: [ids: number[]]; result: Envelope<AniListMedia[]> }
+  'anilist:season':
+    { args: [season: string, year: number, page: number]; result: FetcherHitsEnvelope }
   'steam:library':
     { args: [profileInput: string]; result: SteamLibraryResult }
   'openlibrary:search':

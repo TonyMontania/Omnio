@@ -432,6 +432,12 @@ export interface AnyItem {
   favorite?: boolean
   // Set when the item is pinned to Home; the timestamp keeps pin order.
   pinnedAt?: number
+  // AniList link for anime / donghua, resolved by title. 0 = looked up,
+  // no match; `anilistCheckedAt` spaces out retries.
+  anilistId?: number
+  anilistCheckedAt?: number
+  // Next episode as reported by AniList (unix seconds).
+  nextAiring?: { episode: number; airingAt: number; checkedAt: number }
   cover?: string
   bannerImage?: string
   logoImage?: string
