@@ -166,6 +166,7 @@ import FiltersDropdown from './components/editors/FiltersDropdown'
 import { invoke } from './utils/ipc'
 import { buildItemFromForm as buildItemFromFormImpl } from './editor/buildItemFromForm'
 import { withSidecarFields } from './editor/sidecar'
+import { newEpisodes, noticeMessages } from './utils/episodeNotices'
 import { syncAiring, syncSeriesAiring, type AiringApi, type SeriesApi, type TmdbShow } from './utils/airingSync'
 import { aniListAnimePatch, aniListCover, aniListTitle, weekdayOfTimestamp, type AniListMedia } from './utils/anilist'
 import { resetForm as resetFormImpl, loadItemIntoForm as loadItemIntoFormImpl, type FormSetters } from './editor/formActions'
@@ -243,6 +244,7 @@ interface Settings {
   cardZoom?: 'sm' | 'md' | 'lg' | 'xl'
   sgdbApiKey?: string
   tmdbApiKey?: string
+  notifyNewEpisodes?: boolean
   igdbClientId?: string
   igdbClientSecret?: string
   comicvineApiKey?: string
@@ -1267,6 +1269,8 @@ function App() {
   itemsRef.current = items
   const tmdbKeyRef = useRef(settings.tmdbApiKey)
   tmdbKeyRef.current = settings.tmdbApiKey
+  const notifyRef = useRef(settings.notifyNewEpisodes)
+  notifyRef.current = settings.notifyNewEpisodes
   useEffect(() => {
     if (!loaded) return
     let cancelled = false
@@ -1285,6 +1289,15 @@ function App() {
       if (running) return
       running = true
       try {
+        if (notifyRef.current) {
+          const notices = newEpisodes(itemsRef.current)
+          if (notices.length > 0) {
+            for (const m of noticeMessages(notices)) void window.ipcRenderer.invoke('notify:desktop', m.title, m.body)
+            const announced = new Map(notices.map((n) => [n.id, n.episode]))
+            skipHistoryRef.current = true
+            setItems((prev) => prev.map((i) => (announced.has(i.id) ? { ...i, notifiedEpisode: announced.get(i.id) } as AnyItem : i)))
+          }
+        }
         const patches = await syncAiring(itemsRef.current, api)
         const key = tmdbKeyRef.current?.trim()
         if (key) patches.push(...await syncSeriesAiring(itemsRef.current, seriesApi(key)))
@@ -1299,7 +1312,7 @@ function App() {
       }
     }
     void run()
-    const timer = window.setInterval(() => void run(), 30 * 60 * 1000)
+    const timer = window.setInterval(() => void run(), 15 * 60 * 1000)
     return () => { cancelled = true; window.clearInterval(timer) }
   }, [loaded])
 
@@ -3778,6 +3791,18 @@ function App() {
                         <button type="button" className={(settings.autoFinishedAtOnComplete === false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoFinishedAtOnComplete: false }))}>No</button>
                       </div>
                       <p className="hint">Only affects items that had no finished date when the auto-completion fires — an existing date is never overwritten.</p>
+                    </div>
+                    <div className="field-group">
+                      <label>Desktop notifications for new episodes</label>
+                      <div className="yesno">
+                        <button type="button" className={settings.notifyNewEpisodes ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, notifyNewEpisodes: true }))}>Yes</button>
+                        <button type="button" className={!settings.notifyNewEpisodes ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, notifyNewEpisodes: false }))}>No</button>
+                        <button type="button" className="secondary-btn compact" onClick={async () => {
+                          const shown = await window.ipcRenderer.invoke('notify:desktop', 'Omnio', 'Notifications are working.')
+                          if (!shown) setToast('Your system blocked the notification. Check its notification settings for Omnio.')
+                        }}>Send a test</button>
+                      </div>
+                      <p className="hint">While Omnio is open, it lets you know when a new episode of an anime, donghua or series you're <b>watching</b> comes out. Air times come from AniList, and from TMDb for series (needs your TMDb key in Integrations).</p>
                     </div>
                     <div className="field-group">
                       <label>Remember sort per library</label>

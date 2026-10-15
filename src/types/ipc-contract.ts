@@ -267,6 +267,8 @@ export type IpcContract = {
     { args: [term: string, kind: 'ANIME' | 'MANGA']; result: FetcherHitsEnvelope }
   'anilist:airing':
     { args: [ids: number[]]; result: Envelope<AniListMedia[]> }
+  'notify:desktop':
+    { args: [title: string, body: string]; result: boolean }
   'vndb:user-list':
     { args: [user: string]; result: Envelope<{ user: string; entries: import('../utils/vndbList').VndbListEntry[] }> }
   'anilist:season':

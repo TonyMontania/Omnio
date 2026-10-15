@@ -442,6 +442,8 @@ export interface AnyItem {
   // Next episode as reported by AniList or TMDb (unix seconds). TMDb only
   // knows the day, so `dateOnly` marks a local-midnight timestamp.
   nextAiring?: { episode: number; airingAt: number; checkedAt: number; season?: number; dateOnly?: boolean }
+  // Last episode a desktop notification went out for.
+  notifiedEpisode?: number
   cover?: string
   bannerImage?: string
   logoImage?: string

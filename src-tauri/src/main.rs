@@ -27,6 +27,7 @@ use state::AppState;
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_shell::init())
         .manage(AppState::default())
         // `omnio-asset://<category>/<kind>/<file>` serves files out of
@@ -142,6 +143,7 @@ fn main() {
             handlers::fetchers::anilist_airing,
             handlers::fetchers::anilist_season,
             handlers::fetchers::vndb_user_list,
+            handlers::notify::notify_desktop,
             // Plugin sandbox — generic infra for locally-installed
             // renderer overlays under `src/categories/<slug>/`.
             handlers::install_scan::install_scan,
