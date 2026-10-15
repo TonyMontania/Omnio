@@ -182,9 +182,11 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
         const post = findDuplicate(allGames, game.id, { dlsiteId: outcome.res.dlsiteId, dlsiteUrl: outcome.res.dlsiteUrl })
         const dupWarn = post ? ` (⚠ already exists as "${post.name}")` : ''
         const coverWarn = outcome.coverDiag ? ` — ${outcome.coverDiag}` : ''
-        setF95Status((outcome.res.storeLinksHidden
-          ? '✓ Imported — F95 hides store links without login; use Ryuugames for dlsite/steam.'
-          : '✓ Imported') + dupWarn + coverWarn)
+        setF95Status((outcome.res.fromCache
+          ? '✓ Imported from F95Checker’s cache — F95Zone is blocking direct requests, so store links and the release date are missing. Use "Paste page" for everything.'
+          : outcome.res.storeLinksHidden
+            ? '✓ Imported — F95 hides store links without login; use Ryuugames for dlsite/steam.'
+            : '✓ Imported') + dupWarn + coverWarn)
       } else {
         // Save the merged metadata straight into the existing game
         // and close the editor — the parent already has that game

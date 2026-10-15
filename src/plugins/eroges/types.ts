@@ -32,6 +32,7 @@ export interface ErogeItem {
   latestVersion?: string       // last version seen on F95
   threadUpdated?: string       // last "Thread Updated" seen on F95
   lastCheckedAt?: number       // ms since epoch
+  f95LastChange?: number       // when F95Checker's cache last saw the thread change (unix s)
   updateAvailable?: boolean
   createdAt?: number
   updatedAt?: number

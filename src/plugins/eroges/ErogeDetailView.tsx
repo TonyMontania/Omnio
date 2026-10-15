@@ -3,6 +3,7 @@ import type { ErogeItem } from './types'
 import { assetUrl, savesList, savesAdd, savesDelete, savesOpenFolder, savesReveal, savesDeleteAll } from './ipc'
 import type { SaveInfo } from './ipc'
 import { f95CheckVersion, f95GamesByCreator, f95ThreadId, f95ThreadUrl } from './f95Api'
+import { cachedLastChanges, cachedThread, isNewerVersion, versionPatchFrom } from './f95Cache'
 import { engineClass, type TagPrefs } from './constants'
 import ServiceLogo from '../../components/ServiceLogo'
 
@@ -163,10 +164,23 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
   async function checkUpdate() {
     if (!game.link) return
     setChecking(true); setFlash('')
+    const threadId = f95ThreadId(game.link)
+    try {
+      const lastChange = threadId ? (await cachedLastChanges([threadId])).get(threadId) : undefined
+      const thread = threadId && lastChange ? await cachedThread(threadId, lastChange) : null
+      if (thread && lastChange) {
+        const patch = versionPatchFrom(game, thread, lastChange)
+        onUpdateGame(patch as Partial<ErogeItem>)
+        setFlash(patch.updateAvailable ? `New version: ${thread.version}` : BTN_UP_TO_DATE)
+        setChecking(false)
+        return
+      }
+    } catch {
+      // Cache unreachable: read the thread directly below.
+    }
     try {
       const res = await f95CheckVersion(game.link, f95Cookie)
-      const norm = (v: string) => v.replace(/\s+/g, '').toLowerCase()
-      const different = !!res.version && !!game.version && norm(res.version) !== norm(game.version)
+      const different = isNewerVersion(res.version, game.version)
       onUpdateGame({
         latestVersion: res.version || game.latestVersion,
         threadUpdated: res.threadUpdated || game.threadUpdated,

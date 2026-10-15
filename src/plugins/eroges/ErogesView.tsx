@@ -9,7 +9,8 @@ import type { ErogeItem, ErogeData, ErogeSettings, BacklogStatus } from './types
 import type { PluginViewProps } from '../registry'
 import { SLUG, tagPrefsFrom } from './constants'
 import { loadData, saveData, savesRenameFolder, assetRename, assetDelete, savesDeleteAll, transcodeStoredAvif } from './ipc'
-import { f95CheckVersion, F95_BLOCKED, F95_BLOCKED_MESSAGE } from './f95Api'
+import { f95CheckVersion, f95ThreadId, F95_BLOCKED, F95_BLOCKED_MESSAGE } from './f95Api'
+import { cachedLastChanges, cachedThread, isNewerVersion, versionPatchFrom } from './f95Cache'
 import { reportPluginCount } from '../counts'
 import ErogeCard from './ErogeCard'
 import ErogeRow from './ErogeRow'
@@ -193,67 +194,76 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
     setDetailId(null)
   }
 
-  // Check F95 for updates across every game with a matching link.
-  //
-  // Old behaviour: sequential + 250ms sleep between requests. On a
-  // library of 100 games that was ~2.5 minutes of pure wall time
-  // (fetch + parse + sleep, ×100). Reasons it was slow:
-  //   1. Every request paid its own TLS handshake — the Rust
-  //      `net:fetch-text` handler built a fresh reqwest client per
-  //      call, so connection pooling was off (the Rust side now uses
-  //      the shared client instead — same-host requests reuse TCP).
-  //   2. One-at-a-time meant even fast responses stacked latency.
-  //   3. The sleep alone burned ~25 s per 100 games.
-  //
-  // New behaviour: `CONCURRENCY` workers pull from a shared index and
-  // apply each patch as soon as it lands (progress bar advances live,
-  // "Updates" tab count jumps as they arrive). The 250ms sleep is
-  // gone — the parallel cap already spaces things out, and every
-  // request now reuses the pooled HTTPS connection. On 100 games this
-  // is roughly a 6–8× speedup end-to-end.
+  // Versions come from F95Checker's cache first (it keeps working when
+  // F95Zone challenges direct requests). Games the cache doesn't know,
+  // or every game if the cache is down, fall back to reading the thread.
   const UPDATE_CHECK_CONCURRENCY = 4
   async function checkAllUpdates() {
     const targets = tabGames.filter((g) => !g.archived && g.link && /f95zone/i.test(g.link))
     if (targets.length === 0) { alert('No games with an F95 link in this view.'); return }
     setCheckingAll({ done: 0, total: targets.length })
-    const norm = (v: string) => v.replace(/\s+/g, '').toLowerCase()
-    const cookie = data.settings?.f95Cookie
-    let nextIdx = 0
     let done = 0
-    let blocked = false
+    const tick = () => { done += 1; setCheckingAll({ done, total: targets.length }) }
+    const apply = (id: string, patch: Partial<ErogeItem>) =>
+      setData((d) => ({ ...d, games: d.games.map((x) => (x.id === id ? { ...x, ...patch } : x)) }))
 
-    async function worker() {
-      for (;;) {
-        if (blocked) return
-        const myIdx = nextIdx++
-        if (myIdx >= targets.length) return
-        const g = targets[myIdx]
-        try {
-          const res = await f95CheckVersion(g.link!, cookie)
-          const different = !!res.version && !!g.version && norm(res.version) !== norm(g.version)
-          const patch: Partial<ErogeItem> = {
-            latestVersion: res.version || g.latestVersion,
-            threadUpdated: res.threadUpdated || g.threadUpdated,
-            lastCheckedAt: Date.now(),
-            updateAvailable: different,
-            status: (res.status as ErogeItem['status']) || g.status,
-          }
-          // Apply the patch immediately so the "Updates" tab count and
-          // any per-card badge react as results stream in. React 18
-          // batches these across the microtask boundary between awaits.
-          setData((d) => ({ ...d, games: d.games.map((x) => x.id === g.id ? { ...x, ...patch } : x) }))
-        } catch (err) {
-          if ((err as Error).message === F95_BLOCKED_MESSAGE) blocked = true
-        }
-        done += 1
-        setCheckingAll({ done, total: targets.length })
-      }
+    const pool = async <T,>(list: T[], work: (item: T) => Promise<void>) => {
+      let next = 0
+      const worker = async () => { while (next < list.length) await work(list[next++]) }
+      await Promise.all(Array.from({ length: Math.min(UPDATE_CHECK_CONCURRENCY, list.length) }, worker))
     }
 
-    const workerCount = Math.min(UPDATE_CHECK_CONCURRENCY, targets.length)
-    await Promise.all(Array.from({ length: workerCount }, () => worker()))
+    let direct: ErogeItem[] = targets
+    try {
+      const threadIds = new Map(targets.map((g) => [g.id, f95ThreadId(g.link)]))
+      const changes = await cachedLastChanges(Array.from(threadIds.values()).filter((id): id is number => !!id))
+      const full: { game: ErogeItem; threadId: number; lastChange: number }[] = []
+      direct = []
+      for (const g of targets) {
+        const threadId = threadIds.get(g.id)
+        const lastChange = threadId ? changes.get(threadId) : undefined
+        if (!threadId || !lastChange) { direct.push(g); continue }
+        if (g.f95LastChange === lastChange && g.latestVersion) {
+          apply(g.id, { lastCheckedAt: Date.now(), updateAvailable: isNewerVersion(g.latestVersion, g.version) })
+          tick()
+          continue
+        }
+        full.push({ game: g, threadId, lastChange })
+      }
+      await pool(full, async ({ game, threadId, lastChange }) => {
+        try {
+          const thread = await cachedThread(threadId, lastChange)
+          if (thread) apply(game.id, versionPatchFrom(game, thread, lastChange) as Partial<ErogeItem>)
+          else direct.push(game)
+        } catch {
+          direct.push(game)
+        }
+        if (!direct.includes(game)) tick()
+      })
+    } catch {
+      direct = targets.slice(done)
+    }
+
+    let blocked = false
+    const cookie = data.settings?.f95Cookie
+    await pool(direct, async (g) => {
+      if (blocked) { tick(); return }
+      try {
+        const res = await f95CheckVersion(g.link!, cookie)
+        apply(g.id, {
+          latestVersion: res.version || g.latestVersion,
+          threadUpdated: res.threadUpdated || g.threadUpdated,
+          lastCheckedAt: Date.now(),
+          updateAvailable: isNewerVersion(res.version, g.version),
+          status: (res.status as ErogeItem['status']) || g.status,
+        })
+      } catch (err) {
+        if ((err as Error).message === F95_BLOCKED_MESSAGE) blocked = true
+      }
+      tick()
+    })
     setCheckingAll(null)
-    if (blocked) alert(`${F95_BLOCKED} Try the update check again later.`)
+    if (blocked) alert(`${F95_BLOCKED} ${direct.length} game${direct.length === 1 ? '' : 's'} couldn't be checked. Try again later.`)
   }
 
   // -- render ------------------------------------------------------

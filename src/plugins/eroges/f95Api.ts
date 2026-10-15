@@ -8,6 +8,7 @@ import { fetchText, assetDownload } from './ipc'
 import { parseF95Title } from './parseF95Title'
 import type { Parsed } from './parseF95Title'
 import type { OtherGame } from './types'
+import { cachedThread } from './f95Cache'
 
 function decodeEntities(s: string): string {
   if (!s) return ''
@@ -77,6 +78,8 @@ export interface F95FetchResult extends Parsed {
   otherGamesCreator: string
   otherGamesFromPost: OtherGame[]
   tags: string[]
+  // Filled from F95Checker's cache because F95Zone blocked the page.
+  fromCache?: boolean
 }
 
 export function f95ThreadId(url: string | undefined): number | null {
@@ -173,7 +176,21 @@ export function looksLikeF95Thread(html: string): boolean {
 }
 
 export async function f95Fetch(url: string, cookie?: string): Promise<F95FetchResult> {
-  return parseF95Page(await fetchF95Html(url, cookie))
+  try {
+    return parseF95Page(await fetchF95Html(url, cookie))
+  } catch (err) {
+    const threadId = f95ThreadId(url)
+    if ((err as Error).message !== F95_BLOCKED_MESSAGE || !threadId) throw err
+    const thread = await cachedThread(threadId).catch(() => null)
+    if (!thread) throw err
+    return {
+      name: thread.name, version: thread.version, creator: thread.creator, engine: thread.engine,
+      status: thread.status, vn: thread.vn, description: thread.description, releaseDate: '',
+      coverUrl: thread.coverUrl, coverFallbacks: [], originalTitle: '', language: '',
+      dlsiteUrl: '', dlsiteId: '', steamUrl: '', itchUrl: '', storeLinksHidden: false,
+      otherGamesCreator: '', otherGamesFromPost: [], tags: thread.tags, fromCache: true,
+    }
+  }
 }
 
 export function parseF95Page(html: string): F95FetchResult {
