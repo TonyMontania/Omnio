@@ -126,6 +126,7 @@ const SpotifyImporter    = lazy(() => import('./SpotifyImporter'))
 const HighlightsImporter = lazy(() => import('./HighlightsImporter'))
 const LastfmImporter    = lazy(() => import('./LastfmImporter'))
 const TraktImporter     = lazy(() => import('./TraktImporter'))
+const VndbListImporter = lazy(() => import('./VndbListImporter'))
 const DiscogsImporter   = lazy(() => import('./DiscogsImporter'))
 const YearlyWrapped     = lazy(() => import('./YearlyWrapped'))
 const CoverWallExporter = lazy(() => import('./CoverWallExporter'))
@@ -825,6 +826,7 @@ function App() {
   const [highlightsImportOpen, setHighlightsImportOpen] = useState(false)
   const [lastfmImportOpen, setLastfmImportOpen] = useState(false)
   const [traktImportOpen, setTraktImportOpen] = useState(false)
+  const [vndbImportOpen, setVndbImportOpen] = useState(false)
   const [discogsImportOpen, setDiscogsImportOpen] = useState(false)
   const [backloggdOpen, setBackloggdOpen] = useState(false)
   const [storyGraphOpen, setStoryGraphOpen] = useState(false)
@@ -4140,6 +4142,7 @@ function App() {
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setLastFmOpen(true)}><ServiceLogo service="lastfm" /><span>Last.fm sync (API)</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setMusicScanOpen(true)}><ServiceLogo service="musicbrainz" /><span>Local music folder</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setTraktImportOpen(true)}><ServiceLogo service="trakt" /><span>Trakt.tv</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setVndbImportOpen(true)}><ServiceLogo service="vndb" /><span>VNDB list</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setDiscogsImportOpen(true)}><ServiceLogo service="discogs" /><span>Discogs collection</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setStoryGraphOpen(true)}><ServiceLogo service="storygraph" /><span>StoryGraph</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setImdbOpen(true)}><ServiceLogo service="imdb" /><span>IMDb</span></button>
@@ -6722,6 +6725,27 @@ function App() {
           }}
           onClose={() => setTraktImportOpen(false)}
         />
+      )}
+
+      {vndbImportOpen && (
+        <Suspense fallback={null}>
+          <VndbListImporter
+            existingItems={items}
+            onImport={({ updates, creates }) => {
+              setItems((all) => [...all.map((it) => (updates.has(it.id) ? { ...it, ...updates.get(it.id) } as AnyItem : it)), ...creates])
+              const total = updates.size + creates.length
+              setToast(`Imported ${total} visual novel${total === 1 ? '' : 's'} from VNDB`)
+              void (async () => {
+                for (const it of creates) {
+                  if (!it.cover?.startsWith('http')) continue
+                  const path = await downloadImageAsset(it.cover, 'visual_novels', 'cover', assetBasename(it.title, 'cover'))
+                  if (path) setItems((all) => all.map((x) => (x.id === it.id ? { ...x, cover: path } as AnyItem : x)))
+                }
+              })()
+            }}
+            onClose={() => setVndbImportOpen(false)}
+          />
+        </Suspense>
       )}
 
       {lastfmImportOpen && (

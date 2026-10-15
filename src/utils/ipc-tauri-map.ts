@@ -75,6 +75,7 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'anilist:search': ['term', 'kind'],
   'anilist:airing': ['ids'],
   'anilist:season': ['season', 'year', 'page'],
+  'vndb:user-list': ['user'],
   'steam:library': ['profileInput'],
   'openlibrary:search': ['term'],
   'openlibrary:work': ['workKey'],

@@ -900,6 +900,51 @@ fn vndb_headers() -> Vec<(&'static str, &'static str)> {
     ]
 }
 
+// A user's public VNDB list. Accepts a username or a `u123` id.
+#[command]
+pub async fn vndb_user_list(user: String, state: State<'_, AppState>) -> Result<Value, ()> {
+    let q = user.trim();
+    if q.is_empty() { return Ok(err("Missing VNDB username")); }
+    let client = get_http_client(&state);
+    let lookup = format!("{VNDB_BASE}/user?q={}", url_encode(q));
+    let users = match proxy_json(&client, &lookup, ProxyJsonOptions::default()).await {
+        Ok(v) => v,
+        Err(e) => return Ok(err(e)),
+    };
+    let Some(found) = users.get(q).filter(|u| !u.is_null()) else {
+        return Ok(err(format!("No VNDB user named \"{q}\"")));
+    };
+    let user_id = found.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let username = found.get("username").and_then(|v| v.as_str()).unwrap_or(q).to_string();
+
+    let url = format!("{VNDB_BASE}/ulist");
+    let mut entries: Vec<Value> = Vec::new();
+    for page in 1..=30 {
+        let body = json!({
+            "user": user_id,
+            "fields": "id, vote, started, finished, labels.id, labels.label, vn.title, vn.alttitle, vn.released, vn.length_minutes, vn.image.url, vn.developers.name",
+            "sort": "id",
+            "results": 100,
+            "page": page,
+        }).to_string();
+        let opts = ProxyJsonOptions {
+            method: Method::POST,
+            headers: vec![("Content-Type", "application/json"), ("User-Agent", OMNIO_UA)],
+            body: Some(body),
+            http_error_prefix: "VNDB",
+        };
+        let v = match proxy_json(&client, &url, opts).await {
+            Ok(v) => v,
+            Err(e) => return Ok(err(e)),
+        };
+        if let Some(list) = v.get("results").and_then(|r| r.as_array()) {
+            entries.extend(list.iter().cloned());
+        }
+        if !v.get("more").and_then(|m| m.as_bool()).unwrap_or(false) { break; }
+    }
+    Ok(ok(json!({ "user": username, "entries": entries })))
+}
+
 #[command]
 pub async fn vndb_search(term: String, state: State<'_, AppState>) -> Result<Value, ()> {
     if term.trim().is_empty() { return Ok(err("Missing search term")); }
