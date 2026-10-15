@@ -6,16 +6,18 @@
 
 import { memo } from 'react'
 import type { ErogeItem } from './types'
-import { engineClass, BACKLOG_LABELS } from './constants'
+import { engineClass, BACKLOG_LABELS, type TagPrefs } from './constants'
+import TagSignals from './TagSignals'
 
 interface Props {
   game: ErogeItem
   onOpen: (id: string) => void
   onToggleFav: (id: string) => void
   cardFields?: Record<string, boolean>
+  tagPrefs?: TagPrefs
 }
 
-function ErogeRowImpl({ game, onOpen, onToggleFav, cardFields }: Props) {
+function ErogeRowImpl({ game, onOpen, onToggleFav, cardFields, tagPrefs }: Props) {
   const showTitle = cardFields?.title !== false
   const showVn = cardFields?.vn !== false
   const showEngine = cardFields?.engine !== false
@@ -41,7 +43,8 @@ function ErogeRowImpl({ game, onOpen, onToggleFav, cardFields }: Props) {
         {showVersion && game.version && <span className="er-row-version">[{game.version}]</span>}
         {showCreator && game.creator && <span className="er-row-creator">[{game.creator}]</span>}
       </div>
-      {game.updateAvailable && <span className="er-row-update">UPDATE</span>}
+      <TagSignals game={game} prefs={tagPrefs} />
+      {game.updateAvailable && !game.archived && <span className="er-row-update">UPDATE</span>}
     </div>
   )
 }
@@ -51,5 +54,6 @@ const ErogeRow = memo(ErogeRowImpl, (prev, next) =>
   && prev.onOpen === next.onOpen
   && prev.onToggleFav === next.onToggleFav
   && prev.cardFields === next.cardFields
+  && prev.tagPrefs === next.tagPrefs
 )
 export default ErogeRow

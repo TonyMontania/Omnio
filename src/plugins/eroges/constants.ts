@@ -31,3 +31,23 @@ export function engineClass(engine?: string): string {
   const found = ENGINES.find((e) => e.label.toLowerCase() === engine.toLowerCase())
   return found?.cls ?? 'others'
 }
+
+export interface TagPrefs { preferred: Set<string>; avoided: Set<string> }
+
+export function tagPrefsFrom(preferred?: string[], avoided?: string[]): TagPrefs {
+  return {
+    preferred: new Set((preferred ?? []).map((t) => t.toLowerCase())),
+    avoided: new Set((avoided ?? []).map((t) => t.toLowerCase())),
+  }
+}
+
+export function matchTags(tags: string[] | undefined, prefs: TagPrefs): { liked: string[]; avoided: string[] } {
+  const liked: string[] = []
+  const avoided: string[] = []
+  for (const t of tags ?? []) {
+    const key = t.toLowerCase()
+    if (prefs.avoided.has(key)) avoided.push(t)
+    else if (prefs.preferred.has(key)) liked.push(t)
+  }
+  return { liked, avoided }
+}

@@ -9,7 +9,8 @@ export interface ErogeItem {
   id: string
   name: string
   originalTitle?: string       // Japanese/native title from Ryuugames
-  version?: string
+  version?: string             // version you have installed
+  finishedVersion?: string     // last version you played through
   creator?: string
   engine?: string
   vn?: boolean
@@ -26,6 +27,8 @@ export interface ErogeItem {
   description?: string
   coverFile?: string           // filename inside assets/plugins/eroges/cover/
   favorite?: boolean
+  archived?: boolean           // skipped by update checks
+  tags?: string[]              // F95 thread tags
   latestVersion?: string       // last version seen on F95
   threadUpdated?: string       // last "Thread Updated" seen on F95
   lastCheckedAt?: number       // ms since epoch
@@ -49,6 +52,8 @@ export interface ErogeSettings {
   // steam) that F95 hides from anonymous visitors become visible.
   // Stored in the plugin's own JSON — never leaves the machine.
   f95Cookie?: string
+  preferredTags?: string[]
+  avoidedTags?: string[]
 }
 
 export interface ErogeData {

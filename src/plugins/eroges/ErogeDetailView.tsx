@@ -3,7 +3,7 @@ import type { ErogeItem } from './types'
 import { assetUrl, savesList, savesAdd, savesDelete, savesOpenFolder, savesReveal, savesDeleteAll } from './ipc'
 import type { SaveInfo } from './ipc'
 import { f95CheckVersion, f95GamesByCreator, f95ThreadId, f95ThreadUrl } from './f95Api'
-import { engineClass } from './constants'
+import { engineClass, type TagPrefs } from './constants'
 import ServiceLogo from '../../components/ServiceLogo'
 
 interface Props {
@@ -15,6 +15,7 @@ interface Props {
   onCacheFields: (patch: Partial<ErogeItem>) => void
   allGames: ErogeItem[]
   onOpenGame: (id: string) => void
+  tagPrefs?: TagPrefs
 }
 
 interface OtherGameRow {
@@ -91,7 +92,7 @@ function renderDescription(desc: string): React.ReactNode[] {
   return nodes
 }
 
-export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onUpdateGame, onCacheFields, allGames, onOpenGame }: Props) {
+export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onUpdateGame, onCacheFields, allGames, onOpenGame, tagPrefs }: Props) {
   const [saves, setSaves] = useState<SaveInfo[]>([])
   const [checking, setChecking] = useState(false)
   const [flash, setFlash] = useState('')
@@ -194,6 +195,7 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
         <div className="er-detail-actions">
           {game.link && <button className="er-btn" onClick={copyLink}>Copy F95</button>}
           {isF95 && <button className="er-btn" onClick={checkUpdate} disabled={checking}>{checking ? 'Checking…' : 'Check update'}</button>}
+          <button className="er-btn" onClick={() => onUpdateGame({ archived: !game.archived })} title="Archived games are skipped by update checks">{game.archived ? 'Unarchive' : 'Archive'}</button>
           <button className="er-btn" onClick={onEdit}>Edit</button>
           <button className="er-btn er-btn-danger" onClick={onDelete}>Delete</button>
         </div>
@@ -207,6 +209,8 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
 
       <div className="er-detail-meta">
         {game.creator && <span><b>Creator:</b>{game.creator}</span>}
+        {game.finishedVersion && <span><b>Finished:</b>{game.finishedVersion}{game.version && game.finishedVersion !== game.version ? ` (installed ${game.version})` : ''}</span>}
+        {game.archived && <span><b>Archived</b></span>}
         {game.releaseDate && <span><b>Date:</b>{game.releaseDate}</span>}
         {game.language && <span><b>Language:</b>{game.language}</span>}
         {game.backlogStatus && <span><b>Progress:</b>{BACKLOG_LABEL[game.backlogStatus]}</span>}
@@ -225,6 +229,16 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
       )}
 
       {flash && <div style={{ color: 'var(--text-dim)', fontSize: 12 }}>{flash}</div>}
+
+      {game.tags && game.tags.length > 0 && (
+        <div className="er-detail-tags">
+          {game.tags.map((t) => {
+            const key = t.toLowerCase()
+            const cls = tagPrefs?.avoided.has(key) ? 'avoided' : tagPrefs?.preferred.has(key) ? 'liked' : ''
+            return <span key={t} className={`er-detail-tag ${cls}`}>{t}</span>
+          })}
+        </div>
+      )}
 
       {game.description && (
         <div className="er-detail-desc">{renderDescription(game.description)}</div>

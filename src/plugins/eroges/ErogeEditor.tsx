@@ -110,6 +110,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
       otherGamesCreator: res.otherGamesCreator || target.otherGamesCreator,
       otherGamesFromPost: res.otherGamesFromPost.length ? res.otherGamesFromPost : target.otherGamesFromPost,
       otherGamesFetchedAt: undefined,
+      tags: res.tags.length ? res.tags : target.tags,
     }
   }
 
@@ -420,10 +421,14 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
                     {ENGINES.map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
                   </select>
                 </label>
-                <label>Version <input type="text" value={game.version ?? ''} onChange={(e) => set('version', e.target.value)} placeholder="v0.7" /></label>
+                <label>Installed version <input type="text" value={game.version ?? ''} onChange={(e) => set('version', e.target.value)} placeholder="v0.7" /></label>
                 <label>Release date (YY/MM/DD) <input type="text" value={game.releaseDate ?? ''} onChange={(e) => set('releaseDate', e.target.value)} placeholder="24/06/02" /></label>
                 <label className="er-checkbox">
                   <input type="checkbox" checked={!!game.vn} onChange={(e) => set('vn', e.target.checked)} /> Visual Novel (VN)
+                </label>
+                <label>Tags
+                  <input type="text" value={(game.tags ?? []).join(', ')} placeholder="Filled from F95 — comma separated"
+                    onChange={(e) => set('tags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))} />
                 </label>
                 <label>Description
                   <textarea rows={8} value={game.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Your notes or the fetched description…" />
@@ -445,6 +450,28 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
                     {BACKLOG_STATUSES.map((s) => <option key={s} value={s}>{BACKLOG_LABELS[s]}</option>)}
                   </select>
                 </label>
+                <label>Finished version
+                  <div className="er-inline-row">
+                    <input type="text" value={game.finishedVersion ?? ''} onChange={(e) => set('finishedVersion', e.target.value)} placeholder="The last version you played through" />
+                    {game.version && game.finishedVersion !== game.version && (
+                      <button type="button" className="er-btn er-btn-sm" onClick={() => set('finishedVersion', game.version)}>Same as installed</button>
+                    )}
+                  </div>
+                </label>
+                <div className="er-form-section">
+                  <div className="er-form-section-head">
+                    <span className="er-form-section-title">Archive</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`er-toggle-pill${game.archived ? ' active' : ''}`}
+                    onClick={() => set('archived', !game.archived)}
+                    aria-pressed={!!game.archived}
+                  >
+                    <span className="er-toggle-star" aria-hidden>⏸</span>
+                    <span>{game.archived ? 'Archived — update checks skip it' : 'Archive (skip update checks)'}</span>
+                  </button>
+                </div>
               </>
             )}
 

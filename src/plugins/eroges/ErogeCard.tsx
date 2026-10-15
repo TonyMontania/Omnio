@@ -1,16 +1,18 @@
 import { memo } from 'react'
 import type { ErogeItem } from './types'
 import { assetUrl } from './ipc'
-import { engineClass } from './constants'
+import { engineClass, type TagPrefs } from './constants'
+import TagSignals from './TagSignals'
 
 interface Props {
   game: ErogeItem
   onOpen: (id: string) => void
   onToggleFav: (id: string) => void
   cardFields?: Record<string, boolean>
+  tagPrefs?: TagPrefs
 }
 
-function ErogeCardImpl({ game, onOpen, onToggleFav, cardFields }: Props) {
+function ErogeCardImpl({ game, onOpen, onToggleFav, cardFields, tagPrefs }: Props) {
   const cover = game.coverFile ? assetUrl('cover', game.coverFile) : undefined
   const showTitle = cardFields?.title !== false
   const showVn = cardFields?.vn !== false
@@ -35,7 +37,7 @@ function ErogeCardImpl({ game, onOpen, onToggleFav, cardFields }: Props) {
           title="Favorite"
           onClick={(e) => { e.stopPropagation(); onToggleFav(game.id) }}
         >★</button>
-        {game.updateAvailable && (
+        {game.updateAvailable && !game.archived && (
           <div className="gc-update-badge" title={`New version: ${game.latestVersion ?? '?'}`}>UPDATE</div>
         )}
       </div>
@@ -45,6 +47,7 @@ function ErogeCardImpl({ game, onOpen, onToggleFav, cardFields }: Props) {
           {showVersion && game.version ? <span className="gc-version">[{game.version}]</span> : null}
           {showCreator && game.creator ? <span className="gc-creator">[{game.creator}]</span> : null}
         </div>
+        <TagSignals game={game} prefs={tagPrefs} />
       </div>
     </div>
   )
@@ -59,5 +62,6 @@ const ErogeCard = memo(ErogeCardImpl, (prev, next) =>
   && prev.onOpen === next.onOpen
   && prev.onToggleFav === next.onToggleFav
   && prev.cardFields === next.cardFields
+  && prev.tagPrefs === next.tagPrefs
 )
 export default ErogeCard

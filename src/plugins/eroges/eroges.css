@@ -518,3 +518,36 @@
 .er-modal .er-toggle-pill.active .er-toggle-star { color: var(--accent); }
 
 .er-modal .er-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+.er-view .er-signals { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+.er-view .er-row .er-signals { margin-top: 0; }
+.er-view .er-signal {
+  font-family: var(--font-mono, monospace); font-size: 10.5px; line-height: 1;
+  padding: 3px 7px; border-radius: 999px; border: 1px solid var(--border);
+  color: var(--text-dim); white-space: nowrap;
+}
+.er-view .er-signal.liked { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.er-view .er-signal.avoided { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); }
+.er-view .er-detail-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.er-view .er-detail-tag {
+  font-size: 12px; padding: 3px 9px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border-soft); color: var(--text-dim);
+}
+.er-view .er-detail-tag.liked { color: var(--accent); border-color: var(--accent); }
+.er-view .er-detail-tag.avoided { color: var(--danger); border-color: var(--danger); text-decoration: line-through; text-decoration-thickness: 1px; }
+.er-modal .er-inline-row { display: flex; gap: 8px; align-items: center; }
+.er-modal .er-inline-row input { flex: 1; }
+.er-modal .er-settings-hint { color: var(--text-dim); font-size: 12px; line-height: 1.5; margin: 0 0 12px; }
+.er-modal .er-settings-note { color: var(--text-faint); font-size: 11px; margin: 0 0 12px; }
+.er-modal .er-settings-pre {
+  background: var(--bg); color: var(--text-dim); font-size: 11px;
+  padding: 8px; border-radius: 6px; margin: 0 0 12px; overflow: auto;
+}
+.er-modal .er-settings-field { display: block; color: var(--text-dim); font-size: 12px; margin-bottom: 10px; }
+.er-modal .er-settings-field textarea,
+.er-modal .er-settings-field input {
+  display: block; width: 100%; margin-top: 4px; box-sizing: border-box;
+  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 10px; font-size: 12px; resize: vertical;
+}
+.er-modal .er-settings-field textarea { font-family: var(--font-mono, monospace); }

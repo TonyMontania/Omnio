@@ -5,9 +5,9 @@
 // own separate header row.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { ErogeItem, ErogeData, BacklogStatus } from './types'
+import type { ErogeItem, ErogeData, ErogeSettings, BacklogStatus } from './types'
 import type { PluginViewProps } from '../registry'
-import { SLUG } from './constants'
+import { SLUG, tagPrefsFrom } from './constants'
 import { loadData, saveData, savesRenameFolder, assetRename, assetDelete, savesDeleteAll, transcodeStoredAvif } from './ipc'
 import { f95CheckVersion, F95_BLOCKED, F95_BLOCKED_MESSAGE } from './f95Api'
 import { reportPluginCount } from '../counts'
@@ -74,12 +74,14 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
     playing: data.games.filter((g) => g.backlogStatus === 'playing').length,
     backlog: data.games.filter((g) => g.backlogStatus === 'backlog').length,
     played: data.games.filter((g) => g.backlogStatus === 'played').length,
-    updates: data.games.filter((g) => g.updateAvailable).length,
+    updates: data.games.filter((g) => g.updateAvailable && !g.archived).length,
   }), [data.games])
+
+  const tagPrefs = useMemo(() => tagPrefsFrom(data.settings?.preferredTags, data.settings?.avoidedTags), [data.settings?.preferredTags, data.settings?.avoidedTags])
 
   const tabGames = useMemo(() => {
     if (tab.kind === 'backlog') return data.games.filter((g) => g.backlogStatus === tab.value)
-    if (tab.kind === 'updates') return data.games.filter((g) => g.updateAvailable)
+    if (tab.kind === 'updates') return data.games.filter((g) => g.updateAvailable && !g.archived)
     return data.games
   }, [data.games, tab])
 
@@ -211,7 +213,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
   // is roughly a 6–8× speedup end-to-end.
   const UPDATE_CHECK_CONCURRENCY = 4
   async function checkAllUpdates() {
-    const targets = tabGames.filter((g) => g.link && /f95zone/i.test(g.link))
+    const targets = tabGames.filter((g) => !g.archived && g.link && /f95zone/i.test(g.link))
     if (targets.length === 0) { alert('No games with an F95 link in this view.'); return }
     setCheckingAll({ done: 0, total: targets.length })
     const norm = (v: string) => v.replace(/\s+/g, '').toLowerCase()
@@ -269,6 +271,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
           onCacheFields={(patch) => cacheGameFields(detailGame.id, patch)}
           allGames={data.games}
           onOpenGame={openDetail}
+          tagPrefs={tagPrefs}
         />
       ) : (
         <>
@@ -300,6 +303,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
                   onOpen={openDetail}
                   onToggleFav={toggleFavorite}
                   cardFields={cardFields}
+                  tagPrefs={tagPrefs}
                 />
               ))}
             </div>
@@ -312,6 +316,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
                   onOpen={openDetail}
                   onToggleFav={toggleFavorite}
                   cardFields={cardFields}
+                  tagPrefs={tagPrefs}
                 />
               ))}
             </div>
@@ -331,28 +336,17 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
 
       {showSettings && (
         <SettingsModal
-          initial={data.settings?.f95Cookie ?? ''}
-          onSave={async (cookie) => {
-            // Persist the whole data blob synchronously here instead
-            // of relying on the debounced save-on-change useEffect —
-            // avoids a race where the app is closed before that
-            // effect fires and the cookie gets lost.
-            //
-            // Serialize the cookie as an empty string when cleared,
-            // not `undefined`: some JSON round-trips (Tauri IPC,
-            // JSON.stringify) drop undefined values entirely, so the
-            // stored field would end up missing rather than empty.
-            const trimmed = cookie.trim()
-            const nextData: ErogeData = {
-              ...data,
-              settings: { ...data.settings, f95Cookie: trimmed },
-            }
+          initial={data.settings ?? {}}
+          onSave={async (settings) => {
+            // Saved right away rather than through the debounced effect,
+            // so closing the app straight after can't lose it.
+            const nextData: ErogeData = { ...data, settings }
             setData(nextData)
             setShowSettings(false)
             try {
               await saveData(nextData)
             } catch (err) {
-              alert(`No pude guardar el cookie: ${(err as Error).message}`)
+              alert(`Could not save the settings: ${(err as Error).message}`)
             }
           }}
           onCancel={() => setShowSettings(false)}
@@ -366,47 +360,55 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
 
 // -- inline mini modals ------------------------------------------
 
+const splitTags = (v: string): string[] => Array.from(new Set(v.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)))
+
 function SettingsModal({ initial, onSave, onCancel }: {
-  initial: string
-  onSave: (cookie: string) => void
+  initial: ErogeSettings
+  onSave: (settings: ErogeSettings) => void
   onCancel: () => void
 }) {
-  const [cookie, setCookie] = useState(initial)
+  const [cookie, setCookie] = useState(initial.f95Cookie ?? '')
+  const [preferred, setPreferred] = useState((initial.preferredTags ?? []).join(', '))
+  const [avoided, setAvoided] = useState((initial.avoidedTags ?? []).join(', '))
+  const save = (nextCookie: string) => onSave({
+    ...initial,
+    f95Cookie: nextCookie.trim(),
+    preferredTags: splitTags(preferred),
+    avoidedTags: splitTags(avoided),
+  })
   return (
     <div className="er-modal-backdrop" onClick={onCancel}>
       <div className="er-modal" onClick={(e) => e.stopPropagation()} style={{ width: 560 }}>
         <h2>Eroges settings</h2>
-        <p style={{ color: 'var(--text-dim)', fontSize: 12, lineHeight: 1.5, margin: '0 0 12px' }}>
+        <p className="er-settings-hint">
           F95 hides store links from anonymous visitors. By pasting your session cookies, the importer
           can read the DLsite / Steam links automatically.
         </p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 12, lineHeight: 1.5, margin: '0 0 12px' }}>
+        <p className="er-settings-hint">
           How to get them: on F95 (logged in) → DevTools (F12) → Application → Cookies → f95zone.to.
           Copy the values of <code>xf_user</code> and <code>xf_session</code> and paste them below in this format:
         </p>
-        <pre style={{ background: 'var(--bg)', color: 'var(--text-dim)', fontSize: 11, padding: 8, borderRadius: 6, margin: '0 0 12px', overflow: 'auto' }}>xf_user=&lt;value&gt;; xf_session=&lt;value&gt;</pre>
-        <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: 12, marginBottom: 10 }}>
+        <pre className="er-settings-pre">xf_user=&lt;value&gt;; xf_session=&lt;value&gt;</pre>
+        <label className="er-settings-field">
           Cookie header
-          <textarea
-            value={cookie}
-            onChange={(e) => setCookie(e.target.value)}
-            rows={4}
-            placeholder="xf_user=1234%2C....; xf_session=abcdef..."
-            style={{
-              display: 'block', width: '100%', marginTop: 4, boxSizing: 'border-box',
-              background: 'var(--bg)', color: 'var(--text)', border: '1px solid var(--border)',
-              borderRadius: 6, padding: '8px 10px', fontFamily: 'var(--font-mono, monospace)',
-              fontSize: 12, resize: 'vertical',
-            }}
-          />
+          <textarea value={cookie} onChange={(e) => setCookie(e.target.value)} rows={3} placeholder="xf_user=1234%2C....; xf_session=abcdef..." />
         </label>
-        <p style={{ color: 'var(--text-faint)', fontSize: 11, margin: '0 0 12px' }}>
+        <p className="er-settings-note">
           Saved only in your Omnio data folder (<code>data/plugins/eroges.json</code>). It never leaves your machine.
         </p>
+        <label className="er-settings-field">
+          Tags you like
+          <input type="text" value={preferred} onChange={(e) => setPreferred(e.target.value)} placeholder="e.g. romance, vanilla, sandbox" />
+        </label>
+        <label className="er-settings-field">
+          Tags to avoid
+          <input type="text" value={avoided} onChange={(e) => setAvoided(e.target.value)} placeholder="e.g. horror, grinding" />
+        </label>
+        <p className="er-settings-note">Comma separated. Games carrying these F95 tags are highlighted on their card and detail page.</p>
         <div className="er-modal-actions">
           <button className="er-btn" onClick={onCancel}>Cancel</button>
-          {initial && <button className="er-btn er-btn-danger" onClick={() => onSave('')}>Clear</button>}
-          <button className="er-btn er-btn-primary" onClick={() => onSave(cookie)}>Save</button>
+          {initial.f95Cookie && <button className="er-btn er-btn-danger" onClick={() => save('')}>Clear cookie</button>}
+          <button className="er-btn er-btn-primary" onClick={() => save(cookie)}>Save</button>
         </div>
       </div>
     </div>

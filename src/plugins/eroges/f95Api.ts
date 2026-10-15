@@ -76,6 +76,7 @@ export interface F95FetchResult extends Parsed {
   storeLinksHidden: boolean
   otherGamesCreator: string
   otherGamesFromPost: OtherGame[]
+  tags: string[]
 }
 
 export function f95ThreadId(url: string | undefined): number | null {
@@ -391,10 +392,11 @@ export function parseF95Page(html: string): F95FetchResult {
 
   const storeLinksHidden = !dlsiteUrl && !steamUrl && !itchUrl && /messageHide--link/i.test(html)
   const other = parseOtherGames(bodyHtml || html)
+  const tags = Array.from(new Set(Array.from(html.matchAll(/<a[^>]*class="tagItem"[^>]*>([^<]+)<\/a>/gi), (m) => decodeEntities(m[1]).trim()).filter(Boolean)))
   return {
     ...parsed, description, releaseDate, coverUrl, coverFallbacks, originalTitle, language,
     dlsiteUrl, dlsiteId, steamUrl, itchUrl, storeLinksHidden,
-    otherGamesCreator: other.creator, otherGamesFromPost: other.threads,
+    otherGamesCreator: other.creator, otherGamesFromPost: other.threads, tags,
   }
 }
 
