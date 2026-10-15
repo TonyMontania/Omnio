@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import type { ErogeItem } from './types'
 import { assetUrl } from './ipc'
-import { engineClass, type TagPrefs } from './constants'
+import type { TagPrefs } from './constants'
 import TagSignals from './TagSignals'
 
 interface Props {
@@ -14,38 +14,40 @@ interface Props {
 
 function ErogeCardImpl({ game, onOpen, onToggleFav, cardFields, tagPrefs }: Props) {
   const cover = game.coverFile ? assetUrl('cover', game.coverFile) : undefined
-  const showTitle = cardFields?.title !== false
-  const showVn = cardFields?.vn !== false
-  const showEngine = cardFields?.engine !== false
-  const showStatus = cardFields?.status !== false
-  const showVersion = cardFields?.version !== false
-  const showCreator = cardFields?.creator !== false
+  const show = (field: string) => cardFields?.[field] !== false
+  const hasUpdate = !!game.updateAvailable && !game.archived
+  const details = [
+    show('vn') && game.vn ? 'VN' : '',
+    show('engine') ? game.engine : '',
+    show('version') ? game.version : '',
+    show('creator') ? game.creator : '',
+  ].filter(Boolean)
   return (
-    <div className="er-card" onClick={() => onOpen(game.id)}>
+    <div className={`er-card${hasUpdate ? ' has-update' : ''}`} onClick={() => onOpen(game.id)}>
       <div className="gc-banner">
         {cover
           ? <img src={cover} alt="" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
           : <div className="gc-nocover">No cover</div>}
-        <div className="gc-tags">
-          {showVn && game.vn ? <span className="er-tag eng-vn">VN</span> : null}
-          {showEngine && game.engine ? <span className={`er-tag eng-${engineClass(game.engine)}`}>{game.engine}</span> : null}
-          {showStatus && game.status ? <span className={`er-tag st-${game.status.toLowerCase()}`}>{game.status}</span> : null}
-        </div>
+        {hasUpdate && (
+          <span className="gc-update" title={`New version: ${game.latestVersion ?? '?'}`}>
+            {game.latestVersion ? `${game.latestVersion} new` : 'Update'}
+          </span>
+        )}
         <button
           type="button"
-          className={`gc-fav ${game.favorite ? 'on' : ''}`}
-          title="Favorite"
+          className={`gc-fav${game.favorite ? ' on' : ''}`}
+          title={game.favorite ? 'Remove from favorites' : 'Add to favorites'}
+          aria-pressed={!!game.favorite}
           onClick={(e) => { e.stopPropagation(); onToggleFav(game.id) }}
         >★</button>
-        {game.updateAvailable && !game.archived && (
-          <div className="gc-update-badge" title={`New version: ${game.latestVersion ?? '?'}`}>UPDATE</div>
-        )}
       </div>
       <div className="gc-info">
-        {showTitle && <div className="gc-name">{game.name}</div>}
-        <div className="gc-meta">
-          {showVersion && game.version ? <span className="gc-version">[{game.version}]</span> : null}
-          {showCreator && game.creator ? <span className="gc-creator">[{game.creator}]</span> : null}
+        {show('title') && <div className="gc-name" title={game.name}>{game.name}</div>}
+        <div className="gc-line">
+          {show('status') && game.status && (
+            <span className={`gc-status st-${game.status.toLowerCase()}`}>{game.status}</span>
+          )}
+          {details.length > 0 && <span className="gc-details">{details.join(' · ')}</span>}
         </div>
         <TagSignals game={game} prefs={tagPrefs} />
       </div>
@@ -53,10 +55,6 @@ function ErogeCardImpl({ game, onOpen, onToggleFav, cardFields, tagPrefs }: Prop
   )
 }
 
-// Cards re-render only when their game or callbacks change — with 100+
-// items in the grid, unchanged rows would otherwise all re-render on
-// every parent state update (search input, sort change, favorite
-// toggle on another card).
 const ErogeCard = memo(ErogeCardImpl, (prev, next) =>
   prev.game === next.game
   && prev.onOpen === next.onOpen

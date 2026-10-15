@@ -4,7 +4,7 @@ import { assetUrl, savesList, savesAdd, savesDelete, savesOpenFolder, savesRevea
 import type { SaveInfo } from './ipc'
 import { f95CheckVersion, f95GamesByCreator, f95ThreadId, f95ThreadUrl } from './f95Api'
 import { cachedLastChanges, cachedThread, isNewerVersion, versionPatchFrom } from './f95Cache'
-import { engineClass, type TagPrefs } from './constants'
+import type { TagPrefs } from './constants'
 import ServiceLogo from '../../components/ServiceLogo'
 
 interface Props {
@@ -25,6 +25,8 @@ interface OtherGameRow {
   libGame?: ErogeItem
   url?: string
 }
+
+type DetailTab = 'overview' | 'saves' | 'links' | 'more'
 
 const OTHER_GAMES_STALE_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -98,6 +100,8 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
   const [checking, setChecking] = useState(false)
   const [flash, setFlash] = useState('')
   const [loadingOthers, setLoadingOthers] = useState(false)
+  const [tab, setTab] = useState<DetailTab>('overview')
+  const [menuOpen, setMenuOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
   const refreshSaves = useCallback(async () => { setSaves(await savesList(game.name)) }, [game.name])
@@ -105,6 +109,8 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
 
   useEffect(() => {
     rootRef.current?.closest('.er-view')?.scrollTo({ top: 0 })
+    setTab('overview')
+    setMenuOpen(false)
   }, [game.id])
 
   const cover = game.coverFile ? assetUrl('cover', game.coverFile) : null
@@ -195,158 +201,184 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
     setChecking(false)
   }
 
+  const links = [
+    { url: game.link, service: 'f95' as const, label: 'F95Zone' },
+    { url: game.dlsiteUrl, service: 'dlsite' as const, label: 'DLsite' },
+    { url: game.steamUrl, service: 'steam' as const, label: 'Steam' },
+    { url: game.itchUrl, service: 'itch' as const, label: 'itch.io' },
+    { url: game.ryuugamesUrl, service: 'ryuugames' as const, label: 'Ryuugames' },
+  ].filter((l) => !!l.url) as { url: string; service: 'f95' | 'dlsite' | 'steam' | 'itch' | 'ryuugames'; label: string }[]
+
+  const tabs: { id: DetailTab; label: string; count?: number }[] = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'saves', label: 'Saves', count: saves.length },
+    ...(links.length > 0 ? [{ id: 'links' as const, label: 'Links', count: links.length }] : []),
+    ...(otherGames.length > 0 || loadingOthers ? [{ id: 'more' as const, label: `More from ${creatorName || game.creator}`, count: otherGames.length }] : []),
+  ]
+  const activeTab = tabs.some((t) => t.id === tab) ? tab : 'overview'
+  const hasUpdate = !!game.updateAvailable && !game.archived
+  const facts = [
+    game.backlogStatus ? { label: 'Progress', value: BACKLOG_LABEL[game.backlogStatus] } : null,
+    game.version ? { label: 'Installed', value: game.version } : null,
+    game.finishedVersion ? { label: 'Finished', value: game.finishedVersion } : null,
+    game.latestVersion ? { label: 'Latest', value: game.latestVersion } : null,
+    game.releaseDate ? { label: 'Released', value: game.releaseDate } : null,
+    game.threadUpdated ? { label: 'Thread updated', value: game.threadUpdated } : null,
+    game.language ? { label: 'Language', value: game.language } : null,
+    game.dlsiteId ? { label: 'DLsite', value: game.dlsiteId } : null,
+  ].filter((f): f is { label: string; value: string } => f !== null)
+
+  const menu: { label: string; onClick: () => void; danger?: boolean }[] = [
+    { label: game.favorite ? 'Remove from favorites' : 'Add to favorites', onClick: () => onUpdateGame({ favorite: !game.favorite }) },
+    ...(game.link ? [
+      { label: 'Copy F95 link', onClick: () => void copyLink() },
+      { label: 'Open on F95Zone', onClick: () => window.open(game.link, '_blank', 'noreferrer') },
+    ] : []),
+    { label: game.archived ? 'Unarchive' : 'Archive (skip update checks)', onClick: () => onUpdateGame({ archived: !game.archived }) },
+    { label: 'Delete', onClick: onDelete, danger: true },
+  ]
+
   return (
     <div className="er-detail" ref={rootRef}>
-      <div className="er-detail-head">
-        {game.vn && <span className="er-tag eng-vn">VN</span>}
-        {game.engine && <span className={`er-tag eng-${engineClass(game.engine)}`}>{game.engine}</span>}
-        {game.status && <span className={`er-tag st-${game.status.toLowerCase()}`}>{game.status}</span>}
-        <div className="er-detail-title">
-          {game.name}
-          {game.version && <span className="er-detail-version">[{game.version}]</span>}
-          {game.originalTitle && <div style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 400, marginTop: 2 }}>{game.originalTitle}</div>}
-        </div>
-        <div className="er-detail-actions">
-          {game.link && <button className="er-btn" onClick={copyLink}>Copy F95</button>}
-          {isF95 && <button className="er-btn" onClick={checkUpdate} disabled={checking}>{checking ? 'Checking…' : 'Check update'}</button>}
-          <button className="er-btn" onClick={() => onUpdateGame({ archived: !game.archived })} title="Archived games are skipped by update checks">{game.archived ? 'Unarchive' : 'Archive'}</button>
-          <button className="er-btn" onClick={onEdit}>Edit</button>
-          <button className="er-btn er-btn-danger" onClick={onDelete}>Delete</button>
-        </div>
-      </div>
-
-      <div className="er-detail-cover-wrap">
-        {cover
-          ? <img className="er-detail-cover" src={cover} alt="cover" />
-          : <div className="er-detail-nocover">No cover</div>}
-      </div>
-
-      <div className="er-detail-meta">
-        {game.creator && <span><b>Creator:</b>{game.creator}</span>}
-        {game.finishedVersion && <span><b>Finished:</b>{game.finishedVersion}{game.version && game.finishedVersion !== game.version ? ` (installed ${game.version})` : ''}</span>}
-        {game.archived && <span><b>Archived</b></span>}
-        {game.releaseDate && <span><b>Date:</b>{game.releaseDate}</span>}
-        {game.language && <span><b>Language:</b>{game.language}</span>}
-        {game.backlogStatus && <span><b>Progress:</b>{BACKLOG_LABEL[game.backlogStatus]}</span>}
-        {game.dlsiteId && <span><b>DLSITE:</b>{game.dlsiteId}</span>}
-        {game.threadUpdated && <span><b>Thread updated:</b>{game.threadUpdated}</span>}
-        {game.favorite && <span style={{ color: 'var(--accent)' }}>★ Favorite</span>}
-      </div>
-
-      {(game.latestVersion || game.lastCheckedAt) && (
-        <div className={`er-update-info ${game.updateAvailable ? 'has-update' : ''}`}>
-          {game.updateAvailable
-            ? <>New version available: <b>{game.latestVersion}</b> (you have <b>{game.version || '—'}</b>) </>
-            : <>You're on the latest version ({game.latestVersion || game.version || '—'})</>}
-          {game.lastCheckedAt && <span className="er-uc-when">— checked {new Date(game.lastCheckedAt).toLocaleString()}</span>}
-        </div>
-      )}
-
-      {flash && <div style={{ color: 'var(--text-dim)', fontSize: 12 }}>{flash}</div>}
-
-      {game.tags && game.tags.length > 0 && (
-        <div className="er-detail-tags">
-          {game.tags.map((t) => {
-            const key = t.toLowerCase()
-            const cls = tagPrefs?.avoided.has(key) ? 'avoided' : tagPrefs?.preferred.has(key) ? 'liked' : ''
-            return <span key={t} className={`er-detail-tag ${cls}`}>{t}</span>
-          })}
-        </div>
-      )}
-
-      {game.description && (
-        <div className="er-detail-desc">{renderDescription(game.description)}</div>
-      )}
-
-      {(game.link || game.dlsiteUrl || game.steamUrl || game.itchUrl || game.ryuugamesUrl) && (
-        <div className="er-links">
-          {game.link && (
-            <a href={game.link} target="_blank" rel="noreferrer" className="er-link">
-              <span className="er-link-icon" title="F95Zone" aria-hidden="true"><ServiceLogo service="f95" size={22} /></span>
-              <span className="er-link-url">{game.link}</span>
-            </a>
-          )}
-          {game.dlsiteUrl && (
-            <a href={game.dlsiteUrl} target="_blank" rel="noreferrer" className="er-link">
-              <span className="er-link-icon" title="DLsite" aria-hidden="true"><ServiceLogo service="dlsite" size={22} /></span>
-              <span className="er-link-url">{game.dlsiteUrl}</span>
-            </a>
-          )}
-          {game.steamUrl && (
-            <a href={game.steamUrl} target="_blank" rel="noreferrer" className="er-link">
-              <span className="er-link-icon" title="Steam" aria-hidden="true"><ServiceLogo service="steam" size={22} /></span>
-              <span className="er-link-url">{game.steamUrl}</span>
-            </a>
-          )}
-          {game.itchUrl && (
-            <a href={game.itchUrl} target="_blank" rel="noreferrer" className="er-link">
-              <span className="er-link-icon" title="itch.io" aria-hidden="true"><ServiceLogo service="itch" size={22} /></span>
-              <span className="er-link-url">{game.itchUrl}</span>
-            </a>
-          )}
-          {game.ryuugamesUrl && (
-            <a href={game.ryuugamesUrl} target="_blank" rel="noreferrer" className="er-link">
-              <span className="er-link-icon" title="Ryuugames" aria-hidden="true"><ServiceLogo service="ryuugames" size={22} /></span>
-              <span className="er-link-url">{game.ryuugamesUrl}</span>
-            </a>
-          )}
-        </div>
-      )}
-
-      {(otherGames.length > 0 || loadingOthers) && (
-        <div className="er-other-games">
-          <h3>
-            More from {creatorName || game.creator}
-            {otherGames.length > 0 && <span className="er-other-count">{otherGames.length}</span>}
-          </h3>
-          {otherGames.length === 0 ? (
-            <div className="er-other-hint">Looking up other games on F95…</div>
-          ) : (
-            <div className="er-other-grid">
-              {otherGames.map((row) => row.libGame ? (
-                <button key={row.key} type="button" className="er-card er-other-card" onClick={() => onOpenGame(row.libGame!.id)} title={row.title}>
-                  <div className="gc-banner">
-                    {row.libGame.coverFile
-                      ? <img src={assetUrl('cover', row.libGame.coverFile)} alt="" loading="lazy" />
-                      : <div className="gc-nocover">No cover</div>}
-                  </div>
-                  <div className="gc-info"><div className="gc-name">{row.title}</div></div>
-                </button>
-              ) : (
-                <a key={row.key} className="er-card er-other-card" href={row.url} target="_blank" rel="noreferrer" title={`${row.title} — open on F95Zone`}>
-                  <div className="gc-banner">
-                    <div className="gc-nocover er-other-f95"><ServiceLogo service="f95" size={44} /></div>
-                  </div>
-                  <div className="gc-info"><div className="gc-name">{row.title}</div></div>
-                </a>
-              ))}
+      <header className="er-hero">
+        {cover && <img className="er-hero-bg" src={cover} alt="" aria-hidden />}
+        <div className="er-hero-body">
+          <div className="er-hero-cover">
+            {cover ? <img src={cover} alt="" /> : <span>No cover</span>}
+          </div>
+          <div className="er-hero-info">
+            <div className="er-hero-chips">
+              {game.status && <span className={`er-chip st-${game.status.toLowerCase()}`}>{game.status}</span>}
+              {game.vn && <span className="er-chip">VN</span>}
+              {game.favorite && <span className="er-chip fav">★ Favorite</span>}
+              {game.archived && <span className="er-chip">Archived</span>}
+              {hasUpdate && <span className="er-chip update">{game.latestVersion ? `${game.latestVersion} available` : 'Update available'}</span>}
             </div>
-          )}
-        </div>
-      )}
-
-      <div className="er-detail-saves">
-        <div className="er-saves-header">
-          <h3>Savefiles ({saves.length})</h3>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="er-btn er-btn-sm" onClick={async () => { await savesAdd(game.name); refreshSaves() }}>+ Add</button>
-            <button className="er-btn er-btn-sm" onClick={() => savesOpenFolder(game.name)}>Open folder</button>
-            {saves.length > 0 && <button className="er-btn er-btn-sm er-btn-danger" onClick={async () => { if (confirm('Delete all saves?')) { await savesDeleteAll(game.name); refreshSaves() } }}>Delete all</button>}
+            <h1 className="er-hero-title">{game.name}</h1>
+            {game.originalTitle && <div className="er-hero-original">{game.originalTitle}</div>}
+            <div className="er-hero-meta">{[game.creator, game.engine, game.version].filter(Boolean).join(' · ')}</div>
+            <div className="er-hero-actions">
+              {isF95 && (
+                <button className="er-btn er-btn-primary" onClick={checkUpdate} disabled={checking}>
+                  {checking ? 'Checking…' : 'Check update'}
+                </button>
+              )}
+              <button className="er-btn" onClick={onEdit}>Edit</button>
+              <div className="er-menu-wrap">
+                <button className="er-btn er-btn-icon" aria-label="More actions" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>⋯</button>
+                {menuOpen && (
+                  <div className="er-menu" role="menu" onMouseLeave={() => setMenuOpen(false)}>
+                    {menu.map((m) => (
+                      <button key={m.label} role="menuitem" className={m.danger ? 'danger' : ''} onClick={() => { setMenuOpen(false); m.onClick() }}>{m.label}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {flash && <span className="er-hero-flash">{flash}</span>}
+            </div>
           </div>
         </div>
-        <div className="er-saves-list">
-          {saves.length === 0 && <div className="er-saves-empty">No saves stored.</div>}
+      </header>
+
+      <nav className="er-tabs" role="tablist">
+        {tabs.map((t) => (
+          <button key={t.id} role="tab" aria-selected={activeTab === t.id} className={activeTab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
+            {t.label}{!!t.count && <span className="er-tab-count">{t.count}</span>}
+          </button>
+        ))}
+      </nav>
+
+      {activeTab === 'overview' && (
+        <div className="er-overview">
+          {facts.length > 0 && (
+            <dl className="er-facts">
+              {facts.map((f) => (
+                <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>
+              ))}
+            </dl>
+          )}
+          {game.lastCheckedAt && (
+            <p className="er-checked">
+              {hasUpdate
+                ? <>Version <b>{game.latestVersion}</b> is out. You have {game.version || 'no version set'}.</>
+                : <>Up to date.</>}
+              {' '}Checked {new Date(game.lastCheckedAt).toLocaleString()}.
+            </p>
+          )}
+          {game.tags && game.tags.length > 0 && (
+            <div className="er-detail-tags">
+              {game.tags.map((t) => {
+                const key = t.toLowerCase()
+                const cls = tagPrefs?.avoided.has(key) ? 'avoided' : tagPrefs?.preferred.has(key) ? 'liked' : ''
+                return <span key={t} className={`er-detail-tag ${cls}`}>{t}</span>
+              })}
+            </div>
+          )}
+          {game.description
+            ? <div className="er-detail-desc">{renderDescription(game.description)}</div>
+            : <p className="er-empty-note">No description yet. Import from F95 or add one in Edit.</p>}
+        </div>
+      )}
+
+      {activeTab === 'saves' && (
+        <div className="er-panel">
+          <div className="er-panel-head">
+            <span>{saves.length === 0 ? 'No saves stored yet.' : `${saves.length} save${saves.length === 1 ? '' : 's'}`}</span>
+            <div className="er-panel-actions">
+              <button className="er-btn er-btn-sm" onClick={async () => { await savesAdd(game.name); refreshSaves() }}>+ Add</button>
+              <button className="er-btn er-btn-sm" onClick={() => savesOpenFolder(game.name)}>Open folder</button>
+              {saves.length > 0 && <button className="er-btn er-btn-sm er-btn-danger" onClick={async () => { if (confirm('Delete all saves?')) { await savesDeleteAll(game.name); refreshSaves() } }}>Delete all</button>}
+            </div>
+          </div>
           {saves.map((s) => (
             <div key={s.name} className="er-save-row">
               <span className="er-save-name" title={s.name}>{s.name}</span>
               <div className="er-save-actions">
                 <button className="er-btn er-btn-sm" onClick={() => savesReveal(game.name, s.name)}>View</button>
-                <button className="er-btn er-btn-sm er-btn-danger" onClick={async () => { if (confirm(`Delete ${s.name}?`)) { await savesDelete(game.name, s.name); refreshSaves() } }}>×</button>
+                <button className="er-btn er-btn-sm er-btn-danger" aria-label={`Delete ${s.name}`} onClick={async () => { if (confirm(`Delete ${s.name}?`)) { await savesDelete(game.name, s.name); refreshSaves() } }}>×</button>
               </div>
             </div>
           ))}
         </div>
-      </div>
+      )}
+
+      {activeTab === 'links' && (
+        <div className="er-panel">
+          {links.map((l) => (
+            <a key={l.service} href={l.url} target="_blank" rel="noreferrer" className="er-link">
+              <span className="er-link-icon" aria-hidden="true"><ServiceLogo service={l.service} size={22} /></span>
+              <span className="er-link-label">{l.label}</span>
+              <span className="er-link-url">{l.url}</span>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'more' && (
+        otherGames.length === 0 ? (
+          <p className="er-empty-note">Looking up other games on F95…</p>
+        ) : (
+          <div className="er-other-grid">
+            {otherGames.map((row) => row.libGame ? (
+              <button key={row.key} type="button" className="er-card er-other-card" onClick={() => onOpenGame(row.libGame!.id)} title={row.title}>
+                <div className="gc-banner">
+                  {row.libGame.coverFile
+                    ? <img src={assetUrl('cover', row.libGame.coverFile)} alt="" loading="lazy" />
+                    : <div className="gc-nocover">No cover</div>}
+                </div>
+                <div className="gc-info"><div className="gc-name">{row.title}</div></div>
+              </button>
+            ) : (
+              <a key={row.key} className="er-card er-other-card" href={row.url} target="_blank" rel="noreferrer" title={`${row.title} — open on F95Zone`}>
+                <div className="gc-banner">
+                  <div className="gc-nocover er-other-f95"><ServiceLogo service="f95" size={44} /></div>
+                </div>
+                <div className="gc-info"><div className="gc-name">{row.title}</div></div>
+              </a>
+            ))}
+          </div>
+        )
+      )}
     </div>
   )
 }
