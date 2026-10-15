@@ -15,7 +15,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2"
-tauri-plugin-notification = "2"
+tauri-plugin-notification = "~2.4"
 
 # JSON serialization mirrors the on-disk shape produced by the
 # Electron main-process today. Any AnyItem field ported here will use
