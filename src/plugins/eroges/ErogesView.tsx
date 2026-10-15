@@ -9,7 +9,7 @@ import type { ErogeItem, ErogeData, BacklogStatus } from './types'
 import type { PluginViewProps } from '../registry'
 import { SLUG } from './constants'
 import { loadData, saveData, savesRenameFolder, assetRename, assetDelete, savesDeleteAll, transcodeStoredAvif } from './ipc'
-import { f95CheckVersion } from './f95Api'
+import { f95CheckVersion, F95_BLOCKED, F95_BLOCKED_MESSAGE } from './f95Api'
 import { reportPluginCount } from '../counts'
 import ErogeCard from './ErogeCard'
 import ErogeRow from './ErogeRow'
@@ -218,9 +218,11 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
     const cookie = data.settings?.f95Cookie
     let nextIdx = 0
     let done = 0
+    let blocked = false
 
     async function worker() {
       for (;;) {
+        if (blocked) return
         const myIdx = nextIdx++
         if (myIdx >= targets.length) return
         const g = targets[myIdx]
@@ -238,8 +240,9 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
           // any per-card badge react as results stream in. React 18
           // batches these across the microtask boundary between awaits.
           setData((d) => ({ ...d, games: d.games.map((x) => x.id === g.id ? { ...x, ...patch } : x) }))
-        } catch { /* silently skip failures — surfacing one toast per
-                     failed game would drown the user in noise */ }
+        } catch (err) {
+          if ((err as Error).message === F95_BLOCKED_MESSAGE) blocked = true
+        }
         done += 1
         setCheckingAll({ done, total: targets.length })
       }
@@ -248,6 +251,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
     const workerCount = Math.min(UPDATE_CHECK_CONCURRENCY, targets.length)
     await Promise.all(Array.from({ length: workerCount }, () => worker()))
     setCheckingAll(null)
+    if (blocked) alert(`${F95_BLOCKED} Try the update check again later.`)
   }
 
   // -- render ------------------------------------------------------

@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import type { ErogeItem, BacklogStatus, F95Status } from './types'
 import { ENGINES, STATUSES, BACKLOG_STATUSES, BACKLOG_LABELS } from './constants'
-import { f95Fetch, f95DownloadCover } from './f95Api'
+import { f95Fetch, f95DownloadCover, f95PageUrl, looksLikeF95Thread, parseF95Page } from './f95Api'
 import { ryuuFetch, ryuuDownloadCover } from './ryuuApi'
 import { assetSaveDataUrl, assetDelete } from './ipc'
 import { fileToDataUrl } from '../../utils/files'
@@ -73,8 +73,11 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
   const [dupPrompt, setDupPrompt] = useState<{
     source: 'f95' | 'ryuu'
     url: string
+    html?: string
     duplicate: ErogeItem
   } | null>(null)
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [pastedHtml, setPastedHtml] = useState('')
 
   useEffect(() => {
     if (initial?.link && !f95Url) setF95Url(initial.link)
@@ -110,8 +113,8 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     }
   }
 
-  async function runF95Import(target: ErogeItem, url: string): Promise<{ patched: ErogeItem; res: Awaited<ReturnType<typeof f95Fetch>>; coverDiag?: string } | null> {
-    const res = await f95Fetch(url, f95Cookie)
+  async function runF95Import(target: ErogeItem, url: string, html?: string): Promise<{ patched: ErogeItem; res: Awaited<ReturnType<typeof f95Fetch>>; coverDiag?: string } | null> {
+    const res = html ? parseF95Page(html) : await f95Fetch(url, f95Cookie)
     let patched = mergeF95(target, res, url)
     let coverDiag: string | undefined
     if (!patched.coverFile) {
@@ -146,14 +149,32 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     await doF95Import('current', f95Url.trim())
   }
 
+  async function importFromPastedPage() {
+    const html = pastedHtml.trim()
+    if (!looksLikeF95Thread(html)) {
+      setF95Status('That doesn\'t look like an F95 thread page. Copy the whole page source with Ctrl+U, then Ctrl+A and Ctrl+C.')
+      return
+    }
+    const url = f95PageUrl(html) || f95Url.trim()
+    if (url) setF95Url(url)
+    setPasteOpen(false)
+    setPastedHtml('')
+    const dup = url ? findDuplicate(allGames, game.id, { link: url }) : null
+    if (dup) {
+      setDupPrompt({ source: 'f95', url, html, duplicate: dup })
+      return
+    }
+    await doF95Import('current', url, html)
+  }
+
   // Actually run the import and either update the current draft (mode
   // = 'current') or merge into an existing library entry and hand it
   // back to the parent via onSave (mode = 'merge:<id>').
-  async function doF95Import(mode: 'current' | { mergeInto: ErogeItem }, url: string) {
+  async function doF95Import(mode: 'current' | { mergeInto: ErogeItem }, url: string, html?: string) {
     setImporting(true); setF95Status('Importing…')
     try {
       const target = mode === 'current' ? game : mode.mergeInto
-      const outcome = await runF95Import(target, url)
+      const outcome = await runF95Import(target, url, html)
       if (!outcome) return
       if (mode === 'current') {
         setGame(outcome.patched)
@@ -275,10 +296,10 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
 
   const runDupChoice = async (choice: 'add' | 'merge') => {
     if (!dupPrompt) return
-    const { source, url, duplicate } = dupPrompt
+    const { source, url, html, duplicate } = dupPrompt
     setDupPrompt(null)
     if (source === 'f95') {
-      await doF95Import(choice === 'add' ? 'current' : { mergeInto: duplicate }, url)
+      await doF95Import(choice === 'add' ? 'current' : { mergeInto: duplicate }, url, html)
     } else {
       await doRyuuImport(choice === 'add' ? 'current' : { mergeInto: duplicate }, url)
     }
@@ -336,7 +357,21 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
                     <input type="text" placeholder="Paste the F95 link and press Import"
                       value={f95Url} onChange={(e) => setF95Url(e.target.value)} />
                     <button type="button" className="er-btn" onClick={importFromF95} disabled={importing}>F95</button>
+                    <button type="button" className={pasteOpen ? 'er-btn active' : 'er-btn'} onClick={() => setPasteOpen((v) => !v)} disabled={importing}
+                      title="Import from a thread page you copied in your browser">Paste page</button>
                   </div>
+                  {pasteOpen && (
+                    <div className="er-f95-paste">
+                      <p className="er-form-section-hint">
+                        Open the thread in your browser, press <kbd>Ctrl+U</kbd> to view the page source, then <kbd>Ctrl+A</kbd> and <kbd>Ctrl+C</kbd>. Paste it here.
+                      </p>
+                      <textarea rows={4} value={pastedHtml} onChange={(e) => setPastedHtml(e.target.value)} placeholder="Paste the page source here" autoFocus />
+                      <div className="er-f95-paste-actions">
+                        <button type="button" className="er-btn" onClick={() => { setPasteOpen(false); setPastedHtml('') }}>Cancel</button>
+                        <button type="button" className="er-btn er-btn-primary" onClick={importFromPastedPage} disabled={!pastedHtml.trim() || importing}>Import</button>
+                      </div>
+                    </div>
+                  )}
                   {f95Status && <div className="er-f95-status">{f95Status}</div>}
                   <div className="er-f95-import">
                     <input type="text" placeholder="Paste the Ryuugames link to add metadata"

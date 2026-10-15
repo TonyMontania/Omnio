@@ -133,17 +133,49 @@ export async function f95GamesByCreator(creator: string): Promise<OtherGame[]> {
   return out
 }
 
-export async function f95Fetch(url: string, cookie?: string): Promise<F95FetchResult> {
+export const F95_BLOCKED = 'F95Zone is blocking automated requests right now.'
+export const F95_BLOCKED_MESSAGE =
+  `${F95_BLOCKED} Open the thread in your browser, copy the page source (Ctrl+U, then Ctrl+A and Ctrl+C) and use "Paste page" in the editor, or try again later.`
+
+export function isF95BlockedError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err)
+  return /cf-mitigated=challenge|HTTP 403[^]*cloudflare|Just a moment/i.test(msg)
+}
+
+async function fetchF95Html(url: string, cookie?: string): Promise<string> {
   const u = new URL(url)
-  if (!/^https?:$/.test(u.protocol)) throw new Error('URL inválida')
+  if (!/^https?:$/.test(u.protocol)) throw new Error('Invalid URL')
   const headers: Record<string, string> = {
     'User-Agent': UA,
     'Accept': 'text/html,application/xhtml+xml',
     'Accept-Language': 'en-US,en;q=0.9',
   }
   if (cookie && cookie.trim()) headers['Cookie'] = cookie.trim()
-  const html = await fetchText(u.toString(), headers)
+  try {
+    return await fetchText(u.toString(), headers)
+  } catch (err) {
+    if (isF95BlockedError(err)) throw new Error(F95_BLOCKED_MESSAGE)
+    throw err
+  }
+}
 
+// The thread URL a saved F95 page belongs to, read from its canonical
+// link or og:url. Lets a pasted page fill the F95 link field too.
+export function f95PageUrl(html: string): string {
+  const canonical = html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i)?.[1]
+    || extractMeta(html, 'og:url')
+  return canonical && f95ThreadId(canonical) ? decodeEntities(canonical) : ''
+}
+
+export function looksLikeF95Thread(html: string): boolean {
+  return /f95zone/i.test(html) && /bbWrapper/i.test(html)
+}
+
+export async function f95Fetch(url: string, cookie?: string): Promise<F95FetchResult> {
+  return parseF95Page(await fetchF95Html(url, cookie))
+}
+
+export function parseF95Page(html: string): F95FetchResult {
   const ogTitle = extractMeta(html, 'og:title')
   const ogImage = extractMeta(html, 'og:image')
   const pageTitle = (html.match(/<title>([^<]+)<\/title>/i) ?? ['', ''])[1] ?? ''
@@ -375,14 +407,9 @@ export interface F95Version {
 export async function f95CheckVersion(url: string, cookie?: string): Promise<F95Version> {
   const u = new URL(url)
   if (!/^https?:$/.test(u.protocol) || !/f95zone/i.test(u.hostname)) {
-    throw new Error('no es link de F95')
+    throw new Error('Not an F95 link')
   }
-  const headers: Record<string, string> = {
-    'User-Agent': UA,
-    'Accept': 'text/html,application/xhtml+xml',
-  }
-  if (cookie && cookie.trim()) headers['Cookie'] = cookie.trim()
-  const html = await fetchText(u.toString(), headers)
+  const html = await fetchF95Html(u.toString(), cookie)
   const ogTitle = extractMeta(html, 'og:title')
   const pageTitle = (html.match(/<title>([^<]+)<\/title>/i) ?? ['', ''])[1] ?? ''
   const parsed = parseF95Title(decodeEntities(ogTitle || pageTitle))
