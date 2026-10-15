@@ -24,7 +24,7 @@ Games · Music · Movies · Series · Anime · Donghua · Manga · Manhwa · Man
 </div>
 
 - **12 libraries, one app** — stop juggling a site per hobby.
-- **One-click metadata from 15 sources** — covers, descriptions, tracklists, cast, tags.
+- **One-click metadata from 14 sources** — covers, descriptions, tracklists, cast, tags.
 - **Yours, offline** — no accounts, no cloud, no telemetry. Your library is a folder of JSON files you own.
 
 <p align="center">
@@ -116,7 +116,7 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 *Library grid — cover-first browsing with status chips, smart lists, grouping, sorting, filters and bulk actions.*
 
 ![Omnio — Tabbed editor with live preview](https://github.com/user-attachments/assets/ffba12f6-f3b2-44b2-a531-91d16c804204)
-*Tabbed editor (Overview / Identity / Progress / Media / History / Related / Notes) with live preview + one-click metadata fetch from 15 sources.*
+*Tabbed editor (Overview / Identity / Progress / Media / History / Related / Notes) with live preview + one-click metadata fetch from 14 sources.*
 
 ## Why Omnio?
 
@@ -151,7 +151,7 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 
 **Discover**
 
-- **One-click metadata + covers** from 15 sources (see below). Cached locally for 24 h
+- **One-click metadata + covers** from 14 sources (see below). Cached locally for 24 h
 - **Quick-add via URL** — paste an IGDB / TMDb / AniList / VNDB / Steam URL into the title field, the fetcher opens pre-filled
 - **Global search (Ctrl+K)** across every library with operator syntax (`favorite:true`, `year:>2020`, `status:playing`)
 - **Home widget board** — Continue where you left off, Currently airing, Upcoming this week, Cover carousel, Big numbers, On this day, Rating spread, Top of the year, Genre spotlight, Pick from your backlog and more. Drag & drop, resize, and quick-add from the sidebar
@@ -164,7 +164,7 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 **Own your data**
 
 - **Fully local** — no accounts, no telemetry, no analytics
-- **Import** — MAL / AniList XML, Steam, Letterboxd, IMDb, Backloggd, Serializd, Spotify, RateYourMusic, Kindle highlights, Last.fm (CSV + API sync), local music folder scan, Trakt.tv, Discogs, StoryGraph, HowLongToBeat, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads presets
+- **Import** — MAL / AniList XML, Steam, Letterboxd, IMDb, Backloggd, Serializd, Spotify, RateYourMusic, Kindle highlights, Last.fm (CSV + API sync), local music folder scan, Trakt.tv, Discogs, StoryGraph, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads presets
 - **Export** — static HTML site (searchable, light/dark), MAL XML, iCal for release calendar, per-category CSV, Yearly Wrapped PNG
 - **Rolling backups** — 5 automatic snapshots per save, restore any of them
 - **In-app updater** — checks GitHub Releases, downloads the matching build
@@ -188,7 +188,6 @@ Sources are grouped by the library they feed. Anything marked *No key* works out
 | [IGDB](https://www.igdb.com/) | Full metadata + source inference (Remake / Remaster / Port…) | Twitch Client ID + Secret (free) |
 | [SteamGridDB](https://www.steamgriddb.com/) | Covers, banners, logos, heroes | Free API key |
 | [PCGamingWiki](https://www.pcgamingwiki.com/) | Save + config paths per OS | No key |
-| [HowLongToBeat](https://howlongtobeat.com/) | Main story / +extras / completionist hours (fills `hltbHours`) | No key |
 
 **Movies & Series**
 

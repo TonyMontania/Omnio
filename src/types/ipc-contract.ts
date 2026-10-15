@@ -292,8 +292,6 @@ export type IpcContract = {
     { args: [term: string]; result: PcgwSearchResult }
   'pcgw:save-paths':
     { args: [pageName: string]; result: PcgwSavePathsResult }
-  'hltb:search':
-    { args: [term: string]; result: FetcherObjectEnvelope }
   'lastfm:top_albums':
     { args: [apiKey: string, username: string, limit: number, period: string]; result: FetcherObjectEnvelope }
   'lastfm:album_info':

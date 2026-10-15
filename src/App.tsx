@@ -118,7 +118,6 @@ const BackloggdImporter  = lazy(() => import('./BackloggdImporter'))
 const StoryGraphImporter = lazy(() => import('./StoryGraphImporter'))
 const ImdbImporter       = lazy(() => import('./ImdbImporter'))
 const RymImporter        = lazy(() => import('./RymImporter'))
-const HltbImporter       = lazy(() => import('./HltbImporter'))
 const LastfmApiSync      = lazy(() => import('./LastfmApiSync'))
 const MusicFolderScanner = lazy(() => import('./MusicFolderScanner'))
 const SerializdImporter  = lazy(() => import('./SerializdImporter'))
@@ -173,7 +172,7 @@ type Layout = 'list' | 'grid' | 'compact' | 'kanban' | 'timeline' | 'diary'
 type GroupBy = 'none' | 'year' | 'decade' | 'status' | 'rating'
 type SortBy =
   | 'alpha' | 'recent' | 'rating' | 'custom'
-  | 'time' | 'status' | 'releaseAsc' | 'releaseDesc' | 'hltbAsc' | 'hltbDesc'
+  | 'time' | 'status' | 'releaseAsc' | 'releaseDesc'
   | 'yearAsc' | 'yearDesc' | 'duration'
   | 'episodes' | 'animeStatus' | 'seriesStatus'
   | 'chapters' | 'mangaStatus'
@@ -440,13 +439,6 @@ function filterAndSort<T extends AnyItem>(list: T[], search: string, filterTags:
   else if (sortBy === 'recent') arr.sort((a, b) => b.createdAt - a.createdAt)
   else if (sortBy === 'rating') arr.sort((a, b) => (b.rating || 0) - (a.rating || 0))
   else if (sortBy === 'time') arr.sort((a, b) => parseFloat(b.playTime || '0') - parseFloat(a.playTime || '0'))
-  // Unrated games fall to the end so a fresh backlog still sorts sensibly.
-  else if (sortBy === 'hltbAsc') arr.sort((a, b) => {
-    const av = (a as { hltbHours?: number }).hltbHours ?? Number.POSITIVE_INFINITY
-    const bv = (b as { hltbHours?: number }).hltbHours ?? Number.POSITIVE_INFINITY
-    return av - bv
-  })
-  else if (sortBy === 'hltbDesc') arr.sort((a, b) => ((b as { hltbHours?: number }).hltbHours ?? -1) - ((a as { hltbHours?: number }).hltbHours ?? -1))
   else if (sortBy === 'status') arr.sort((a, b) => getGameStatusRank(b.gameStatus) - getGameStatusRank(a.gameStatus))
   else if (sortBy === 'releaseAsc') arr.sort((a, b) => compareDates(a.releaseDate, b.releaseDate, true))
   else if (sortBy === 'releaseDesc') arr.sort((a, b) => compareDates(a.releaseDate, b.releaseDate, false))
@@ -833,7 +825,6 @@ function App() {
   const [storyGraphOpen, setStoryGraphOpen] = useState(false)
   const [imdbOpen, setImdbOpen] = useState(false)
   const [rymOpen, setRymOpen] = useState(false)
-  const [hltbOpen, setHltbOpen] = useState(false)
   const [lastFmOpen, setLastFmOpen] = useState(false)
   const [musicScanOpen, setMusicScanOpen] = useState(false)
   const [serializdOpen, setSerializdOpen] = useState(false)
@@ -883,7 +874,6 @@ function App() {
   const [ownership, setOwnership] = useState<Ownership | ''>('')
   const [gameStatus, setGameStatus] = useState<GameStatus>('backlog')
   const [playTime, setPlayTime] = useState('')
-  const [hltbHours, setHltbHours] = useState('')
   const [playthroughs, setPlaythroughs] = useState<Playthrough[]>([])
   const [vnEndings, setVnEndings] = useState<VnEnding[]>([])
   const [storeLinks, setStoreLinks] = useState<StoreLink[]>([])
@@ -1127,6 +1117,13 @@ function App() {
         items = items.map((i) => (i.categoryId === 'musica' && i.concerts ? { ...i, concerts: undefined } : i))
       }
     }
+
+    items = items.map((i) => {
+      if (!('hltbHours' in i || 'hltbHoursCompletionist' in i || 'hltbHoursExtras' in i)) return i
+      const rest: Record<string, unknown> = { ...i }
+      delete rest.hltbHours; delete rest.hltbHoursCompletionist; delete rest.hltbHoursExtras
+      return rest as unknown as Item
+    })
 
     skipHistoryRef.current = true
     setItems(items)
@@ -1656,7 +1653,7 @@ function App() {
   }
 
   const openAddPanel = () => {
-    setEditingId(null); resetForm(); setHltbHours(''); setBasedOnItemId('')
+    setEditingId(null); resetForm(); setBasedOnItemId('')
     // Applied after resetForm so template slots override the reset defaults.
     applyItemTemplate(settings.itemTemplates?.[activeCategory])
     setPanelOpen(true)
@@ -1666,8 +1663,6 @@ function App() {
     loadItemIntoFormImpl(formSetters, item)
     // Fields not covered by FormSetters — wired inline to avoid rippling
     // through every form-related type.
-    const hltb = (item as { hltbHours?: number }).hltbHours
-    setHltbHours(hltb !== undefined ? String(hltb) : '')
     setBasedOnItemId((item as { basedOnItemId?: string }).basedOnItemId ?? '')
     setLibraryCustomValues(item.libraryCustomFieldValues ?? {})
     setPlaythroughs(item.playthroughs ?? [])
@@ -1816,12 +1811,6 @@ function App() {
       })
     }
     applyPatchFieldsToForm(patch, formSetters, { activeCategory })
-
-    // hltbHours is a number on AnyItem but a string on the form.
-    const patchHltb = (patch as { hltbHours?: number }).hltbHours
-    if (typeof patchHltb === 'number' && Number.isFinite(patchHltb) && patchHltb > 0) {
-      setHltbHours(String(patchHltb))
-    }
 
     // If IGDB reported a parent game, look for it locally and prefill originalWorkId.
     if (hints?.parentGameTitle && activeCategory === 'videojuegos') {
@@ -1982,7 +1971,6 @@ function App() {
     createdAt: editingItem?.createdAt || Date.now(),
     gameStatus: gameStatus || undefined,
     playTime: playTime || undefined,
-    hltbHours: hltbHours ? Number(hltbHours) : undefined,
     devs: devs.length > 0 ? devs : undefined,
     publishers: publishers.length > 0 ? publishers : undefined,
     platforms: platforms.length > 0 ? platforms : undefined,
@@ -2003,7 +1991,7 @@ function App() {
     seriesStatus: seriesStatus || undefined,
   } as Item), [
     editingId, editingItem, activeCategory, title, cover, description, tags, rating,
-    gameStatus, playTime, hltbHours, devs, publishers, platforms, genres, bannerImage, logoImage,
+    gameStatus, playTime, devs, publishers, platforms, genres, bannerImage, logoImage,
     artist, musicType, releaseYear, releaseDate, consumed, readingStatus,
     chaptersRead, totalChapters, watchStatus, episodesWatched, totalEpisodes, seriesStatus,
   ])
@@ -4052,7 +4040,6 @@ function App() {
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setStoryGraphOpen(true)}><ServiceLogo service="storygraph" /><span>StoryGraph</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setImdbOpen(true)}><ServiceLogo service="imdb" /><span>IMDb</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setRymOpen(true)}><ServiceLogo service="rym" /><span>RateYourMusic</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setHltbOpen(true)}><ServiceLogo service="hltb" /><span>HowLongToBeat times</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setDiscographyCheckerOpen(true)}><ServiceLogo service="musicbrainz" /><span>Music discography check</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={() => setInstallScanOpen(true)}><ServiceLogo service="steam" /><span>Installed games (Steam / GOG / Epic)</span></button>
                       </div>
@@ -4587,8 +4574,6 @@ function App() {
                         <option value="custom">{activeCollection ? 'Manual order' : 'Custom order'}</option>
                         {activeCategory === 'videojuegos' && <>
                           <option value="time">Time played</option>
-                          <option value="hltbAsc">Shortest to beat</option>
-                          <option value="hltbDesc">Longest to beat</option>
                           <option value="status">Status</option>
                           <option value="releaseAsc">Release date ↑</option>
                           <option value="releaseDesc">Release date ↓</option>
@@ -5230,7 +5215,6 @@ function App() {
                         ownership={ownership} setOwnership={setOwnership}
                         gameStatus={gameStatus} setGameStatus={setGameStatus}
                         playTime={playTime} handlePlayTimeChange={handlePlayTimeChange}
-                        hltbHours={hltbHours} setHltbHours={setHltbHours}
                         hasDlc={hasDlc} setHasDlc={setHasDlc} dlcList={dlcList} setDlcList={setDlcList}
                         hasAddons={hasAddons} setHasAddons={setHasAddons} addonsList={addonsList} setAddonsList={setAddonsList}
                         isBundle={isBundle} setIsBundle={setIsBundle} bundleContents={bundleContents} setBundleContents={setBundleContents} setBundleSgdbFor={setBundleSgdbFor}
@@ -6529,23 +6513,6 @@ function App() {
         </Suspense>
       )}
 
-      {hltbOpen && (
-        <Suspense fallback={null}>
-          <HltbImporter
-            existingItems={items}
-            onPatch={(patches) => {
-              const byId = new Map(patches.map((p) => [p.id, p.hltbHours]))
-              setItems((all) => all.map((it) => {
-                const h = byId.get(it.id)
-                if (h === undefined) return it
-                return { ...it, hltbHours: h } as Item
-              }))
-              setToast(`Patched ${patches.length} game${patches.length === 1 ? '' : 's'} with HLTB times`)
-            }}
-            onClose={() => setHltbOpen(false)}
-          />
-        </Suspense>
-      )}
 
       {musicScanOpen && (
         <Suspense fallback={null}>

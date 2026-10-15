@@ -8,7 +8,7 @@
 // as its own visual language. See the `WITH_ASSET` map below.
 //
 // Niche services simpleicons doesn't ship (StoryGraph, Backloggd,
-// Serializd, HowLongToBeat, RateYourMusic, Kindle, the eroge plugin's
+// Serializd, RateYourMusic, Kindle, the eroge plugin's
 // F95/DLsite/itch/Ryuugames) fall through to hand-drawn inline SVGs
 // in the `CUSTOM` switch so no button ends up unbadged.
 
@@ -56,7 +56,7 @@ export type ServiceName =
   | 'letterboxd' | 'imdb' | 'tmdb' | 'trakt' | 'serializd'
   | 'goodreads' | 'storygraph' | 'kindle'
   | 'spotify' | 'lastfm' | 'discogs' | 'rym' | 'musicbrainz'
-  | 'backloggd' | 'hltb' | 'igdb' | 'sgdb' | 'pcgw'
+  | 'backloggd' | 'igdb' | 'sgdb' | 'pcgw'
   | 'anidb' | 'vndb' | 'mangadex' | 'comicvine'
   | 'notion' | 'csv'
   | 'f95' | 'dlsite' | 'itch' | 'ryuugames'
@@ -150,8 +150,6 @@ export default function ServiceLogo({ service, size = 18, style }: Props) {
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#132831" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="11" fill="#f2c400">RYM</text></svg>
     case 'backloggd':
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#1e2a3a" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="14" fill="#f6c04f">b</text></svg>
-    case 'hltb':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#3498db" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">HLTB</text></svg>
     case 'igdb':
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#9147ff" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">IGDB</text></svg>
     case 'sgdb':

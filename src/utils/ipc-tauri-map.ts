@@ -87,7 +87,6 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'anidb:search-titles': ['query', 'limit'],
   'pcgw:search': ['term'],
   'pcgw:save-paths': ['pageName'],
-  'hltb:search': ['term'],
   'lastfm:top_albums': ['apiKey', 'username', 'limit', 'period'],
   'lastfm:album_info': ['apiKey', 'username', 'artist', 'album'],
   'artist:images-search': ['name'],

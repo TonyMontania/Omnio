@@ -35,8 +35,8 @@ Realistic threat surfaces:
 
 - Path traversal / file writes via imported files (backups, MAL/AniList XML,
   Letterboxd CSV, IMDb CSV, Backloggd CSV, Serializd CSV, Spotify JSON,
-  RateYourMusic CSV, Kindle My Clippings text, StoryGraph CSV, HowLongToBeat
-  CSV, Trakt JSON, Discogs API responses, Last.fm CSV / API sync results,
+  RateYourMusic CSV, Kindle My Clippings text, StoryGraph CSV,
+  Trakt JSON, Discogs API responses, Last.fm CSV / API sync results,
   local music folder scan of arbitrary audio + cover files, Notion / Playnite
   / GOG / Goodreads spreadsheet presets, …).
 - XSS in the exported HTML site or in remote metadata rendered inside the app.

@@ -143,7 +143,7 @@ src-tauri/                        Backend (Rust). 8 handler modules under
                                   MangaDex, ComicVine, MusicBrainz, VGMdb, IGDB,
                                   TMDb, AniList, Steam, OpenLibrary, VNDB,
                                   Discogs, lrclib, AniDB, PCGamingWiki,
-                                  HowLongToBeat, Last.fm.
+                                  Last.fm.
 
 docs/
   FIELDS.md                       Every field on every category, EN + ES labels.

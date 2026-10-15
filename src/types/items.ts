@@ -130,13 +130,6 @@ export interface GameFields {
   gameReview?: string
   playTime?: string
   duration?: string
-  // Estimated hours to beat the main story (HowLongToBeat). Used by
-  // the backlog prioritization sort ("Shortest first") and displayed
-  // in the games detail view. Stored as a number so we can sort
-  // numerically without parsing.
-  hltbHours?: number
-  hltbHoursCompletionist?: number
-  hltbHoursExtras?: number
   ownership?: Ownership
   platforms?: Platform[]
   devs?: string[]
