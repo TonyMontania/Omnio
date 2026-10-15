@@ -180,7 +180,7 @@ pub async fn storage_clean_orphan_assets() -> CleanOrphanResult {
         // so a Windows walk still matches paths written on Linux (or
         // vice versa, for users who cross-restore).
         let rel = match abs.strip_prefix(assets_root) {
-            Ok(r) => r.to_string_lossy().replace('\\', "/"),
+            Ok(r) => normalize_asset_ref(&r.to_string_lossy()),
             Err(_) => continue,
         };
         // Skip anything owned by a plugin — plugin JSONs live under
@@ -401,7 +401,14 @@ fn push_ref(v: &serde_json::Value, refs: &mut HashSet<String>) {
             return;
         }
     }
-    refs.insert(s.to_string());
+    refs.insert(normalize_asset_ref(s));
+}
+
+// Stored paths use forward slashes and no leading separator, but some
+// saves wrote `/photo/x.jpg` for images outside the libraries. Both
+// sides are compared in one canonical form so those files are kept.
+fn normalize_asset_ref(s: &str) -> String {
+    s.replace('\\', "/").trim_start_matches('/').to_string()
 }
 
 // Recursive walk collecting every file's absolute path. Same shape as
@@ -471,4 +478,23 @@ fn civil_from_days(z: i64) -> (i32, u32, u32) {
     let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
     let y = if m <= 2 { y + 1 } else { y };
     (y as i32, m, d)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn asset_refs_compare_in_one_form() {
+        assert_eq!(normalize_asset_ref("/photo/Band photo.jpg"), "photo/Band photo.jpg");
+        assert_eq!(normalize_asset_ref(r"artists\photo\Band.jpg"), "artists/photo/Band.jpg");
+        assert_eq!(normalize_asset_ref("games/cover/x.webp"), "games/cover/x.webp");
+    }
+
+    #[test]
+    fn leading_slash_refs_protect_their_files() {
+        let mut refs = HashSet::new();
+        push_ref(&serde_json::json!("/cover/My group cover.jpg"), &mut refs);
+        assert!(refs.contains("cover/My group cover.jpg"));
+    }
 }

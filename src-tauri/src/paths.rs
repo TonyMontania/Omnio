@@ -77,8 +77,11 @@ pub fn file_for_category(cat: &str) -> String {
 // assets/ folder names use the same alias map — legacy migrations
 // (`renameLegacyAssetFolders` on the TS side) rely on the two staying
 // identical so a folder rename doesn't strand JSON paths.
-pub fn asset_folder_for_category(cat: &str) -> &'static str {
-    category_filename(cat)
+pub fn asset_folder_for_category(cat: &str) -> &str {
+    let folder = category_filename(cat);
+    // Artists and groups aren't libraries but keep their images in a
+    // folder named after them, like every library does.
+    if folder.is_empty() { cat } else { folder }
 }
 
 // Top-level slices persisted at `data/<name>.json` alongside the
@@ -238,4 +241,16 @@ pub fn init(app: &AppHandle) -> Result<(), String> {
 /// condition we want to defend against on every call.
 pub fn get() -> &'static Paths {
     PATHS.get().expect("paths::get called before paths::init")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn non_library_images_get_their_own_folder() {
+        assert_eq!(asset_folder_for_category("videojuegos"), "games");
+        assert_eq!(asset_folder_for_category("artists"), "artists");
+        assert_eq!(asset_folder_for_category("groups"), "groups");
+    }
 }
