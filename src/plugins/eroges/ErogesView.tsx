@@ -16,6 +16,7 @@ import ErogeCard from './ErogeCard'
 import ErogeRow from './ErogeRow'
 import ErogeDetailView from './ErogeDetailView'
 import ErogeEditor from './ErogeEditor'
+import ErogesControls, { type ErogeFilter, type ErogeSort } from './ErogesControls'
 import './eroges.css'
 
 type Tab =
@@ -38,7 +39,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
   const [loaded, setLoaded] = useState(false)
   const [tab, setTab] = useState<Tab>({ kind: 'all' })
   const [search, setSearch] = useState('')
-  const [sort, setSort] = useState<'az' | 'creator' | 'status' | 'engine' | 'releaseDate' | 'updated'>('az')
+  const [sort, setSort] = useState<ErogeSort>('az')
   const [layout, setLayout] = useState<Layout>('grid')
   const [checkingAll, setCheckingAll] = useState<{ done: number; total: number } | null>(null)
   const [showSettings, setShowSettings] = useState(false)
@@ -113,41 +114,32 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
       })
       return
     }
-    const chips = [
-      { key: 'playing', label: 'Playing', count: counts.playing, active: tab.kind === 'backlog' && tab.value === 'playing', onClick: () => { setTab({ kind: 'backlog', value: 'playing' }) } },
-      { key: 'backlog', label: 'Backlog', count: counts.backlog, active: tab.kind === 'backlog' && tab.value === 'backlog', onClick: () => { setTab({ kind: 'backlog', value: 'backlog' }) } },
-      { key: 'played', label: 'Played', count: counts.played, active: tab.kind === 'backlog' && tab.value === 'played', onClick: () => { setTab({ kind: 'backlog', value: 'played' }) } },
-      { key: 'updates', label: 'Updates', count: counts.updates, active: tab.kind === 'updates', onClick: () => { setTab({ kind: 'updates' }) } },
-    ]
-    // Title changes when a filter chip is active — same pattern as
-    // Omnio's board views (click "Playing" → title becomes "Playing"
-    // and the count reflects only that subset).
-    const activeChip = chips.find((c) => c.active)
-    const title = activeChip ? activeChip.label : 'Eroges'
-    const onBack = activeChip ? () => setTab({ kind: 'all' }) : undefined
+    const filter: ErogeFilter = tab.kind === 'backlog' ? tab.value : tab.kind
     const actions = (
-      <>
-        <div className="view-toggle">
-          <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>☰ List</button>
-          <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>▦ Grid</button>
-        </div>
-        <button className="secondary-btn" onClick={() => setShowSettings(true)} title="Settings (F95 cookies)">⚙</button>
-        <button className="secondary-btn" onClick={checkAllUpdates} disabled={!!checkingAll}
-          title={`Check updates for the games in ${title} with an F95 link`}>
-          {checkingAll ? `Checking ${checkingAll.done}/${checkingAll.total}…` : '↻ Update'}
-        </button>
-        <button className="add-btn" onClick={() => setEditingId('new')}>+ Add</button>
-      </>
+      <ErogesControls
+        filter={filter}
+        counts={counts}
+        onFilter={(f) => setTab(f === 'all' || f === 'updates' ? { kind: f } : { kind: 'backlog', value: f })}
+        search={search}
+        onSearch={setSearch}
+        sort={sort}
+        onSort={setSort}
+        layout={layout}
+        onLayout={setLayout}
+        onOpenSettings={() => setShowSettings(true)}
+        checking={checkingAll}
+        onCheckUpdates={checkAllUpdates}
+        onAdd={() => setEditingId('new')}
+      />
     )
     setPageMeta({
-      icon: <HeartIcon />, title,
-      count: { n: visible.length, unit: visible.length === 1 ? 'item' : 'items' },
-      onBack,
-      chips,
+      icon: <HeartIcon />,
+      title: 'Eroges',
+      count: { n: visible.length, unit: visible.length === 1 ? 'game' : 'games' },
       actions,
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detailGame, tab, tabGames, counts, visible.length, setPageMeta, layout, checkingAll])
+  }, [detailGame, tab, tabGames, counts, visible.length, setPageMeta, layout, checkingAll, search, sort])
 
   // -- mutations ---------------------------------------------------
   function upsertGame(g: ErogeItem) {
@@ -285,23 +277,6 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
         />
       ) : (
         <>
-          <div className="toolbar">
-            <input
-              className="search-input"
-              placeholder="Search by title... (Ctrl+F)"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <select className="sort-select" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
-              <option value="az">Alphabetical</option>
-              <option value="creator">By creator</option>
-              <option value="updated">Most recent</option>
-              <option value="status">Status</option>
-              <option value="engine">Engine</option>
-              <option value="releaseDate">Release date</option>
-            </select>
-          </div>
-
           {visible.length === 0 ? (
             <div className="er-empty">No games in this view.</div>
           ) : layout === 'list' ? (
