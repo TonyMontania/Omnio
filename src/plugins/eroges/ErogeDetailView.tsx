@@ -241,11 +241,13 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
   return (
     <div className="er-detail" ref={rootRef}>
       <header className="er-hero">
-        {cover && <img className="er-hero-bg" src={cover} alt="" aria-hidden />}
+        <div className="er-hero-stage">
+          {cover && <img className="er-hero-bg" src={cover} alt="" aria-hidden />}
+          {cover
+            ? <img className="er-hero-image zoomable" src={cover} alt={game.name} data-zoom-label="Cover" title="Click to view full size" />
+            : <span className="er-hero-nocover">No cover</span>}
+        </div>
         <div className="er-hero-body">
-          <div className="er-hero-cover">
-            {cover ? <img src={cover} alt="" /> : <span>No cover</span>}
-          </div>
           <div className="er-hero-info">
             <div className="er-hero-chips">
               {game.status && <span className={`er-chip st-${game.status.toLowerCase()}`}>{game.status}</span>}
@@ -257,7 +259,8 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
             <h1 className="er-hero-title">{game.name}</h1>
             {game.originalTitle && <div className="er-hero-original">{game.originalTitle}</div>}
             <div className="er-hero-meta">{[game.creator, game.engine, game.version].filter(Boolean).join(' · ')}</div>
-            <div className="er-hero-actions">
+          </div>
+          <div className="er-hero-actions">
               {isF95 && (
                 <button className="er-btn er-btn-primary" onClick={checkUpdate} disabled={checking}>
                   {checking ? 'Checking…' : 'Check update'}
@@ -275,7 +278,6 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
                 )}
               </div>
               {flash && <span className="er-hero-flash">{flash}</span>}
-            </div>
           </div>
         </div>
       </header>

@@ -44,6 +44,7 @@
 .er-view .er-card.has-update .gc-banner { outline: 2px solid var(--accent); outline-offset: -2px; }
 .er-view .gc-banner img {
   width: 100%; height: 100%;
+  image-rendering: -webkit-optimize-contrast;
   object-fit: cover; object-position: center; display: block;
 }
 .er-view .gc-nocover {
@@ -117,34 +118,36 @@
 .er-view .er-detail { display: flex; flex-direction: column; gap: 18px; }
 
 .er-view .er-hero {
-  position: relative; overflow: hidden;
+  position: relative;
   border-radius: 16px; border: 1px solid var(--border-soft);
   background: var(--surface);
+}
+.er-view .er-hero-stage {
+  position: relative; overflow: hidden;
+  border-radius: 15px 15px 0 0;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 200px; max-height: 46vh;
+  background: #000;
 }
 .er-view .er-hero-bg {
   position: absolute; inset: -40px;
   width: calc(100% + 80px); height: calc(100% + 80px);
-  object-fit: cover; filter: blur(36px) saturate(1.2);
-  opacity: .45; pointer-events: none;
+  object-fit: cover; filter: blur(40px) saturate(1.15) brightness(.6);
+  pointer-events: none;
 }
-.er-view .er-hero::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(90deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 70%, transparent) 55%, transparent 100%);
+.er-view .er-hero-image {
+  position: relative; display: block;
+  image-rendering: -webkit-optimize-contrast;
+  max-width: 100%; max-height: 46vh;
+  object-fit: contain; cursor: zoom-in;
 }
+.er-view .er-hero-nocover { color: var(--text-faint); font-size: 12px; }
 .er-view .er-hero-body {
-  position: relative; z-index: 1;
-  display: flex; gap: 24px; align-items: flex-end;
-  padding: 24px;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+  padding: 18px 22px 20px;
 }
-.er-view .er-hero-cover {
-  flex-shrink: 0; width: 340px; max-width: 42%;
-  aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden;
-  background: var(--surface-2); box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-faint); font-size: 12px;
-}
-.er-view .er-hero-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.er-view .er-hero-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.er-view .er-hero-info { min-width: 0; flex: 1 1 360px; display: flex; flex-direction: column; gap: 6px; }
 .er-view .er-hero-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .er-view .er-chip {
   display: inline-flex; align-items: center; gap: 5px;
@@ -162,12 +165,12 @@
 }
 .er-view .er-hero-original { font-size: 13px; color: var(--text-dim); }
 .er-view .er-hero-meta { font-size: 13.5px; color: var(--text-dim); }
-.er-view .er-hero-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.er-view .er-hero-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .er-view .er-hero-flash { font-size: 12.5px; color: var(--text-dim); }
 .er-view .er-btn.er-btn-icon { width: 34px; padding-left: 0; padding-right: 0; justify-content: center; font-size: 16px; }
 .er-view .er-menu-wrap { position: relative; }
 .er-view .er-menu {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 20;
   min-width: 220px; padding: 4px;
   background: var(--surface-2); border: 1px solid var(--border);
   border-radius: var(--radius-sm); box-shadow: 0 10px 28px rgba(0, 0, 0, .35);
