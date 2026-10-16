@@ -12,6 +12,19 @@ export function Field({ label, wide, hint, children }: { label: string; wide?: b
   )
 }
 
+/** Titled block inside a tab, e.g. "Fetch metadata". Spans the full width. */
+export function Group({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <section className="es-group">
+      <div className="es-group-head">
+        <h3>{title}</h3>
+        {hint && <span className="es-group-hint">{hint}</span>}
+      </div>
+      <div className="es-grid">{children}</div>
+    </section>
+  )
+}
+
 export function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="es-check">

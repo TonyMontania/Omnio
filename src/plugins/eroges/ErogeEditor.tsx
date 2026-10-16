@@ -5,8 +5,8 @@ import { f95Fetch, f95DownloadCover, f95PageUrl, looksLikeF95Thread, parseF95Pag
 import { ryuuFetch, ryuuDownloadCover } from './ryuuApi'
 import { assetSaveDataUrl, assetDelete, assetUrl } from './ipc'
 import { fileToDataUrl } from '../../utils/files'
-import EditorShell, { type EditorSection } from '../../components/editor-shell/EditorShell'
-import { Check, DetailPreview, EditorDialog, Field, ImageSlot, ImportBox, ImportReview, TogglePill, Toggles } from '../../components/editor-shell/parts'
+import EditorShell, { type EditorTab, type EditorTabId } from '../../components/editor-shell/EditorShell'
+import { Check, DetailPreview, EditorDialog, Field, Group, ImageSlot, ImportBox, ImportReview, TogglePill, Toggles } from '../../components/editor-shell/parts'
 import ErogeCard from './ErogeCard'
 
 interface Props {
@@ -58,6 +58,8 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
   const isEdit = !!initial
   const [game, setGame] = useState<ErogeItem>(initial ? { ...initial } : empty())
   const [stage, setStage] = useState<Stage>(isEdit ? 'form' : 'import')
+  const [tab, setTab] = useState<EditorTabId>('overview')
+  const [previewMode, setPreviewMode] = useState<'card' | 'detail'>('card')
   const [importText, setImportText] = useState(initial?.link || initial?.ryuugamesUrl || '')
   const [importStatus, setImportStatus] = useState('')
   const [importing, setImporting] = useState(false)
@@ -265,7 +267,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
   }
 
   function save() {
-    if (!game.name.trim()) { setStage('form'); return }
+    if (!game.name.trim()) { setStage('form'); setTab('overview'); return }
     const now = Date.now()
     onSave({
       ...game,
@@ -367,18 +369,31 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     )
   }
 
-  const sections: EditorSection[] = [
+  const linkCount = [game.dlsiteId, game.dlsiteUrl, game.steamUrl, game.itchUrl, game.ryuugamesUrl, game.link].filter((v) => !!v?.trim()).length
+
+  const tabs: EditorTab[] = [
     {
-      id: 'import',
-      hint: isEdit ? 'Refresh empty fields from F95 or Ryuugames' : 'Fill the form from F95 or Ryuugames',
-      content: importBox(false),
+      id: 'overview',
+      content: <>
+        <Group title="Fetch metadata" hint={isEdit ? 'Refreshes empty fields' : 'Fills the form for you'}>
+          {importBox(false)}
+        </Group>
+        <Field label="Name" wide><input type="text" required value={game.name} onChange={(e) => set('name', e.target.value)} autoFocus={isEdit === false && !game.name} /></Field>
+        <ImageSlot label="Cover" src={cover} shape="wide" onFile={setCoverFromFile} onRemove={removeCover} />
+        <div className="es-field">
+          <span className="es-label">Favorite</span>
+          <Toggles>
+            <TogglePill on={!!game.favorite} icon="★" label="Mark as favorite" onLabel="Favorite" onChange={(v) => set('favorite', v)} />
+          </Toggles>
+        </div>
+      </>,
     },
     {
-      id: 'basics',
+      id: 'identity',
       content: <>
-        <Field label="Name" wide><input type="text" required value={game.name} onChange={(e) => set('name', e.target.value)} /></Field>
         <Field label="Original title" wide><input type="text" value={game.originalTitle ?? ''} onChange={(e) => set('originalTitle', e.target.value)} placeholder="蒼海のレディ・スパイ" /></Field>
         <Field label="Creator"><input type="text" value={game.creator ?? ''} onChange={(e) => set('creator', e.target.value)} /></Field>
+        <Field label="Language"><input type="text" value={game.language ?? ''} onChange={(e) => set('language', e.target.value)} placeholder="Japanese, English" /></Field>
         <Field label="Engine">
           <select value={game.engine ?? ''} onChange={(e) => set('engine', e.target.value)}>
             <option value="">—</option>
@@ -386,35 +401,19 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
           </select>
         </Field>
         <Field label="Installed version"><input type="text" value={game.version ?? ''} onChange={(e) => set('version', e.target.value)} placeholder="v0.7" /></Field>
+        <Field label="Release date" hint="YY/MM/DD"><input type="text" value={game.releaseDate ?? ''} onChange={(e) => set('releaseDate', e.target.value)} placeholder="24/06/02" /></Field>
         <Check label="Visual novel" checked={!!game.vn} onChange={(v) => set('vn', v)} />
+        <Field label="Tags" wide hint="comma separated">
+          <input type="text" value={(game.tags ?? []).join(', ')} placeholder="Filled from F95"
+            onChange={(e) => set('tags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))} />
+        </Field>
+        <Field label="Description" wide>
+          <textarea rows={8} value={game.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Your notes or the fetched description" />
+        </Field>
       </>,
     },
     {
       id: 'progress',
-      content: <>
-        <Field label="Progress">
-          <select value={game.backlogStatus ?? ''} onChange={(e) => set('backlogStatus', e.target.value as BacklogStatus)}>
-            <option value="">—</option>
-            {BACKLOG_STATUSES.map((s) => <option key={s} value={s}>{BACKLOG_LABELS[s]}</option>)}
-          </select>
-        </Field>
-        <Field label="Finished version">
-          <div className="es-inline">
-            <input type="text" value={game.finishedVersion ?? ''} onChange={(e) => set('finishedVersion', e.target.value)} placeholder="Last version you finished" />
-            {game.version && game.finishedVersion !== game.version && (
-              <button type="button" className="es-btn small" onClick={() => set('finishedVersion', game.version)} title="Same as installed">= {game.version}</button>
-            )}
-          </div>
-        </Field>
-        <Toggles>
-          <TogglePill on={!!game.favorite} icon="★" label="Mark as favorite" onLabel="Favorite" onChange={(v) => set('favorite', v)} />
-          <TogglePill on={!!game.archived} icon="⏸" label="Archive" onLabel="Archived — no update checks" onChange={(v) => set('archived', v)} />
-        </Toggles>
-      </>,
-    },
-    {
-      id: 'details',
-      label: 'Release',
       content: <>
         <Field label="Development status">
           <select value={game.status ?? ''} onChange={(e) => set('status', e.target.value as F95Status)}>
@@ -422,36 +421,37 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
             {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </Field>
-        <Field label="Release date"><input type="text" value={game.releaseDate ?? ''} onChange={(e) => set('releaseDate', e.target.value)} placeholder="2024-06-02" /></Field>
-        <Field label="Language" wide><input type="text" value={game.language ?? ''} onChange={(e) => set('language', e.target.value)} placeholder="Japanese, English" /></Field>
-      </>,
-    },
-    {
-      id: 'media',
-      content: <ImageSlot label="Cover" src={cover} shape="wide" onFile={setCoverFromFile} onRemove={removeCover} />,
-    },
-    {
-      id: 'notes',
-      label: 'Description & tags',
-      content: <>
-        <Field label="Tags" wide hint="comma separated">
-          <input type="text" value={(game.tags ?? []).join(', ')} placeholder="Filled from F95"
-            onChange={(e) => set('tags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))} />
+        <Field label="My progress">
+          <select value={game.backlogStatus ?? ''} onChange={(e) => set('backlogStatus', e.target.value as BacklogStatus)}>
+            <option value="">—</option>
+            {BACKLOG_STATUSES.map((s) => <option key={s} value={s}>{BACKLOG_LABELS[s]}</option>)}
+          </select>
         </Field>
-        <Field label="Description" wide>
-          <textarea rows={7} value={game.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Your notes or the fetched description" />
+        <Field label="Finished version" wide>
+          <div className="es-inline">
+            <input type="text" value={game.finishedVersion ?? ''} onChange={(e) => set('finishedVersion', e.target.value)} placeholder="Last version you finished" />
+            {game.version && game.finishedVersion !== game.version && (
+              <button type="button" className="es-btn small" onClick={() => set('finishedVersion', game.version)}>Same as installed ({game.version})</button>
+            )}
+          </div>
         </Field>
+        <Group title="Archive" hint="Archived games are skipped by update checks">
+          <Toggles>
+            <TogglePill on={!!game.archived} icon="⏸" label="Archive" onLabel="Archived" onChange={(v) => set('archived', v)} />
+          </Toggles>
+        </Group>
       </>,
     },
     {
       id: 'links',
+      count: linkCount,
       content: <>
-        <Field label="F95 thread" wide><input type="text" value={game.link ?? ''} onChange={(e) => set('link', e.target.value)} placeholder="https://f95zone.to/threads/…" /></Field>
-        <Field label="Ryuugames" wide><input type="text" value={game.ryuugamesUrl ?? ''} onChange={(e) => set('ryuugamesUrl', e.target.value)} placeholder="https://www.ryuugames.com/…" /></Field>
         <Field label="DLsite ID"><input type="text" value={game.dlsiteId ?? ''} onChange={(e) => set('dlsiteId', e.target.value)} placeholder="RJ01234567" /></Field>
-        <Field label="DLsite page"><input type="text" value={game.dlsiteUrl ?? ''} onChange={(e) => set('dlsiteUrl', e.target.value)} placeholder="https://www.dlsite.com/…" /></Field>
-        <Field label="Steam"><input type="text" value={game.steamUrl ?? ''} onChange={(e) => set('steamUrl', e.target.value)} placeholder="https://store.steampowered.com/app/…" /></Field>
-        <Field label="itch.io"><input type="text" value={game.itchUrl ?? ''} onChange={(e) => set('itchUrl', e.target.value)} placeholder="https://creator.itch.io/game" /></Field>
+        <Field label="DLsite URL"><input type="text" value={game.dlsiteUrl ?? ''} onChange={(e) => set('dlsiteUrl', e.target.value)} placeholder="https://www.dlsite.com/…" /></Field>
+        <Field label="Steam URL"><input type="text" value={game.steamUrl ?? ''} onChange={(e) => set('steamUrl', e.target.value)} placeholder="https://store.steampowered.com/app/…" /></Field>
+        <Field label="itch.io URL"><input type="text" value={game.itchUrl ?? ''} onChange={(e) => set('itchUrl', e.target.value)} placeholder="https://creator.itch.io/game" /></Field>
+        <Field label="Ryuugames URL"><input type="text" value={game.ryuugamesUrl ?? ''} onChange={(e) => set('ryuugamesUrl', e.target.value)} placeholder="https://www.ryuugames.com/…" /></Field>
+        <Field label="F95 link"><input type="text" value={game.link ?? ''} onChange={(e) => set('link', e.target.value)} placeholder="https://f95zone.to/threads/…" /></Field>
       </>,
     },
   ]
@@ -480,8 +480,12 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
             />
           ),
         }}
+        previewMode={previewMode}
+        onPreviewMode={setPreviewMode}
         previewNote={initial?.createdAt ? `Added ${new Date(initial.createdAt).toLocaleDateString()}` : undefined}
-        sections={sections}
+        tabs={tabs}
+        activeTab={tab}
+        onTab={setTab}
         onCancel={onCancel}
         onSubmit={save}
       />
