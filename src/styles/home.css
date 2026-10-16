@@ -494,31 +494,49 @@
 }
 .home-empty-hint p { margin: 0; font-size: 13px; }
 
-/* Add-widget picker list. */
+/* Add-widget picker: a grid of cards, each with a schematic drawing. */
 .home-widget-picker {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px;
 }
+.home-widget-picker li { display: flex; }
 .home-widget-picker button {
-  width: 100%;
-  text-align: left;
-  padding: 10px 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  color: var(--text);
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  width: 100%; text-align: left; padding: 10px;
+  background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+  color: var(--text); cursor: pointer;
+  display: flex; flex-direction: column; gap: 4px;
+  transition: border-color .15s, transform .15s;
 }
-.home-widget-picker button:hover { border-color: var(--accent); }
+.home-widget-picker button:hover { border-color: var(--accent); transform: translateY(-2px); }
+.home-widget-picker .picker-art {
+  display: block; margin-bottom: 6px;
+  background: var(--bg); border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
+  overflow: hidden;
+}
 .home-widget-picker .picker-title { font-weight: 600; font-size: 13.5px; }
-.home-widget-picker .picker-desc  { font-size: 12px; color: var(--text-dim); }
+.home-widget-picker .picker-desc  { font-size: 12px; color: var(--text-dim); line-height: 1.4; flex: 1; }
+.home-widget-picker .picker-sizes { display: flex; gap: 4px; margin-top: 4px; }
+.home-widget-picker .picker-sizes span {
+  font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em;
+  padding: 1px 6px; border-radius: 999px; border: 1px solid var(--border-soft); color: var(--text-faint);
+}
+
+.wp { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.wp .wp-cover { fill: color-mix(in srgb, var(--text) 16%, transparent); }
+.wp .wp-cover-strong { fill: color-mix(in srgb, var(--text) 30%, transparent); }
+.wp .wp-tile { fill: var(--surface-2); stroke: var(--border-soft); stroke-width: 1; }
+.wp .wp-line { fill: color-mix(in srgb, var(--text) 18%, transparent); }
+.wp .wp-text { fill: color-mix(in srgb, var(--text) 42%, transparent); }
+.wp .wp-track { fill: color-mix(in srgb, var(--text) 12%, transparent); }
+.wp .wp-dot { fill: color-mix(in srgb, var(--text) 30%, transparent); }
+.wp .wp-accent { fill: var(--accent); }
+.wp .wp-accent-stroke { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wp .wp-live { fill: var(--danger); }
+.wp .wp-check { stroke: var(--surface); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.wp text { font-family: var(--font-mono); font-size: 9px; font-weight: 700; }
+.wp .wp-on-accent { fill: var(--surface); }
+.wp .wp-tiny { font-size: 5.5px; letter-spacing: .04em; }
+.wp .wp-big { fill: var(--text); font-size: 16px; font-family: var(--font-display); }
 
 /* Below 768px: collapse to single-column layout regardless of size. */
 @media (max-width: 768px) {

@@ -14,6 +14,7 @@ import {
   getHomeWidget, listHomeWidgets, DEFAULT_HOME_LAYOUT,
   type HomeWidgetSlot, type WidgetSize, type HomeContext,
 } from './registry'
+import WidgetPreview from './WidgetPreview'
 
 interface Props {
   items: Item[]
@@ -276,20 +277,24 @@ export default function HomeBoard(props: Props) {
 
       {pickerOpen && (
         <div className="modal-overlay" onClick={() => setPickerOpen(false)}>
-          <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520, width: '92vw' }}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 780, width: '92vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
               <h2>Add widget</h2>
               <button type="button" className="panel-close" onClick={() => setPickerOpen(false)}>✕</button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body" style={{ overflowY: 'auto' }}>
               {availableToAdd.length === 0
                 ? <p className="hint">Every widget is already on your board.</p>
                 : <ul className="home-widget-picker">
                     {availableToAdd.map((w) => (
                       <li key={w.id}>
                         <button type="button" onClick={() => add(w.id)}>
+                          <span className="picker-art"><WidgetPreview id={w.id} /></span>
                           <span className="picker-title">{w.label}</span>
                           <span className="picker-desc">{w.description}</span>
+                          <span className="picker-sizes">
+                            {w.sizesSupported.map((sz) => <span key={sz}>{sz}</span>)}
+                          </span>
                         </button>
                       </li>
                     ))}
