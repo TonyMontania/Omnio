@@ -1,9 +1,9 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState } from 'react'
 import type { ErogeItem, BacklogStatus, F95Status } from './types'
 import { ENGINES, STATUSES, BACKLOG_STATUSES, BACKLOG_LABELS } from './constants'
 import { f95Fetch, f95DownloadCover, f95PageUrl, looksLikeF95Thread, parseF95Page } from './f95Api'
 import { ryuuFetch, ryuuDownloadCover } from './ryuuApi'
-import { assetSaveDataUrl, assetDelete } from './ipc'
+import { assetSaveDataUrl, assetDelete, assetUrl } from './ipc'
 import { fileToDataUrl } from '../../utils/files'
 
 interface Props {
@@ -49,24 +49,17 @@ const empty = (): ErogeItem => ({
   link: '', description: '', coverFile: '', favorite: false,
 })
 
-type EditorTab = 'overview' | 'identity' | 'progress' | 'links'
-const TABS: { value: EditorTab; label: string }[] = [
-  { value: 'overview', label: 'Overview' },
-  { value: 'identity', label: 'Identity' },
-  { value: 'progress', label: 'Progress' },
-  { value: 'links',    label: 'Links' },
-]
+type Stage = 'import' | 'review' | 'form'
 
 export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCancel }: Props) {
   const isEdit = !!initial
   const [game, setGame] = useState<ErogeItem>(initial ? { ...initial } : empty())
-  const [activeTab, setActiveTab] = useState<EditorTab>('overview')
-  const [f95Url, setF95Url] = useState('')
-  const [f95Status, setF95Status] = useState('')
+  const [stage, setStage] = useState<Stage>(isEdit ? 'form' : 'import')
+  const [importText, setImportText] = useState(initial?.link || initial?.ryuugamesUrl || '')
+  const [importStatus, setImportStatus] = useState('')
   const [importing, setImporting] = useState(false)
-  const [ryuuUrl, setRyuuUrl] = useState('')
-  const [ryuuStatus, setRyuuStatus] = useState('')
-  const [importingRyuu, setImportingRyuu] = useState(false)
+  const setF95Status = setImportStatus
+  const setRyuuStatus = setImportStatus
   // When an import matches an existing library entry, we pause and
   // present the user with a choice: create a fresh duplicate, or
   // fold the new metadata into the existing game.
@@ -76,13 +69,6 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     html?: string
     duplicate: ErogeItem
   } | null>(null)
-  const [pasteOpen, setPasteOpen] = useState(false)
-  const [pastedHtml, setPastedHtml] = useState('')
-
-  useEffect(() => {
-    if (initial?.link && !f95Url) setF95Url(initial.link)
-    if (initial?.ryuugamesUrl && !ryuuUrl) setRyuuUrl(initial.ryuugamesUrl)
-  }, [initial, f95Url, ryuuUrl])
 
   const set = <K extends keyof ErogeItem>(k: K, v: ErogeItem[K]) => setGame((g) => ({ ...g, [k]: v }))
 
@@ -140,32 +126,35 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     return { patched, res, coverDiag }
   }
 
-  async function importFromF95() {
-    if (!f95Url.trim()) { setF95Status('Paste a link first'); return }
-    const dup = findDuplicate(allGames, game.id, { link: f95Url.trim() })
-    if (dup) {
-      setDupPrompt({ source: 'f95', url: f95Url.trim(), duplicate: dup })
+  // One box takes an F95 link, a Ryuugames link or a pasted F95 page.
+  async function runImport() {
+    const text = importText.trim()
+    if (!text) return
+    if (text.startsWith('<') || /<html|bbWrapper/i.test(text)) {
+      if (!looksLikeF95Thread(text)) {
+        setImportStatus('That doesn\'t look like an F95 thread page. Copy the whole page source with Ctrl+U, then Ctrl+A and Ctrl+C.')
+        return
+      }
+      const url = f95PageUrl(text) || game.link || ''
+      const dup = url ? findDuplicate(allGames, game.id, { link: url }) : null
+      if (dup) { setDupPrompt({ source: 'f95', url, html: text, duplicate: dup }); return }
+      setImportText(url)
+      await doF95Import('current', url, text)
       return
     }
-    await doF95Import('current', f95Url.trim())
-  }
-
-  async function importFromPastedPage() {
-    const html = pastedHtml.trim()
-    if (!looksLikeF95Thread(html)) {
-      setF95Status('That doesn\'t look like an F95 thread page. Copy the whole page source with Ctrl+U, then Ctrl+A and Ctrl+C.')
+    if (/ryuugames/i.test(text)) {
+      const dup = findDuplicate(allGames, game.id, { ryuugamesUrl: text })
+      if (dup) { setDupPrompt({ source: 'ryuu', url: text, duplicate: dup }); return }
+      await doRyuuImport('current', text)
       return
     }
-    const url = f95PageUrl(html) || f95Url.trim()
-    if (url) setF95Url(url)
-    setPasteOpen(false)
-    setPastedHtml('')
-    const dup = url ? findDuplicate(allGames, game.id, { link: url }) : null
-    if (dup) {
-      setDupPrompt({ source: 'f95', url, html, duplicate: dup })
+    if (/f95zone/i.test(text)) {
+      const dup = findDuplicate(allGames, game.id, { link: text })
+      if (dup) { setDupPrompt({ source: 'f95', url: text, duplicate: dup }); return }
+      await doF95Import('current', text)
       return
     }
-    await doF95Import('current', url, html)
+    setImportStatus('Paste an F95Zone or Ryuugames link, or an F95 thread page.')
   }
 
   // Actually run the import and either update the current draft (mode
@@ -179,6 +168,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
       if (!outcome) return
       if (mode === 'current') {
         setGame(outcome.patched)
+        if (stage === 'import') setStage('review')
         const post = findDuplicate(allGames, game.id, { dlsiteId: outcome.res.dlsiteId, dlsiteUrl: outcome.res.dlsiteUrl })
         const dupWarn = post ? ` (⚠ already exists as "${post.name}")` : ''
         const coverWarn = outcome.coverDiag ? ` — ${outcome.coverDiag}` : ''
@@ -239,24 +229,15 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     return { patched, res }
   }
 
-  async function importFromRyuu() {
-    if (!ryuuUrl.trim()) { setRyuuStatus('Paste a link first'); return }
-    const dup = findDuplicate(allGames, game.id, { ryuugamesUrl: ryuuUrl.trim() })
-    if (dup) {
-      setDupPrompt({ source: 'ryuu', url: ryuuUrl.trim(), duplicate: dup })
-      return
-    }
-    await doRyuuImport('current', ryuuUrl.trim())
-  }
-
   async function doRyuuImport(mode: 'current' | { mergeInto: ErogeItem }, url: string) {
-    setImportingRyuu(true); setRyuuStatus('Importing…')
+    setImporting(true); setRyuuStatus('Importing…')
     try {
       const target = mode === 'current' ? game : mode.mergeInto
       const outcome = await runRyuuImport(target, url)
       if (!outcome) return
       if (mode === 'current') {
         setGame(outcome.patched)
+        if (stage === 'import') setStage('review')
         const post = findDuplicate(allGames, game.id, { dlsiteId: outcome.res.dlsiteId, dlsiteUrl: outcome.res.dlsiteUrl })
         setRyuuStatus(post ? `✓ Imported (⚠ already exists as "${post.name}")` : '✓ Imported')
       } else {
@@ -265,7 +246,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     } catch (err) {
       setRyuuStatus(`Error: ${(err as Error).message}`)
     }
-    setImportingRyuu(false)
+    setImporting(false)
   }
 
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -285,9 +266,8 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     set('coverFile', '')
   }
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!game.name.trim()) return
+  function save() {
+    if (!game.name.trim()) { setStage('form'); return }
     const now = Date.now()
     onSave({
       ...game,
@@ -295,6 +275,11 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
       updatedAt: now,
       createdAt: game.createdAt || now,
     })
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault()
+    save()
   }
 
   const runDupChoice = async (choice: 'add' | 'merge') => {
@@ -307,6 +292,39 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
       await doRyuuImport(choice === 'add' ? 'current' : { mergeInto: duplicate }, url)
     }
   }
+
+  const cover = game.coverFile ? assetUrl('cover', game.coverFile) : undefined
+  const previewDetails = [game.vn ? 'VN' : '', game.engine, game.version, game.creator].filter(Boolean).join(' · ')
+  const reviewFields: { label: string; filled: boolean }[] = [
+    { label: 'Cover', filled: !!game.coverFile },
+    { label: 'Creator', filled: !!game.creator },
+    { label: 'Version', filled: !!game.version },
+    { label: 'Engine', filled: !!game.engine },
+    { label: 'Status', filled: !!game.status },
+    { label: 'Release date', filled: !!game.releaseDate },
+    { label: 'Description', filled: !!game.description },
+    { label: 'Tags', filled: !!game.tags?.length },
+    { label: 'Store links', filled: !!(game.dlsiteUrl || game.steamUrl || game.itchUrl) },
+  ]
+  const missing = reviewFields.filter((f) => !f.filled).map((f) => f.label)
+
+  const importBox = (
+    <div className="er-import">
+      <textarea
+        rows={stage === 'import' ? 4 : 2}
+        value={importText}
+        onChange={(e) => setImportText(e.target.value)}
+        placeholder="Paste an F95 or Ryuugames link — or the thread's page source (Ctrl+U, Ctrl+A, Ctrl+C) if F95 is blocking"
+        autoFocus={stage === 'import'}
+      />
+      <div className="er-import-actions">
+        {importStatus && <span className="er-import-status">{importStatus}</span>}
+        <button type="button" className="er-btn er-btn-primary" onClick={runImport} disabled={importing || !importText.trim()}>
+          {importing ? 'Importing…' : 'Import'}
+        </button>
+      </div>
+    </div>
+  )
 
   return (
     <div className="er-modal-backdrop" onClick={onCancel}>
@@ -332,121 +350,98 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
           </div>
         </div>
       )}
-      <div className="er-modal er-modal-tabbed" onClick={(e) => e.stopPropagation()}>
-        <div className="er-modal-header">
-          <h2>{isEdit ? 'Edit game' : 'New game'}</h2>
+
+      {stage === 'import' && (
+        <div className="er-modal er-editor-import" onClick={(e) => e.stopPropagation()}>
+          <h2>Add a game</h2>
+          {importBox}
+          <div className="er-modal-actions spread">
+            <button type="button" className="er-link-btn" onClick={() => setStage('form')}>Fill it in by hand</button>
+            <button type="button" className="er-btn" onClick={onCancel}>Cancel</button>
+          </div>
         </div>
-        <div className="er-editor-tabs" role="tablist">
-          {TABS.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              role="tab"
-              className={activeTab === t.value ? 'er-editor-tab active' : 'er-editor-tab'}
-              onClick={() => setActiveTab(t.value)}
-            >{t.label}</button>
-          ))}
+      )}
+
+      {stage === 'review' && (
+        <div className="er-modal er-editor-import" onClick={(e) => e.stopPropagation()}>
+          <h2>Review</h2>
+          <div className="er-review">
+            <div className="er-review-cover">{cover ? <img src={cover} alt="" /> : <span>No cover</span>}</div>
+            <div className="er-review-info">
+              <div className="er-review-name">{game.name || 'Untitled'}</div>
+              <div className="er-review-meta">{[game.status, previewDetails].filter(Boolean).join(' · ')}</div>
+              <div className="er-review-count">
+                Imported {reviewFields.length - missing.length} of {reviewFields.length} fields
+                {missing.length > 0 && <> · missing {missing.join(', ')}</>}
+              </div>
+            </div>
+          </div>
+          {importStatus && <p className="er-import-status">{importStatus}</p>}
+          <div className="er-modal-actions">
+            <button type="button" className="er-btn" onClick={() => setStage('form')}>Edit details</button>
+            <button type="button" className="er-btn er-btn-primary" onClick={save}>Save</button>
+          </div>
         </div>
-        <form className="er-form" onSubmit={submit}>
-          <div className="er-form-body">
-            {activeTab === 'overview' && (
-              <>
-                <div className="er-form-section er-form-section-first">
-                  <div className="er-form-section-head">
-                    <span className="er-form-section-title">Fetch metadata</span>
-                    <span className="er-form-section-hint">Paste a link and auto-fill fields</span>
-                  </div>
-                  <div className="er-f95-import">
-                    <input type="text" placeholder="Paste the F95 link and press Import"
-                      value={f95Url} onChange={(e) => setF95Url(e.target.value)} />
-                    <button type="button" className="er-btn" onClick={importFromF95} disabled={importing}>F95</button>
-                    <button type="button" className={pasteOpen ? 'er-btn active' : 'er-btn'} onClick={() => setPasteOpen((v) => !v)} disabled={importing}
-                      title="Import from a thread page you copied in your browser">Paste page</button>
-                  </div>
-                  {pasteOpen && (
-                    <div className="er-f95-paste">
-                      <p className="er-form-section-hint">
-                        Open the thread in your browser, press <kbd>Ctrl+U</kbd> to view the page source, then <kbd>Ctrl+A</kbd> and <kbd>Ctrl+C</kbd>. Paste it here.
-                      </p>
-                      <textarea rows={4} value={pastedHtml} onChange={(e) => setPastedHtml(e.target.value)} placeholder="Paste the page source here" autoFocus />
-                      <div className="er-f95-paste-actions">
-                        <button type="button" className="er-btn" onClick={() => { setPasteOpen(false); setPastedHtml('') }}>Cancel</button>
-                        <button type="button" className="er-btn er-btn-primary" onClick={importFromPastedPage} disabled={!pastedHtml.trim() || importing}>Import</button>
-                      </div>
-                    </div>
-                  )}
-                  {f95Status && <div className="er-f95-status">{f95Status}</div>}
-                  <div className="er-f95-import">
-                    <input type="text" placeholder="Paste the Ryuugames link to add metadata"
-                      value={ryuuUrl} onChange={(e) => setRyuuUrl(e.target.value)} />
-                    <button type="button" className="er-btn" onClick={importFromRyuu} disabled={importingRyuu}>Ryuugames</button>
-                  </div>
-                  {ryuuStatus && <div className="er-f95-status">{ryuuStatus}</div>}
+      )}
+
+      {stage === 'form' && (
+        <div className="er-modal er-editor" onClick={(e) => e.stopPropagation()}>
+          <div className="er-editor-head">
+            <h2>{isEdit ? 'Edit game' : 'New game'}</h2>
+          </div>
+          <form className="er-editor-body" onSubmit={submit}>
+            <aside className="er-editor-preview">
+              <div className="er-card er-preview-card">
+                <div className="gc-banner">
+                  {cover ? <img src={cover} alt="" /> : <div className="gc-nocover">No cover</div>}
+                  {game.favorite && <span className="gc-fav on" aria-hidden>★</span>}
                 </div>
-
-                <label>Name <input type="text" required value={game.name} onChange={(e) => set('name', e.target.value)} /></label>
-                <label>Cover
-                  <div className="er-form-cover">
-                    <input ref={coverInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onCoverFileChosen} />
-                    <button type="button" className="er-btn" onClick={() => coverInputRef.current?.click()}>Choose file</button>
-                    {game.coverFile && <button type="button" className="er-btn er-btn-danger er-btn-sm" onClick={removeCover}>Remove</button>}
-                    <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{game.coverFile || 'No image'}</span>
+                <div className="gc-info">
+                  <div className="gc-name">{game.name || 'Untitled'}</div>
+                  <div className="gc-line">
+                    {game.status && <span className={`gc-status st-${game.status.toLowerCase()}`}>{game.status}</span>}
+                    {previewDetails && <span className="gc-details">{previewDetails}</span>}
                   </div>
-                </label>
-
-                <div className="er-form-section">
-                  <div className="er-form-section-head">
-                    <span className="er-form-section-title">Favorite</span>
-                  </div>
-                  <button
-                    type="button"
-                    className={`er-toggle-pill${game.favorite ? ' active' : ''}`}
-                    onClick={() => set('favorite', !game.favorite)}
-                    aria-pressed={!!game.favorite}
-                  >
-                    <span className="er-toggle-star" aria-hidden>★</span>
-                    <span>{game.favorite ? 'Marked as favorite' : 'Mark as favorite'}</span>
-                  </button>
                 </div>
+              </div>
+              <input ref={coverInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onCoverFileChosen} />
+              <div className="er-preview-actions">
+                <button type="button" className="er-btn er-btn-sm" onClick={() => coverInputRef.current?.click()}>{cover ? 'Change cover' : 'Add cover'}</button>
+                {cover && <button type="button" className="er-btn er-btn-sm er-btn-danger" onClick={removeCover}>Remove</button>}
+              </div>
+            </aside>
 
-              </>
-            )}
+            <div className="er-editor-fields">
+              <details className="er-group" open={!isEdit && !game.name}>
+                <summary>Import or refresh from a link</summary>
+                <div className="er-group-grid">
+                {importBox}
+                </div>
+              </details>
 
-            {activeTab === 'identity' && (
-              <>
-                <label>Original title <input type="text" value={game.originalTitle ?? ''} onChange={(e) => set('originalTitle', e.target.value)} placeholder="蒼海のレディ・スパイ" /></label>
+              <details className="er-group" open>
+                <summary>Basics</summary>
+                <div className="er-group-grid">
+                <label className="span-2">Name <input type="text" required value={game.name} onChange={(e) => set('name', e.target.value)} /></label>
+                <label className="span-2">Original title <input type="text" value={game.originalTitle ?? ''} onChange={(e) => set('originalTitle', e.target.value)} placeholder="蒼海のレディ・スパイ" /></label>
                 <label>Creator <input type="text" value={game.creator ?? ''} onChange={(e) => set('creator', e.target.value)} /></label>
-                <label>Language <input type="text" value={game.language ?? ''} onChange={(e) => set('language', e.target.value)} placeholder="Japanese, English" /></label>
                 <label>Engine
                   <select value={game.engine ?? ''} onChange={(e) => set('engine', e.target.value)}>
                     <option value="">—</option>
-                    {ENGINES.map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
+                    {ENGINES.map((en) => <option key={en.label} value={en.label}>{en.label}</option>)}
                   </select>
                 </label>
                 <label>Installed version <input type="text" value={game.version ?? ''} onChange={(e) => set('version', e.target.value)} placeholder="v0.7" /></label>
-                <label>Release date (YY/MM/DD) <input type="text" value={game.releaseDate ?? ''} onChange={(e) => set('releaseDate', e.target.value)} placeholder="24/06/02" /></label>
-                <label className="er-checkbox">
-                  <input type="checkbox" checked={!!game.vn} onChange={(e) => set('vn', e.target.checked)} /> Visual Novel (VN)
+                <label className="er-check-field">
+                  <input type="checkbox" checked={!!game.vn} onChange={(e) => set('vn', e.target.checked)} /> Visual novel
                 </label>
-                <label>Tags
-                  <input type="text" value={(game.tags ?? []).join(', ')} placeholder="Filled from F95 — comma separated"
-                    onChange={(e) => set('tags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))} />
-                </label>
-                <label>Description
-                  <textarea rows={8} value={game.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Your notes or the fetched description…" />
-                </label>
-              </>
-            )}
+                </div>
+              </details>
 
-            {activeTab === 'progress' && (
-              <>
-                <label>Development status
-                  <select value={game.status ?? ''} onChange={(e) => set('status', e.target.value as F95Status)}>
-                    <option value="">—</option>
-                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </label>
-                <label>My progress
+              <details className="er-group" open>
+                <summary>Your progress</summary>
+                <div className="er-group-grid">
+                <label>Progress
                   <select value={game.backlogStatus ?? ''} onChange={(e) => set('backlogStatus', e.target.value as BacklogStatus)}>
                     <option value="">—</option>
                     {BACKLOG_STATUSES.map((s) => <option key={s} value={s}>{BACKLOG_LABELS[s]}</option>)}
@@ -454,47 +449,70 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
                 </label>
                 <label>Finished version
                   <div className="er-inline-row">
-                    <input type="text" value={game.finishedVersion ?? ''} onChange={(e) => set('finishedVersion', e.target.value)} placeholder="The last version you played through" />
+                    <input type="text" value={game.finishedVersion ?? ''} onChange={(e) => set('finishedVersion', e.target.value)} placeholder="Last version you finished" />
                     {game.version && game.finishedVersion !== game.version && (
-                      <button type="button" className="er-btn er-btn-sm" onClick={() => set('finishedVersion', game.version)}>Same as installed</button>
+                      <button type="button" className="er-btn er-btn-sm" onClick={() => set('finishedVersion', game.version)} title="Same as installed">= {game.version}</button>
                     )}
                   </div>
                 </label>
-                <div className="er-form-section">
-                  <div className="er-form-section-head">
-                    <span className="er-form-section-title">Archive</span>
-                  </div>
-                  <button
-                    type="button"
-                    className={`er-toggle-pill${game.archived ? ' active' : ''}`}
-                    onClick={() => set('archived', !game.archived)}
-                    aria-pressed={!!game.archived}
-                  >
-                    <span className="er-toggle-star" aria-hidden>⏸</span>
-                    <span>{game.archived ? 'Archived — update checks skip it' : 'Archive (skip update checks)'}</span>
+                <div className="span-2 er-toggles">
+                  <button type="button" className={`er-toggle-pill${game.favorite ? ' active' : ''}`} onClick={() => set('favorite', !game.favorite)} aria-pressed={!!game.favorite}>
+                    <span className="er-toggle-star" aria-hidden>★</span>{game.favorite ? 'Favorite' : 'Mark as favorite'}
+                  </button>
+                  <button type="button" className={`er-toggle-pill${game.archived ? ' active' : ''}`} onClick={() => set('archived', !game.archived)} aria-pressed={!!game.archived}>
+                    <span className="er-toggle-star" aria-hidden>⏸</span>{game.archived ? 'Archived — no update checks' : 'Archive'}
                   </button>
                 </div>
-              </>
-            )}
+                </div>
+              </details>
 
-            {activeTab === 'links' && (
-              <>
-                <label>DLSITE ID <input type="text" value={game.dlsiteId ?? ''} onChange={(e) => set('dlsiteId', e.target.value)} placeholder="RJ01234567" /></label>
-                <label>DLSITE URL <input type="text" value={game.dlsiteUrl ?? ''} onChange={(e) => set('dlsiteUrl', e.target.value)} placeholder="https://www.dlsite.com/..." /></label>
-                <label>Steam URL <input type="text" value={game.steamUrl ?? ''} onChange={(e) => set('steamUrl', e.target.value)} placeholder="https://store.steampowered.com/app/..." /></label>
-                <label>itch.io URL <input type="text" value={game.itchUrl ?? ''} onChange={(e) => set('itchUrl', e.target.value)} placeholder="https://<creator>.itch.io/<game>" /></label>
-                <label>Ryuugames URL <input type="text" value={game.ryuugamesUrl ?? ''} onChange={(e) => set('ryuugamesUrl', e.target.value)} placeholder="https://www.ryuugames.com/..." /></label>
-                <label>F95 link <input type="text" value={game.link ?? ''} onChange={(e) => set('link', e.target.value)} placeholder="https://f95zone.to/..." /></label>
-              </>
-            )}
+              <details className="er-group" open>
+                <summary>Release</summary>
+                <div className="er-group-grid">
+                <label>Development status
+                  <select value={game.status ?? ''} onChange={(e) => set('status', e.target.value as F95Status)}>
+                    <option value="">—</option>
+                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </label>
+                <label>Release date <input type="text" value={game.releaseDate ?? ''} onChange={(e) => set('releaseDate', e.target.value)} placeholder="2024-06-02" /></label>
+                <label className="span-2">Language <input type="text" value={game.language ?? ''} onChange={(e) => set('language', e.target.value)} placeholder="Japanese, English" /></label>
+                </div>
+              </details>
 
-          </div>
-          <div className="er-modal-actions">
-            <button type="button" className="er-btn" onClick={onCancel}>Cancel</button>
-            <button type="submit" className="er-btn er-btn-primary">Save</button>
-          </div>
-        </form>
-      </div>
+              <details className="er-group">
+                <summary>Links</summary>
+                <div className="er-group-grid">
+                <label className="span-2">F95 thread <input type="text" value={game.link ?? ''} onChange={(e) => set('link', e.target.value)} placeholder="https://f95zone.to/threads/…" /></label>
+                <label className="span-2">Ryuugames <input type="text" value={game.ryuugamesUrl ?? ''} onChange={(e) => set('ryuugamesUrl', e.target.value)} placeholder="https://www.ryuugames.com/…" /></label>
+                <label>DLsite ID <input type="text" value={game.dlsiteId ?? ''} onChange={(e) => set('dlsiteId', e.target.value)} placeholder="RJ01234567" /></label>
+                <label>DLsite page <input type="text" value={game.dlsiteUrl ?? ''} onChange={(e) => set('dlsiteUrl', e.target.value)} placeholder="https://www.dlsite.com/…" /></label>
+                <label>Steam <input type="text" value={game.steamUrl ?? ''} onChange={(e) => set('steamUrl', e.target.value)} placeholder="https://store.steampowered.com/app/…" /></label>
+                <label>itch.io <input type="text" value={game.itchUrl ?? ''} onChange={(e) => set('itchUrl', e.target.value)} placeholder="https://creator.itch.io/game" /></label>
+                </div>
+              </details>
+
+              <details className="er-group" open={!!game.description}>
+                <summary>Description and tags</summary>
+                <div className="er-group-grid">
+                <label className="span-2">Tags
+                  <input type="text" value={(game.tags ?? []).join(', ')} placeholder="Filled from F95 — comma separated"
+                    onChange={(e) => set('tags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))} />
+                </label>
+                <label className="span-2">Description
+                  <textarea rows={7} value={game.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Your notes or the fetched description" />
+                </label>
+                </div>
+              </details>
+            </div>
+
+            <div className="er-editor-foot">
+              <button type="button" className="er-btn" onClick={onCancel}>Cancel</button>
+              <button type="submit" className="er-btn er-btn-primary">Save</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
