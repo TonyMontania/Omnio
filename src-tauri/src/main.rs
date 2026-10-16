@@ -18,6 +18,7 @@ mod handlers;
 mod migrate_from_electron;
 mod net;
 mod paths;
+mod reveal;
 mod schemas;
 mod state;
 mod util;

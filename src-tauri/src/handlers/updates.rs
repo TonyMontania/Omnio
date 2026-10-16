@@ -499,31 +499,10 @@ pub async fn updates_download(
 
 // -- updates:reveal --------------------------------------------------
 //
-// Same "reveal in file manager" pattern as asset_blob_reveal — on
-// Windows we use `explorer.exe /select,<path>` which selects the file
-// in Explorer. On other platforms we fall back to opening the parent
-// directory since tauri-plugin-shell doesn't expose a cross-platform
-// reveal_item_in_dir.
+// Shows the downloaded file in the file manager.
 #[command]
-pub async fn updates_reveal(#[allow(non_snake_case)] filePath: String, app: AppHandle) -> bool {
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        let _ = app;  // suppress "unused" warning on Windows
-        let _ = Command::new("explorer.exe")
-            .arg(format!("/select,{filePath}"))
-            .spawn();
-        return true;
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        // Best-effort: open parent dir via the shell plugin.
-        let parent = std::path::Path::new(&filePath).parent().map(|p| p.to_string_lossy().into_owned());
-        if let Some(p) = parent {
-            return app.shell().open(p, None).is_ok();
-        }
-        false
-    }
+pub async fn updates_reveal(#[allow(non_snake_case)] filePath: String) -> bool {
+    crate::reveal::reveal_file(std::path::Path::new(&filePath))
 }
 
 // -- updates:launch-installer ---------------------------------------

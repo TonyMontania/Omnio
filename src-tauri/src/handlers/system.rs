@@ -242,40 +242,17 @@ pub async fn library_save_text_to(
 // -- system:reveal ---------------------------------------------------
 //
 // Open the OS file explorer at the given path so a "Reveal in
-// Explorer" affordance can follow a successful export. Best-effort:
-// falls back to opening the parent directory when the shell APIs
-// can't highlight the file itself.
+// Explorer" affordance can follow a successful export. Folders open
+// directly; files open their folder with the file selected.
 #[tauri::command]
 pub async fn system_reveal(path: String) -> SimpleResult {
     let target = std::path::PathBuf::from(&path);
-    #[cfg(target_os = "windows")]
-    {
-        // /select, highlights the file inside its folder.
-        let _ = std::process::Command::new("explorer")
-            .arg("/select,")
-            .arg(&target)
-            .spawn();
-        return SimpleResult::ok();
+    if target.is_dir() {
+        crate::reveal::open_folder(&target);
+    } else {
+        crate::reveal::reveal_file(&target);
     }
-    #[cfg(target_os = "macos")]
-    {
-        let _ = std::process::Command::new("open")
-            .arg("-R")
-            .arg(&target)
-            .spawn();
-        return SimpleResult::ok();
-    }
-    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-    {
-        // Linux — try xdg-open on the parent so the folder opens even
-        // if the FM can't select individual files.
-        let parent = target.parent().map(|p| p.to_path_buf())
-            .unwrap_or_else(|| std::path::PathBuf::from("."));
-        let _ = std::process::Command::new("xdg-open")
-            .arg(parent)
-            .spawn();
-        SimpleResult::ok()
-    }
+    SimpleResult::ok()
 }
 
 // -- fs:list-dir -----------------------------------------------------

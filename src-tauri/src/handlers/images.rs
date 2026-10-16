@@ -268,33 +268,13 @@ pub async fn asset_blob_delete(rel: String) -> bool {
 
 // -- asset-blob:reveal -----------------------------------------------
 //
-// Original: line 153. Open the file's parent dir in the OS file
-// manager with the file selected. Electron uses `shell.showItemInFolder`;
-// Windows exposes the same via `explorer.exe /select,`. Non-Windows
-// hosts get the parent dir opened via the shell plugin.
+// Open the file's folder in the OS file manager with the file selected.
 #[command]
 pub async fn asset_blob_reveal(rel: String) -> bool {
     let Some(abs) = safe_relative(&rel) else {
         return false;
     };
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        let _ = Command::new("explorer.exe")
-            .arg(format!("/select,{}", abs.display()))
-            .spawn();
-        return true;
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        // Best-effort fallback: no cross-platform "reveal in folder"
-        // primitive in the tauri-plugin-shell surface; opening the
-        // parent dir is the closest match. When macOS/Linux support
-        // matters we'll add tauri-plugin-opener which exposes
-        // reveal_item_in_dir directly.
-        let _ = abs;
-        false
-    }
+    crate::reveal::reveal_file(&abs)
 }
 
 // -- image:download --------------------------------------------------

@@ -490,16 +490,7 @@ pub async fn plugin_saves_open_folder(
 ) -> bool {
     let Some(folder) = saves_folder(&slug, &gameName) else { return false };
     let _ = fs::create_dir_all(&folder).await;
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        Command::new("explorer.exe").arg(&folder).spawn().is_ok()
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = folder;
-        false
-    }
+    crate::reveal::open_folder(&folder)
 }
 
 #[command]
@@ -511,16 +502,7 @@ pub async fn plugin_saves_reveal(
     if safe.is_empty() { return false }
     let target = folder.join(&safe);
     if !target.exists() { return false }
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        Command::new("explorer.exe").arg(format!("/select,{}", target.display())).spawn().is_ok()
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = target;
-        false
-    }
+    crate::reveal::reveal_file(&target)
 }
 
 #[command]
