@@ -32,6 +32,9 @@
   cursor: pointer; min-width: 0;
   content-visibility: auto;
   contain-intrinsic-size: 260px 210px;
+  /* content-visibility clips painting to the card, so leave room for
+     the banner's hover lift or its top outline gets cut off. */
+  padding-top: 3px;
 }
 .er-view .gc-banner {
   position: relative; aspect-ratio: 16 / 9;
