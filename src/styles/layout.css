@@ -2,7 +2,7 @@
    rhythm above the first row equals the rhythm between subsequent rows,
    now that the old .content-header (which had its own margin) is gone
    and the topnav provides the visual separation instead. */
-.content { flex: 1; display: flex; flex-direction: column; padding: 20px 32px 0; overflow: hidden; }
+.content { --content-pad-x: 32px; flex: 1; display: flex; flex-direction: column; padding: 20px var(--content-pad-x) 0; overflow: hidden; }
 
 .content-header {
   display: flex;
@@ -17,15 +17,15 @@
 .content-scroll {
   flex: 1;
   overflow-y: scroll;
-  margin: 0 -32px;
-  padding: 0 32px 28px;
+  margin: 0 calc(-1 * var(--content-pad-x));
+  padding: 0 var(--content-pad-x) 28px;
   scrollbar-gutter: stable;
 }
 .content > .game-page {
   flex: 1;
   overflow-y: scroll;
-  margin: 0 -32px;
-  padding: 0 32px 28px;
+  margin: 0 calc(-1 * var(--content-pad-x));
+  padding: 0 var(--content-pad-x) 28px;
   scrollbar-gutter: stable;
 }
 

@@ -4,7 +4,7 @@
 
 .app[data-motion="reduced"] * { transition: none !important; animation: none !important; }
 
-.app[data-density="compact"] .content { padding: 18px 20px 0; }
+.app[data-density="compact"] .content { --content-pad-x: 20px; padding-top: 18px; }
 .app[data-density="compact"] .content-header { margin-bottom: 14px; }
 .app[data-density="compact"] .sidebar { padding: 14px 8px; }
 .app[data-density="compact"] .nav-item { padding: 6px 10px; font-size: 12.5px; }
