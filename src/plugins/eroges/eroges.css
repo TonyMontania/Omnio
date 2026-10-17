@@ -235,6 +235,7 @@
 .er-view .er-detail-desc {
   white-space: pre-line; line-height: 1.65; color: var(--text);
   font-size: 14px; max-width: 80ch;
+  margin-inline: auto; text-align: center;
 }
 
 /* Inline description formatting */
@@ -367,7 +368,7 @@
 
 /* --- Modal (matches Omnio's modal panels) --- */
 .er-modal-backdrop {
-  position: fixed; inset: 0; background: rgba(0, 0, 0, .55);
+  position: fixed; inset: var(--titlebar-h, 0px) 0 0 0; background: rgba(0, 0, 0, .55);
   display: flex; align-items: center; justify-content: center;
   z-index: 1000; padding: 20px;
 }
