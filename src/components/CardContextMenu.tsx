@@ -34,7 +34,9 @@ export default function CardContextMenu({ x, y, actions, onClose }: Props) {
     if (nx + r.width > vw - 8) nx = vw - r.width - 8
     if (ny + r.height > vh - 8) ny = vh - r.height - 8
     el.style.left = `${Math.max(8, nx)}px`
-    el.style.top = `${Math.max(8, ny)}px`
+    // Never under the app's title bar.
+    const top = parseFloat(getComputedStyle(el).getPropertyValue('--titlebar-h')) || 0
+    el.style.top = `${Math.max(top + 8, ny)}px`
   }, [x, y, actions.length])
 
   useEffect(() => {

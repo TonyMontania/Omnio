@@ -81,6 +81,8 @@ import { matchesSmartList } from './types/smartLists'
 import SmartListsModal from './components/SmartListsModal'
 import type { Playlist } from './types/playlists'
 const PlaylistsView = lazy(() => import('./views/PlaylistsView'))
+import TitleBar from './components/TitleBar'
+import { usesCustomTitleBar } from './utils/titleBar'
 import CardContextMenu, { type CardMenuAction } from './components/CardContextMenu'
 import LibraryPickerModal from './components/LibraryPickerModal'
 import PlaylistPickerModal from './components/PlaylistPickerModal'
@@ -2730,7 +2732,9 @@ function App() {
       data-layout="sidebar"
       data-sidebar={settings.sidebarCollapsed ? 'collapsed' : 'expanded'}
       data-card-zoom={settings.cardZoom ?? 'md'}
+      data-titlebar={usesCustomTitleBar() ? 'custom' : undefined}
     >
+      <TitleBar />
       {updateInfo && !updateBannerDismissed && (
         <div className="update-banner">
           <span className="update-banner-icon">↗</span>

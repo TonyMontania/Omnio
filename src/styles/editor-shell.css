@@ -2,14 +2,14 @@
    left, tabbed form on the right, pinned footer. */
 
 .es-backdrop {
-  position: fixed; inset: 0; z-index: 1000;
+  position: fixed; inset: var(--titlebar-h, 0px) 0 0 0; z-index: 1000;
   background: rgba(0, 0, 0, .72);
   display: flex; align-items: center; justify-content: center;
   padding: 2.5vh 2vw;
 }
 
 .es-panel {
-  width: min(1240px, 100%); height: min(860px, 95vh);
+  width: min(1240px, 100%); height: min(860px, calc(95vh - var(--titlebar-h, 0px)));
   background: var(--surface); color: var(--text);
   border: 1px solid var(--border-soft); border-radius: var(--radius-lg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
