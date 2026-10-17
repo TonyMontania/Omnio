@@ -316,7 +316,7 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onClose, 
               {openScreen && (
                 <div
                   onClick={() => setOpenScreen(null)}
-                  style={{ position: 'fixed', inset: 'var(--titlebar-h, 0px) 0 0 0', background: 'rgba(0,0,0,0.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out' }}
+                  style={{ position: 'fixed', inset: 0, paddingTop: 'var(--titlebar-h, 0px)', background: 'rgba(0,0,0,0.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out' }}
                 >
                   <img src={assetSrc(openScreen)} alt="" style={{ maxWidth: '95vw', maxHeight: 'calc(95vh - var(--titlebar-h, 0px))' }} />
                 </div>

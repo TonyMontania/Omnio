@@ -56,13 +56,13 @@
    used by the update dialog. */
 .modal-backdrop {
   position: fixed;
-  inset: var(--titlebar-h, 0px) 0 0 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 900;
-  padding: 24px;
+  padding: calc(24px + var(--titlebar-h, 0px)) 24px 24px;
 }
 /* Every modal spawned inside a .modal-backdrop shares an opaque panel
    surface. Individual modals override only what they need (width,

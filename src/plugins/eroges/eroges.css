@@ -368,9 +368,9 @@
 
 /* --- Modal (matches Omnio's modal panels) --- */
 .er-modal-backdrop {
-  position: fixed; inset: var(--titlebar-h, 0px) 0 0 0; background: rgba(0, 0, 0, .55);
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .55);
   display: flex; align-items: center; justify-content: center;
-  z-index: 1000; padding: 20px;
+  z-index: 1000; padding: calc(20px + var(--titlebar-h, 0px)) 20px 20px;
 }
 .er-modal {
   background: var(--surface); color: var(--text);

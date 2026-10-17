@@ -2,10 +2,10 @@
    left, tabbed form on the right, pinned footer. */
 
 .es-backdrop {
-  position: fixed; inset: var(--titlebar-h, 0px) 0 0 0; z-index: 1000;
+  position: fixed; inset: 0; z-index: 1000;
   background: rgba(0, 0, 0, .72);
   display: flex; align-items: center; justify-content: center;
-  padding: 2.5vh 2vw;
+  padding: calc(2.5vh + var(--titlebar-h, 0px)) 2vw 2.5vh;
 }
 
 .es-panel {

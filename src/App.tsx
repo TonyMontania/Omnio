@@ -81,7 +81,7 @@ import { matchesSmartList } from './types/smartLists'
 import SmartListsModal from './components/SmartListsModal'
 import type { Playlist } from './types/playlists'
 const PlaylistsView = lazy(() => import('./views/PlaylistsView'))
-import TitleBar from './components/TitleBar'
+import WindowControls from './components/WindowControls'
 import { usesCustomTitleBar } from './utils/titleBar'
 import CardContextMenu, { type CardMenuAction } from './components/CardContextMenu'
 import LibraryPickerModal from './components/LibraryPickerModal'
@@ -140,7 +140,7 @@ import { buildStaticSiteHtml } from './exportSite'
 import { buildCsvExports, buildSingleCsv } from './CsvExporter'
 import {
   CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
-  InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon,
+  InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon, HomeIcon, ArcadeIcon,
 } from './icons'
 
 import DistChart from './insights/DistChart'
@@ -2721,6 +2721,14 @@ function App() {
     }
   })()
 
+  // Home and Arcade draw their own headers; with app-drawn window
+  // controls they still get a top bar so the controls have a place.
+  const customTitleBar = usesCustomTitleBar()
+  const navMeta: typeof pageMeta = pageMeta ?? (!customTitleBar ? null
+    : specialView === 'home' ? { icon: <HomeIcon />, title: 'Home' }
+    : specialView === 'arcade' ? { icon: <ArcadeIcon />, title: 'Arcade' }
+    : { icon: null, title: '' })
+
   return (
     <Suspense fallback={null}>
     <div
@@ -2732,9 +2740,8 @@ function App() {
       data-layout="sidebar"
       data-sidebar={settings.sidebarCollapsed ? 'collapsed' : 'expanded'}
       data-card-zoom={settings.cardZoom ?? 'md'}
-      data-titlebar={usesCustomTitleBar() ? 'custom' : undefined}
+      data-titlebar={customTitleBar ? 'custom' : undefined}
     >
-      <TitleBar />
       {updateInfo && !updateBannerDismissed && (
         <div className="update-banner">
           <span className="update-banner-icon">↗</span>
@@ -2795,27 +2802,27 @@ function App() {
         />
 
         <div className="main-column">
-      {pageMeta && (
-        <nav className="topnav">
-          <div className="topnav-page">
-            {pageMeta.onBack && (
-              <button className="topnav-back" onClick={pageMeta.onBack} title="Back" aria-label="Back">
+      {navMeta && (
+        <nav className="topnav" data-tauri-drag-region>
+          <div className="topnav-page" data-tauri-drag-region>
+            {navMeta.onBack && (
+              <button className="topnav-back" onClick={navMeta.onBack} title="Back" aria-label="Back">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M15 6l-6 6 6 6" />
                 </svg>
               </button>
             )}
-            <span className="topnav-page-icon">{pageMeta.icon}</span>
-            <span className="topnav-page-title">{pageMeta.title}</span>
-            {pageMeta.count && (
+            <span className="topnav-page-icon">{navMeta.icon}</span>
+            <span className="topnav-page-title" data-tauri-drag-region>{navMeta.title}</span>
+            {navMeta.count && (
               <span className="topnav-page-count">
-                <span className="count-n">{pageMeta.count.n}</span>
-                <span className="count-unit">{pageMeta.count.unit}</span>
+                <span className="count-n">{navMeta.count.n}</span>
+                <span className="count-unit">{navMeta.count.unit}</span>
               </span>
             )}
-            {pageMeta.chips && (
+            {navMeta.chips && (
               <div className="topnav-chips">
-                {pageMeta.chips.map((c) => (
+                {navMeta.chips.map((c) => (
                   <button
                     key={c.key}
                     className={c.active ? 'topnav-chip active' : 'topnav-chip'}
@@ -2828,9 +2835,10 @@ function App() {
               </div>
             )}
           </div>
-          {pageMeta.actions && (
-            <div className="topnav-page-actions">{pageMeta.actions}</div>
+          {navMeta.actions && (
+            <div className="topnav-page-actions">{navMeta.actions}</div>
           )}
+          <WindowControls />
         </nav>
       )}
         <main className="content">

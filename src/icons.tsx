@@ -209,6 +209,17 @@ export function HomeIcon() {
   )
 }
 
+export function ArcadeIcon() {
+  return (
+    <Icon>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <path d="M8 10v4M6 12h4" />
+      <circle cx="15" cy="11" r="1" fill="currentColor" />
+      <circle cx="17.5" cy="13.5" r="1" fill="currentColor" />
+    </Icon>
+  )
+}
+
 export function ChevronIcon({ open }: { open: boolean }) {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>

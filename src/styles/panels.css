@@ -1,6 +1,7 @@
 .panel-backdrop {
   position: fixed;
-  inset: var(--titlebar-h, 0px) 0 0 0;
+  inset: 0;
+  padding-top: var(--titlebar-h, 0px);
   background: rgba(0, 0, 0, 0.82);
   z-index: 55;
   display: flex;
@@ -384,7 +385,8 @@
 
 .modal-overlay {
   position: fixed;
-  inset: var(--titlebar-h, 0px) 0 0 0;
+  inset: 0;
+  padding-top: var(--titlebar-h, 0px);
   background: rgba(0,0,0,0.55);
   display: flex;
   align-items: center;

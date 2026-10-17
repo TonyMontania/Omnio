@@ -60,37 +60,30 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .app { height: 100vh; display: flex; flex-direction: column; background: var(--bg); color: var(--text); }
 .body { flex: 1; display: flex; overflow: hidden; }
 
-/* App-drawn title bar (components/TitleBar.tsx). In normal flow above
-   everything else; full-screen overlays start below it by offsetting
-   their top with --titlebar-h, so the window controls are never covered
-   and never cover the app. */
+/* App-drawn window controls (components/WindowControls.tsx) at the right
+   end of the top bar. --titlebar-h is the top bar's height: overlays keep
+   their content below it, and the controls sit above every overlay, so
+   the two never overlap and the window can always be closed. */
 .app { --titlebar-h: 0px; }
-.app[data-titlebar="custom"] { --titlebar-h: 32px; }
-.titlebar {
+.app[data-titlebar="custom"] { --titlebar-h: 48px; }
+.app[data-titlebar="custom"] .topnav { height: var(--titlebar-h); min-height: 0; padding-right: 0; user-select: none; -webkit-user-select: none; }
+.window-controls {
   position: relative; z-index: 100000;
-  height: var(--titlebar-h); flex-shrink: 0;
-  display: flex; align-items: stretch; justify-content: space-between;
-  background: var(--surface); border-bottom: 1px solid var(--border-soft);
-  user-select: none; -webkit-user-select: none;
+  display: flex; align-self: stretch; flex-shrink: 0;
+  margin: -8px 0 -8px 4px;
 }
-.titlebar-title {
-  flex: 1; display: flex; align-items: center; padding-left: 14px;
-  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--text-faint);
-}
-.titlebar-controls { display: flex; flex-shrink: 0; }
-.titlebar-btn {
-  width: 46px; height: 100%; padding: 0; border: 0; border-radius: 0;
+.window-btn {
+  width: 46px; padding: 0; border: 0; border-radius: 0;
   background: transparent; color: var(--text-dim); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: background .12s, color .12s;
 }
-.titlebar-btn svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
-.titlebar-btn:hover { background: var(--surface-hover); color: var(--text); }
-.titlebar-btn:active { background: var(--surface-2); }
-.titlebar-btn.close:hover { background: #e5484d; color: #fff; }
-.titlebar-btn.close:active { background: #c6383d; color: #fff; }
-.titlebar-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.window-btn svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
+.window-btn:hover { background: var(--surface-hover); color: var(--text); }
+.window-btn:active { background: var(--surface-2); }
+.window-btn.close:hover { background: #e5484d; color: #fff; }
+.window-btn.close:active { background: #c6383d; color: #fff; }
+.window-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .update-banner {
   display: flex;
