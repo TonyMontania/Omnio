@@ -453,7 +453,10 @@
   background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
   color: var(--text-faint);
 }
-.er-search:focus-within { border-color: var(--accent); }
+.er-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+/* The box draws the focus ring; the bare input inside must not add the
+   app-wide input ring on top of it. */
+.er-search input:focus, .er-search input:focus-visible { outline: none; box-shadow: none; }
 .er-search input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 13px; }
 .er-search button { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 15px; padding: 0; }
 .er-icon-btn {
