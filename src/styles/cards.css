@@ -135,22 +135,32 @@
 .item-time { color: var(--accent) !important; }
 .item-meta { color: var(--text-dim); }
 
-/* Status line shared by every library card: coloured dot + status,
-   details joined by "·", rating pushed to the end. */
+/* Card text shared by every library: title with the rating on its right,
+   then a status line (coloured dot + status, then details). In the grid
+   the details may take a second line so long artist / author names and
+   years stay readable instead of being cut. */
+.card-title-row { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.card-title-row h3 { flex: 1; min-width: 0; }
+.list.grid .card-title-row { margin-top: 9px; }
+.list.grid .card-title-row h3 { margin: 0; }
+.card-rating { flex-shrink: 0; font-family: var(--font-mono); font-size: 11px; color: var(--accent); white-space: nowrap; }
 .item-info .card-line {
-  display: flex; align-items: center; gap: 6px; min-width: 0;
-  margin: 3px 0 0; font-size: 12px; color: var(--text-dim); white-space: nowrap;
+  display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 6px; row-gap: 1px; min-width: 0;
+  margin: 3px 0 0; font-size: 12px; color: var(--text-dim);
 }
-.card-status { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; color: var(--text-dim); }
+.card-status { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; color: var(--text-dim); white-space: nowrap; }
 .card-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--tone, var(--status-backlog)); }
 .card-status.tone-planned { --tone: var(--status-backlog); }
 .card-status.tone-progress { --tone: var(--status-playing); }
 .card-status.tone-done { --tone: var(--status-completed); }
 .card-status.tone-paused { --tone: var(--status-played); }
 .card-status.tone-dropped { --tone: var(--status-dropped); }
-.card-details { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-faint); }
-.card-status + .card-details::before { content: '·'; margin-right: 6px; }
-.card-rating { margin-left: auto; flex-shrink: 0; padding-left: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+.card-details {
+  min-width: 0; flex: 1 1 100%; color: var(--text-faint); line-height: 1.4;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere;
+}
+.card-status + .card-details { flex-basis: auto; }
+.list:not(.grid) .card-details { -webkit-line-clamp: 1; }
 .card-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .card-chips:empty { display: none; }
 .card-chips > p { margin: 5px 0 0; }
@@ -246,106 +256,74 @@
 }
 .list.delete-mode .item-card { outline: 1px dashed var(--danger); outline-offset: -1px; }
 
-.folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px; }
-
-/* Folder-grid layout variants — driven by the toolbar's Layout toggle
-   when browsing folder-shaped sub-views (Music → Artists, Music →
-   Groups, and any other library that grows a similar sub-tab). Grid
-   is the default cover-first tile look above; list gives each folder
-   its own row with the photo pushed to the left; compact is a tight
-   text-first row for scanning long libraries. */
-.folder-grid-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.folder-grid-list .folder-card {
-  flex-direction: row;
-  align-items: center;
-  text-align: left;
-  padding: 10px 14px;
-  gap: 14px;
-}
-.folder-grid-list .folder-card h3 { margin: 0; font-size: 15px; flex: 1; }
-.folder-grid-list .folder-card:hover { transform: none; }
-.folder-grid-list .folder-photo { width: 44px; height: 44px; box-shadow: none; }
-
-.folder-grid-compact {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.folder-grid-compact .folder-card {
-  flex-direction: row;
-  align-items: center;
-  text-align: left;
-  padding: 6px 12px;
-  gap: 10px;
-  border-radius: var(--radius-sm);
-}
-.folder-grid-compact .folder-card h3 { margin: 0; font-size: 13px; flex: 1; font-weight: 500; }
-.folder-grid-compact .folder-card:hover { transform: none; }
-.folder-grid-compact .folder-photo { width: 26px; height: 26px; box-shadow: none; }
-.folder-grid-compact .folder-photo.placeholder { font-size: 14px; }
-
+/* Folder cards: groups and artists. The grid matches the library cards
+   (cover first, outline that turns accent on hover, name and one line
+   under it); list and compact are rows with a small thumbnail. */
+.folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 22px; }
 .folder-card {
-  position: relative;
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  padding: 22px 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  text-align: center;
-  transition: border-color 0.15s, transform 0.15s;
+  position: relative; cursor: pointer; min-width: 0;
+  display: flex; flex-direction: column; gap: 0;
+  padding-top: 3px; background: none; border: none;
 }
-
-.folder-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-.folder-icon { font-size: 32px; }
-.folder-card h3 { margin: 4px 0 0; font-size: 14px; color: var(--text); font-weight: 600; }
-.folder-count { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); letter-spacing: 0.03em; }
-
-/* Image variant of the folder-card (custom group covers, artist photos). */
-.folder-photo {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+.folder-art {
+  position: relative; width: 100%; aspect-ratio: 1; overflow: hidden;
+  border-radius: 10px; background: var(--surface-2);
+  outline: 1px solid var(--border-soft); outline-offset: -1px;
+  display: flex; align-items: center; justify-content: center;
+  transition: outline-color .15s, transform .15s;
 }
-.folder-photo.circle { border-radius: 50%; }
+.folder-art.circle { border-radius: 50%; }
+.folder-card:hover .folder-art { outline-color: var(--accent); transform: translateY(-2px); }
+.folder-photo { width: 100%; height: 100%; object-fit: cover; display: block; image-rendering: -webkit-optimize-contrast; }
 .folder-photo.placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface-2);
-  color: var(--text-faint);
-  font-family: var(--font-display);
-  font-size: 36px;
-  font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-faint); font-family: var(--font-display); font-size: 40px; font-weight: 600;
+}
+.folder-icon { color: var(--text-faint); display: flex; }
+.folder-icon svg { width: 40px; height: 40px; }
+.folder-card h3 {
+  margin: 9px 0 0; font-size: 13.5px; color: var(--text); font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.artist-card h3 { text-align: center; }
+.artist-card .folder-count { text-align: center; }
+.folder-count {
+  margin-top: 3px; font-size: 12px; color: var(--text-faint); line-height: 1.4;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
 }
 
-/* Edit affordance on group folders. Sits opposite the delete ✕. */
-.folder-edit {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(0, 0, 0, 0.55);
-  border: none;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  color: #ccc;
-  cursor: pointer;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.folder-grid-list, .folder-grid-compact { display: flex; flex-direction: column; gap: 8px; }
+.folder-grid-compact { gap: 4px; }
+.folder-grid-list .folder-card, .folder-grid-compact .folder-card {
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 12px; align-items: center;
+  padding: 10px 12px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 10px;
 }
+.folder-grid-compact .folder-card { padding: 6px 10px; border-radius: var(--radius-sm); }
+.folder-grid-list .folder-card:hover, .folder-grid-compact .folder-card:hover { border-color: var(--accent); }
+.folder-grid-list .folder-art, .folder-grid-compact .folder-art { grid-row: 1 / span 2; width: 48px; border-radius: 8px; }
+.folder-grid-compact .folder-art { width: 28px; border-radius: 6px; }
+.folder-grid-list .folder-art.circle, .folder-grid-compact .folder-art.circle { border-radius: 50%; }
+.folder-grid-list .folder-card:hover .folder-art, .folder-grid-compact .folder-card:hover .folder-art { transform: none; }
+.folder-grid-list .folder-card h3, .folder-grid-compact .folder-card h3 { margin: 0; text-align: left; align-self: end; }
+.folder-grid-list .folder-count, .folder-grid-compact .folder-count { text-align: left; align-self: start; -webkit-line-clamp: 1; }
+.folder-grid-compact .folder-card h3 { grid-row: 1 / span 2; align-self: center; font-weight: 500; font-size: 13px; }
+.folder-grid-compact .folder-count { display: none; }
+.folder-grid-list .folder-photo.placeholder, .folder-grid-compact .folder-photo.placeholder { font-size: 18px; }
+.folder-grid-list .folder-icon svg, .folder-grid-compact .folder-icon svg { width: 20px; height: 20px; }
+
+/* Card actions: edit (groups) and delete sit on the artwork. */
+.folder-card .delete { top: 9px; right: 6px; left: auto; }
+.folder-edit {
+  position: absolute; top: 9px; left: 6px; z-index: 1;
+  width: 22px; height: 22px; border: none; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55); color: #ccc; cursor: pointer; font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .12s;
+}
+.folder-card:hover .folder-edit, .folder-card:hover .delete { opacity: .9; }
 .folder-edit:hover { color: var(--accent); }
+.folder-grid-list .folder-card .delete, .folder-grid-compact .folder-card .delete { top: 50%; transform: translateY(-50%); right: 10px; }
+.folder-grid-list .folder-edit, .folder-grid-compact .folder-edit { top: 50%; transform: translateY(-50%); left: auto; right: 38px; }
 
 .cover-wrap.square img, .cover-wrap.square .cover-placeholder { aspect-ratio: 1 / 1; }
 .cover-preview.square img { aspect-ratio: 1 / 1; object-fit: cover; }

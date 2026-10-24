@@ -183,12 +183,16 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
         })()}
       </div>
       <div className="item-info">
-        {showTitle && <h3 title={item.title}>{item.title}</h3>}
-        {(statusLabel || details.length > 0 || ratingText) && (
-          <p className="card-line">
+        {(showTitle || ratingText) && (
+          <div className="card-title-row">
+            {showTitle && <h3 title={item.title}>{item.title}</h3>}
+            {ratingText && <span className="card-rating">{ratingText}</span>}
+          </div>
+        )}
+        {(statusLabel || details.length > 0) && (
+          <p className="card-line" title={[statusLabel, ...details].filter(Boolean).join(' · ')}>
             {statusLabel && <span className={`card-status tone-${tone}`}>{statusLabel}</span>}
             {details.length > 0 && <span className="card-details">{details.join(' · ')}</span>}
-            {ratingText && <span className="card-rating">{ratingText}</span>}
           </p>
         )}
         <div className="card-chips">

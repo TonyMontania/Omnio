@@ -68,7 +68,7 @@ export default function ErogesControls(p: Props) {
               <button className={p.layout === 'grid' ? 'on' : ''} onClick={() => p.onLayout('grid')}>▦ Grid</button>
               <button className={p.layout === 'list' ? 'on' : ''} onClick={() => p.onLayout('list')}>☰ List</button>
             </div>
-            <button className="pop-foot" onClick={() => { setOptionsOpen(false); p.onOpenSettings() }}>Eroges settings…</button>
+            <button className="pop-foot" onClick={() => { setOptionsOpen(false); p.onOpenSettings() }}><span className="pop-icon" aria-hidden>⚙</span>Eroges settings…</button>
           </div>
         )}
       </div>

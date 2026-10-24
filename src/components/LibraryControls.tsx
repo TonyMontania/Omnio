@@ -26,7 +26,7 @@ interface Props<S extends string, G extends string, L extends string> {
   activeSmartListId: string | null
   onSmartList: (id: string | null) => void
   onManageSmartLists: () => void
-  views: { label: string; onClick: () => void }[]
+  views: { label: string; icon: string; onClick: () => void }[]
   deleteMode: boolean
   onToggleDelete: () => void
   exportCount: number
@@ -87,7 +87,7 @@ export default function LibraryControls<S extends string, G extends string, L ex
             <div className="pop-list">
               {p.layoutOptions.map((o) => (
                 <button type="button" key={o.value} className={p.layout === o.value ? 'on' : ''} onClick={() => p.onLayout(o.value)}>
-                  {o.icon && <span aria-hidden>{o.icon}</span>}{o.label}
+                  {o.icon && <span className="pop-icon" aria-hidden>{o.icon}</span>}{o.label}
                 </button>
               ))}
             </div>
@@ -98,7 +98,7 @@ export default function LibraryControls<S extends string, G extends string, L ex
                 <button type="button" key={l.id} className={p.activeSmartListId === l.id ? 'on' : ''} onClick={() => p.onSmartList(l.id)}>★ {l.name}</button>
               ))}
             </div>
-            <button type="button" className="pop-foot" onClick={() => { view.setOpen(false); p.onManageSmartLists() }}>Manage smart lists…</button>
+            <button type="button" className="pop-foot" onClick={() => { view.setOpen(false); p.onManageSmartLists() }}><span className="pop-icon" aria-hidden>⚙</span>Manage smart lists…</button>
           </div>
         )}
       </div>
@@ -109,20 +109,22 @@ export default function LibraryControls<S extends string, G extends string, L ex
           <div className="pop" role="menu" aria-label="More">
             <div className="pop-list">
               {p.views.map((v) => (
-                <button type="button" role="menuitem" key={v.label} onClick={() => { more.setOpen(false); v.onClick() }}>{v.label}</button>
+                <button type="button" role="menuitem" key={v.label} onClick={() => { more.setOpen(false); v.onClick() }}>
+                  <span className="pop-icon" aria-hidden>{v.icon}</span>{v.label}
+                </button>
               ))}
             </div>
             <div className="pop-sep" />
             <div className="pop-list">
               <button type="button" role="menuitem" className={p.deleteMode ? 'on' : 'danger'} onClick={() => { more.setOpen(false); p.onToggleDelete() }}>
-                {p.deleteMode ? '← Exit delete mode' : '✕ Delete mode'}
+                <span className="pop-icon" aria-hidden>{p.deleteMode ? '←' : '✕'}</span>{p.deleteMode ? 'Exit delete mode' : 'Delete mode'}
               </button>
             </div>
             <div className="pop-sep" />
             <div className="pop-label">Export shown</div>
             <div className="pop-list">
-              <button type="button" role="menuitem" disabled={p.exportCount === 0} onClick={() => { more.setOpen(false); p.onExport('csv') }}>As CSV ({p.exportCount})</button>
-              <button type="button" role="menuitem" disabled={p.exportCount === 0} onClick={() => { more.setOpen(false); p.onExport('json') }}>As JSON ({p.exportCount})</button>
+              <button type="button" role="menuitem" disabled={p.exportCount === 0} onClick={() => { more.setOpen(false); p.onExport('csv') }}><span className="pop-icon" aria-hidden>↓</span>As CSV ({p.exportCount})</button>
+              <button type="button" role="menuitem" disabled={p.exportCount === 0} onClick={() => { more.setOpen(false); p.onExport('json') }}><span className="pop-icon" aria-hidden>↓</span>As JSON ({p.exportCount})</button>
             </div>
           </div>
         )}

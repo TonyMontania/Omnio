@@ -1,0 +1,72 @@
+/* Hero header for detail pages (artist now, library items next): wide
+   artwork with a blurred backdrop, avatar or cover overlapping its lower
+   edge, chips, title and a stats line, then underline tabs. */
+
+.hero { position: relative; margin-bottom: 8px; }
+.hero-stage {
+  position: relative; height: clamp(150px, 26vh, 260px); overflow: hidden;
+  border-radius: 15px; background: var(--surface-2);
+}
+.hero-bg {
+  position: absolute; inset: -30px; width: calc(100% + 60px); height: calc(100% + 60px);
+  object-fit: cover; filter: blur(28px) saturate(1.2); opacity: .55;
+}
+.hero-banner { position: relative; width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-stage::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, transparent 45%, color-mix(in srgb, var(--bg) 85%, transparent) 100%);
+}
+.hero-body { display: flex; align-items: flex-end; gap: 20px; padding: 0 24px; margin-top: -64px; position: relative; z-index: 1; }
+.hero-avatar {
+  width: 132px; height: 132px; flex-shrink: 0; border-radius: 50%; overflow: hidden;
+  border: 4px solid var(--bg); background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-faint); font-family: var(--font-display); font-size: 48px; font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+}
+.hero-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.hero-text { min-width: 0; padding-bottom: 6px; display: flex; flex-direction: column; gap: 6px; }
+.hero-text h1 { margin: 0; font-family: var(--font-display); font-size: clamp(24px, 3vw, 34px); line-height: 1.1; color: var(--text); overflow-wrap: anywhere; }
+.hero-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.hero-chips span {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim); background: var(--surface);
+}
+.hero-chips span:first-child { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.hero-meta { margin: 0; font-size: 13px; color: var(--text-dim); }
+
+.hero-tabs { display: flex; gap: 4px; margin: 18px 0 18px; border-bottom: 1px solid var(--border-soft); overflow-x: auto; }
+.hero-tabs button {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 14px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer;
+  color: var(--text-dim); font: inherit; font-size: 13.5px; white-space: nowrap;
+}
+.hero-tabs button:hover { color: var(--text); }
+.hero-tabs button.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.hero-tab-count { font-family: var(--font-mono); font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: var(--surface-2); color: var(--text-faint); }
+.hero-tabs button.on .hero-tab-count { color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
+
+.hero-panel { display: flex; flex-direction: column; gap: 22px; max-width: 980px; }
+.hero-section h3 {
+  margin: 0 0 10px; font-family: var(--font-display); font-size: 12px; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--accent);
+}
+.facts { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px 24px; }
+.facts div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.facts dt { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); }
+.facts dd { margin: 0; font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+
+.member-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.member-list li {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--border-soft); border-radius: 10px;
+}
+.member-list li.former { opacity: .75; }
+.member-name { font-weight: 600; color: var(--text); font-size: 13.5px; }
+.member-roles { font-size: 12.5px; color: var(--text-dim); }
+.member-period, .member-stint { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
+
+@media (max-width: 760px) {
+  .hero-body { flex-direction: column; align-items: flex-start; margin-top: -48px; padding: 0 12px; }
+  .hero-avatar { width: 96px; height: 96px; font-size: 34px; }
+}

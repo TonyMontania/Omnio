@@ -32,5 +32,6 @@
 @import './styles/sidebar.css';       /* persistent left sidebar (restored) */
 @import './styles/arcade.css';        /* arcade score / 1cc tracker */
 @import './styles/home.css';          /* home dashboard landing view */
-@import './styles/controls.css';      /* shared library controls: status segments, search, popovers */
+@import './styles/controls.css';
+@import './styles/hero.css';          /* detail-page hero header, tabs, facts */      /* shared library controls: status segments, search, popovers */
 @import './styles/editor-shell.css';  /* shared item editor: preview + section index + form */

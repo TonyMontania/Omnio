@@ -61,6 +61,7 @@ import DiaryView from './views/DiaryView'
 import TimelineView from './views/TimelineView'
 import { patchItemStatus, getUniversalStatusOptions, getUniversalStatusValue } from './utils/statusUniversal'
 import LibraryControls from './components/LibraryControls'
+import PageControls from './components/PageControls'
 import { airingWeekday, isCurrentlyAiring } from './utils/airing'
 import { applyAutoStatus } from './utils/autoStatus'
 import { matchAction } from './utils/keyboardActions'
@@ -427,6 +428,35 @@ function statusRank<T extends string>(value: T | undefined, fallback: T, options
   return idx < 0 ? options.length : idx
 }
 
+type FolderSort = 'alpha' | 'recent' | 'count'
+type ArtistSort = 'yearDesc' | 'yearAsc' | 'recent' | 'alpha' | 'rating' | 'duration'
+
+const FOLDER_SORTS: { value: FolderSort; label: string }[] = [
+  { value: 'alpha', label: 'Alphabetical' },
+  { value: 'recent', label: 'Most recent' },
+  { value: 'count', label: 'Most items' },
+]
+const ARTIST_SORTS: { value: ArtistSort; label: string }[] = [
+  { value: 'yearDesc', label: 'Release year ↓' },
+  { value: 'yearAsc', label: 'Release year ↑' },
+  { value: 'recent', label: 'Most recent' },
+  { value: 'alpha', label: 'Alphabetical' },
+  { value: 'rating', label: 'Rating' },
+  { value: 'duration', label: 'Duration (longest)' },
+]
+const FOLDER_LAYOUTS: { value: 'grid' | 'list' | 'compact'; label: string; icon: string }[] = [
+  { value: 'grid', label: 'Grid', icon: '▦' },
+  { value: 'list', label: 'List', icon: '☰' },
+  { value: 'compact', label: 'Compact', icon: '≡' },
+]
+
+function sortFolders<T extends { name: string; createdAt?: number }>(list: T[], mode: FolderSort, count: (x: T) => number): T[] {
+  return [...list].sort((a, b) =>
+    mode === 'recent' ? (b.createdAt ?? 0) - (a.createdAt ?? 0)
+    : mode === 'count' ? count(b) - count(a) || a.name.localeCompare(b.name)
+    : a.name.localeCompare(b.name))
+}
+
 const GROUP_OPTIONS: { value: GroupBy; label: string }[] = [
   { value: 'none', label: 'No grouping' },
   { value: 'year', label: 'By year' },
@@ -656,9 +686,9 @@ function App() {
 
   const [subView, setSubView] = useState<'items' | 'groups' | 'artists'>('items')
   // Independent of the main library `sortBy` so the two don't clobber each other.
-  const [folderSort, setFolderSort] = useState<'alpha' | 'recent'>('alpha')
+  const [folderSort, setFolderSort] = useState<FolderSort>('alpha')
+  const [artistSort, setArtistSort] = useState<ArtistSort>('yearDesc')
   const [musicArtists, setMusicArtists] = useState<MusicArtist[]>([])
-  const [newArtistName, setNewArtistName] = useState('')
   const [viewingArtist, setViewingArtist] = useState<MusicArtist | null>(null)
   const [artistPanelOpen, setArtistPanelOpen] = useState(false)
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null)
@@ -681,7 +711,6 @@ function App() {
   const artistPhotoFileInputRef = useRef<HTMLInputElement>(null)
   const artistBannerFileInputRef = useRef<HTMLInputElement>(null)
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null)
-  const [newCollectionName, setNewCollectionName] = useState('')
   const [editingCollectionId, setEditingCollectionId] = useState<string | null>(null)
   const [collectionNameField, setCollectionNameField] = useState('')
   const [collectionCoverField, setCollectionCoverField] = useState('')
@@ -1604,10 +1633,8 @@ function App() {
 
   const resetListControls = () => { setSearch(''); setFilterTags([]); setFilterStatus([]); setStatusFilter(null); setFilterPlatforms([]); setFilterGenres([]) }
 
-  const handleAddArtist = () => {
-    if (!newArtistName.trim()) return
-    setMusicArtists((prev) => [...prev, { id: crypto.randomUUID(), name: newArtistName.trim(), createdAt: Date.now() }])
-    setNewArtistName('')
+  const handleAddArtist = (name: string) => {
+    setMusicArtists((prev) => [...prev, { id: crypto.randomUUID(), name, createdAt: Date.now() }])
   }
 
   const handleDeleteArtist = (id: string) => {
@@ -2320,6 +2347,19 @@ function App() {
     closePanel({ afterSave: true })
   }
 
+  // Ctrl/Cmd+S saves whichever editor is open, like the plugin editors.
+  useEffect(() => {
+    if (!panelOpen && !artistPanelOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return
+      e.preventDefault()
+      if (artistPanelOpen) void handleSaveArtistEdit()
+      else void handleSave()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
   const performDelete = (item: AnyItem) => {
     deleteAssetFile(item.cover)
     deleteAssetFile(item.bannerImage)
@@ -2418,11 +2458,9 @@ function App() {
     setPanelOpen(true)
   }
 
-  const handleCreateCollection = () => {
-    if (!newCollectionName.trim()) return
-    const newCol: Collection = { id: crypto.randomUUID(), name: newCollectionName.trim(), categoryId: activeCategory, itemIds: [], createdAt: Date.now() }
+  const handleCreateCollection = (name: string) => {
+    const newCol: Collection = { id: crypto.randomUUID(), name, categoryId: activeCategory, itemIds: [], createdAt: Date.now() }
     setCollections((prev) => [...prev, newCol])
-    setNewCollectionName('')
   }
 
   const handleDeleteCollection = (id: string) => {
@@ -2606,6 +2644,29 @@ function App() {
     if (specialView === 'playlists') return { icon: <span className="page-icon-glyph">♪</span>, title: 'Playlists', count: { n: playlists.length, unit: playlists.length === 1 ? 'playlist' : 'playlists' } }
     if (specialView === 'stats') return { icon: <InsightsIcon />, title: 'Statistics' }
     if (specialView === 'settings') return { icon: <SettingsIcon />, title: 'Settings' }
+    if (viewingArtist && specialView === 'none') {
+      const n = musicList.filter((m) => m.artist === viewingArtist.name).length
+      return {
+        icon: <CategoryIcon id="musica" />,
+        title: viewingArtist.name,
+        count: { n, unit: n === 1 ? 'release' : 'releases' },
+        onBack: () => setViewingArtist(null),
+        actions: (
+          <PageControls
+            search={search}
+            onSearch={setSearch}
+            searchPlaceholder="Search releases"
+            sort={artistSort}
+            sortOptions={ARTIST_SORTS}
+            onSort={setArtistSort}
+            layout={classicLayout}
+            layoutOptions={FOLDER_LAYOUTS}
+            onLayout={setLayout}
+            extra={<button type="button" className="secondary-btn" onClick={() => openArtistEditPanel(viewingArtist)}>✎ Edit</button>}
+          />
+        ),
+      }
+    }
     if (specialView === 'simulcastBoard') {
       const airing = itemsInCategory.filter((i) => i.airingStatus === 'airing' && airingWeekday(i))
       const browse = <button className="secondary-btn" onClick={() => setSeasonBrowserOpen(true)} title="See this season on AniList and add shows">Browse season</button>
@@ -2618,11 +2679,28 @@ function App() {
     const label = current?.label ?? ''
     // Groups and Artists are sub-pages of the library with a back arrow.
     if (subView !== 'items' && !activeCollectionId) {
+      const isGroups = subView === 'groups'
       return {
-        icon: subView === 'groups' ? <FolderIcon /> : <CategoryIcon id={activeCategory} />,
-        title: `${label} · ${subView === 'groups' ? 'Groups' : 'Artists'}`,
-        count: subView === 'groups' ? count : { n: musicArtists.length, unit: musicArtists.length === 1 ? 'artist' : 'artists' },
+        icon: isGroups ? <FolderIcon /> : <CategoryIcon id={activeCategory} />,
+        title: `${label} · ${isGroups ? 'Groups' : 'Artists'}`,
+        count: isGroups ? count : { n: musicArtists.length, unit: musicArtists.length === 1 ? 'artist' : 'artists' },
         onBack: () => { setSubView('items'); resetListControls() },
+        actions: (
+          <PageControls
+            search={search}
+            onSearch={setSearch}
+            searchPlaceholder={isGroups ? 'Search groups' : 'Search artists'}
+            sort={folderSort}
+            sortOptions={FOLDER_SORTS}
+            onSort={setFolderSort}
+            layout={classicLayout}
+            layoutOptions={FOLDER_LAYOUTS}
+            onLayout={setLayout}
+            create={isGroups
+              ? { label: '+ New group', placeholder: 'Group name', onCreate: handleCreateCollection }
+              : { label: '+ Add artist', placeholder: 'Artist name', onCreate: handleAddArtist }}
+          />
+        ),
       }
     }
     const libActions = (
@@ -2667,8 +2745,8 @@ function App() {
         onSmartList={setActiveSmartListId}
         onManageSmartLists={() => setSmartListsModalOpen(true)}
         views={activeCollectionId ? [] : [
-          { label: 'Groups', onClick: () => { setSubView('groups'); resetListControls() } },
-          ...(activeCategory === 'musica' ? [{ label: 'Artists', onClick: () => { setSubView('artists'); resetListControls() } }] : []),
+          { label: 'Groups', icon: '▤', onClick: () => { setSubView('groups'); resetListControls() } },
+          ...(activeCategory === 'musica' ? [{ label: 'Artists', icon: '♪', onClick: () => { setSubView('artists'); resetListControls() } }] : []),
         ]}
         deleteMode={deleteMode}
         onToggleDelete={() => setDeleteMode((v) => !v)}
@@ -2845,9 +2923,8 @@ function App() {
               artist={viewingArtist}
               items={musicList.filter((m) => m.artist === viewingArtist.name)}
               layout={classicLayout}
-              onSetLayout={(l) => setLayout(l)}
-              onBack={() => setViewingArtist(null)}
-              onEdit={() => openArtistEditPanel(viewingArtist)}
+              search={search}
+              sortMode={artistSort}
               onOpenItem={openEditPanel}
               onDeleteItem={handleDelete}
               musicFields={settings.musicFields}
@@ -4388,72 +4465,48 @@ function App() {
             <>
               {subView === 'artists' ? (
                 <div className="content-scroll">
-                  <div className="new-collection">
-                    <input
-                      placeholder="New artist name"
-                      value={newArtistName}
-                      onChange={(e) => setNewArtistName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleAddArtist() }}
-                    />
-                    <button type="button" onClick={handleAddArtist}>+ Add artist</button>
-                    <select
-                      className="sort-select"
-                      value={folderSort}
-                      onChange={(e) => setFolderSort(e.target.value as 'alpha' | 'recent')}
-                      title="Sort artists"
-                    >
-                      <option value="alpha">Alphabetical</option>
-                      <option value="recent">Most recent</option>
-                    </select>
-                  </div>
                   <div className={`folder-grid folder-grid-${classicLayout}`}>
                     {musicArtists.length === 0 && <p className="empty">No artists yet.</p>}
-                    {[...musicArtists]
-                      .sort((a, b) => folderSort === 'recent' ? (b.createdAt ?? 0) - (a.createdAt ?? 0) : a.name.localeCompare(b.name))
-                      .map((a) => (
-                      <div key={a.id} className="folder-card" onClick={() => setViewingArtist(a)}>
-                        <button className="delete" onClick={(e) => { e.stopPropagation(); handleDeleteArtist(a.id) }}>✕</button>
-                        {a.photo
-                          ? <img className="folder-photo circle" src={assetSrc(a.photo)} alt={a.name} />
-                          : <div className="folder-photo circle placeholder">{a.name.slice(0, 1).toUpperCase()}</div>}
-                        <h3>{a.name}</h3>
-                        <span className="folder-count">{musicList.filter((m) => m.artist === a.name).length} items</span>
-                      </div>
-                    ))}
+                    {sortFolders(
+                      musicArtists.filter((a) => !search.trim() || a.name.toLowerCase().includes(search.trim().toLowerCase())),
+                      folderSort,
+                      (a) => musicList.filter((m) => m.artist === a.name).length,
+                    ).map((a) => {
+                      const n = musicList.filter((m) => m.artist === a.name).length
+                      const line = [`${n} ${n === 1 ? 'release' : 'releases'}`, a.genres?.[0], a.origin].filter(Boolean).join(' · ')
+                      return (
+                        <div key={a.id} className="folder-card artist-card" onClick={() => setViewingArtist(a)}>
+                          <button className="delete" onClick={(e) => { e.stopPropagation(); handleDeleteArtist(a.id) }}>✕</button>
+                          <div className="folder-art circle">
+                            {a.photo
+                              ? <img className="folder-photo" src={assetSrc(a.photo)} alt={a.name} loading="lazy" />
+                              : <div className="folder-photo placeholder">{a.name.slice(0, 1).toUpperCase()}</div>}
+                          </div>
+                          <h3 title={a.name}>{a.name}</h3>
+                          <span className="folder-count" title={line}>{line}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               ) : showFolderListing ? (
                 <div className="content-scroll">
-                  <div className="new-collection">
-                    <input
-                      placeholder="New group name"
-                      value={newCollectionName}
-                      onChange={(e) => setNewCollectionName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleCreateCollection() }}
-                    />
-                    <button type="button" onClick={handleCreateCollection}>+ Create group</button>
-                    <select
-                      className="sort-select"
-                      value={folderSort}
-                      onChange={(e) => setFolderSort(e.target.value as 'alpha' | 'recent')}
-                      title="Sort groups"
-                    >
-                      <option value="alpha">Alphabetical</option>
-                      <option value="recent">Most recent</option>
-                    </select>
-                  </div>
                   <div className={`folder-grid folder-grid-${classicLayout}`}>
                     {categoryCollections.length === 0 && <p className="empty">You haven't created any groups here yet.</p>}
-                    {[...categoryCollections]
-                      .sort((a, b) => folderSort === 'recent' ? (b.createdAt ?? 0) - (a.createdAt ?? 0) : a.name.localeCompare(b.name))
-                      .map((c) => (
+                    {sortFolders(
+                      categoryCollections.filter((c) => !search.trim() || c.name.toLowerCase().includes(search.trim().toLowerCase())),
+                      folderSort,
+                      (c) => c.itemIds.length,
+                    ).map((c) => (
                       <div key={c.id} className="folder-card" onClick={() => { setActiveCollectionId(c.id); resetListControls(); setSortBy('custom') }}>
                         <button className="folder-edit" onClick={(e) => { e.stopPropagation(); openCollectionEditModal(c) }} title="Edit group">✎</button>
                         <button className="delete" onClick={(e) => { e.stopPropagation(); handleDeleteCollection(c.id) }}>✕</button>
-                        {c.cover
-                          ? <img className="folder-photo" src={assetSrc(c.cover)} alt={c.name} />
-                          : <span className="folder-icon"><FolderIcon /></span>}
-                        <h3>{c.name}</h3>
+                        <div className="folder-art">
+                          {c.cover
+                            ? <img className="folder-photo" src={assetSrc(c.cover)} alt={c.name} loading="lazy" />
+                            : <span className="folder-icon"><FolderIcon /></span>}
+                        </div>
+                        <h3 title={c.name}>{c.name}</h3>
                         <span className="folder-count">{c.itemIds.length} {c.itemIds.length === 1 ? 'item' : 'items'}</span>
                       </div>
                     ))}
@@ -4621,7 +4674,7 @@ function App() {
                     <button type="button" className={editPreviewMode === 'detail' ? 'active' : ''} onClick={() => setEditPreviewMode('detail')}>Detail</button>
                   </div>
                   {editPreviewMode === 'card' ? (
-                    <div className="edit-preview-frame card-mode">
+                    <div className="edit-preview-frame card-mode list grid edit-preview-grid">
                       <ItemCard
                         item={previewItem}
                         layout="grid"

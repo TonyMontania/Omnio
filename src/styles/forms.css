@@ -947,3 +947,30 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .app[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.4);
 }
+
+/* Library editors (item panel and artist panel) share the look of the
+   plugin editor: sentence-case labels, short fields two per row, small
+   uppercase section titles, a neutral Fetch metadata box and the live
+   preview showing the real grid card. */
+:is(.edit-form-col, .artist-editor-modal) .field-group label {
+  font-family: var(--font-body); font-size: 12px; font-weight: 500;
+  letter-spacing: 0; text-transform: none; color: var(--text-dim);
+}
+:is(.edit-form-col, .artist-editor-modal) .form { column-gap: 14px; row-gap: 14px; }
+:is(.edit-form-col, .artist-editor-modal) .form > .field-group:has(> label:first-child + :is(input:not([type="checkbox"]):not([type="file"]), select):last-child):not(:has(> input[placeholder^="Title"])) {
+  width: calc(50% - 7px);
+}
+:is(.edit-form-col, .artist-editor-modal) .form-section-header { border-bottom: 0; margin: 14px 0 -2px; padding-bottom: 0; width: 100%; }
+:is(.edit-form-col, .artist-editor-modal) .form-section-title {
+  font-family: var(--font-display); font-size: 12px; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--accent);
+}
+:is(.edit-form-col, .artist-editor-modal) .metadata-sources-panel {
+  background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+}
+.list.grid.edit-preview-grid { display: grid; grid-template-columns: minmax(0, 220px); justify-content: center; padding: 6px 0; pointer-events: none; }
+.list.grid.edit-preview-grid > .item-card { content-visibility: visible; }
+
+@media (max-width: 900px) {
+  :is(.edit-form-col, .artist-editor-modal) .form > .field-group { width: 100% !important; }
+}

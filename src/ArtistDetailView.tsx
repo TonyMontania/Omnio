@@ -4,23 +4,23 @@ import { assetSrc, getBandStatusLabel, getMemberStatus } from './types'
 import ItemCard from './ItemCard'
 import BandTimeline from './components/BandTimeline'
 
+type SortMode = 'recent' | 'alpha' | 'rating' | 'yearDesc' | 'yearAsc' | 'duration'
+type Tab = 'discography' | 'about' | 'concerts'
+
 interface Props {
   artist: MusicArtist
   items: Item[]
   layout: 'list' | 'grid' | 'compact'
-  onSetLayout: (l: 'list' | 'grid' | 'compact') => void
-  onBack: () => void
-  onEdit: () => void
+  // Search, sort, layout and Edit live in the top bar (App's page meta).
+  search: string
+  sortMode: SortMode
   onOpenItem: (item: Item) => void
   onDeleteItem: (item: Item) => void
   musicFields?: Record<MusicField, boolean>
 }
 
-type SortMode = 'recent' | 'alpha' | 'rating' | 'yearDesc' | 'yearAsc' | 'duration'
-
-export default function ArtistDetailView({ artist, items, layout, onSetLayout, onBack, onEdit, onOpenItem, onDeleteItem, musicFields }: Props) {
-  const [search, setSearch] = useState('')
-  const [sortMode, setSortMode] = useState<SortMode>('yearDesc')
+export default function ArtistDetailView({ artist, items, layout, search, sortMode, onOpenItem, onDeleteItem, musicFields }: Props) {
+  const [tab, setTab] = useState<Tab>('discography')
 
   const pickYear = (i: Item) => {
     if (i.releaseDate) return new Date(i.releaseDate).getFullYear()
@@ -30,179 +30,147 @@ export default function ArtistDetailView({ artist, items, layout, onSetLayout, o
     if (!i.tracks) return 0
     return i.tracks.reduce((a, t) => a + (parseInt(t.duration || '0', 10) || 0), 0)
   }
-  const sortedItems = [...items].sort((a, b) => {
-    if (sortMode === 'alpha') return a.title.localeCompare(b.title)
-    if (sortMode === 'rating') return (b.rating || 0) - (a.rating || 0)
-    if (sortMode === 'recent') return b.createdAt - a.createdAt
-    if (sortMode === 'yearAsc') return (pickYear(a) || 9999) - (pickYear(b) || 9999)
-    if (sortMode === 'duration') return pickDuration(b) - pickDuration(a)
-    // yearDesc default
-    return pickYear(b) - pickYear(a)
-  })
+  const query = search.trim().toLowerCase()
+  const shownItems = [...items]
+    .filter((item) => !query || item.title.toLowerCase().includes(query))
+    .sort((a, b) => {
+      if (sortMode === 'alpha') return a.title.localeCompare(b.title)
+      if (sortMode === 'rating') return (b.rating || 0) - (a.rating || 0)
+      if (sortMode === 'recent') return b.createdAt - a.createdAt
+      if (sortMode === 'yearAsc') return (pickYear(a) || 9999) - (pickYear(b) || 9999)
+      if (sortMode === 'duration') return pickDuration(b) - pickDuration(a)
+      return pickYear(b) - pickYear(a)
+    })
 
   const ratedItems = items.filter((i) => i.rating)
   const avgRating = ratedItems.length ? (ratedItems.reduce((a, i) => a + (i.rating || 0), 0) / ratedItems.length).toFixed(1) : null
+  const listened = items.filter((i) => i.consumed).length
 
   const activePeriod = [artist.activeFrom, artist.activeTo].some(Boolean)
     ? `${artist.activeFrom || '?'} – ${artist.activeTo || 'present'}`
     : null
 
   const allMembers = artist.members ?? []
-  const currentMembers = allMembers.filter((m) => getMemberStatus(m) === 'current')
-  const currentTouringMembers = allMembers.filter((m) => getMemberStatus(m) === 'current-touring')
-  const formerMembers = allMembers.filter((m) => getMemberStatus(m) === 'former')
-  const formerTouringMembers = allMembers.filter((m) => getMemberStatus(m) === 'former-touring')
-  const hasInfo = artist.origin || artist.bandStatus || (artist.genres && artist.genres.length > 0)
-    || activePeriod || (artist.labels && artist.labels.length > 0) || (artist.members && artist.members.length > 0)
+  const memberSections = [
+    { list: allMembers.filter((m) => getMemberStatus(m) === 'current'), label: 'Current members', formerish: false },
+    { list: allMembers.filter((m) => getMemberStatus(m) === 'current-touring'), label: 'Touring members', formerish: false },
+    { list: allMembers.filter((m) => getMemberStatus(m) === 'former'), label: 'Former members', formerish: true },
+    { list: allMembers.filter((m) => getMemberStatus(m) === 'former-touring'), label: 'Former touring', formerish: true },
+  ]
+  const facts: [string, string | null | undefined][] = [
+    ['Origin', artist.origin],
+    ['Status', artist.bandStatus ? getBandStatusLabel(artist.bandStatus) : null],
+    ['Years active', activePeriod],
+    ['Genres', artist.genres?.join(', ')],
+    ['Labels', artist.labels?.join(', ')],
+  ]
+  const shownFacts = facts.filter(([, v]) => !!v)
+  const concerts = artist.concerts ?? []
+  const chips = [artist.bandStatus ? getBandStatusLabel(artist.bandStatus) : null, artist.origin, activePeriod].filter(Boolean) as string[]
+  const stats = [
+    `${items.length} ${items.length === 1 ? 'release' : 'releases'}`,
+    listened ? `${listened} listened` : null,
+    avgRating ? `★ ${avgRating} average` : null,
+  ].filter(Boolean).join(' · ')
+
+  const tabs: { id: Tab; label: string; count?: number }[] = [
+    { id: 'discography', label: 'Discography', count: items.length },
+    { id: 'about', label: 'About' },
+    ...(concerts.length > 0 ? [{ id: 'concerts' as Tab, label: 'Concerts', count: concerts.length }] : []),
+  ]
+  const backdrop = artist.bannerImage || artist.photo
 
   return (
-    <div className="game-page artist-page">
-      <div className="game-page-topbar">
-        <button className="back-btn wide" onClick={onBack}>← Back</button>
-        <div className="game-page-actions">
-          <button className="edit-btn" onClick={onEdit}>✎ Edit</button>
+    <div className="content-scroll artist-page">
+      <header className="hero">
+        <div className={`hero-stage${artist.bannerImage ? '' : ' no-banner'}`}>
+          {backdrop && <img className="hero-bg" src={assetSrc(backdrop)} alt="" aria-hidden />}
+          {artist.bannerImage && <img className="hero-banner zoomable" src={assetSrc(artist.bannerImage)} alt="" data-zoom-label="Banner" />}
         </div>
-      </div>
-
-      <div className="artist-banner">
-        {artist.bannerImage ? <img className="zoomable" src={assetSrc(artist.bannerImage)} alt={artist.name} data-zoom-label="Banner" /> : <div className="artist-banner-placeholder" />}
-        <div className="banner-fade" />
-        <div className="artist-header-row">
-          <div className="artist-avatar">
-            {artist.photo ? <img className="zoomable" src={assetSrc(artist.photo)} alt={artist.name} data-zoom-label="Photo" /> : <span>{artist.name.charAt(0).toUpperCase()}</span>}
+        <div className="hero-body">
+          <div className="hero-avatar">
+            {artist.photo
+              ? <img className="zoomable" src={assetSrc(artist.photo)} alt={artist.name} data-zoom-label="Photo" />
+              : <span>{artist.name.charAt(0).toUpperCase()}</span>}
           </div>
-          <div className="artist-header-info">
-            <span className="artist-eyebrow">Artist</span>
+          <div className="hero-text">
+            {chips.length > 0 && <div className="hero-chips">{chips.map((c) => <span key={c}>{c}</span>)}</div>}
             <h1>{artist.name}</h1>
-            <span className="artist-count">
-              {items.length} {items.length === 1 ? 'item' : 'items'} in your library
-              {avgRating && ` · ★ ${avgRating} average`}
-            </span>
+            <p className="hero-meta">{stats}</p>
           </div>
         </div>
-      </div>
+      </header>
 
-      {hasInfo && (
-        <div className="artist-info-grid">
-          {artist.origin && (
-            <div className="artist-info-block"><h4>Origin</h4><div className="val">{artist.origin}</div></div>
-          )}
-          {artist.bandStatus && (
-            <div className="artist-info-block"><h4>Status</h4><div className="val">{getBandStatusLabel(artist.bandStatus)}</div></div>
-          )}
-          {activePeriod && (
-            <div className="artist-info-block"><h4>Years active</h4><div className="val">{activePeriod}</div></div>
-          )}
-          {artist.genres && artist.genres.length > 0 && (
-            <div className="artist-info-block"><h4>Genres</h4><div className="val">{artist.genres.join(', ')}</div></div>
-          )}
-          {artist.labels && artist.labels.length > 0 && (
-            <div className="artist-info-block"><h4>Labels</h4><div className="val">{artist.labels.join(', ')}</div></div>
-          )}
-          {artist.members && artist.members.length > 0 && (
-            <div className="artist-info-block" style={{ gridColumn: '1 / -1' }}>
-              <h4>Members</h4>
-              {([
-                { list: currentMembers,        label: null,               formerish: false },
-                { list: currentTouringMembers, label: 'Touring members',  formerish: false },
-                { list: formerMembers,         label: 'Former members',   formerish: true  },
-                { list: formerTouringMembers,  label: 'Former touring',   formerish: true  },
-              ] as const).map((section, idx) => (
-                section.list.length === 0 ? null : (
-                  <div key={idx}>
-                    {section.label && <div className="artist-members-label">{section.label}</div>}
-                    <div className="artist-members">
-                      {section.list.map((m) => (
-                        <div key={m.id} className={section.formerish ? 'artist-member-row former' : 'artist-member-row'}>
-                          <span className="m-name">
-                            {m.name}
-                            {m.deceased && <span className="m-deceased" title="Deceased"> †</span>}
-                          </span>
-                          {m.roles.length > 0 && <span className="m-roles">— {m.roles.join(', ')}</span>}
-                          {(m.joinedIn || (section.formerish && m.leftIn)) && (
-                            <span className="m-period">· {m.joinedIn || '?'} – {section.formerish ? (m.leftIn || '?') : 'present'}</span>
-                          )}
-                          {m.stints && m.stints.length > 0 && m.stints.map((s) => (
-                            <span key={s.id} className="m-stint">
-                              · {s.touring ? 'touring' : 'also'} {s.roles.length > 0 ? s.roles.join(', ') : '—'}
-                              {(s.from || s.to) && ` (${s.from || '?'} – ${s.to || (section.formerish ? '?' : 'present')})`}
-                            </span>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <nav className="hero-tabs" role="tablist">
+        {tabs.map((t) => (
+          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>
+            {t.label}{t.count != null && t.count > 0 && <span className="hero-tab-count">{t.count}</span>}
+          </button>
+        ))}
+      </nav>
 
-      {artist.members && artist.members.length > 0 && (
-        <div className="artist-info-grid">
-          <div className="artist-info-block" style={{ gridColumn: '1 / -1' }}>
-            <h4>Timeline</h4>
-            <BandTimeline artist={artist} releases={items} />
-          </div>
-        </div>
-      )}
-
-      {artist.concerts && artist.concerts.length > 0 && (
-        <div className="artist-info-grid">
-          <div className="artist-info-block" style={{ gridColumn: '1 / -1' }}>
-            <h4>Concerts attended ({artist.concerts.length})</h4>
-            <ul className="concert-list detail">
-              {[...artist.concerts].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((c) => (
-                <li key={c.id} className="concert-row">
-                  <div className="concert-head">
-                    <span className="concert-date">{c.date || '—'}</span>
-                    <span className="concert-venue">{c.venue}</span>
-                    {c.city && <span className="concert-city">{c.city}</span>}
-                  </div>
-                  {c.setlist && <pre className="concert-setlist">{c.setlist}</pre>}
-                  {c.notes && <p className="concert-notes">{c.notes}</p>}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
-
-      <div className="content-header artist-content-header">
-        <div />
-        <div className="view-toggle">
-          <button type="button" className={layout === 'list' ? 'active' : ''} onClick={() => onSetLayout('list')}>☰ List</button>
-          <button type="button" className={layout === 'grid' ? 'active' : ''} onClick={() => onSetLayout('grid')}>▦ Grid</button>
-          <button type="button" className={layout === 'compact' ? 'active' : ''} onClick={() => onSetLayout('compact')}>≡ Compact</button>
-        </div>
-      </div>
-
-      <div className="toolbar">
-        <input
-          className="search-input"
-          placeholder="Search by title..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select className="sort-select" value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)}>
-          <option value="yearDesc">Release year ↓</option>
-          <option value="yearAsc">Release year ↑</option>
-          <option value="recent">Most recent</option>
-          <option value="alpha">Alphabetical</option>
-          <option value="rating">Rating</option>
-          <option value="duration">Duration (longest)</option>
-        </select>
-      </div>
-
-      <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-        {sortedItems.length === 0 && <p className="empty">Nothing from this artist yet.</p>}
-        {sortedItems
-          .filter((item) => !search.trim() || item.title.toLowerCase().includes(search.trim().toLowerCase()))
-          .map((item) => (
+      {tab === 'discography' && (
+        <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
+          {shownItems.length === 0 && <p className="empty">{query ? 'No releases match your search.' : 'Nothing from this artist yet.'}</p>}
+          {shownItems.map((item) => (
             <ItemCard key={item.id} item={item} layout={layout} onOpen={onOpenItem} onDelete={onDeleteItem} musicFields={musicFields} />
           ))}
-      </div>
+        </div>
+      )}
+
+      {tab === 'about' && (
+        <div className="hero-panel">
+          {shownFacts.length > 0
+            ? <dl className="facts">{shownFacts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+            : <p className="empty">No details yet. Add origin, genres or members from Edit.</p>}
+          {allMembers.length > 0 && memberSections.map((section) => section.list.length === 0 ? null : (
+            <section key={section.label} className="hero-section">
+              <h3>{section.label}</h3>
+              <ul className="member-list">
+                {section.list.map((m) => (
+                  <li key={m.id} className={section.formerish ? 'former' : ''}>
+                    <span className="member-name">{m.name}{m.deceased && <span className="m-deceased" title="Deceased"> †</span>}</span>
+                    {m.roles.length > 0 && <span className="member-roles">{m.roles.join(', ')}</span>}
+                    {(m.joinedIn || (section.formerish && m.leftIn)) && (
+                      <span className="member-period">{m.joinedIn || '?'} – {section.formerish ? (m.leftIn || '?') : 'present'}</span>
+                    )}
+                    {m.stints?.map((st) => (
+                      <span key={st.id} className="member-stint">
+                        {st.touring ? 'touring' : 'also'} {st.roles.length > 0 ? st.roles.join(', ') : '—'}
+                        {(st.from || st.to) && ` (${st.from || '?'} – ${st.to || (section.formerish ? '?' : 'present')})`}
+                      </span>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+          {allMembers.length > 0 && (
+            <section className="hero-section">
+              <h3>Timeline</h3>
+              <BandTimeline artist={artist} releases={items} />
+            </section>
+          )}
+        </div>
+      )}
+
+      {tab === 'concerts' && (
+        <div className="hero-panel">
+          <ul className="concert-list detail">
+            {[...concerts].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((c) => (
+              <li key={c.id} className="concert-row">
+                <div className="concert-head">
+                  <span className="concert-date">{c.date || '—'}</span>
+                  <span className="concert-venue">{c.venue}</span>
+                  {c.city && <span className="concert-city">{c.city}</span>}
+                </div>
+                {c.setlist && <pre className="concert-setlist">{c.setlist}</pre>}
+                {c.notes && <p className="concert-notes">{c.notes}</p>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
