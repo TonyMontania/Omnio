@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { getMangaStatus, getPublicationStatusLabel, getMangaSourceLabel, getAgeRatingLabel, getNextUnreadChapter, assetSrc } from './types'
-import { MangaStatusIcon } from './icons'
 import type { Item, AnyItem, MangaItem, Collection, FranchiseSection, FranchiseGraph } from './types'
-import DetailTopbar from './components/detail/DetailTopbar'
-import CoverPlaceholder from './components/CoverPlaceholder'
+import DetailShell, { DetailChips, DetailFacts, DetailSection } from './components/detail/DetailShell'
+import { formatDay } from './utils/format'
 import ImageLightbox from './components/ImageLightbox'
 import { exportItemAsJson } from './utils/files'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
@@ -33,7 +32,7 @@ interface Props {
   franchiseGraph?: FranchiseGraph
 }
 
-export default function MangaDetailModal({ item, groups, allManga, onClose, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
+export default function MangaDetailModal({ item, groups, allManga, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
   const [volumeLightbox, setVolumeLightbox] = useState<number | null>(null)
   const ms = getMangaStatus(item.mangaStatus)
   const nextCh = item.hasChapters ? getNextUnreadChapter(item.chapters) : null
@@ -49,131 +48,66 @@ export default function MangaDetailModal({ item, groups, allManga, onClose, onEd
     .filter((x): x is Item => !!x)
     .map((it) => ({ item: it }))
 
+  const relatedCount = relatedEntries.length + recommendedEntries.length + Math.max(0, franchiseItems.length - 1)
+  const chapterCount = item.hasChapters ? item.chapters?.length ?? 0 : 0
+  const volumeCount = item.volumeCovers?.length ?? 0
+  const ownership = item.mediaOwnership
+    ? item.mediaOwnership === 'physical' ? 'Physical' : item.mediaOwnership === 'digital' ? 'Digital' : item.mediaOwnership === 'both' ? 'Physical + Digital' : 'Not owned'
+    : null
+
   return (
-    <div className="game-page">
-      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)} />
-
-      {item.bannerImage && (
-        <div className="game-modal-banner">
-          <img className="zoomable" src={assetSrc(item.bannerImage)} alt={item.title} data-zoom-label="Banner" />
-          <div className="banner-fade" />
-        </div>
-      )}
-
-      <div className="game-modal-body" style={item.bannerImage ? { marginTop: 110 } : undefined}>
-        <div className="game-modal-main">
-          <div className="game-modal-cover">
-            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder"><CoverPlaceholder categoryId={item.categoryId} /></div>}
-          </div>
-          <div className="game-modal-info">
-            <div className="game-modal-title-row">
-              <h1>{item.title}</h1>
-            </div>
-            {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
-            {item.alternativeTitles && item.alternativeTitles.length > 0 && (
-              <p className="game-modal-alt-titles">{item.alternativeTitles.join(' · ')}</p>
-            )}
-            {((item.authors && item.authors.length > 0) || (item.mangaArtists && item.mangaArtists.length > 0)) && (
-              <p className="game-modal-devs">
-                {item.authors && item.authors.join(', ')}
-                {item.authors && item.authors.length > 0 && item.mangaArtists && item.mangaArtists.length > 0 && ' · '}
-                {item.mangaArtists && item.mangaArtists.join(', ')}
-              </p>
-            )}
-            {item.mangaDescription && <div className="game-modal-description">{item.mangaDescription}</div>}
-            <div className="dlc-addons-row">
-              <div className="field-group">
-                <label>Status</label>
-                <div className="pills">
-                  <span className={`badge status-badge status-${ms.value}`}><MangaStatusIcon value={ms.value} /> {ms.label}</span>
-                  {item.pubStatus && <span className="badge group-badge">{getPublicationStatusLabel(item.pubStatus)}</span>}
-                  {item.mangaSource && <span className="pill static">Source: {getMangaSourceLabel(item.mangaSource)}</span>}
-                  {item.ageRating && <span className="pill static">{getAgeRatingLabel(item.ageRating)}</span>}
-                  {item.magazine && <span className="pill static">{item.magazine}</span>}
-                  {item.mediaOwnership && <span className="pill static">{item.mediaOwnership === 'physical' ? 'Physical' : item.mediaOwnership === 'digital' ? 'Digital' : item.mediaOwnership === 'both' ? 'Physical + Digital' : 'Not owned'}</span>}
-                  {item.mangadexId && (
-                    <a
-                      className="pill static pcgw-link"
-                      href={`https://mangadex.org/title/${item.mangadexId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Follow this title on MangaDex to get chapter notifications in your reader"
-                    >New chapters ↗</a>
-                  )}
-                </div>
-              </div>
-              {groups.length > 0 && (
-                <div className="field-group">
-                  <label>Groups</label>
-                  <div className="pills">
-                    {groups.map((g) => <span key={g.id} className="badge group-badge">{g.name}</span>)}
-                  </div>
-                </div>
+    <DetailShell
+      item={item}
+      chips={[ms.label, item.pubStatus ? getPublicationStatusLabel(item.pubStatus) : null, item.magazine]}
+      subtitle={item.alternativeTitles && item.alternativeTitles.length > 0 ? item.alternativeTitles.join(' · ') : undefined}
+      meta={[item.authors?.join(', '), item.mangaArtists?.join(', ')].filter(Boolean).join(' · ') || undefined}
+      stats={[
+        ['Rating', item.rating ? `★ ${item.rating}` : null],
+        ['Chapters', item.chaptersRead ? `${item.chaptersRead}${item.totalChapters ? ` / ${item.totalChapters}` : ''}` : item.totalChapters ? `${item.totalChapters} total` : null],
+        ['Volumes', item.volumesRead ? `${item.volumesRead}${item.totalVolumes ? ` / ${item.totalVolumes}` : ''}` : null],
+        ['Next chapter', nextCh ? `Ch. ${nextCh.number}` : null],
+        ['Finished', item.finishedAt ? formatDay(item.finishedAt) : null],
+      ]}
+      onEdit={onEdit}
+      onDuplicate={onDuplicate}
+      onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)}
+      tabs={[
+        {
+          id: 'overview',
+          label: 'Overview',
+          content: (
+            <>
+              {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
+              {item.mangaDescription && <p className="detail-description">{item.mangaDescription}</p>}
+              {item.mangadexId && (
+                <a className="pill static pcgw-link" style={{ alignSelf: 'flex-start' }} href={`https://mangadex.org/title/${item.mangadexId}`} target="_blank" rel="noopener noreferrer" title="Follow this title on MangaDex to get chapter notifications in your reader">New chapters on MangaDex ↗</a>
               )}
-            </div>
-            {item.genres && item.genres.length > 0 && (
-              <div className="field-group">
-                <label>Genres</label>
-                <div className="card-tags">{item.genres.map((g) => <span key={g} className="card-tag">{g}</span>)}</div>
-              </div>
-            )}
-            {item.tags && item.tags.length > 0 && (
-              <div className="field-group modal-tags">
-                <label>Tags</label>
-                <div className="card-tags">{item.tags.map((t) => <span key={t} className="card-tag">{t}</span>)}</div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="game-modal-extra">
-          <div className="dlc-addons-row wrap-4">
-            {item.chaptersRead && (
-              <div className="field-group">
-                <label>Chapters</label>
-                <div className="pills"><span className="pill static">{item.chaptersRead}{item.totalChapters ? ` / ${item.totalChapters}` : ''}</span></div>
-              </div>
-            )}
-            {item.volumesRead && (
-              <div className="field-group">
-                <label>Volumes</label>
-                <div className="pills"><span className="pill static">{item.volumesRead}{item.totalVolumes ? ` / ${item.totalVolumes}` : ''}</span></div>
-              </div>
-            )}
-            {item.rating ? (
-              <div className="field-group">
-                <label>Rating</label>
-                <div className="pills"><span className="pill static">★ {item.rating}</span></div>
-              </div>
-            ) : null}
-            {item.startDate && (
-              <div className="field-group">
-                <label>Started</label>
-                <div className="pills"><span className="pill static">{item.startDate}</span></div>
-              </div>
-            )}
-            {item.finishedAt && (
-              <div className="field-group">
-                <label>Finished</label>
-                <div className="pills"><span className="pill static">{item.finishedAt}</span></div>
-              </div>
-            )}
-            {nextCh && (
-              <div className="field-group">
-                <label>Next chapter</label>
-                <div className="pills"><span className="pill static">Ch. {nextCh.number}{nextCh.title ? ` — ${nextCh.title}` : ''}</span></div>
-              </div>
-            )}
-          </div>
-
-          <DetailReview review={item.mangaReview} hasSpoilers={item.hasSpoilers} />
-          <DetailNotes notes={item.notes} />
-          <DetailHistoryTable label="Reread history" entries={item.rewatches ?? []} />
-          <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
-          <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
-          <CustomFieldsView fields={item.customFields} />
-
+              <DetailFacts facts={[
+                ['Authors', item.authors?.join(', ')],
+                ['Artists', item.mangaArtists?.join(', ')],
+                ['Magazine', item.magazine],
+                ['Publication', item.pubStatus ? getPublicationStatusLabel(item.pubStatus) : null],
+                ['Genres', item.genres?.join(', ')],
+                ['Source', item.mangaSource ? getMangaSourceLabel(item.mangaSource) : null],
+                ['Age rating', item.ageRating ? getAgeRatingLabel(item.ageRating) : null],
+                ['Owned as', ownership],
+                ['Started', item.startDate ? formatDay(item.startDate) : null],
+                ['Next chapter', nextCh ? `Ch. ${nextCh.number}${nextCh.title ? ` — ${nextCh.title}` : ''}` : null],
+                ['Groups', groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
+              ]} />
+              {item.tags && item.tags.length > 0 && <DetailSection title="Tags"><DetailChips values={item.tags} /></DetailSection>}
+              <DetailReview review={item.mangaReview} hasSpoilers={item.hasSpoilers} />
+              <DetailNotes notes={item.notes} />
+              <CustomFieldsView fields={item.customFields} />
+            </>
+          ),
+        },
+        {
+          id: 'chapters',
+          label: 'Chapters',
+          count: chapterCount,
+          hidden: chapterCount === 0,
+          content: <>
           {item.hasChapters && item.chapters && item.chapters.length > 0 && (
             <div className="field-group">
               <label>Chapters</label>
@@ -201,9 +135,14 @@ export default function MangaDetailModal({ item, groups, allManga, onClose, onEd
               </table>
             </div>
           )}
-        </div>
-      </div>
-
+          </>,
+        },
+        {
+          id: 'volumes',
+          label: 'Volumes',
+          count: volumeCount,
+          hidden: volumeCount === 0,
+          content: <>
       {item.volumeCovers && item.volumeCovers.length > 0 && (
         <div className="field-group volume-gallery">
           <label>Volumes</label>
@@ -231,6 +170,29 @@ export default function MangaDetailModal({ item, groups, allManga, onClose, onEd
           onClose={() => setVolumeLightbox(null)}
         />
       )}
-    </div>
+          </>,
+        },
+        {
+          id: 'history',
+          label: 'Rereads',
+          count: item.rewatches?.length,
+          hidden: !item.rewatches || item.rewatches.length === 0,
+          content: <DetailHistoryTable label="Reread history" entries={item.rewatches ?? []} />,
+        },
+        {
+          id: 'related',
+          label: 'Related',
+          count: relatedCount,
+          hidden: relatedCount === 0,
+          content: (
+            <>
+              <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
+              <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
+              <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
+            </>
+          ),
+        },
+      ]}
+    />
   )
 }

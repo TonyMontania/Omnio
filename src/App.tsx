@@ -2640,6 +2640,11 @@ function App() {
     if (specialView === 'arcade') return null
     // Active plugin publishes its meta via setPageMeta; mirror it here.
     if (activePluginSlug) return pluginPageMeta
+    // An open item: back arrow + title; its actions live in the page hero.
+    if (viewing) {
+      const lib = CATEGORIES.find((c) => c.id === viewing.categoryId)
+      return { icon: <CategoryIcon id={viewing.categoryId} />, title: lib?.label ?? viewing.title, onBack: () => setViewing(null) }
+    }
     if (specialView === 'calendar') return { icon: <CalendarIcon />, title: 'Release calendar' }
     if (specialView === 'playlists') return { icon: <span className="page-icon-glyph">♪</span>, title: 'Playlists', count: { n: playlists.length, unit: playlists.length === 1 ? 'playlist' : 'playlists' } }
     if (specialView === 'stats') return { icon: <InsightsIcon />, title: 'Statistics' }

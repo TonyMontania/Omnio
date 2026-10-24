@@ -37,3 +37,13 @@ export function formatIsoDate(iso: string | undefined): string {
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
   return d.toLocaleDateString()
 }
+
+// "Feb 25, 2022" for a date-only value, without the timezone shift
+// formatDate() would apply to `YYYY-MM-DD` strings.
+export function formatDay(iso: string | undefined): string {
+  if (!iso) return ''
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
+  const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}

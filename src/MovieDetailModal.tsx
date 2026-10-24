@@ -1,7 +1,7 @@
-import { formatDurationMinutes, getWatchLocationLabel, getMovieSourceLabel, assetSrc } from './types'
+import { formatDurationMinutes, getWatchLocationLabel, getMovieSourceLabel } from './types'
 import type { Item, AnyItem, MovieItem, Collection, FranchiseSection, FranchiseGraph } from './types'
-import DetailTopbar from './components/detail/DetailTopbar'
-import CoverPlaceholder from './components/CoverPlaceholder'
+import DetailShell, { DetailChips, DetailFacts, DetailSection } from './components/detail/DetailShell'
+import { formatDay } from './utils/format'
 import { exportItemAsJson } from './utils/files'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
@@ -30,7 +30,7 @@ interface Props {
 
 const yearOf = (i: Item) => i.releaseYear || ''
 
-export default function MovieDetailModal({ item, groups, allMovies, allItems, onClose, onEdit, onDuplicate, onNavigate, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
+export default function MovieDetailModal({ item, groups, allMovies, allItems, onEdit, onDuplicate, onNavigate, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
   const banner = item.bannerImage2
   const franchiseItems = item.franchise
     ? allMovies.filter((a) => a.franchise === item.franchise).sort((a, b) => yearOf(a).localeCompare(yearOf(b)))
@@ -44,135 +44,75 @@ export default function MovieDetailModal({ item, groups, allMovies, allItems, on
     .filter((x): x is Item => !!x)
     .map((it) => ({ item: it }))
 
+  const relatedCount = relatedEntries.length + recommendedEntries.length + Math.max(0, franchiseItems.length - 1)
+  const runtime = formatDurationMinutes(item.duration)
+
   return (
-    <div className="game-page">
-      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)} />
-
-      {banner && (
-        <div className="game-modal-banner">
-          <img className="zoomable" src={assetSrc(banner)} alt={item.title} data-zoom-label="Backdrop" />
-          <div className="banner-fade" />
-        </div>
-      )}
-
-      <div className="game-modal-body" style={banner ? { marginTop: 110 } : undefined}>
-        <div className="game-modal-main">
-          <div className="game-modal-cover">
-            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder"><CoverPlaceholder categoryId={item.categoryId} /></div>}
-          </div>
-          <div className="game-modal-info">
-            <div className="game-modal-title-row">
-              <h1>{item.title} {item.releaseYear && <span className="game-modal-year">({item.releaseYear})</span>}</h1>
-            </div>
-            {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
-            {item.alternativeTitles && item.alternativeTitles.length > 0 && (
-              <p className="game-modal-alt-titles">{item.alternativeTitles.join(' · ')}</p>
-            )}
-            {item.directors && item.directors.length > 0 && (
-              <p className="game-modal-devs">{item.directors.join(', ')}</p>
-            )}
-            {item.writers && item.writers.length > 0 && (
-              <p className="game-modal-devs">Written by {item.writers.join(', ')}</p>
-            )}
-            {item.cast && item.cast.length > 0 && (
-              <p className="game-modal-devs">Starring: {item.cast.join(', ')}</p>
-            )}
-            {item.movieDescription && <div className="game-modal-description">{item.movieDescription}</div>}
-            <div className="dlc-addons-row">
-              <div className="field-group">
-                <label>Status</label>
-                <div className="pills">
-                  <span className="pill static">{item.consumed ? '✓ Watched' : 'Not watched'}</span>
-                  {item.movieSource && <span className="pill static">Source: {getMovieSourceLabel(item.movieSource)}</span>}
-                  {item.contentRating && <span className="pill static">{item.contentRating}</span>}
-                </div>
-              </div>
-              {item.franchise && (
-                <div className="field-group">
-                  <label>Franchise</label>
-                  <div className="pills"><span className="pill static">{item.franchise}</span></div>
-                </div>
-              )}
-              {groups.length > 0 && (
-                <div className="field-group">
-                  <label>Groups</label>
-                  <div className="pills">
-                    {groups.map((g) => <span key={g.id} className="badge group-badge">{g.name}</span>)}
-                  </div>
-                </div>
-              )}
-            </div>
-            {item.genres && item.genres.length > 0 && (
-              <div className="field-group">
-                <label>Genres</label>
-                <div className="card-tags">{item.genres.map((g) => <span key={g} className="card-tag">{g}</span>)}</div>
-              </div>
-            )}
-            {item.tags && item.tags.length > 0 && (
-              <div className="field-group modal-tags">
-                <label>Tags</label>
-                <div className="card-tags">{item.tags.map((t) => <span key={t} className="card-tag">{t}</span>)}</div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="game-modal-extra">
-          <div className="dlc-addons-row wrap-4">
-            {formatDurationMinutes(item.duration) && (
-              <div className="field-group">
-                <label>Duration</label>
-                <div className="pills"><span className="pill static">{formatDurationMinutes(item.duration)}</span></div>
-              </div>
-            )}
-            {item.timesWatched && (
-              <div className="field-group">
-                <label>Times watched</label>
-                <div className="pills"><span className="pill static">{item.timesWatched}×</span></div>
-              </div>
-            )}
-            {item.rating ? (
-              <div className="field-group">
-                <label>Rating</label>
-                <div className="pills"><span className="pill static">★ {item.rating}</span></div>
-              </div>
-            ) : null}
-            {item.finishedAt && (
-              <div className="field-group">
-                <label>Watched on</label>
-                <div className="pills"><span className="pill static">{item.finishedAt}</span></div>
-              </div>
-            )}
-            {item.watchedWhere && (
-              <div className="field-group">
-                <label>Watched where</label>
-                <div className="pills"><span className="pill static">{getWatchLocationLabel(item.watchedWhere)}</span></div>
-              </div>
-            )}
-          </div>
-
-          {item.productionCompanies && item.productionCompanies.length > 0 && (
-            <div className="field-group">
-              <label>Production companies</label>
-              <div className="pills">{item.productionCompanies.map((c) => <span key={c} className="pill static">{c}</span>)}</div>
-            </div>
-          )}
-          {item.distributors && item.distributors.length > 0 && (
-            <div className="field-group">
-              <label>Distributed by</label>
-              <div className="pills">{item.distributors.map((d) => <span key={d} className="pill static">{d}</span>)}</div>
-            </div>
-          )}
-
-          <DetailReview review={item.movieReview} hasSpoilers={item.hasSpoilers} />
-          <DetailNotes notes={item.notes} />
-          <DetailHistoryTable label="Rewatch history" entries={item.rewatches ?? []} />
-          <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
-          <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
-          <CustomFieldsView fields={item.customFields} />
-        </div>
-      </div>
-    </div>
+    <DetailShell
+      item={item}
+      banner={banner}
+      chips={[item.consumed ? 'Watched' : 'Not watched', item.releaseYear, item.contentRating]}
+      subtitle={item.alternativeTitles && item.alternativeTitles.length > 0 ? item.alternativeTitles.join(' · ') : undefined}
+      meta={item.directors && item.directors.length > 0 ? `Directed by ${item.directors.join(', ')}` : undefined}
+      stats={[
+        ['Rating', item.rating ? `★ ${item.rating}` : null],
+        ['Runtime', runtime || null],
+        ['Times watched', item.timesWatched ? `${item.timesWatched}×` : null],
+        ['Watched on', item.finishedAt ? formatDay(item.finishedAt) : null],
+      ]}
+      onEdit={onEdit}
+      onDuplicate={onDuplicate}
+      onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)}
+      tabs={[
+        {
+          id: 'overview',
+          label: 'Overview',
+          content: (
+            <>
+              {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
+              {item.movieDescription && <p className="detail-description">{item.movieDescription}</p>}
+              <DetailFacts facts={[
+                ['Directors', item.directors?.join(', ')],
+                ['Writers', item.writers?.join(', ')],
+                ['Released', item.releaseYear],
+                ['Genres', item.genres?.join(', ')],
+                ['Franchise', item.franchise],
+                ['Production', item.productionCompanies?.join(', ')],
+                ['Distributed by', item.distributors?.join(', ')],
+                ['Source', item.movieSource ? getMovieSourceLabel(item.movieSource) : null],
+                ['Content rating', item.contentRating],
+                ['Watched where', item.watchedWhere ? getWatchLocationLabel(item.watchedWhere) : null],
+                ['Groups', groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
+              ]} />
+              {item.cast && item.cast.length > 0 && <DetailSection title="Cast"><DetailChips values={item.cast} /></DetailSection>}
+              {item.tags && item.tags.length > 0 && <DetailSection title="Tags"><DetailChips values={item.tags} /></DetailSection>}
+              <DetailReview review={item.movieReview} hasSpoilers={item.hasSpoilers} />
+              <DetailNotes notes={item.notes} />
+              <CustomFieldsView fields={item.customFields} />
+            </>
+          ),
+        },
+        {
+          id: 'history',
+          label: 'Rewatches',
+          count: item.rewatches?.length,
+          hidden: !item.rewatches || item.rewatches.length === 0,
+          content: <DetailHistoryTable label="Rewatch history" entries={item.rewatches ?? []} />,
+        },
+        {
+          id: 'related',
+          label: 'Related',
+          count: relatedCount,
+          hidden: relatedCount === 0,
+          content: (
+            <>
+              <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
+              <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
+              <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
+            </>
+          ),
+        },
+      ]}
+    />
   )
 }

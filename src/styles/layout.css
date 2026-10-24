@@ -21,13 +21,6 @@
   padding: 0 var(--content-pad-x) 28px;
   scrollbar-gutter: stable;
 }
-.content > .game-page {
-  flex: 1;
-  overflow-y: scroll;
-  margin: 0 calc(-1 * var(--content-pad-x));
-  padding: 0 var(--content-pad-x) 28px;
-  scrollbar-gutter: stable;
-}
 
 .page-title { display: flex; align-items: center; gap: 12px; }
 .page-icon { font-size: 26px; display: flex; align-items: center; }
@@ -175,21 +168,6 @@
   align-self: flex-start;
   padding: 0;
 }
-
-.back-btn {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.back-btn:hover { color: var(--text); }
 
 .sub-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
 

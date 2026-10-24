@@ -1,8 +1,7 @@
-import { getBookStatus, getBookFormatLabel, getBookSourceLabel, getPublicationStatusLabel, getAgeRatingLabel, assetSrc } from './types'
-import { MangaStatusIcon } from './icons'  // Book status uses the same visual language as Manga (plan/reading/completed/paused/dropped).
-import type { Item, AnyItem, Collection, MangaStatus, BookItem, FranchiseSection, FranchiseGraph } from './types'
-import DetailTopbar from './components/detail/DetailTopbar'
-import CoverPlaceholder from './components/CoverPlaceholder'
+import { getBookStatus, getBookFormatLabel, getBookSourceLabel, getPublicationStatusLabel, getAgeRatingLabel } from './types'
+import type { Item, AnyItem, Collection, BookItem, FranchiseSection, FranchiseGraph } from './types'
+import DetailShell, { DetailChips, DetailFacts, DetailSection } from './components/detail/DetailShell'
+import { formatDay } from './utils/format'
 import { exportItemAsJson } from './utils/files'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
@@ -30,7 +29,7 @@ interface Props {
   franchiseGraph?: FranchiseGraph
 }
 
-export default function BookDetailModal({ item, groups, allBooks, onClose, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
+export default function BookDetailModal({ item, groups, allBooks, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
   const bs = getBookStatus(item.bookStatus)
   // Same franchise/related/recommended shape as every other detail view —
   // Books share the code path so behaviour is identical.
@@ -46,120 +45,59 @@ export default function BookDetailModal({ item, groups, allBooks, onClose, onEdi
     .filter((x): x is Item => !!x)
     .map((it) => ({ item: it }))
 
+  const relatedCount = relatedEntries.length + recommendedEntries.length + Math.max(0, franchiseItems.length - 1)
+  const noteCount = (item.chapterNotes?.length ?? 0) + (item.highlights?.length ?? 0)
+
   return (
-    <div className="game-page">
-      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)} />
-
-      <div className="game-modal-body">
-        <div className="game-modal-main">
-          <div className="game-modal-cover">
-            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder"><CoverPlaceholder categoryId={item.categoryId} /></div>}
-          </div>
-          <div className="game-modal-info">
-            <div className="game-modal-title-row">
-              <h1>{item.title}</h1>
-            </div>
-            {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
-            {item.alternativeTitles && item.alternativeTitles.length > 0 && (
-              <p className="game-modal-alt-titles">{item.alternativeTitles.join(' · ')}</p>
-            )}
-            {item.authors && item.authors.length > 0 && (
-              <p className="game-modal-devs">{item.authors.join(', ')}</p>
-            )}
-            {item.description && <div className="game-modal-description">{item.description}</div>}
-            <div className="dlc-addons-row">
-              <div className="field-group">
-                <label>Status</label>
-                <div className="pills">
-                  <span className={`badge status-badge status-${bs.value}`}><MangaStatusIcon value={bs.value as MangaStatus} /> {bs.label}</span>
-                  {item.pubStatus && <span className="badge group-badge">{getPublicationStatusLabel(item.pubStatus)}</span>}
-                  {item.bookFormat && <span className="pill static">{getBookFormatLabel(item.bookFormat)}</span>}
-                  {item.bookSource && <span className="pill static">Source: {getBookSourceLabel(item.bookSource)}</span>}
-                  {item.ageRating && <span className="pill static">{getAgeRatingLabel(item.ageRating)}</span>}
-                </div>
-              </div>
-              {groups.length > 0 && (
-                <div className="field-group">
-                  <label>Groups</label>
-                  <div className="pills">
-                    {groups.map((g) => <span key={g.id} className="badge group-badge">{g.name}</span>)}
-                  </div>
-                </div>
-              )}
-            </div>
-            {item.genres && item.genres.length > 0 && (
-              <div className="field-group">
-                <label>Genres</label>
-                <div className="card-tags">{item.genres.map((g) => <span key={g} className="card-tag">{g}</span>)}</div>
-              </div>
-            )}
-            {item.tags && item.tags.length > 0 && (
-              <div className="field-group modal-tags">
-                <label>Tags</label>
-                <div className="card-tags">{item.tags.map((t) => <span key={t} className="card-tag">{t}</span>)}</div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="game-modal-extra">
-          <div className="dlc-addons-row wrap-4">
-            {item.pagesRead && (
-              <div className="field-group">
-                <label>Pages</label>
-                <div className="pills"><span className="pill static">{item.pagesRead}{item.totalPages ? ` / ${item.totalPages}` : ''}</span></div>
-              </div>
-            )}
-            {item.publisher && (
-              <div className="field-group">
-                <label>Publisher</label>
-                <div className="pills"><span className="pill static">{item.publisher}</span></div>
-              </div>
-            )}
-            {item.saga && (
-              <div className="field-group">
-                <label>Series</label>
-                <div className="pills"><span className="pill static">{item.saga}{item.sagaIndex ? ` · ${item.sagaIndex}` : ''}</span></div>
-              </div>
-            )}
-            {item.isbn && (
-              <div className="field-group">
-                <label>ISBN</label>
-                <div className="pills"><span className="pill static">{item.isbn}</span></div>
-              </div>
-            )}
-            {item.translator && (
-              <div className="field-group">
-                <label>Translator</label>
-                <div className="pills"><span className="pill static">{item.translator}</span></div>
-              </div>
-            )}
-            {item.rating ? (
-              <div className="field-group">
-                <label>Rating</label>
-                <div className="pills"><span className="pill static">★ {item.rating}</span></div>
-              </div>
-            ) : null}
-            {item.releaseDate && (
-              <div className="field-group">
-                <label>Published</label>
-                <div className="pills"><span className="pill static">{item.releaseDate}</span></div>
-              </div>
-            )}
-            {item.startDate && (
-              <div className="field-group">
-                <label>Started</label>
-                <div className="pills"><span className="pill static">{item.startDate}</span></div>
-              </div>
-            )}
-            {item.finishedAt && (
-              <div className="field-group">
-                <label>Finished</label>
-                <div className="pills"><span className="pill static">{item.finishedAt}</span></div>
-              </div>
-            )}
-          </div>
-
+    <DetailShell
+      item={item}
+      chips={[bs.label, item.bookFormat ? getBookFormatLabel(item.bookFormat) : null, item.pubStatus ? getPublicationStatusLabel(item.pubStatus) : null]}
+      subtitle={item.alternativeTitles && item.alternativeTitles.length > 0 ? item.alternativeTitles.join(' · ') : undefined}
+      meta={item.authors && item.authors.length > 0 ? item.authors.join(', ') : undefined}
+      stats={[
+        ['Rating', item.rating ? `★ ${item.rating}` : null],
+        ['Pages', item.pagesRead ? `${item.pagesRead}${item.totalPages ? ` / ${item.totalPages}` : ''}` : item.totalPages ? `${item.totalPages} total` : null],
+        ['Series', item.saga ? `${item.saga}${item.sagaIndex ? ` #${item.sagaIndex}` : ''}` : null],
+        ['Finished', item.finishedAt ? formatDay(item.finishedAt) : null],
+      ]}
+      onEdit={onEdit}
+      onDuplicate={onDuplicate}
+      onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)}
+      tabs={[
+        {
+          id: 'overview',
+          label: 'Overview',
+          content: (
+            <>
+              {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
+              {item.description && <p className="detail-description">{item.description}</p>}
+              <DetailFacts facts={[
+                ['Authors', item.authors?.join(', ')],
+                ['Publisher', item.publisher],
+                ['Published', item.releaseDate ? formatDay(item.releaseDate) : item.releaseYear],
+                ['Series', item.saga ? `${item.saga}${item.sagaIndex ? ` · ${item.sagaIndex}` : ''}` : null],
+                ['Translator', item.translator],
+                ['ISBN', item.isbn],
+                ['Format', item.bookFormat ? getBookFormatLabel(item.bookFormat) : null],
+                ['Genres', item.genres?.join(', ')],
+                ['Source', item.bookSource ? getBookSourceLabel(item.bookSource) : null],
+                ['Age rating', item.ageRating ? getAgeRatingLabel(item.ageRating) : null],
+                ['Started', item.startDate ? formatDay(item.startDate) : null],
+                ['Groups', groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
+              ]} />
+              {item.tags && item.tags.length > 0 && <DetailSection title="Tags"><DetailChips values={item.tags} /></DetailSection>}
+              <DetailReview review={item.bookReview} hasSpoilers={item.hasSpoilers} />
+              <DetailNotes notes={item.notes} />
+              <CustomFieldsView fields={item.customFields} />
+            </>
+          ),
+        },
+        {
+          id: 'highlights',
+          label: 'Highlights',
+          count: noteCount,
+          hidden: noteCount === 0,
+          content: <>
           {item.chapterNotes && item.chapterNotes.length > 0 && (
             <div className="field-group">
               <label>Notes per chapter ({item.chapterNotes.length})</label>
@@ -193,15 +131,29 @@ export default function BookDetailModal({ item, groups, allBooks, onClose, onEdi
             </div>
           )}
 
-          <DetailReview review={item.bookReview} hasSpoilers={item.hasSpoilers} />
-          <DetailNotes notes={item.notes} />
-          <DetailHistoryTable label="Reread history" entries={item.rewatches ?? []} />
-          <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
-          <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
-          <CustomFieldsView fields={item.customFields} />
-        </div>
-      </div>
-    </div>
+          </>,
+        },
+        {
+          id: 'history',
+          label: 'Rereads',
+          count: item.rewatches?.length,
+          hidden: !item.rewatches || item.rewatches.length === 0,
+          content: <DetailHistoryTable label="Reread history" entries={item.rewatches ?? []} />,
+        },
+        {
+          id: 'related',
+          label: 'Related',
+          count: relatedCount,
+          hidden: relatedCount === 0,
+          content: (
+            <>
+              <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
+              <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
+              <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
+            </>
+          ),
+        },
+      ]}
+    />
   )
 }

@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { getSeriesStatus, getSeriesFormatLabel, getSeasonWatchedCount, getSeasonTotalEpisodes, assetSrc } from './types'
-import { AnimeStatusIcon } from './icons'
+import { getSeriesStatus, getSeriesFormatLabel, getSeasonWatchedCount, getSeasonTotalEpisodes } from './types'
 import type { Item, AnyItem, SeriesItem, Collection, FranchiseSection, FranchiseGraph } from './types'
-import DetailTopbar from './components/detail/DetailTopbar'
-import CoverPlaceholder from './components/CoverPlaceholder'
+import DetailShell, { DetailChips, DetailFacts, DetailSection } from './components/detail/DetailShell'
+import { formatDay } from './utils/format'
 import { exportItemAsJson } from './utils/files'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
@@ -32,7 +31,7 @@ interface Props {
   franchiseGraph?: FranchiseGraph
 }
 
-export default function SeriesDetailModal({ item, groups, allSeries, onClose, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
+export default function SeriesDetailModal({ item, groups, allSeries, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
   const [openSeason, setOpenSeason] = useState<string | null>(null)
   const ss = getSeriesStatus(item.seriesStatus)
   const franchiseItems = item.franchise
@@ -50,133 +49,61 @@ export default function SeriesDetailModal({ item, groups, allSeries, onClose, on
     ? [item.startYear, item.endYear].filter(Boolean).join(' – ')
     : null
 
+  const relatedCount = relatedEntries.length + recommendedEntries.length + Math.max(0, franchiseItems.length - 1)
+  const seasonCount = item.hasSeasons ? item.seasons?.length ?? 0 : 0
+  const credits = [item.showrunners?.join(', '), item.network].filter(Boolean).join(' · ')
+
   return (
-    <div className="game-page">
-      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)} />
-
-      <div className="game-modal-body">
-        <div className="game-modal-main">
-          <div className="game-modal-cover">
-            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder"><CoverPlaceholder categoryId={item.categoryId} /></div>}
-          </div>
-          <div className="game-modal-info">
-            <div className="game-modal-title-row">
-              <h1>{item.title}</h1>
-            </div>
-            {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
-            {item.network && <p className="game-modal-devs">{item.network}</p>}
-            {item.seriesDescription && <div className="game-modal-description">{item.seriesDescription}</div>}
-            <div className="dlc-addons-row">
-              <div className="field-group">
-                <label>Status</label>
-                <div className="pills">
-                  <span className="pill static"><AnimeStatusIcon value={ss.value} /> {ss.label}</span>
-                  {item.seriesFormat && <span className="pill static">{getSeriesFormatLabel(item.seriesFormat)}</span>}
-                  {yearsRange && <span className="pill static">{yearsRange}</span>}
-                  {item.contentRating && <span className="pill static">{item.contentRating}</span>}
-                </div>
-              </div>
-              {groups.length > 0 && (
-                <div className="field-group">
-                  <label>Groups</label>
-                  <div className="pills">
-                    {groups.map((g) => <span key={g.id} className="badge group-badge">{g.name}</span>)}
-                  </div>
-                </div>
-              )}
-            </div>
-            {item.directors && item.directors.length > 0 && (
-              <div className="field-group">
-                <label>Directors</label>
-                <div className="pills">{item.directors.map((d) => <span key={d} className="pill static">{d}</span>)}</div>
-              </div>
-            )}
-            {item.showrunners && item.showrunners.length > 0 && (
-              <div className="field-group">
-                <label>Showrunners</label>
-                <div className="pills">{item.showrunners.map((s) => <span key={s} className="pill static">{s}</span>)}</div>
-              </div>
-            )}
-            {item.writers && item.writers.length > 0 && (
-              <div className="field-group">
-                <label>Writers</label>
-                <div className="pills">{item.writers.map((w) => <span key={w} className="pill static">{w}</span>)}</div>
-              </div>
-            )}
-            {item.cast && item.cast.length > 0 && (
-              <div className="field-group">
-                <label>Cast</label>
-                <div className="pills">{item.cast.map((c) => <span key={c} className="pill static">{c}</span>)}</div>
-              </div>
-            )}
-            {item.genres && item.genres.length > 0 && (
-              <div className="field-group">
-                <label>Genres</label>
-                <div className="card-tags">{item.genres.map((g) => <span key={g} className="card-tag">{g}</span>)}</div>
-              </div>
-            )}
-            {item.tags && item.tags.length > 0 && (
-              <div className="field-group modal-tags">
-                <label>Tags</label>
-                <div className="card-tags">{item.tags.map((t) => <span key={t} className="card-tag">{t}</span>)}</div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="game-modal-extra">
-          <div className="dlc-addons-row wrap-4">
-            {item.episodesWatched && (
-              <div className="field-group">
-                <label>Episodes</label>
-                <div className="pills"><span className="pill static">{item.episodesWatched}{item.totalEpisodes ? ` / ${item.totalEpisodes}` : ''}</span></div>
-              </div>
-            )}
-            {item.unitCount && (
-              <div className="field-group">
-                <label>Seasons</label>
-                <div className="pills"><span className="pill static">{item.unitCount}</span></div>
-              </div>
-            )}
-            {item.rating ? (
-              <div className="field-group">
-                <label>Rating</label>
-                <div className="pills"><span className="pill static">★ {item.rating}</span></div>
-              </div>
-            ) : null}
-            {item.country && (
-              <div className="field-group">
-                <label>Country</label>
-                <div className="pills"><span className="pill static">{item.country}</span></div>
-              </div>
-            )}
-            {item.language && (
-              <div className="field-group">
-                <label>Language</label>
-                <div className="pills"><span className="pill static">{item.language}</span></div>
-              </div>
-            )}
-            {item.startDate && (
-              <div className="field-group">
-                <label>Started</label>
-                <div className="pills"><span className="pill static">{item.startDate}</span></div>
-              </div>
-            )}
-            {item.finishedAt && (
-              <div className="field-group">
-                <label>Finished</label>
-                <div className="pills"><span className="pill static">{item.finishedAt}</span></div>
-              </div>
-            )}
-          </div>
-
-          <DetailReview review={item.seriesReview} hasSpoilers={item.hasSpoilers} />
-          <DetailHistoryTable label="Rewatch history" entries={item.rewatches ?? []} />
-          <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-          <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
-          <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
-          <CustomFieldsView fields={item.customFields} />
-
+    <DetailShell
+      item={item}
+      chips={[ss.label, item.seriesFormat ? getSeriesFormatLabel(item.seriesFormat) : null, yearsRange, item.contentRating]}
+      subtitle={item.alternativeTitles && item.alternativeTitles.length > 0 ? item.alternativeTitles.join(' · ') : undefined}
+      meta={credits || undefined}
+      stats={[
+        ['Rating', item.rating ? `★ ${item.rating}` : null],
+        ['Episodes', item.episodesWatched ? `${item.episodesWatched}${item.totalEpisodes ? ` / ${item.totalEpisodes}` : ''}` : item.totalEpisodes ? `${item.totalEpisodes} total` : null],
+        ['Seasons', item.unitCount || (seasonCount ? String(seasonCount) : null)],
+        ['Finished', item.finishedAt ? formatDay(item.finishedAt) : null],
+      ]}
+      onEdit={onEdit}
+      onDuplicate={onDuplicate}
+      onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)}
+      tabs={[
+        {
+          id: 'overview',
+          label: 'Overview',
+          content: (
+            <>
+              {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
+              {item.seriesDescription && <p className="detail-description">{item.seriesDescription}</p>}
+              <DetailFacts facts={[
+                ['Network', item.network],
+                ['Years', yearsRange],
+                ['Format', item.seriesFormat ? getSeriesFormatLabel(item.seriesFormat) : null],
+                ['Showrunners', item.showrunners?.join(', ')],
+                ['Directors', item.directors?.join(', ')],
+                ['Writers', item.writers?.join(', ')],
+                ['Genres', item.genres?.join(', ')],
+                ['Country', item.country],
+                ['Language', item.language],
+                ['Content rating', item.contentRating],
+                ['Started', item.startDate ? formatDay(item.startDate) : null],
+                ['Groups', groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
+              ]} />
+              {item.cast && item.cast.length > 0 && <DetailSection title="Cast"><DetailChips values={item.cast} /></DetailSection>}
+              {item.tags && item.tags.length > 0 && <DetailSection title="Tags"><DetailChips values={item.tags} /></DetailSection>}
+              <DetailReview review={item.seriesReview} hasSpoilers={item.hasSpoilers} />
+              <DetailNotes notes={item.notes} />
+              <CustomFieldsView fields={item.customFields} />
+            </>
+          ),
+        },
+        {
+          id: 'seasons',
+          label: 'Seasons',
+          count: seasonCount,
+          hidden: seasonCount === 0,
+          content: <>
           {item.hasSeasons && item.seasons && item.seasons.length > 0 && (
             <div className="field-group">
               <label>Seasons</label>
@@ -227,9 +154,29 @@ export default function SeriesDetailModal({ item, groups, allSeries, onClose, on
             </div>
           )}
 
-          <DetailNotes notes={item.notes} />
-        </div>
-      </div>
-    </div>
+          </>,
+        },
+        {
+          id: 'history',
+          label: 'Rewatches',
+          count: item.rewatches?.length,
+          hidden: !item.rewatches || item.rewatches.length === 0,
+          content: <DetailHistoryTable label="Rewatch history" entries={item.rewatches ?? []} />,
+        },
+        {
+          id: 'related',
+          label: 'Related',
+          count: relatedCount,
+          hidden: relatedCount === 0,
+          content: (
+            <>
+              <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
+              <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
+              <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
+            </>
+          ),
+        },
+      ]}
+    />
   )
 }

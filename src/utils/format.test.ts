@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatBytes, formatIsoDate, formatDate } from './format'
+import { formatBytes, formatIsoDate, formatDate, formatDay } from './format'
 
 describe('formatBytes', () => {
   it('formats bytes', () => {
@@ -48,5 +48,15 @@ describe('formatDate', () => {
 
   it('returns empty for invalid input', () => {
     expect(formatDate('nope')).toBe('')
+  })
+})
+
+describe('formatDay', () => {
+  it('keeps the calendar day of a date-only value', () => {
+    expect(formatDay('2022-02-25')).toContain('25')
+    expect(formatDay('2022-02-25')).toContain('2022')
+  })
+  it('returns empty for no value', () => {
+    expect(formatDay(undefined)).toBe('')
   })
 })

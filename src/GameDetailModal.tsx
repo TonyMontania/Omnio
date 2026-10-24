@@ -2,11 +2,10 @@ import { useState } from 'react'
 import { getOwnershipLabel, getGameStatus, getGameSourceLabel, getAgeRatingLabel, assetSrc } from './types'
 import { GameStatusIcon } from './icons'
 import type { Item, AnyItem, GameItem, Collection, FranchiseSection, FranchiseGraph } from './types'
-import DetailTopbar from './components/detail/DetailTopbar'
+import DetailShell, { DetailChips, DetailFacts, DetailSection } from './components/detail/DetailShell'
 import ImageLightbox from './components/ImageLightbox'
-import CoverPlaceholder from './components/CoverPlaceholder'
 import { exportItemAsJson } from './utils/files'
-import { formatBytes, formatDate } from './utils/format'
+import { formatBytes, formatDate, formatDay } from './utils/format'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
 import CustomFieldsView from './components/CustomFieldsView'
 import DetailFranchiseTimeline from './components/detail/DetailFranchiseTimeline'
@@ -44,7 +43,7 @@ interface Props {
 const timelineSortKey = (i: Item) => i.releaseDate || i.releaseYear || ''
 const yearOf = (i: Item) => timelineSortKey(i).slice(0, 4)
 
-export default function GameDetailModal({ item, groups, allGames, onClose, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
+export default function GameDetailModal({ item, groups, allGames, onEdit, onDuplicate, onNavigate, allItems, onOpenCrossLibraryFranchise, franchiseSections, franchiseViewMode, franchiseGraph }: Props) {
   const [screenshotLightbox, setScreenshotLightbox] = useState<number | null>(null)
   const gs = getGameStatus(item.gameStatus)
   const year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null
@@ -62,130 +61,71 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
   const originalWork = item.originalWorkId ? allGames.find((a) => a.id === item.originalWorkId) : null
   const derivedWorks = allGames.filter((a) => a.originalWorkId === item.id)
 
+  const facts: [string, React.ReactNode][] = [
+    ['Developers', item.devs?.join(', ')],
+    ['Publishers', item.publishers?.join(', ')],
+    ['Released', item.releaseDate ? formatDay(item.releaseDate) : item.releaseYear],
+    ['Platforms', item.platforms?.join(', ')],
+    ['Genres', item.genres?.join(', ')],
+    ['Franchise', item.franchise],
+    ['Source', item.gameSource ? getGameSourceLabel(item.gameSource) : null],
+    ['Ownership', item.ownership ? getOwnershipLabel(item.ownership) : null],
+    ['Age rating', item.ageRating ? getAgeRatingLabel(item.ageRating) : null],
+    ['Steam Deck', item.deckCompat && item.deckCompat !== 'unknown' ? <span className={`deck-chip deck-${item.deckCompat}`} style={{ textTransform: 'capitalize' }}>◆ {item.deckCompat}</span> : null],
+    ['ProtonDB', item.protonRating ? <span style={{ textTransform: 'capitalize' }}>{item.protonRating}</span> : null],
+    ['Groups', groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
+  ]
+  const playLogCount = (item.playthroughs?.length ?? 0) + (item.saveFiles?.length ?? 0) + (item.rewatches?.length ?? 0) + (item.purchases?.length ?? 0)
+  const relatedCount = relatedEntries.length + recommendedEntries.length + derivedWorks.length + (originalWork ? 1 : 0) + Math.max(0, franchiseItems.length - 1)
+
   return (
-    <div className="game-page">
-      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)} />
-
-      {item.bannerImage && (
-        <div className="game-modal-banner">
-          <img className="zoomable" src={assetSrc(item.bannerImage)} alt={item.title} data-zoom-label="Banner" />
-          <div className="banner-fade" />
-        </div>
-      )}
-      {item.bannerImage && item.logoImage && <img className="game-modal-logo zoomable" src={assetSrc(item.logoImage)} alt={item.title} data-zoom-label="Logo" />}
-
-      <div className="game-modal-body" style={item.bannerImage ? { marginTop: 110 } : undefined}>
-        <div className="game-modal-main">
-          <div className="game-modal-cover">
-            {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder"><CoverPlaceholder categoryId={item.categoryId} /></div>}
-          </div>
-          <div className="game-modal-info">
-            <div className="game-modal-title-row">
-              <h1>{item.title} {year && <span className="game-modal-year">({year})</span>}</h1>
-              {!item.bannerImage && item.logoImage && <img className="game-modal-logo-inline zoomable" src={assetSrc(item.logoImage)} alt={item.title} data-zoom-label="Logo" />}
-            </div>
-            {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
-            {item.alternativeTitles && item.alternativeTitles.length > 0 && (
-              <p className="game-modal-alt-titles">{item.alternativeTitles.join(' · ')}</p>
-            )}
-            {((item.devs && item.devs.length > 0) || (item.publishers && item.publishers.length > 0)) && (
-              <p className="game-modal-devs">
-                {item.devs && item.devs.length > 0 && item.devs.join(', ')}
-                {item.devs && item.devs.length > 0 && item.publishers && item.publishers.length > 0 && ' · '}
-                {item.publishers && item.publishers.length > 0 && item.publishers.join(', ')}
-              </p>
-            )}
-            {item.description && <div className="game-modal-description">{item.description}</div>}
-            <div className="dlc-addons-row">
-              <div className="field-group">
-                <label>Status</label>
-                <div className="pills">
-                  <span className={`badge status-badge status-${gs.value}`}><GameStatusIcon value={gs.value} /> {gs.label}</span>
-                  {item.gameSource && <span className="pill static">Source: {getGameSourceLabel(item.gameSource)}</span>}
-                  {item.ageRating && <span className="pill static">{getAgeRatingLabel(item.ageRating)}</span>}
-                </div>
-              </div>
-              {groups.length > 0 && (
-                <div className="field-group">
-                  <label>Groups</label>
-                  <div className="pills">
-                    {groups.map((g) => <span key={g.id} className="badge group-badge">{g.name}</span>)}
-                  </div>
-                </div>
-              )}
-            </div>
-            {item.genres && item.genres.length > 0 && (
-              <div className="field-group">
-                <label>Genres</label>
-                <div className="card-tags">{item.genres.map((g) => <span key={g} className="card-tag">{g}</span>)}</div>
-              </div>
-            )}
-            {item.tags && item.tags.length > 0 && (
-              <div className="field-group modal-tags">
-                <label>Tags</label>
-                <div className="card-tags">{item.tags.map((t) => <span key={t} className="card-tag">{t}</span>)}</div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="game-modal-extra">
-          {item.platforms && item.platforms.length > 0 && (
+    <DetailShell
+      item={item}
+      chips={[gs.label, year ? String(year) : null, item.platforms?.[0]]}
+      subtitle={item.alternativeTitles && item.alternativeTitles.length > 0 ? item.alternativeTitles.join(' · ') : undefined}
+      meta={[item.devs?.join(', '), item.publishers?.join(', ')].filter(Boolean).join(' · ') || undefined}
+      stats={[
+        ['Rating', item.rating ? `★ ${item.rating}` : null],
+        ['Time played', item.playTime ? `${item.playTime}h` : null],
+        ['Achievements', item.achievementsUnlocked || item.achievementsTotal ? `${item.achievementsUnlocked || '0'} / ${item.achievementsTotal || '?'}` : null],
+        ['Finished', item.finishedAt ? formatDay(item.finishedAt) : null],
+      ]}
+      onEdit={onEdit}
+      onDuplicate={onDuplicate}
+      onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)}
+      tabs={[
+        {
+          id: 'overview',
+          label: 'Overview',
+          content: (
+            <>
+              {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
+              {item.description && <p className="detail-description">{item.description}</p>}
+              <DetailFacts facts={facts} />
+              {item.tags && item.tags.length > 0 && <DetailSection title="Tags"><DetailChips values={item.tags} /></DetailSection>}
+          {item.storeLinks && item.storeLinks.length > 0 && (
             <div className="field-group">
-              <label>Platforms</label>
-              <div className="pills">{item.platforms.map((p) => <span key={p} className="pill static">{p}</span>)}</div>
+              <label>Store links</label>
+              <div className="detail-store-links">
+                {item.storeLinks.map((s) => {
+                  const logoService = STORE_SLUG_TO_LOGO[s.store] ?? null
+                  return (
+                    <a
+                      key={s.id}
+                      className="pill static detail-store-link"
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={s.note || undefined}
+                    >
+                      {logoService ? <ServiceLogo service={logoService} size={16} /> : <span aria-hidden>↗</span>}
+                      <span>{s.store}</span>
+                    </a>
+                  )
+                })}
+              </div>
             </div>
           )}
-          <div className="dlc-addons-row wrap-4">
-            {item.ownership && (
-              <div className="field-group">
-                <label>Ownership</label>
-                <div className="pills"><span className="pill static">{getOwnershipLabel(item.ownership)}</span></div>
-              </div>
-            )}
-            {item.playTime && (
-              <div className="field-group">
-                <label>Time played</label>
-                <div className="pills"><span className="pill static">{item.playTime}h played</span></div>
-              </div>
-            )}
-            {(item.achievementsUnlocked || item.achievementsTotal) && (
-              <div className="field-group">
-                <label>Achievements</label>
-                <div className="pills"><span className="pill static">{item.achievementsUnlocked || '0'} / {item.achievementsTotal || '?'}</span></div>
-              </div>
-            )}
-            {item.rating ? (
-              <div className="field-group">
-                <label>Rating</label>
-                <div className="pills"><span className="pill static">★ {item.rating}</span></div>
-              </div>
-            ) : null}
-            {item.finishedAt && (
-              <div className="field-group">
-                <label>Completion date</label>
-                <div className="pills"><span className="pill static">Finished: {item.finishedAt}</span></div>
-              </div>
-            )}
-            {item.deckCompat && item.deckCompat !== 'unknown' && (
-              <div className="field-group">
-                <label>Steam Deck</label>
-                <div className="pills">
-                  <span className={`pill static deck-chip deck-${item.deckCompat}`} style={{ textTransform: 'capitalize' }}>
-                    ◆ {item.deckCompat}
-                  </span>
-                </div>
-              </div>
-            )}
-            {item.protonRating && (
-              <div className="field-group">
-                <label>ProtonDB</label>
-                <div className="pills">
-                  <span className="pill static" style={{ textTransform: 'capitalize' }}>{item.protonRating}</span>
-                </div>
-              </div>
-            )}
-          </div>
 
           {item.bundleContents && item.bundleContents.length > 0 && (
             <div className="field-group">
@@ -236,6 +176,18 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             </div>
           )}
 
+          <DetailReview review={item.gameReview} hasSpoilers={item.hasSpoilers} />
+          <DetailNotes notes={item.notes} />
+              <CustomFieldsView fields={item.customFields} />
+            </>
+          ),
+        },
+        {
+          id: 'achievements',
+          label: 'Achievements',
+          count: item.achievements?.length,
+          hidden: !item.achievements || item.achievements.length === 0,
+          content: <>
           {item.achievements && item.achievements.length > 0 && (() => {
             const unlocked = item.achievements!.filter((a) => a.unlockedAt).length
             const sorted = [...item.achievements!].sort((a, b) => {
@@ -262,6 +214,14 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             )
           })()}
 
+        </>,
+        },
+        {
+          id: 'media',
+          label: 'Screenshots',
+          count: item.screenshots?.length,
+          hidden: !item.screenshots || item.screenshots.length === 0,
+          content: <>
           {item.screenshots && item.screenshots.length > 0 && (
             <div className="field-group">
               <label>Screenshots ({item.screenshots.length})</label>
@@ -292,36 +252,14 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             />
           )}
 
-          {item.saveFiles && item.saveFiles.length > 0 && (
-            <div className="field-group">
-              <label>Save files</label>
-              <ul className="save-files-list detail">
-                {item.saveFiles.map((s) => {
-                  const size = formatBytes(s.size)
-                  const when = formatDate(s.addedAt)
-                  return (
-                    <li key={s.id} className="save-files-row">
-                      <div className="save-files-meta">
-                        <span className="save-files-name" title={s.filename}>{s.filename}</span>
-                        <span className="save-files-sub">
-                          {size} · {when}
-                          {s.note && <> · <em>{s.note}</em></>}
-                        </span>
-                      </div>
-                      <div className="save-files-actions">
-                        <button
-                          type="button"
-                          onClick={() => window.ipcRenderer.invoke('asset-blob:reveal', s.path)}
-                          title="Open folder in file manager"
-                        >Open folder</button>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )}
-
+        </>,
+        },
+        {
+          id: 'log',
+          label: 'Play log',
+          count: playLogCount,
+          hidden: playLogCount === 0,
+          content: <>
           {item.playthroughs && item.playthroughs.length > 0 && (() => {
             const totalSeconds = item.playthroughs!.reduce((sum, p) => {
               const raw = p.hours ?? ''
@@ -359,30 +297,37 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             )
           })()}
 
-          {item.storeLinks && item.storeLinks.length > 0 && (
+          {item.saveFiles && item.saveFiles.length > 0 && (
             <div className="field-group">
-              <label>Store links</label>
-              <div className="detail-store-links">
-                {item.storeLinks.map((s) => {
-                  const logoService = STORE_SLUG_TO_LOGO[s.store] ?? null
+              <label>Save files</label>
+              <ul className="save-files-list detail">
+                {item.saveFiles.map((s) => {
+                  const size = formatBytes(s.size)
+                  const when = formatDate(s.addedAt)
                   return (
-                    <a
-                      key={s.id}
-                      className="pill static detail-store-link"
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={s.note || undefined}
-                    >
-                      {logoService ? <ServiceLogo service={logoService} size={16} /> : <span aria-hidden>↗</span>}
-                      <span>{s.store}</span>
-                    </a>
+                    <li key={s.id} className="save-files-row">
+                      <div className="save-files-meta">
+                        <span className="save-files-name" title={s.filename}>{s.filename}</span>
+                        <span className="save-files-sub">
+                          {size} · {when}
+                          {s.note && <> · <em>{s.note}</em></>}
+                        </span>
+                      </div>
+                      <div className="save-files-actions">
+                        <button
+                          type="button"
+                          onClick={() => window.ipcRenderer.invoke('asset-blob:reveal', s.path)}
+                          title="Open folder in file manager"
+                        >Open folder</button>
+                      </div>
+                    </li>
                   )
                 })}
-              </div>
+              </ul>
             </div>
           )}
 
+          <DetailHistoryTable label="Replay history" entries={item.rewatches ?? []} />
           {item.purchases && item.purchases.length > 0 && (
             <div className="field-group">
               <label>Purchase log · {item.purchases.length} entr{item.purchases.length === 1 ? 'y' : 'ies'}</label>
@@ -413,9 +358,14 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
             </div>
           )}
 
-          <DetailReview review={item.gameReview} hasSpoilers={item.hasSpoilers} />
-          <DetailNotes notes={item.notes} />
-          <DetailHistoryTable label="Replay history" entries={item.rewatches ?? []} />
+        </>,
+        },
+        {
+          id: 'related',
+          label: 'Related',
+          count: relatedCount,
+          hidden: relatedCount === 0,
+          content: <>
           <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
           {originalWork && (
             <DetailCoverStrip label="Original work" entries={[{ item: originalWork }]} onNavigate={onNavigate} />
@@ -427,9 +377,9 @@ export default function GameDetailModal({ item, groups, allGames, onClose, onEdi
           />
           <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
           <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
-          <CustomFieldsView fields={item.customFields} />
-        </div>
-      </div>
-    </div>
+        </>,
+        },
+      ]}
+    />
   )
 }

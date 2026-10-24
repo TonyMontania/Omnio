@@ -1,98 +1,6 @@
-.game-page {
-  position: relative;
-  width: 100%;
-}
 
-.game-page-topbar {
-  position: relative;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
 
-.game-page-actions { display: flex; gap: 8px; }
-
-.back-btn.wide { width: auto; padding: 0 14px; font-size: 13px; gap: 6px; }
-
-.game-modal-banner {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  /* Tall enough to reach just past the bottom of the cover, so the full
-     banner image is visible behind the cover + info instead of only a top
-     strip. The fade keeps the lower area readable and hides the cutoff. */
-  height: 470px;
-  overflow: hidden;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-
-.game-modal-banner img { width: 100%; height: 100%; object-fit: cover; opacity: 0.55; }
-
-.banner-fade {
-  position: absolute;
-  inset: 0;
-  /* Clear at the very top, ramping to solid surface by ~90% so text sitting
-     over the banner (title, description) stays legible and the bottom edge
-     dissolves into the page. */
-  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 12%, var(--surface) 90%);
-}
-
-.game-modal-body { position: relative; padding: 28px 32px 32px; }
-
-.game-modal-main { display: flex; gap: 24px; align-items: flex-start; }
-
-.game-modal-cover {
-  width: 180px;
-  aspect-ratio: 2 / 3;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: 0 12px 28px rgba(0,0,0,0.4);
-  background: var(--surface-1);
-}
-
-.game-modal-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-.game-modal-info { flex: 1; padding-top: 8px; }
-
-.game-modal-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-
-.game-modal-title-row h1 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.game-modal-year { font-size: 18px; font-weight: 400; color: var(--text-faint); }
-.game-modal-logo {
-  position: absolute;
-  top: 90px;
-  right: 40px;
-  max-height: 100px;
-  max-width: 200px;
-  object-fit: contain;
-  filter: drop-shadow(0 6px 14px rgba(0,0,0,0.5));
-  z-index: 1;
-}
-
-.game-modal-logo-inline { max-height: 48px; max-width: 120px; object-fit: contain; }
-.game-modal-devs { margin: 4px 0 14px; color: var(--text-dim); font-size: 14px; }
-.game-modal-alt-titles { margin: 4px 0 6px; color: var(--text-faint); font-size: 13px; font-style: italic; }
-.game-modal-description { color: var(--text-dim); font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
-.game-modal-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .modal-tags { margin-top: 0; }
-
-.game-modal-extra {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-soft);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
 
 .dlc-addons-row {
   display: flex;
@@ -108,32 +16,6 @@
 .modal-tags { margin-top: 6px; }
 
 .music-page { width: 100%; }
-
-.music-modal-main { display: flex; gap: 28px; align-items: flex-start; }
-
-.music-modal-cover {
-  width: 200px;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: 0 12px 28px rgba(0,0,0,0.4);
-}
-
-.music-modal-cover img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
-
-.music-modal-info { flex: 1; padding-top: 8px; }
-
-.music-modal-info h1 {
-  margin: 0 0 4px;
-  font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.music-modal-artist { margin: 0 0 14px; font-size: 15px; color: var(--text-dim); }
-.music-modal-info .pills { margin-bottom: 16px; }
-.music-modal-notes { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-soft); }
 
 .track-editor { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; width: 100%; overflow-x: auto; }
 
@@ -453,11 +335,6 @@
 .tracklist-header-row { display: flex; align-items: baseline; justify-content: space-between; }
 .tracklist-total { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
 
-.music-modal-label { margin: 0 0 12px; font-size: 13px; color: var(--text-faint); font-family: var(--font-mono); }
-
-.music-badge-row { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 16px; }
-.music-badge-row .field-group { flex: 0 1 auto; width: auto; }
-
 /* Bundle contents (read-only view in GameDetailModal) */
 .bundle-view-grid {
   display: grid;
@@ -614,9 +491,7 @@
 .single-covers-gallery { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-soft); }
 .single-covers-grid {
   display: grid;
-  /* Match the main music cover (.music-modal-cover, width: 260px) so
-     single artwork sits at album-sized parity — pre-0.3.7 it was
-     ~110px "thumbnails" that couldn't be read at a glance. */
+  /* Album-sized tiles so single artwork reads at a glance. */
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 20px;
 }
@@ -823,13 +698,6 @@
   margin: 0;
 }
 .col-disc { width: 60px; }
-
-/* When the notes wrap has no children rendered (album with no review,
-   notes, listen history, related, recommendations or custom fields),
-   collapse it so it doesn't add invisible vertical space between the
-   header and the tracklist below. React returns null for empty
-   sub-components which leaves the div DOM-empty, so :empty applies. */
-.music-modal-notes-wrap:empty { display: none; }
 
 /* Disc group wrapper — the flex parent (.music-tracklist) gave
    children content-width by default, which collapsed the table.

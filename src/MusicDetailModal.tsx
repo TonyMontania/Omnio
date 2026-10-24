@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { getMusicTypeLabel, isAlbumLikeMusic, getTotalDuration, getMusicSourceLabel, getVinylConditionLabel, assetSrc } from './types'
 import { StarRatingDisplay } from './StarRating'
 import type { Item, AnyItem, MusicItem, Collection } from './types'
-import DetailTopbar from './components/detail/DetailTopbar'
+import DetailShell, { DetailChips, DetailFacts, DetailSection } from './components/detail/DetailShell'
 import { exportItemAsJson } from './utils/files'
 import { formatIsoDate } from './utils/format'
 import DetailCoverStrip from './components/detail/DetailCoverStrip'
@@ -26,7 +26,7 @@ interface Props {
   onSaveTrackLyrics: (trackId: string, lyrics: string) => void
 }
 
-export default function MusicDetailModal({ item, groups, allMusic, onClose, onEdit, onDuplicate, onNavigate, onSaveTrackLyrics }: Props) {
+export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDuplicate, onNavigate, onSaveTrackLyrics }: Props) {
   const [lyricsTrackId, setLyricsTrackId] = useState<string | null>(null)
   const [lyricsDraft, setLyricsDraft] = useState('')
   const [lyricsEditing, setLyricsEditing] = useState(false)
@@ -47,56 +47,43 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
     .filter((x): x is Item => !!x)
     .map((it) => ({ item: it }))
 
+  const editionCount = (albumLike ? (item.editions?.length ?? 0) + (item.singleCovers?.length ?? 0) : 0)
+  const relatedCount = relatedEntries.length + recommendedEntries.length
+  const releaseLabel = item.releaseDate ? formatIsoDate(item.releaseDate) : item.releaseYear
+
   return (
-    <div className="game-page music-page">
-      <DetailTopbar onBack={onClose} onDuplicate={onDuplicate} onEdit={onEdit} onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)} />
-
-      <div className="music-modal-main">
-        <div className="music-modal-cover">
-          {item.cover ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" /> : <div className="cover-preview-placeholder"><CoverPlaceholder categoryId={item.categoryId} /></div>}
-        </div>
-        <div className="music-modal-info">
-          <h1>{item.title}</h1>
-          {item.alternativeTitles && item.alternativeTitles.length > 0 && (
-            <p className="game-modal-alt-titles">{item.alternativeTitles.join(' · ')}</p>
-          )}
-          {item.artist && <p className="music-modal-artist">{item.artist}</p>}
-          {albumLike && item.label && <p className="music-modal-label">{item.label}</p>}
-          {item.producers && item.producers.length > 0 && (
-            <p className="music-modal-label">Produced by {item.producers.join(', ')}</p>
-          )}
-
-          <div className="music-badge-row">
-            {item.musicType && (
-              <div className="field-group">
-                <label>Type</label>
-                <div className="pills"><span className="pill static">{getMusicTypeLabel(item.musicType)}</span></div>
-              </div>
-            )}
-            {item.musicSource && (
-              <div className="field-group">
-                <label>Source</label>
-                <div className="pills"><span className="pill static">{getMusicSourceLabel(item.musicSource)}</span></div>
-              </div>
-            )}
-            {(item.releaseDate || item.releaseYear) && (
-              <div className="field-group">
-                <label>Release</label>
-                <div className="pills">
-                  <span className="pill static">{item.releaseDate ? formatIsoDate(item.releaseDate) : item.releaseYear}</span>
-                </div>
-              </div>
-            )}
-            {albumLike && item.genres && item.genres.length > 0 && (
-              <div className="field-group">
-                <label>Genres</label>
-                <div className="card-tags">{item.genres.map((g) => <span key={g} className="card-tag">{g}</span>)}</div>
-              </div>
-            )}
-            <div className="field-group">
-              <label>Status</label>
-              <span className="pill static">{item.consumed ? '✓ Listened' : 'Not listened'}</span>
-              {!albumLike && (() => {
+    <>
+      <DetailShell
+        item={item}
+        coverShape="square"
+        chips={[item.musicType ? getMusicTypeLabel(item.musicType) : null, item.consumed ? 'Listened' : 'Not listened', item.releaseYear || (item.releaseDate ? item.releaseDate.slice(0, 4) : null)]}
+        subtitle={item.alternativeTitles && item.alternativeTitles.length > 0 ? item.alternativeTitles.join(' · ') : undefined}
+        meta={[item.artist, albumLike ? item.label : null].filter(Boolean).join(' · ') || undefined}
+        stats={[
+          ['Rating', item.rating ? <StarRatingDisplay value={item.rating} /> : null],
+          ['Tracks', albumLike && item.tracks && item.tracks.length > 0 ? String(item.tracks.length) : null],
+          ['Length', totalDuration],
+          ['Listened on', albumLike && item.finishedAt ? formatIsoDate(item.finishedAt) : null],
+        ]}
+        onEdit={onEdit}
+        onDuplicate={onDuplicate}
+        onExport={() => exportItemAsJson(item as unknown as Record<string, unknown>, item.title)}
+        tabs={[
+          {
+            id: 'overview',
+            label: 'Overview',
+            content: (
+              <>
+                <DetailFacts facts={[
+                  ['Artist', item.artist],
+                  ['Label', albumLike ? item.label : null],
+                  ['Produced by', item.producers?.join(', ')],
+                  ['Released', releaseLabel],
+                  ['Type', item.musicType ? getMusicTypeLabel(item.musicType) : null],
+                  ['Source', item.musicSource ? getMusicSourceLabel(item.musicSource) : null],
+                  ['Genres', albumLike ? item.genres?.join(', ') : null],
+                  ['Vinyl condition', item.vinylCondition ? getVinylConditionLabel(item.vinylCondition) : null],
+                  ['Part of', !albumLike && (() => {
                 // Prefer the live reference over the free-text label — when
                 // both are set, the ID always wins. Clicking navigates to
                 // the target album's detail view via the same handler that
@@ -114,55 +101,22 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
                 }
                 if (item.partOfAlbum) return <span className="pill static">Part of: {item.partOfAlbum}</span>
                 return null
-              })()}
-            </div>
-            {item.rating ? (
-              <div className="field-group">
-                <label>Rating</label>
-                <div className="pills"><StarRatingDisplay value={item.rating} /></div>
-              </div>
-            ) : null}
-            {albumLike && item.finishedAt && (
-              <div className="field-group">
-                <label>Listened on</label>
-                <div className="pills"><span className="pill static">{item.finishedAt}</span></div>
-              </div>
-            )}
-          </div>
-
-          {groups.length > 0 && (
-            <div className="field-group">
-              <label>Groups</label>
-              <div className="pills">
-                {groups.map((g) => <span key={g.id} className="badge group-badge">{g.name}</span>)}
-              </div>
-            </div>
-          )}
-
-          {item.tags && item.tags.length > 0 && (
-            <div className="field-group modal-tags">
-              <label>Tags</label>
-              <div className="card-tags">{item.tags.map((t) => <span key={t} className="card-tag">{t}</span>)}</div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="music-modal-notes-wrap">
-        {item.vinylCondition && (
-          <div className="field-group">
-            <label>Vinyl condition</label>
-            <div className="pills"><span className="pill static">{getVinylConditionLabel(item.vinylCondition)}</span></div>
-          </div>
-        )}
-        <DetailReview review={item.musicReview} hasSpoilers={item.hasSpoilers} />
-        <DetailNotes notes={item.notes} />
-        <DetailHistoryTable label="Listen history" entries={item.rewatches ?? []} />
-        <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-        <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
-          <CustomFieldsView fields={item.customFields} />
-      </div>
-
+              })()],
+                  ['Groups', groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
+                ]} />
+                {item.tags && item.tags.length > 0 && <DetailSection title="Tags"><DetailChips values={item.tags} /></DetailSection>}
+                <DetailReview review={item.musicReview} hasSpoilers={item.hasSpoilers} />
+                <DetailNotes notes={item.notes} />
+                <CustomFieldsView fields={item.customFields} />
+              </>
+            ),
+          },
+          {
+            id: 'tracks',
+            label: 'Tracklist',
+            count: item.tracks?.length,
+            hidden: !albumLike || !item.tracks || item.tracks.length === 0,
+            content: <>
       {albumLike && item.tracks && item.tracks.length > 0 && (() => {
         // Group tracks by disc when the album is multi-disc. Parse
         // discCount the same way the editor does — first digit wins.
@@ -256,6 +210,14 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
         )
       })()}
 
+            </>,
+          },
+          {
+            id: 'editions',
+            label: 'Editions',
+            count: editionCount,
+            hidden: editionCount === 0,
+            content: <>
       {albumLike && item.singleCovers && item.singleCovers.length > 0 && (
         <div className="field-group single-covers-gallery">
           <label>Single covers</label>
@@ -305,6 +267,29 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
         </div>
       )}
 
+            </>,
+          },
+          {
+            id: 'history',
+            label: 'Listen history',
+            count: item.rewatches?.length,
+            hidden: !item.rewatches || item.rewatches.length === 0,
+            content: <DetailHistoryTable label="Listen history" entries={item.rewatches ?? []} />,
+          },
+          {
+            id: 'related',
+            label: 'Related',
+            count: relatedCount,
+            hidden: relatedCount === 0,
+            content: (
+              <>
+                <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
+                <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
+              </>
+            ),
+          },
+        ]}
+      />
       {currentLyricsTrack && (
         <div className="modal-overlay" onClick={() => setLyricsTrackId(null)}>
           <div className="modal-box lyrics-modal" onClick={(e) => e.stopPropagation()}>
@@ -343,6 +328,6 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
