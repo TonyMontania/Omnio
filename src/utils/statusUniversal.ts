@@ -118,3 +118,15 @@ export function patchItemStatus(categoryId: CategoryId, value: string): Partial<
       return {}
   }
 }
+
+export type StatusTone = 'planned' | 'progress' | 'done' | 'paused' | 'dropped'
+
+// Colour family of a status value, shared by every library's cards so a
+// status dot means the same thing everywhere.
+export function statusTone(value: string): StatusTone {
+  if (/^(playing|watching|reading|listening)$/.test(value)) return 'progress'
+  if (/^(completed|finished|played|watched|listened)$/.test(value)) return 'done'
+  if (/^(paused|on_hold|hiatus)$/.test(value)) return 'paused'
+  if (value === 'dropped') return 'dropped'
+  return 'planned'
+}

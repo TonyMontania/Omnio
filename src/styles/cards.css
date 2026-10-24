@@ -59,11 +59,19 @@
 
 .item-card:hover { border-color: var(--accent); background: var(--surface-hover); }
 
-.list.grid .item-card { flex-direction: column; background: transparent; border: none; padding: 0; }
-.list.grid .item-card:hover { transform: translateY(-3px); }
+.list.grid .item-card { flex-direction: column; gap: 0; background: transparent; border: none; padding: 3px 0 0; }
+.list.grid .item-card:hover { background: transparent; }
 
 .cover-wrap { position: relative; flex-shrink: 0; }
-.list.grid .cover-wrap { width: 100%; border-radius: var(--radius-sm); overflow: hidden; box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
+/* Cover-first grid card: the cover carries the hover state (thin outline
+   that turns accent, small lift); title and one status line sit below. */
+.list.grid .cover-wrap {
+  width: 100%; border-radius: 10px; overflow: hidden;
+  outline: 1px solid var(--border-soft); outline-offset: -1px;
+  transition: outline-color .15s, transform .15s;
+}
+.list.grid .item-card:hover .cover-wrap { outline-color: var(--accent); transform: translateY(-2px); }
+.list.grid .cover-wrap img { image-rendering: -webkit-optimize-contrast; }
 
 .item-card img { width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-sm); display: block; }
 
@@ -82,7 +90,7 @@
 }
 
 .list.grid .item-card img,
-.list.grid .cover-placeholder { width: 100%; height: auto; aspect-ratio: 2 / 3; border-radius: var(--radius-sm); }
+.list.grid .cover-placeholder { width: 100%; height: auto; aspect-ratio: 2 / 3; border-radius: 0; }
 .list.grid .item-card .cover-wrap.square img,
 .list.grid .item-card .cover-wrap.square .cover-placeholder { aspect-ratio: 1 / 1; }
 
@@ -102,7 +110,7 @@
 .status-dot.status-completed { background: var(--status-completed); }
 .status-dot.status-dropped { background: var(--status-dropped); }
 
-.item-info { min-width: 0; }
+.item-info { min-width: 0; flex: 1; }
 .item-info h3 {
   margin: 9px 0 2px;
   font-size: 13.5px;
@@ -115,11 +123,37 @@
 }
 
 .item-info p { margin: 2px 0; font-size: 12px; color: var(--text-dim); }
-.list:not(.grid) .item-info h3 { margin: 0 0 4px; font-size: 15px; white-space: normal; }
+.list:not(.grid) .item-info h3 { margin: 0 0 2px; font-size: 14.5px; white-space: normal; }
+.list:not(.grid):not(.compact) .item-card { align-items: center; padding: 10px 12px; border-radius: 10px; }
+.list:not(.grid):not(.compact) .item-card img,
+.list:not(.grid):not(.compact) .cover-placeholder { width: 44px; height: 64px; border-radius: 6px; }
+.list:not(.grid):not(.compact) .cover-wrap.square img,
+.list:not(.grid):not(.compact) .cover-wrap.square .cover-placeholder { height: 44px; }
+.list:not(.grid):not(.compact) .card-tags { margin-top: 4px; }
 
 .item-status { color: var(--status-completed) !important; font-weight: 500; }
 .item-time { color: var(--accent) !important; }
 .item-meta { color: var(--text-dim); }
+
+/* Status line shared by every library card: coloured dot + status,
+   details joined by "·", rating pushed to the end. */
+.item-info .card-line {
+  display: flex; align-items: center; gap: 6px; min-width: 0;
+  margin: 3px 0 0; font-size: 12px; color: var(--text-dim); white-space: nowrap;
+}
+.card-status { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; color: var(--text-dim); }
+.card-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--tone, var(--status-backlog)); }
+.card-status.tone-planned { --tone: var(--status-backlog); }
+.card-status.tone-progress { --tone: var(--status-playing); }
+.card-status.tone-done { --tone: var(--status-completed); }
+.card-status.tone-paused { --tone: var(--status-played); }
+.card-status.tone-dropped { --tone: var(--status-dropped); }
+.card-details { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-faint); }
+.card-status + .card-details::before { content: '·'; margin-right: 6px; }
+.card-rating { margin-left: auto; flex-shrink: 0; padding-left: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+.card-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.card-chips:empty { display: none; }
+.card-chips > p { margin: 5px 0 0; }
 
 .card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .card-tag {
@@ -152,7 +186,7 @@
   transition: opacity 0.12s;
 }
 
-.list.grid .delete { top: 6px; left: 6px; right: auto; }
+.list.grid .delete { top: 9px; left: 6px; right: auto; }
 .delete:hover { color: var(--danger); }
 
 /* Item-level favorite star. Visible-when-favorited (always shows the
@@ -182,7 +216,8 @@
 .card-fav.on { opacity: 1; color: var(--accent); }
 .item-card:hover .card-fav { opacity: 0.85; }
 .card-fav:hover { color: var(--accent); }
-.list.grid .card-fav { top: 6px; right: auto; left: 32px; }
+.list.grid .card-fav { top: 9px; right: 6px; left: auto; width: 26px; height: 26px; font-size: 13px; background: rgba(0, 0, 0, .55); backdrop-filter: blur(4px); }
+.list.grid .card-fav.on { color: #ffce3a; }
 
 /* Progress bar overlaid on the cover for items tracking chapters /
    episodes / pages consumed vs total. Full-width, bottom-aligned,

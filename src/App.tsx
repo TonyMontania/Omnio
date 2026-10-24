@@ -27,20 +27,20 @@ import type {
 import type { ArcadeGame } from './types/arcade'
 
 import {
-  GAME_STATUS_OPTIONS, GAME_FIELD_OPTIONS, DEFAULT_GAME_FIELDS,
+  GAME_FIELD_OPTIONS, DEFAULT_GAME_FIELDS,
   MUSIC_FIELD_OPTIONS, DEFAULT_MUSIC_FIELDS,
   MANGA_STATUS_OPTIONS, MANGA_FIELD_OPTIONS, DEFAULT_MANGA_FIELDS,
   ANIME_STATUS_OPTIONS,
   ANIME_FIELD_OPTIONS, DEFAULT_ANIME_FIELDS, WEEKDAY_OPTIONS,
   SERIES_STATUS_OPTIONS, SERIES_FIELD_OPTIONS, DEFAULT_SERIES_FIELDS,
   MOVIE_FIELD_OPTIONS, DEFAULT_MOVIE_FIELDS,
-  BOOK_STATUS_OPTIONS, BOOK_FIELD_OPTIONS, DEFAULT_BOOK_FIELDS,
-  VN_STATUS_OPTIONS, VN_FIELD_OPTIONS, DEFAULT_VN_FIELDS,
+  BOOK_FIELD_OPTIONS, DEFAULT_BOOK_FIELDS,
+  VN_FIELD_OPTIONS, DEFAULT_VN_FIELDS,
   BAND_STATUS_OPTIONS,
 } from './types'
 
 import {
-  getGameStatusRank, getMangaStatus, getAnimeStatus, getSeriesStatus, getBookStatus,
+  getGameStatusRank,
   isMangaLike,
   assetSrc, renderMiniMarkdown, parseDurationToSeconds,
 } from './types'
@@ -59,7 +59,8 @@ import ItemCard from './ItemCard'
 import KanbanView from './views/KanbanView'
 import DiaryView from './views/DiaryView'
 import TimelineView from './views/TimelineView'
-import { patchItemStatus, getUniversalStatusOptions } from './utils/statusUniversal'
+import { patchItemStatus, getUniversalStatusOptions, getUniversalStatusValue } from './utils/statusUniversal'
+import LibraryControls from './components/LibraryControls'
 import { airingWeekday, isCurrentlyAiring } from './utils/airing'
 import { applyAutoStatus } from './utils/autoStatus'
 import { matchAction } from './utils/keyboardActions'
@@ -139,7 +140,7 @@ import { BasedOnPicker } from './components/BasedOn'
 import { buildStaticSiteHtml } from './exportSite'
 import { buildCsvExports, buildSingleCsv } from './CsvExporter'
 import {
-  CategoryIcon, GameStatusIcon, MangaStatusIcon, AnimeStatusIcon,
+  CategoryIcon,
   InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon, HomeIcon, ArcadeIcon,
 } from './icons'
 
@@ -426,6 +427,41 @@ function statusRank<T extends string>(value: T | undefined, fallback: T, options
   return idx < 0 ? options.length : idx
 }
 
+const GROUP_OPTIONS: { value: GroupBy; label: string }[] = [
+  { value: 'none', label: 'No grouping' },
+  { value: 'year', label: 'By year' },
+  { value: 'decade', label: 'By decade' },
+  { value: 'status', label: 'By status' },
+  { value: 'rating', label: 'By rating' },
+]
+
+// Sort choices offered for a library, in the order the top bar lists them.
+function sortOptionsFor(categoryId: CategoryId, inCollection: boolean): { value: SortBy; label: string }[] {
+  const base: { value: SortBy; label: string }[] = [
+    { value: 'recent', label: 'Most recent' },
+    { value: 'alpha', label: 'Alphabetical' },
+    { value: 'rating', label: 'Rating' },
+    { value: 'custom', label: inCollection ? 'Manual order' : 'Custom order' },
+  ]
+  const yearSorts: { value: SortBy; label: string }[] = [
+    { value: 'yearAsc', label: 'Year ↑' },
+    { value: 'yearDesc', label: 'Year ↓' },
+  ]
+  switch (categoryId) {
+    case 'videojuegos': return [...base, { value: 'time', label: 'Time played' }, { value: 'status', label: 'Status' }, { value: 'releaseAsc', label: 'Release date ↑' }, { value: 'releaseDesc', label: 'Release date ↓' }]
+    case 'musica': return [...base, { value: 'artist', label: 'By artist' }, ...yearSorts, { value: 'duration', label: 'Duration (longest)' }]
+    case 'peliculas': return [...base, ...yearSorts, { value: 'duration', label: 'Runtime (longest)' }]
+    case 'series': return [...base, { value: 'seriesStatus', label: 'Status' }, { value: 'episodes', label: 'Episodes watched' }, ...yearSorts]
+    case 'anime':
+    case 'donghua': return [...base, { value: 'animeStatus', label: 'Status' }, { value: 'episodes', label: 'Episodes watched' }, ...yearSorts]
+    case 'manga':
+    case 'manhwa':
+    case 'manhua':
+    case 'comics_west': return [...base, { value: 'mangaStatus', label: 'Status' }, { value: 'chapters', label: 'Chapters read' }]
+    default: return base
+  }
+}
+
 function filterAndSort<T extends AnyItem>(list: T[], search: string, filterTags: string[], filterStatus: GameStatus[], filterPlatforms: Platform[], filterGenres: string[], sortBy: SortBy | null, customOrder: string[] = [], minRating = 0, tagTree?: Record<string, string>): T[] {
   filterTags = expandTagSelection(filterTags, tagTree)
   let result = list
@@ -482,7 +518,7 @@ function App() {
   // ItemCard only supports the three classic layouts; degrade for special views.
   const classicLayout: 'list' | 'grid' | 'compact' =
     layout === 'list' || layout === 'compact' ? layout : 'grid'
-  const [specialView, setSpecialView] = useState<'none' | 'home' | 'board' | 'musicBoard' | 'mangaBoard' | 'moviesBoard' | 'animeBoard' | 'seriesBoard' | 'bookBoard' | 'vnBoard' | 'simulcastBoard' | 'stats' | 'calendar' | 'settings' | 'arcade' | 'playlists'>('none')
+  const [specialView, setSpecialView] = useState<'none' | 'home' | 'simulcastBoard' | 'stats' | 'calendar' | 'settings' | 'arcade' | 'playlists'>('none')
   const [arcadeGames, setArcadeGames] = useState<ArcadeGame[]>([])
   const [smartLists, setSmartLists] = useState<SmartList[]>([])
   const [activeSmartListId, setActiveSmartListId] = useState<string | null>(null)
@@ -593,17 +629,10 @@ function App() {
     () => unlockedPluginDefs.filter((p) => !settings.hiddenPlugins?.includes(p.slug)),
     [unlockedPluginDefs, settings.hiddenPlugins],
   )
-  const [animeBoardStatus, setAnimeBoardStatus] = useState<AnimeStatus>('plan_to_watch')
-  const [seriesBoardStatus, setSeriesBoardStatus] = useState<SeriesStatus>('plan_to_watch')
-  const [bookBoardStatus, setBookBoardStatus] = useState<BookStatus>('plan_to_read')
-  const [vnBoardStatus, setVnBoardStatus] = useState<VisualNovelStatus>('plan_to_play')
   const [viewing, setViewing] = useState<AnyItem | null>(null)
   const [settingsTab, setSettingsTab] = useState<'appearance' | 'behavior' | 'libraries' | 'cards' | 'customFields' | 'shortcuts' | 'data' | 'integrations' | 'maintenance'>('appearance')
   const [welcomeStep, setWelcomeStep] = useState<'libraries' | 'keys' | 'tips'>('libraries')
   const [welcomePicks, setWelcomePicks] = useState<Record<string, boolean>>({})
-  const [moviesBoardFilter, setMoviesBoardFilter] = useState<'watched' | 'unwatched'>('watched')
-  const [mangaBoardStatus, setMangaBoardStatus] = useState<MangaStatus>('plan_to_read')
-  const [musicBoardFilter, setMusicBoardFilter] = useState<'listened' | 'unlistened'>('listened')
   const [statsCategory, setStatsCategory] = useState<CategoryId>(CATEGORIES[0].id)
 
   useEffect(() => {
@@ -662,6 +691,7 @@ function App() {
   const [sortBy, setSortBy] = useState<SortBy>('recent')
   const [filterTags, setFilterTags] = useState<string[]>([])
   const [filterStatus, setFilterStatus] = useState<GameStatus[]>([])
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [filterPlatforms, setFilterPlatforms] = useState<Platform[]>([])
   const [filterGenres, setFilterGenres] = useState<string[]>([])
   const [minRating, setMinRating] = useState<number>(0)
@@ -677,7 +707,6 @@ function App() {
   const bannerFileInputRef = useRef<HTMLInputElement>(null)
   const logoFileInputRef = useRef<HTMLInputElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
-  const [boardStatus, setBoardStatus] = useState<GameStatus>('backlog')
   const [chartMode, setChartMode] = useState<'pie' | 'bar'>('pie')
   const [customOrders, setCustomOrders] = useState<Record<string, string[]>>({})
   const [toast, setToast] = useState<string | null>(null)
@@ -844,7 +873,6 @@ function App() {
   const [serializdOpen, setSerializdOpen] = useState(false)
   const [spotifyOpen, setSpotifyOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
-  const [viewMenuOpen, setViewMenuOpen] = useState(false)
   const [wrappedOpen, setWrappedOpen] = useState(false)
   const [coverWallOpen, setCoverWallOpen] = useState(false)
   const [franchiseTimelineOpen, setFranchiseTimelineOpen] = useState<string | null>(null)
@@ -1502,7 +1530,6 @@ function App() {
   const isManga = isMangaLike(activeCategory)
   const categoryCollections = collections.filter((c) => c.categoryId === activeCategory)
   const activeCollection = collections.find((c) => c.id === activeCollectionId) || null
-  const gamesList = items.filter((i) => i.categoryId === 'videojuegos')
   const musicList = items.filter((i) => i.categoryId === 'musica')
 
   const scopedItems = subView === 'groups' && activeCollection
@@ -1510,7 +1537,6 @@ function App() {
     : itemsInCategory
 
   const showFolderListing = subView === 'groups' && !activeCollectionId
-  const showStatusFilter = isVideojuegos
   const availableTags = getUniqueTags(scopedItems)
   const availablePlatforms = Array.from(new Set(scopedItems.flatMap((i) => i.platforms || [])))
   const availableGenres = Array.from(new Set(scopedItems.flatMap((i) => i.genres || []))).sort()
@@ -1527,11 +1553,12 @@ function App() {
   const allItemTags = useMemo(() => getUniqueTags(items), [items])
   const visibleItems = useMemo(
     () => {
-      const filtered = filterAndSort(scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree)
+      let filtered = filterAndSort(scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree)
+      if (statusFilter) filtered = filtered.filter((it) => getUniversalStatusValue(it) === statusFilter)
       if (!activeSmartList) return filtered
       return filtered.filter((it) => matchesSmartList(it, activeSmartList))
     },
-    [scopedItems, search, filterTags, filterStatus, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree, activeSmartList],
+    [scopedItems, search, filterTags, filterStatus, statusFilter, filterPlatforms, filterGenres, sortBy, effectiveCustomOrder, minRating, settings.tagTree, activeSmartList],
   )
 
   const editingItem = items.find((i) => i.id === editingId) || null
@@ -1575,7 +1602,7 @@ function App() {
     setSuggestedTags([])
   }
 
-  const resetListControls = () => { setSearch(''); setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]) }
+  const resetListControls = () => { setSearch(''); setFilterTags([]); setFilterStatus([]); setStatusFilter(null); setFilterPlatforms([]); setFilterGenres([]) }
 
   const handleAddArtist = () => {
     if (!newArtistName.trim()) return
@@ -2545,102 +2572,28 @@ function App() {
     { value: 'diary',    icon: '✎', label: 'Diary',    hint: 'Chronological log',                  extended: true },
   ]
   const availableViews = VIEW_OPTIONS.filter((o) => !o.extended || supportsExtendedViews)
-  const currentView = availableViews.find((o) => o.value === layout) ?? availableViews[0]
-  const viewMenuRef = useRef<HTMLDivElement | null>(null)
-  useEffect(() => {
-    if (!viewMenuOpen) return
-    const onClick = (e: MouseEvent) => {
-      if (viewMenuRef.current && !viewMenuRef.current.contains(e.target as Node)) setViewMenuOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [viewMenuOpen])
-  const viewToggleBtns = (
-    <div className="view-drop" ref={viewMenuRef}>
-      <button
-        type="button"
-        className="view-drop-trigger"
-        onClick={() => setViewMenuOpen((v) => !v)}
-        title="Change view"
-      >
-        <span className="view-drop-icon" aria-hidden>{currentView.icon}</span>
-        <span className="view-drop-label">{currentView.label}</span>
-        <span className="view-drop-arrow" aria-hidden>▾</span>
-      </button>
-      {viewMenuOpen && (
-        <div className="view-drop-menu" role="menu">
-          {availableViews.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              role="menuitem"
-              className={o.value === layout ? 'view-drop-item active' : 'view-drop-item'}
-              onClick={() => { setLayout(o.value); setViewMenuOpen(false) }}
-            >
-              <span className="view-drop-icon" aria-hidden>{o.icon}</span>
-              <span className="view-drop-item-body">
-                <span className="view-drop-item-label">{o.label}</span>
-                <span className="view-drop-item-hint">{o.hint}</span>
-              </span>
-              {o.value === layout && <span className="view-drop-check" aria-hidden>✓</span>}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
+  const exportShown = (kind: 'csv' | 'json') => {
+    if (visibleItems.length === 0) return
+    const activeList = activeSmartListId ? smartLists.find((l) => l.id === activeSmartListId) : null
+    const stem = activeList ? `omnio-${activeList.name.replace(/\s+/g, '-')}` : `omnio-${activeCategory}`
+    if (kind === 'csv') void saveExportInApp(buildSingleCsv(visibleItems as Item[]), stem, 'csv', 'CSV')
+    else void saveExportInApp(JSON.stringify(visibleItems, null, 2), stem, 'json', 'JSON')
+  }
   const backToLibrary = () => setSpecialView('none')
-  type PageChip = { key: string; label: string; count: number; active: boolean; onClick: () => void }
+  type PageChip = { key: string; label: string; count: number; active: boolean; onClick: () => void; accent?: boolean }
+  // Status segments in the top bar filter the library in place.
   const buildCategoryChips = (): PageChip[] => {
-    if (isVideojuegos) return GAME_STATUS_OPTIONS.map((s) => ({
-      key: s.value, label: s.label,
-      count: itemsInCategory.filter((i) => (i.gameStatus || 'backlog') === s.value).length,
-      active: (specialView as string) === 'board' && boardStatus === s.value,
-      onClick: () => { setSpecialView('board'); setBoardStatus(s.value); closePanel(); closeAllDetailViews() },
-    }))
-    if (activeCategory === 'musica') return (['listened', 'unlistened'] as const).map((v) => ({
-      key: v, label: v === 'listened' ? 'Listened' : 'Not listened',
-      count: itemsInCategory.filter((i) => v === 'listened' ? i.consumed : !i.consumed).length,
-      active: (specialView as string) === 'musicBoard' && musicBoardFilter === v,
-      onClick: () => { setSpecialView('musicBoard'); setMusicBoardFilter(v); closePanel(); closeAllDetailViews() },
-    }))
-    if (isManga) return MANGA_STATUS_OPTIONS.map((s) => ({
-      key: s.value, label: s.label,
-      count: itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === s.value).length,
-      active: (specialView as string) === 'mangaBoard' && mangaBoardStatus === s.value,
-      onClick: () => { setSpecialView('mangaBoard'); setMangaBoardStatus(s.value); closePanel(); closeAllDetailViews() },
-    }))
-    if (activeCategory === 'peliculas') return (['watched', 'unwatched'] as const).map((v) => ({
-      key: v, label: v === 'watched' ? 'Watched' : 'Not watched',
-      count: itemsInCategory.filter((i) => v === 'watched' ? i.consumed : !i.consumed).length,
-      active: (specialView as string) === 'moviesBoard' && moviesBoardFilter === v,
-      onClick: () => { setSpecialView('moviesBoard'); setMoviesBoardFilter(v); closePanel(); closeAllDetailViews() },
-    }))
-    if (isAnime) return ANIME_STATUS_OPTIONS.map((s) => ({
-      key: s.value, label: s.label,
-      count: itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === s.value).length,
-      active: (specialView as string) === 'animeBoard' && animeBoardStatus === s.value,
-      onClick: () => { setSpecialView('animeBoard'); setAnimeBoardStatus(s.value); closePanel(); closeAllDetailViews() },
-    }))
-    if (isSeriesLike) return SERIES_STATUS_OPTIONS.map((s) => ({
-      key: s.value, label: s.label,
-      count: itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === s.value).length,
-      active: (specialView as string) === 'seriesBoard' && seriesBoardStatus === s.value,
-      onClick: () => { setSpecialView('seriesBoard'); setSeriesBoardStatus(s.value); closePanel(); closeAllDetailViews() },
-    }))
-    if (activeCategory === 'libros') return BOOK_STATUS_OPTIONS.map((s) => ({
-      key: s.value, label: s.label,
-      count: itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === s.value).length,
-      active: (specialView as string) === 'bookBoard' && bookBoardStatus === s.value,
-      onClick: () => { setSpecialView('bookBoard'); setBookBoardStatus(s.value); closePanel(); closeAllDetailViews() },
-    }))
-    if (activeCategory === 'visual_novels') return VN_STATUS_OPTIONS.map((s) => ({
-      key: s.value, label: s.label,
-      count: itemsInCategory.filter((i) => (i.visualNovelStatus || 'plan_to_play') === s.value).length,
-      active: (specialView as string) === 'vnBoard' && vnBoardStatus === s.value,
-      onClick: () => { setSpecialView('vnBoard'); setVnBoardStatus(s.value); closePanel(); closeAllDetailViews() },
-    }))
-    return []
+    const options = getUniversalStatusOptions(activeCategory)
+    if (options.length === 0) return []
+    return [
+      { key: 'all', label: 'All', count: itemsInCategory.length, active: !statusFilter, onClick: () => setStatusFilter(null) },
+      ...options.map((o) => ({
+        key: o.value, label: o.label,
+        count: itemsInCategory.filter((i) => getUniversalStatusValue(i) === o.value).length,
+        active: statusFilter === o.value,
+        onClick: () => setStatusFilter(statusFilter === o.value ? null : o.value),
+      })),
+    ]
   }
   type PageCount = { n: number; unit: string }
   const pageMeta: { icon: React.ReactNode; title: string; count?: PageCount; onBack?: () => void; actions?: React.ReactNode; chips?: PageChip[] } | null = (() => {
@@ -2653,40 +2606,6 @@ function App() {
     if (specialView === 'playlists') return { icon: <span className="page-icon-glyph">♪</span>, title: 'Playlists', count: { n: playlists.length, unit: playlists.length === 1 ? 'playlist' : 'playlists' } }
     if (specialView === 'stats') return { icon: <InsightsIcon />, title: 'Statistics' }
     if (specialView === 'settings') return { icon: <SettingsIcon />, title: 'Settings' }
-    if (specialView === 'board') {
-      const label = GAME_STATUS_OPTIONS.find((s) => s.value === boardStatus)?.label ?? ''
-      const n = gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus).length
-      return { icon: <GameStatusIcon value={boardStatus} />, title: label, count: { n, unit: n === 1 ? 'game' : 'games' }, onBack: backToLibrary, actions: viewToggleBtns }
-    }
-    if (specialView === 'musicBoard') {
-      const n = musicList.filter((m) => musicBoardFilter === 'listened' ? m.consumed : !m.consumed).length
-      return { icon: <span className="page-icon-glyph">{musicBoardFilter === 'listened' ? '✓' : '○'}</span>, title: musicBoardFilter === 'listened' ? 'Listened' : 'Not listened', count: { n, unit: n === 1 ? 'item' : 'items' }, onBack: backToLibrary, actions: viewToggleBtns }
-    }
-    if (specialView === 'mangaBoard') {
-      const n = itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === mangaBoardStatus).length
-      return { icon: <MangaStatusIcon value={mangaBoardStatus} />, title: getMangaStatus(mangaBoardStatus).label, count: { n, unit: n === 1 ? 'item' : 'items' }, onBack: backToLibrary, actions: viewToggleBtns }
-    }
-    if (specialView === 'moviesBoard') {
-      const n = itemsInCategory.filter((i) => moviesBoardFilter === 'watched' ? i.consumed : !i.consumed).length
-      return { icon: <span className="page-icon-glyph">{moviesBoardFilter === 'watched' ? '✓' : '○'}</span>, title: moviesBoardFilter === 'watched' ? 'Watched' : 'Not watched', count: { n, unit: n === 1 ? 'item' : 'items' }, onBack: backToLibrary, actions: viewToggleBtns }
-    }
-    if (specialView === 'animeBoard') {
-      const n = itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === animeBoardStatus).length
-      return { icon: <AnimeStatusIcon value={animeBoardStatus} />, title: getAnimeStatus(animeBoardStatus).label, count: { n, unit: n === 1 ? 'item' : 'items' }, onBack: backToLibrary, actions: viewToggleBtns }
-    }
-    if (specialView === 'seriesBoard') {
-      const n = itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === seriesBoardStatus).length
-      return { icon: <AnimeStatusIcon value={seriesBoardStatus} />, title: getSeriesStatus(seriesBoardStatus).label, count: { n, unit: n === 1 ? 'item' : 'items' }, onBack: backToLibrary, actions: viewToggleBtns }
-    }
-    if (specialView === 'bookBoard') {
-      const n = itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === bookBoardStatus).length
-      return { icon: <MangaStatusIcon value={bookBoardStatus as MangaStatus} />, title: getBookStatus(bookBoardStatus).label, count: { n, unit: n === 1 ? 'book' : 'books' }, onBack: backToLibrary, actions: viewToggleBtns }
-    }
-    if (specialView === 'vnBoard') {
-      const label = VN_STATUS_OPTIONS.find((s) => s.value === vnBoardStatus)?.label ?? ''
-      const n = itemsInCategory.filter((i) => (i.visualNovelStatus || 'plan_to_play') === vnBoardStatus).length
-      return { icon: <CategoryIcon id="visual_novels" />, title: label, count: { n, unit: n === 1 ? 'VN' : 'VNs' }, onBack: backToLibrary, actions: viewToggleBtns }
-    }
     if (specialView === 'simulcastBoard') {
       const airing = itemsInCategory.filter((i) => i.airingStatus === 'airing' && airingWeekday(i))
       const browse = <button className="secondary-btn" onClick={() => setSeasonBrowserOpen(true)} title="See this season on AniList and add shows">Browse season</button>
@@ -2696,24 +2615,81 @@ function App() {
       ? { n: categoryCollections.length, unit: categoryCollections.length === 1 ? 'group' : 'groups' }
       : { n: visibleItems.length, unit: visibleItems.length === 1 ? 'item' : 'items' }
     const isAnimeLike = activeCategory === 'anime' || activeCategory === 'donghua'
+    const label = current?.label ?? ''
+    // Groups and Artists are sub-pages of the library with a back arrow.
+    if (subView !== 'items' && !activeCollectionId) {
+      return {
+        icon: subView === 'groups' ? <FolderIcon /> : <CategoryIcon id={activeCategory} />,
+        title: `${label} · ${subView === 'groups' ? 'Groups' : 'Artists'}`,
+        count: subView === 'groups' ? count : { n: musicArtists.length, unit: musicArtists.length === 1 ? 'artist' : 'artists' },
+        onBack: () => { setSubView('items'); resetListControls() },
+      }
+    }
     const libActions = (
-      <>
-        {!showFolderListing && viewToggleBtns}
-        {isAnimeLike && subView === 'items' && !activeCollectionId && (
+      <LibraryControls
+        search={search}
+        onSearch={setSearch}
+        searchRef={searchInputRef}
+        filters={
+          <FiltersDropdown
+            availableTags={availableTags}
+            filterTags={filterTags}
+            onToggleTag={(t) => setFilterTags((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t])}
+            showStatus={false}
+            filterStatus={filterStatus}
+            onToggleStatus={(st) => setFilterStatus((prev) => prev.includes(st) ? prev.filter((x) => x !== st) : [...prev, st])}
+            showPlatform={isVideojuegos}
+            availablePlatforms={availablePlatforms}
+            filterPlatforms={filterPlatforms}
+            onTogglePlatform={(pl) => setFilterPlatforms((prev) => prev.includes(pl) ? prev.filter((x) => x !== pl) : [...prev, pl])}
+            showGenre={activeCategory === 'musica'}
+            availableGenres={availableGenres}
+            filterGenres={filterGenres}
+            onToggleGenre={(g) => setFilterGenres((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g])}
+            minRating={minRating}
+            onSetMinRating={setMinRating}
+            onClear={() => { setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]); setMinRating(0) }}
+            tagTree={settings.tagTree}
+          />
+        }
+        sort={sortBy}
+        sortOptions={sortOptionsFor(activeCategory, !!activeCollection)}
+        onSort={setSortByPersistent}
+        groupBy={groupBy}
+        groupOptions={GROUP_OPTIONS}
+        onGroupBy={setGroupBy}
+        groupDisabled={layout === 'kanban' || layout === 'timeline' || layout === 'diary'}
+        layout={layout}
+        layoutOptions={availableViews.map((o) => ({ value: o.value, label: o.label, icon: o.icon }))}
+        onLayout={setLayout}
+        smartLists={smartLists.filter((l) => l.categoryId === 'all' || l.categoryId === activeCategory)}
+        activeSmartListId={activeSmartListId}
+        onSmartList={setActiveSmartListId}
+        onManageSmartLists={() => setSmartListsModalOpen(true)}
+        views={activeCollectionId ? [] : [
+          { label: 'Groups', onClick: () => { setSubView('groups'); resetListControls() } },
+          ...(activeCategory === 'musica' ? [{ label: 'Artists', onClick: () => { setSubView('artists'); resetListControls() } }] : []),
+        ]}
+        deleteMode={deleteMode}
+        onToggleDelete={() => setDeleteMode((v) => !v)}
+        exportCount={visibleItems.length}
+        onExport={exportShown}
+        extra={isAnimeLike && !activeCollectionId ? (
           <button
             className="secondary-btn"
             onClick={() => { setSpecialView('simulcastBoard'); closePanel(); closeAllDetailViews() }}
             title="Airing anime grouped by weekday"
           >This season</button>
-        )}
-        {subView === 'items' && <button className="add-btn" onClick={openAddPanel}>+ Add</button>}
-      </>
+        ) : undefined}
+        addLabel="+ Add"
+        onAdd={openAddPanel}
+      />
     )
     // Chips only render at the library root; groups/artist views suppress them.
-    const chips = !activeCollectionId && subView === 'items' ? buildCategoryChips() : []
+    const chips = !activeCollectionId ? buildCategoryChips() : []
     return {
       icon: activeCollectionId ? <FolderIcon /> : <CategoryIcon id={current?.id ?? ''} />,
-      title: (activeCollectionId ? activeCollection?.name : current?.label) ?? '',
+      title: (activeCollectionId ? activeCollection?.name : label) ?? '',
       count,
       onBack: activeCollectionId ? () => { setActiveCollectionId(null); resetListControls() } : undefined,
       actions: libActions,
@@ -2821,15 +2797,17 @@ function App() {
               </span>
             )}
             {navMeta.chips && (
-              <div className="topnav-chips">
+              <div className="seg topnav-seg" role="tablist" aria-label="Filter by status">
                 {navMeta.chips.map((c) => (
                   <button
                     key={c.key}
-                    className={c.active ? 'topnav-chip active' : 'topnav-chip'}
+                    role="tab"
+                    aria-selected={c.active}
+                    className={c.active ? 'on' : ''}
                     onClick={c.onClick}
                   >
-                    <span>{c.label}</span>
-                    <span className="topnav-chip-count">{c.count}</span>
+                    {c.label}
+                    {c.count > 0 && <span className={c.accent ? 'seg-n accent' : 'seg-n'}>{c.count}</span>}
                   </button>
                 ))}
               </div>
@@ -2876,216 +2854,6 @@ function App() {
             />
           ) : (
             <>
-          {specialView === 'board' && (
-            <>
-              <div className="toolbar">
-                <input
-                  className="search-input"
-                  placeholder="Search by title... (Ctrl+F)"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
-                  <option value="recent">Most recent</option>
-                  <option value="alpha">Alphabetical</option>
-                  <option value="rating">Rating</option>
-                  <option value="time">Time played</option>
-                  <option value="releaseAsc">Release date ↑</option>
-                  <option value="releaseDesc">Release date ↓</option>
-                </select>
-              </div>
-              <div className="content-scroll">
-              <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {filterAndSort(gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus), search, [], [], [], [], sortBy).length === 0 && <p className="empty">No games here.</p>}
-                {filterAndSort(gamesList.filter((g) => (g.gameStatus || 'backlog') === boardStatus), search, [], [], [], [], sortBy).map((g) => (
-                  <ItemCard key={g.id} item={g} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite}
-                        gameFields={settings.gameFields}
-                        musicFields={settings.musicFields}
-                        mangaFields={settings.mangaFields} />
-                ))}
-              </div>
-              </div>
-            </>
-          )}
-
-          {specialView === 'musicBoard' && (() => {
-            const list = filterAndSort(musicList.filter((m) => musicBoardFilter === 'listened' ? m.consumed : !m.consumed), search, [], [], [], [], sortBy)
-            return (<>
-              <div className="toolbar">
-                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
-                  <option value="recent">Most recent</option>
-                  <option value="alpha">Alphabetical</option>
-                  <option value="rating">Rating</option>
-                  <option value="artist">By artist</option>
-                  <option value="yearAsc">Release year ↑</option>
-                  <option value="yearDesc">Release year ↓</option>
-                  <option value="duration">Duration (longest)</option>
-                </select>
-              </div>
-              <div className="content-scroll">
-              <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {list.length === 0 && <p className="empty">Nothing here.</p>}
-                {list.map((m) => (
-                  <ItemCard key={m.id} item={m} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} musicFields={settings.musicFields} />
-                ))}
-              </div>
-              </div>
-            </>)
-          })()}
-
-          {specialView === 'mangaBoard' && (() => {
-            const list = filterAndSort(itemsInCategory.filter((i) => (i.mangaStatus || 'plan_to_read') === mangaBoardStatus), search, [], [], [], [], sortBy)
-            return (<>
-              <div className="toolbar">
-                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
-                  <option value="recent">Most recent</option>
-                  <option value="alpha">Alphabetical</option>
-                  <option value="rating">Rating</option>
-                  <option value="chapters">Chapters read</option>
-                  <option value="mangaStatus">Status</option>
-                  <option value="yearAsc">Release year ↑</option>
-                  <option value="yearDesc">Release year ↓</option>
-                </select>
-              </div>
-              <div className="content-scroll">
-              <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {list.length === 0 && <p className="empty">Nothing here.</p>}
-                {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} mangaFields={settings.mangaFields} />
-                ))}
-              </div>
-              </div>
-            </>)
-          })()}
-
-          {specialView === 'moviesBoard' && (() => {
-            const list = filterAndSort(itemsInCategory.filter((i) => moviesBoardFilter === 'watched' ? i.consumed : !i.consumed), search, [], [], [], [], sortBy)
-            return (<>
-              <div className="toolbar">
-                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
-                  <option value="recent">Most recent</option>
-                  <option value="alpha">Alphabetical</option>
-                  <option value="rating">Rating</option>
-                  <option value="yearAsc">Release year ↑</option>
-                  <option value="yearDesc">Release year ↓</option>
-                  <option value="duration">Duration (longest)</option>
-                </select>
-              </div>
-              <div className="content-scroll">
-              <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {list.length === 0 && <p className="empty">Nothing here.</p>}
-                {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} movieFields={settings.movieFields} />
-                ))}
-              </div>
-              </div>
-            </>)
-          })()}
-
-          {specialView === 'animeBoard' && (() => {
-            const list = filterAndSort(itemsInCategory.filter((i) => (i.watchStatus || 'plan_to_watch') === animeBoardStatus), search, [], [], [], [], sortBy)
-            return (<>
-              <div className="toolbar">
-                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
-                  <option value="recent">Most recent</option>
-                  <option value="alpha">Alphabetical</option>
-                  <option value="rating">Rating</option>
-                  <option value="episodes">Episodes watched</option>
-                  <option value="animeStatus">Status</option>
-                  <option value="yearAsc">Release year ↑</option>
-                  <option value="yearDesc">Release year ↓</option>
-                  <option value="duration">Duration (longest)</option>
-                </select>
-              </div>
-              <div className="content-scroll">
-              <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {list.length === 0 && <p className="empty">Nothing here.</p>}
-                {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} animeFields={settings.animeFields} />
-                ))}
-              </div>
-              </div>
-            </>)
-          })()}
-
-          {specialView === 'seriesBoard' && (() => {
-            const list = filterAndSort(itemsInCategory.filter((i) => (i.seriesStatus || 'plan_to_watch') === seriesBoardStatus), search, [], [], [], [], sortBy)
-            return (<>
-              <div className="toolbar">
-                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
-                  <option value="recent">Most recent</option>
-                  <option value="alpha">Alphabetical</option>
-                  <option value="rating">Rating</option>
-                  <option value="episodes">Episodes watched</option>
-                  <option value="seriesStatus">Status</option>
-                  <option value="yearAsc">Release year ↑</option>
-                  <option value="yearDesc">Release year ↓</option>
-                </select>
-              </div>
-              <div className="content-scroll">
-              <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {list.length === 0 && <p className="empty">Nothing here.</p>}
-                {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} seriesFields={settings.seriesFields} />
-                ))}
-              </div>
-              </div>
-            </>)
-          })()}
-
-          {specialView === 'bookBoard' && (() => {
-            const list = filterAndSort(itemsInCategory.filter((i) => (i.bookStatus || 'plan_to_read') === bookBoardStatus), search, [], [], [], [], sortBy)
-            return (<>
-              <div className="toolbar">
-                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
-                  <option value="recent">Most recent</option>
-                  <option value="alpha">Alphabetical</option>
-                  <option value="rating">Rating</option>
-                  <option value="yearAsc">Publication year ↑</option>
-                  <option value="yearDesc">Publication year ↓</option>
-                </select>
-              </div>
-              <div className="content-scroll">
-              <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {list.length === 0 && <p className="empty">Nothing here.</p>}
-                {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} bookFields={settings.bookFields} />
-                ))}
-              </div>
-              </div>
-            </>)
-          })()}
-
-          {specialView === 'vnBoard' && (() => {
-            const list = filterAndSort(itemsInCategory.filter((i) => (i.visualNovelStatus || 'plan_to_play') === vnBoardStatus), search, [], [], [], [], sortBy)
-            return (<>
-              <div className="toolbar">
-                <input className="search-input" placeholder="Search by title... (Ctrl+F)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
-                  <option value="recent">Most recent</option>
-                  <option value="alpha">Alphabetical</option>
-                  <option value="rating">Rating</option>
-                  <option value="yearAsc">Release year ↑</option>
-                  <option value="yearDesc">Release year ↓</option>
-                </select>
-              </div>
-              <div className="content-scroll">
-              <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-                {list.length === 0 && <p className="empty">Nothing here.</p>}
-                {list.map((i) => (
-                  <ItemCard key={i.id} item={i} layout={classicLayout} onOpen={openEditPanel} onDelete={handleDelete} onToggleFavorite={toggleItemFavorite} vnFields={settings.vnFields} />
-                ))}
-              </div>
-              </div>
-            </>)
-          })()}
-
           {specialView === 'simulcastBoard' && (() => {
             const airing = itemsInCategory.filter((i) => isCurrentlyAiring(i) && airingWeekday(i))
             const byDay = new Map<string, Item[]>()
@@ -4618,20 +4386,6 @@ function App() {
 
           {specialView === 'none' && !activePluginSlug && (
             <>
-              <div className="sub-tabs">
-                <button className={subView === 'items' ? 'sub-tab active' : 'sub-tab'} onClick={() => { setSubView('items'); setActiveCollectionId(null); resetListControls() }}>
-                  All {current?.label}
-                </button>
-                {activeCategory === 'musica' && (
-                  <button className={subView === 'artists' ? 'sub-tab active' : 'sub-tab'} onClick={() => { setSubView('artists'); setActiveCollectionId(null); resetListControls() }}>
-                    Artists
-                  </button>
-                )}
-                <button className={subView === 'groups' ? 'sub-tab active' : 'sub-tab'} onClick={() => { setSubView('groups'); setActiveCollectionId(null); resetListControls() }}>
-                  Groups
-                </button>
-              </div>
-
               {subView === 'artists' ? (
                 <div className="content-scroll">
                   <div className="new-collection">
@@ -4707,146 +4461,6 @@ function App() {
                 </div>
               ) : (
                 <>
-                  <div className="toolbar">
-                    <input
-                      ref={searchInputRef}
-                      className="search-input"
-                      placeholder="Search by title... (Ctrl+F)"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
-                    <div className="toolbar-group">
-                      <div className={`smart-list-toolbar${activeSmartListId ? ' has-active' : ''}`}>
-                        <select
-                          className="smart-list-toolbar-select"
-                          value={activeSmartListId ?? ''}
-                          onChange={(e) => setActiveSmartListId(e.target.value || null)}
-                          title="Apply a saved smart list"
-                        >
-                          <option value="">All items</option>
-                          {smartLists
-                            .filter((l) => l.categoryId === 'all' || l.categoryId === activeCategory)
-                            .map((l) => (
-                              <option key={l.id} value={l.id}>★ {l.name}</option>
-                            ))}
-                        </select>
-                        <button
-                          type="button"
-                          className="smart-list-toolbar-manage"
-                          onClick={() => setSmartListsModalOpen(true)}
-                          title="Manage smart lists"
-                          aria-label="Manage smart lists"
-                        >⚙</button>
-                      </div>
-                      <select
-                        className="sort-select"
-                        value={groupBy}
-                        onChange={(e) => setGroupBy(e.target.value as GroupBy)}
-                        title="Group items visually"
-                        disabled={layout === 'kanban' || layout === 'timeline' || layout === 'diary'}
-                      >
-                        <option value="none">No grouping</option>
-                        <option value="year">Group by year</option>
-                        <option value="decade">Group by decade</option>
-                        <option value="status">Group by status</option>
-                        <option value="rating">Group by rating</option>
-                      </select>
-                      <select className="sort-select" value={sortBy} onChange={(e) => setSortByPersistent(e.target.value as SortBy)}>
-                        <option value="recent">Most recent</option>
-                        <option value="alpha">Alphabetical</option>
-                        <option value="rating">Rating</option>
-                        <option value="custom">{activeCollection ? 'Manual order' : 'Custom order'}</option>
-                        {activeCategory === 'videojuegos' && <>
-                          <option value="time">Time played</option>
-                          <option value="status">Status</option>
-                          <option value="releaseAsc">Release date ↑</option>
-                          <option value="releaseDesc">Release date ↓</option>
-                        </>}
-                        {activeCategory === 'musica' && <>
-                          <option value="artist">By artist</option>
-                          <option value="yearAsc">Release year ↑</option>
-                          <option value="yearDesc">Release year ↓</option>
-                          <option value="duration">Duration (longest)</option>
-                        </>}
-                        {activeCategory === 'peliculas' && <>
-                          <option value="yearAsc">Release year ↑</option>
-                          <option value="yearDesc">Release year ↓</option>
-                          <option value="duration">Runtime (longest)</option>
-                        </>}
-                        {activeCategory === 'series' && <>
-                          <option value="seriesStatus">Status</option>
-                          <option value="episodes">Episodes watched</option>
-                          <option value="yearAsc">Year ↑</option>
-                          <option value="yearDesc">Year ↓</option>
-                        </>}
-                        {(activeCategory === 'anime' || activeCategory === 'donghua') && <>
-                          <option value="animeStatus">Status</option>
-                          <option value="episodes">Episodes watched</option>
-                          <option value="yearAsc">Year ↑</option>
-                          <option value="yearDesc">Year ↓</option>
-                        </>}
-                        {(activeCategory === 'manga' || activeCategory === 'manhwa' || activeCategory === 'manhua' || activeCategory === 'comics_west') && <>
-                          <option value="mangaStatus">Status</option>
-                          <option value="chapters">Chapters read</option>
-                        </>}
-                      </select>
-                      <FiltersDropdown
-                        availableTags={availableTags}
-                        filterTags={filterTags}
-                        onToggleTag={(t) => setFilterTags((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t])}
-                        showStatus={showStatusFilter}
-                        filterStatus={filterStatus}
-                        onToggleStatus={(s) => setFilterStatus((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])}
-                        showPlatform={isVideojuegos}
-                        availablePlatforms={availablePlatforms}
-                        filterPlatforms={filterPlatforms}
-                        onTogglePlatform={(p) => setFilterPlatforms((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p])}
-                        showGenre={activeCategory === 'musica'}
-                        availableGenres={availableGenres}
-                        filterGenres={filterGenres}
-                        onToggleGenre={(g) => setFilterGenres((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g])}
-                        minRating={minRating}
-                        onSetMinRating={setMinRating}
-                        onClear={() => { setFilterTags([]); setFilterStatus([]); setFilterPlatforms([]); setFilterGenres([]); setMinRating(0) }}
-                        tagTree={settings.tagTree}
-                      />
-                    </div>
-                    <span className="toolbar-divider" aria-hidden />
-                    <div className="toolbar-group">
-                      <button
-                        type="button"
-                        className={deleteMode ? 'sort-select delete-mode-btn active' : 'sort-select delete-mode-btn'}
-                        onClick={() => setDeleteMode((v) => !v)}
-                        title={deleteMode ? 'Exit delete mode' : 'Enter delete mode — cards show a red ✕ to remove'}
-                      >
-                        {deleteMode ? '← Exit delete' : '✕ Delete'}
-                      </button>
-                      <select
-                        className="sort-select"
-                        value=""
-                        onChange={(e) => {
-                          const kind = e.target.value
-                          e.currentTarget.value = ''
-                          if (!kind || visibleItems.length === 0) return
-                          const activeList = activeSmartListId ? smartLists.find((l) => l.id === activeSmartListId) : null
-                          const stem = activeList
-                            ? `omnio-${activeList.name.replace(/\s+/g, '-')}`
-                            : `omnio-${activeCategory}`
-                          if (kind === 'csv') {
-                            void saveExportInApp(buildSingleCsv(visibleItems as Item[]), stem, 'csv', 'CSV')
-                          } else if (kind === 'json') {
-                            void saveExportInApp(JSON.stringify(visibleItems, null, 2), stem, 'json', 'JSON')
-                          }
-                        }}
-                        title="Export the items currently on screen"
-                      >
-                        <option value="">↓ Export shown…</option>
-                        <option value="csv">As CSV ({visibleItems.length})</option>
-                        <option value="json">As JSON ({visibleItems.length})</option>
-                      </select>
-                    </div>
-                  </div>
-
                   <div className="content-scroll">
                   {sortBy === 'custom' && <p className="hint drag-hint">Drag cards to reorder them.</p>}
                   {deleteMode && <p className="hint drag-hint" style={{ color: 'var(--danger)' }}>Delete mode — click the red ✕ on any card to remove it.</p>}

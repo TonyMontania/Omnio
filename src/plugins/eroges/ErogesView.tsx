@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ErogeItem, ErogeData, ErogeSettings, BacklogStatus } from './types'
 import type { PluginViewProps } from '../registry'
-import { SLUG, tagPrefsFrom } from './constants'
+import { SLUG, tagPrefsFrom, EROGE_FILTERS } from './constants'
 import { loadData, saveData, savesRenameFolder, assetRename, assetDelete, savesDeleteAll, transcodeStoredAvif } from './ipc'
 import { f95CheckVersion, f95ThreadId, F95_BLOCKED, F95_BLOCKED_MESSAGE } from './f95Api'
 import { cachedLastChanges, cachedThread, isNewerVersion, versionPatchFrom } from './f95Cache'
@@ -115,11 +115,12 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
       return
     }
     const filter: ErogeFilter = tab.kind === 'backlog' ? tab.value : tab.kind
+    const pick = (f: ErogeFilter) => setTab(f === 'all' || f === 'updates' ? { kind: f } : { kind: 'backlog', value: f })
+    const chips = EROGE_FILTERS
+      .filter((f) => f.id !== 'updates' || counts.updates > 0 || filter === 'updates')
+      .map((f) => ({ key: f.id, label: f.label, count: counts[f.id], active: filter === f.id, onClick: () => pick(f.id), accent: f.id === 'updates' }))
     const actions = (
       <ErogesControls
-        filter={filter}
-        counts={counts}
-        onFilter={(f) => setTab(f === 'all' || f === 'updates' ? { kind: f } : { kind: 'backlog', value: f })}
         search={search}
         onSearch={setSearch}
         sort={sort}
@@ -136,6 +137,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
       icon: <HeartIcon />,
       title: 'Eroges',
       count: { n: visible.length, unit: visible.length === 1 ? 'game' : 'games' },
+      chips,
       actions,
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps

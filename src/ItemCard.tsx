@@ -1,8 +1,8 @@
 import type { DragEvent } from 'react'
 import { getGameStatus, getCategoryLine, getMusicTypeLabel, getMangaStatus, isMangaLike, getAnimeStatus, getSeriesStatus, getBookStatus, renderMiniMarkdown, assetSrc, DEFAULT_GAME_FIELDS, DEFAULT_MUSIC_FIELDS, DEFAULT_MANGA_FIELDS, DEFAULT_MOVIE_FIELDS, DEFAULT_ANIME_FIELDS, DEFAULT_SERIES_FIELDS, DEFAULT_BOOK_FIELDS, DEFAULT_VN_FIELDS, VN_STATUS_OPTIONS, VN_LENGTH_OPTIONS } from './types'
 import { useLongPress } from './utils/useLongPress'
-import { GameStatusIcon, MangaStatusIcon, AnimeStatusIcon } from './icons'
-import type { AnyItem, GameField, MusicField, MangaField, MovieField, AnimeField, SeriesField, BookField, VnField, MangaStatus } from './types'
+import type { AnyItem, GameField, MusicField, MangaField, MovieField, AnimeField, SeriesField, BookField, VnField } from './types'
+import { getUniversalStatusValue, statusTone } from './utils/statusUniversal'
 import type { LibraryCustomFieldDef } from './types/customFields'
 import { displayLibraryCustomValue } from './types/customFields'
 import { OMNIO_ITEM_DRAG_TYPE } from './Sidebar'
@@ -94,6 +94,25 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
 
   const line = getCategoryLine(item)
 
+  // One line under the title: status dot + label, then details, then rating.
+  const statusLabel = gs?.label ?? ms?.label ?? as?.label ?? ss?.label ?? bs?.label ?? vns?.label
+    ?? (showMovieStatus ? (item.consumed ? 'Watched' : 'Not watched') : null)
+  const tone = statusLabel ? statusTone(getUniversalStatusValue(item)) : null
+  const musicYearType = isMusic
+    ? [mf!.releaseYear ? musicYear : '', mf!.type && item.musicType ? getMusicTypeLabel(item.musicType) : ''].filter(Boolean).join(' · ')
+    : ''
+  const details = [
+    showBookAuthors ? item.authors!.slice(0, 2).join(', ') : '',
+    showMangaAuthors ? mangaAuthorsList!.slice(0, 2).join(', ') : '',
+    showVnDevs ? item.devs!.slice(0, 2).join(', ') : '',
+    isMusic && mf!.artist ? item.artist ?? '' : '',
+    musicYearType,
+    !isMusic && showLine ? line : '',
+    vnLength ?? '',
+    isVn && vf!.year ? item.releaseYear ?? '' : '',
+  ].filter(Boolean)
+  const ratingText = showRating && item.rating ? `★ ${item.rating}` : ''
+
   // Cards are ALWAYS draggable so a user can drag them onto a
   // sidebar library entry (Sprint H — cross-library move). The
   // existing per-collection reorder gesture is still gated by
@@ -164,19 +183,15 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
         })()}
       </div>
       <div className="item-info">
-        {showTitle && <h3>{item.title}</h3>}
-        {gs && <p className="item-status"><GameStatusIcon value={gs.value} /> {gs.label}</p>}
-        {ms && <p className="item-status"><MangaStatusIcon value={ms.value} /> {ms.label}</p>}
-        {as && <p className="item-status"><AnimeStatusIcon value={as.value} /> {as.label}</p>}
-        {ss && <p className="item-status"><AnimeStatusIcon value={ss.value} /> {ss.label}</p>}
-        {bs && <p className="item-status"><MangaStatusIcon value={bs.value as MangaStatus} /> {bs.label}</p>}
-        {vns && <p className="item-status">{vns.label}</p>}
-        {showBookAuthors && <p className="item-meta">{item.authors!.slice(0, 2).join(', ')}</p>}
-        {showMangaAuthors && <p className="item-meta">{mangaAuthorsList!.slice(0, 2).join(', ')}</p>}
-        {showVnDevs && <p className="item-meta">{item.devs!.slice(0, 2).join(', ')}</p>}
-        {vnLength && <p className="item-time">{vnLength}</p>}
-        {isVn && vf!.year && item.releaseYear && <p className="item-time">{item.releaseYear}</p>}
-        {showMovieStatus && <p className="item-status">{item.consumed ? 'Watched' : 'Not watched'}</p>}
+        {showTitle && <h3 title={item.title}>{item.title}</h3>}
+        {(statusLabel || details.length > 0 || ratingText) && (
+          <p className="card-line">
+            {statusLabel && <span className={`card-status tone-${tone}`}>{statusLabel}</span>}
+            {details.length > 0 && <span className="card-details">{details.join(' · ')}</span>}
+            {ratingText && <span className="card-rating">{ratingText}</span>}
+          </p>
+        )}
+        <div className="card-chips">
         {(isAnime || isSeries) && isCurrentlyAiring(item) && (() => {
           const day = airingWeekday(item)
           const next = item.nextAiring && item.nextAiring.airingAt * 1000 > Date.now() ? item.nextAiring : null
@@ -211,22 +226,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
           </p>
         )}
 
-        {isMusic ? (
-          <>
-            {mf!.artist && item.artist && <p className="item-meta">{item.artist}</p>}
-            {(mf!.releaseYear || mf!.type) && (
-              <p className="item-time">
-                {mf!.releaseYear && musicYear}
-                {mf!.releaseYear && mf!.type && item.musicType && ' · '}
-                {mf!.type && item.musicType && getMusicTypeLabel(item.musicType)}
-              </p>
-            )}
-          </>
-        ) : (
-          showLine && line && <p className="item-time">{line}</p>
-        )}
-
-        {showRating && item.rating ? <span className="rating-badge">★ {item.rating}</span> : null}
+        </div>
         {layout === 'list' && !isGame && !isMusic && !isMovie && item.notes && (
           <div className="item-notes-md" dangerouslySetInnerHTML={{ __html: renderMiniMarkdown(item.notes) }} />
         )}

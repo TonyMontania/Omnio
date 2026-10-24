@@ -1,3 +1,4 @@
+import type { ErogeFilter } from './ErogesControls'
 // Engine, status and backlog-status option tables. Copied verbatim
 // from Nyx's index.html so the F95 title parser keeps matching.
 
@@ -51,3 +52,12 @@ export function matchTags(tags: string[] | undefined, prefs: TagPrefs): { liked:
   }
   return { liked, avoided }
 }
+
+// Status filters, shown as the top bar's segments by ErogesView.
+export const EROGE_FILTERS: { id: ErogeFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'playing', label: 'Playing' },
+  { id: 'backlog', label: 'Backlog' },
+  { id: 'played', label: 'Played' },
+  { id: 'updates', label: 'Updates' },
+]

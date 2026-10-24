@@ -25,7 +25,7 @@ export interface PluginPageMeta {
   count?: { n: number; unit: string }
   onBack?: () => void
   actions?: ReactNode
-  chips?: { key: string; label: string; count: number; active: boolean; onClick: () => void }[]
+  chips?: { key: string; label: string; count: number; active: boolean; onClick: () => void; accent?: boolean }[]
 }
 
 export interface PluginViewProps {
