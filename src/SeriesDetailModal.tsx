@@ -12,6 +12,7 @@ import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
 import { BasedOnDisplay } from './components/BasedOn'
 import DetailNotes from './components/detail/DetailNotes'
+import { numColumnWidth } from './utils/numColumn'
 
 const timelineSortKey = (i: Item) => i.airedFrom || i.startYear || i.releaseYear || ''
 const yearOf = (i: Item) => timelineSortKey(i).slice(0, 4)
@@ -199,7 +200,7 @@ export default function SeriesDetailModal({ item, groups, allSeries, onClose, on
                         <table className="track-table episode-table season-episodes-table">
                           <thead>
                             <tr>
-                              <th className="col-num">#</th>
+                              <th className="col-num" style={{ width: numColumnWidth((s.episodes ?? []).map((ep) => ep.number)) }}>#</th>
                               <th className="col-title">Title</th>
                               <th className="col-listened">✓</th>
                               <th className="col-rating">Rating</th>

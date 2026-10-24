@@ -7,6 +7,7 @@
 import type React from 'react'
 import { useState } from 'react'
 import { StarRatingInput } from '../../StarRating'
+import { numColumnWidth } from '../../utils/numColumn'
 
 export interface UnitLike {
   id: string
@@ -87,7 +88,7 @@ export function UnitListEditor({
         <table className="track-table">
           <thead>
             <tr>
-              <th className="col-num">#</th>
+              <th className="col-num" style={{ width: numColumnWidth(units.map((u) => u.number)) }}>#</th>
               <th className="col-title">Title</th>
               {config.showAirdate && <th className="col-airdate">Air date</th>}
               {config.showLength && <th className="col-length">Length</th>}

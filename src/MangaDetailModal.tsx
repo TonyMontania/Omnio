@@ -13,6 +13,7 @@ import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
 import { BasedOnDisplay } from './components/BasedOn'
 import DetailNotes from './components/detail/DetailNotes'
+import { numColumnWidth } from './utils/numColumn'
 
 const timelineSortKey = (i: Item) => i.startDate || i.releaseYear || ''
 const yearOf = (i: Item) => timelineSortKey(i).slice(0, 4)
@@ -179,7 +180,7 @@ export default function MangaDetailModal({ item, groups, allManga, onClose, onEd
               <table className="track-table episode-table">
                 <thead>
                   <tr>
-                    <th className="col-num">#</th>
+                    <th className="col-num" style={{ width: numColumnWidth((item.chapters ?? []).map((c) => c.number)) }}>#</th>
                     <th className="col-title">Title</th>
                     <th className="col-listened">✓</th>
                     <th className="col-rating">Rating</th>

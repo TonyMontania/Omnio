@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import type { Season, Episode } from '../../types'
 import { StarRatingInput } from '../../StarRating'
+import { numColumnWidth } from '../../utils/numColumn'
 
 export default function SeasonListEditor({ seasons, onAdd, onRemove, onUpdate, onToggleWatched, onRatingChange, onBulkAdd, onEpisodesChange }: {
   seasons: Season[]
@@ -96,7 +97,7 @@ export default function SeasonListEditor({ seasons, onAdd, onRemove, onUpdate, o
                       <table className="track-table">
                         <thead>
                           <tr>
-                            <th className="col-num">#</th>
+                            <th className="col-num" style={{ width: numColumnWidth(s.episodes.map((ep) => ep.number)) }}>#</th>
                             <th className="col-title">Title</th>
                             <th className="col-listened">Watched</th>
                             <th className="col-rating">Rating</th>

@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import type { Track } from '../../types'
 import { StarRatingInput } from '../../StarRating'
+import { numColumnWidth } from '../../utils/numColumn'
 
 export default function TrackListEditor({ tracks, mainArtist, albumTitle, discCount, onAdd, onRemove, onToggleFavorite, onRatingChange, onArtistChange, onFillAllArtist, onToggleListened, onLyricsChange, onNumberChange, onNameChange, onDurationChange, onDiscChange }: {
   tracks: Track[]; mainArtist: string; albumTitle?: string
@@ -166,7 +167,7 @@ export default function TrackListEditor({ tracks, mainArtist, albumTitle, discCo
                 <thead>
                   <tr>
                     <th className="col-fav"></th>
-                    <th className="col-num">#</th>
+                    <th className="col-num" style={{ width: numColumnWidth(tracks.map((t) => t.number)) }}>#</th>
                     <th className="col-title">Title</th>
                     <th className="col-artist">Artist</th>
                     <th className="col-duration">Duration</th>

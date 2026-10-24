@@ -11,6 +11,7 @@ import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
 import DetailNotes from './components/detail/DetailNotes'
 import CoverPlaceholder from './components/CoverPlaceholder'
+import { numColumnWidth } from './utils/numColumn'
 
 
 interface Props {
@@ -238,7 +239,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onClose, onEd
                   <thead>
                     <tr>
                       <th className="col-fav"></th>
-                      <th className="col-num">#</th>
+                      <th className="col-num" style={{ width: numColumnWidth(list.map((t) => t.number)) }}>#</th>
                       <th className="col-title">Title</th>
                       <th className="col-artist">Artist</th>
                       <th className="col-duration">Duration</th>
