@@ -7,6 +7,7 @@ import { cachedLastChanges, cachedThread, isNewerVersion, versionPatchFrom } fro
 import type { TagPrefs } from './constants'
 import ServiceLogo from '../../components/ServiceLogo'
 import { formatBytes, formatDateTime } from '../../utils/format'
+import { FileIcon, SaveIcon } from '../../icons'
 
 interface Props {
   game: ErogeItem
@@ -327,7 +328,7 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
         <div className="er-panel">
           {saves.length === 0 ? (
             <div className="er-saves-empty">
-              <span className="er-saves-empty-icon" aria-hidden>💾</span>
+              <span className="er-saves-empty-icon" aria-hidden><SaveIcon size={28} /></span>
               <p>No saves stored yet. Keep copies of your save files here, in a folder that's only for this game.</p>
               <div className="er-panel-actions">
                 <button className="er-btn er-btn-primary" onClick={async () => { await savesAdd(game.name); refreshSaves() }}>+ Add save files</button>
@@ -346,7 +347,7 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
               </div>
               {saves.map((s) => (
                 <div key={s.name} className="er-save-row">
-                  <span className="er-save-icon" aria-hidden>▤</span>
+                  <span className="er-save-icon" aria-hidden><FileIcon /></span>
                   <div className="er-save-main">
                     <span className="er-save-name" title={s.name}>{s.name}</span>
                     <span className="er-save-sub">{formatBytes(s.size)} · {formatDateTime(new Date(s.mtime).toISOString())}</span>

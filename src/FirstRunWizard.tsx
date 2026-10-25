@@ -10,6 +10,7 @@
 // actions, or via the "skip" button.
 
 import { CATEGORIES } from './categories'
+import { DownloadIcon, KeyIcon, PlusIcon } from './icons'
 import type { CategoryId } from './types/items'
 
 interface Props {
@@ -33,19 +34,19 @@ export default function FirstRunWizard({ onImport, onAddFirst, onOpenIntegration
 
         <div className="first-run-cards">
           <button type="button" className="first-run-card" onClick={onImport}>
-            <div className="first-run-card-icon">↓</div>
+            <div className="first-run-card-icon"><DownloadIcon size={18} /></div>
             <h3>Import an existing library</h3>
             <p>Steam · Letterboxd · MAL / AniList XML · Discogs · Last.fm · Trakt · Kindle highlights · Excel / CSV / Notion.</p>
           </button>
 
           <button type="button" className="first-run-card" onClick={onOpenIntegrations}>
-            <div className="first-run-card-icon">🔑</div>
+            <div className="first-run-card-icon"><KeyIcon size={18} /></div>
             <h3>Set up metadata sources</h3>
             <p>TMDb, IGDB, ComicVine, SteamGridDB and AniDB need a free key. AniList, MusicBrainz, MangaDex, OpenLibrary work out of the box.</p>
           </button>
 
           <div className="first-run-card first-run-add-card">
-            <div className="first-run-card-icon">＋</div>
+            <div className="first-run-card-icon"><PlusIcon size={18} /></div>
             <h3>Add your first item</h3>
             <p>Pick a library to jump into. The add panel opens straight away.</p>
             <div className="first-run-cat-grid">

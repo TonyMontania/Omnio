@@ -220,6 +220,50 @@ export function ArcadeIcon() {
   )
 }
 
+export function KeyIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <circle cx="8" cy="15" r="4" />
+      <path d="M11 12l9-9M17 6l3 3M14.5 8.5l2 2" />
+    </Icon>
+  )
+}
+
+export function DownloadIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+    </Icon>
+  )
+}
+
+export function PlusIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M12 5v14M5 12h14" />
+    </Icon>
+  )
+}
+
+export function SaveIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+      <path d="M7 3v5h8V3" />
+      <rect x="7" y="13" width="10" height="6" rx="1" />
+    </Icon>
+  )
+}
+
+export function FileIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+    </Icon>
+  )
+}
+
 export function ChevronIcon({ open }: { open: boolean }) {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>

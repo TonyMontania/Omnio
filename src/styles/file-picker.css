@@ -112,7 +112,7 @@
 }
 .file-picker-sidebar li:hover { background: var(--surface-2); }
 .file-picker-sidebar li.active { background: var(--accent-soft); color: var(--accent); }
-.file-picker-side-icon { font-size: 13px; }
+.file-picker-side-icon { display: flex; color: var(--text-faint); }
 .file-picker-side-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .file-picker-main {
@@ -153,7 +153,7 @@
   font-style: italic;
 }
 .file-picker-list li.empty:hover { background: transparent; }
-.file-picker-entry-icon { text-align: center; }
+.file-picker-entry-icon { display: flex; justify-content: center; color: var(--text-faint); }
 .file-picker-entry-name {
   white-space: nowrap;
   overflow: hidden;

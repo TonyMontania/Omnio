@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { invoke } from '../utils/ipc'
+import { FileIcon, FolderIcon } from '../icons'
 
 interface CommonLocation { name: string; path: string }
 interface DirEntry { name: string; isDir: boolean; size: number }
@@ -206,7 +207,7 @@ export default function FilePicker({
                   onClick={() => setCwd(loc.path)}
                   title={loc.path}
                 >
-                  <span className="file-picker-side-icon" aria-hidden>📁</span>
+                  <span className="file-picker-side-icon" aria-hidden><FolderIcon /></span>
                   <span className="file-picker-side-name">{loc.name}</span>
                 </li>
               ))}
@@ -250,7 +251,7 @@ export default function FilePicker({
                     }}
                   >
                     <span className="file-picker-entry-icon" aria-hidden>
-                      {entry.isDir ? '📁' : '📄'}
+                      {entry.isDir ? <FolderIcon /> : <FileIcon />}
                     </span>
                     <span className="file-picker-entry-name">{entry.name}</span>
                     <span className="file-picker-entry-size">

@@ -229,7 +229,7 @@
   background: var(--surface); border: 1px solid var(--border-soft);
 }
 .er-view .er-panel .er-save-row:hover { border-color: var(--border); }
-.er-view .er-save-icon { color: var(--text-faint); font-size: 15px; }
+.er-view .er-save-icon { color: var(--text-faint); display: flex; }
 .er-view .er-save-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .er-view .er-panel .er-save-name { color: var(--text); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .er-view .er-save-sub { font-size: 11.5px; color: var(--text-faint); }
@@ -240,7 +240,7 @@
   padding: 30px 20px; border: 1px dashed var(--border); border-radius: 12px;
 }
 .er-view .er-saves-empty p { margin: 0; max-width: 46ch; font-size: 13px; color: var(--text-dim); line-height: 1.5; }
-.er-view .er-saves-empty-icon { font-size: 26px; opacity: .7; }
+.er-view .er-saves-empty-icon { color: var(--text-faint); display: flex; }
 
 .er-view .er-detail-desc {
   white-space: pre-line; line-height: 1.65; color: var(--text);
