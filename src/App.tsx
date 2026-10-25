@@ -434,12 +434,37 @@ function statusRank<T extends string>(value: T | undefined, fallback: T, options
 // Date#getDay() index → the weekday values used by `airingDay`.
 const TODAY_WEEKDAY = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
-// Group covers close to square fill their tile; wider or taller logos
-// stay whole and centred (see .folder-art.logo in cards.css).
+// Group covers that are square and opaque (a logo on its own colored
+// tile) fill their card; anything else, including square images with a
+// transparent background, stays whole with a margin and a blurred
+// backdrop (see .folder-art.logo in cards.css).
 function markSquareCover(e: React.SyntheticEvent<HTMLImageElement>) {
   const img = e.currentTarget
+  const tile = img.parentElement
   const ratio = img.naturalWidth / Math.max(1, img.naturalHeight)
-  img.parentElement?.classList.toggle('fill', ratio > 0.96 && ratio < 1.04)
+  if (!tile || ratio <= 0.96 || ratio >= 1.04) return
+  // Read the pixels from a separate copy so a blocked read can't affect
+  // the visible image; when the corners can't be checked, keep the margin.
+  const probe = new Image()
+  probe.crossOrigin = 'anonymous'
+  probe.onload = () => tile.classList.toggle('fill', hasOpaqueCorners(probe))
+  probe.src = img.currentSrc || img.src
+}
+
+function hasOpaqueCorners(img: HTMLImageElement): boolean {
+  try {
+    const size = 16
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return false
+    ctx.drawImage(img, 0, 0, size, size)
+    const corners = [[0, 0], [size - 1, 0], [0, size - 1], [size - 1, size - 1]]
+    return corners.every(([x, y]) => ctx.getImageData(x, y, 1, 1).data[3] >= 250)
+  } catch {
+    return false
+  }
 }
 
 // Tab names of the item editor, translated when shown.

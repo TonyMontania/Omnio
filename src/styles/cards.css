@@ -279,7 +279,10 @@
    icons): show the whole image centred instead of cropping it, over a
    blurred copy of itself so the empty sides keep its colors. */
 .folder-grid-grid.groups { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
-.folder-art.logo .folder-photo { position: relative; object-fit: contain; padding: 7%; }
+.folder-art.logo {
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--text) 9%, var(--surface-2)), var(--surface-2) 70%);
+}
+.folder-art.logo .folder-photo { position: relative; object-fit: contain; padding: 10%; }
 .folder-art.logo.fill .folder-photo { padding: 0; }
 .folder-art.logo.fill .folder-backdrop { display: none; }
 .folder-art.logo .folder-backdrop {
