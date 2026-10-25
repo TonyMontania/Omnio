@@ -1,33 +1,41 @@
 import { describe, expect, it } from 'vitest'
-import { greeting, welcomeLines } from './welcome'
+import { greeting, welcomeLine } from './welcome'
 import type { Item } from '../types'
 
 const now = new Date(2026, 9, 25, 9, 0) // Sunday morning
 const item = (p: Partial<Item>): Item => ({ id: Math.random().toString(), categoryId: 'anime', title: 'X', createdAt: 0, ...p } as Item)
 
-describe('welcomeLines', () => {
+describe('welcomeLine', () => {
   it('greets an empty library', () => {
-    expect(welcomeLines([], now)[0]).toMatch(/^Welcome to Omnio/)
+    expect(welcomeLine([], now)).toMatch(/^Welcome to Omnio/)
   })
 
-  it('names what you are in the middle of', () => {
-    const lines = welcomeLines([
-      item({ title: 'Frieren', watchStatus: 'watching', createdAt: 3 }),
-      item({ title: 'Berserk', categoryId: 'manga', mangaStatus: 'reading', createdAt: 2 }),
-      item({ title: 'Dune', categoryId: 'libros', bookStatus: 'reading', createdAt: 1 }),
+  it('leads with a show airing today', () => {
+    const line = welcomeLine([
+      item({ title: 'Elden Ring', categoryId: 'videojuegos', gameStatus: 'playing' }),
+      item({ title: 'Dandadan', watchStatus: 'watching', airingStatus: 'airing', airingDay: 'sunday' }),
     ], now)
-    expect(lines[0]).toBe("You're in the middle of Frieren, Berserk and 1 more.")
+    expect(line).toBe('Dandadan has a new episode today.')
   })
 
-  it('mentions a show airing today', () => {
-    const lines = welcomeLines([item({ title: 'Dandadan', airingStatus: 'airing', airingDay: 'sunday' })], now)
-    expect(lines).toContain('Dandadan airs today.')
+  it('celebrates something finished this week', () => {
+    expect(welcomeLine([item({ title: 'Perfect Days', finishedAt: '2026-10-22' })], now))
+      .toBe('You finished Perfect Days this week. Nice one.')
   })
 
-  it('celebrates what was finished this month and never compares', () => {
-    const lines = welcomeLines([item({ finishedAt: '2026-10-03' }), item({ finishedAt: '2026-10-20' })], now)
-    expect(lines).toContain("You've finished 2 things this month.")
-    expect(lines.join(' ')).not.toMatch(/less|haven't|behind/i)
+  it('names one thing in progress, never a list', () => {
+    const line = welcomeLine([
+      item({ title: 'Old one', watchStatus: 'watching', createdAt: 1 }),
+      item({ title: 'Frieren', watchStatus: 'watching', createdAt: 5 }),
+      item({ title: 'Dune', categoryId: 'libros', bookStatus: 'reading', createdAt: 2 }),
+    ], now)
+    expect(line).toContain('Frieren')
+    expect(line).not.toMatch(/Dune|Old one|more/)
+  })
+
+  it('falls back to a friendly library count', () => {
+    expect(welcomeLine([item({ watchStatus: 'completed' }), item({ watchStatus: 'completed' })], now))
+      .toBe('2 things in your library, ready when you are.')
   })
 
   it('picks a greeting for the time of day', () => {

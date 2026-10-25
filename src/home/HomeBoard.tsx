@@ -17,7 +17,7 @@ import {
 import WidgetPreview from './WidgetPreview'
 import type { PluginPageMeta } from '../plugins/registry'
 import { HomeIcon } from '../icons'
-import { greeting, welcomeLines } from './welcome'
+import { greeting, welcomeLine } from './welcome'
 import { locale, t } from '../i18n'
 
 interface Props {
@@ -63,7 +63,7 @@ export default function HomeBoard(props: Props) {
 
   const today = useMemo(() => new Date(), [])
   const hello = greeting(today)
-  const lines = useMemo(() => welcomeLines(items, today), [items, today])
+  const line = useMemo(() => welcomeLine(items, today), [items, today])
   const dateLabel = today.toLocaleDateString(locale(), { weekday: 'long', month: 'long', day: 'numeric' })
 
   // Greeting, date and the layout buttons live in the app's top bar.
@@ -170,7 +170,7 @@ export default function HomeBoard(props: Props) {
       <div className="content-scroll">
         <header className="home-welcome">
           <h1>{hello}</h1>
-          {lines.map((line) => <p key={line}>{line}</p>)}
+          <p>{line}</p>
         </header>
         <div className="home-board">
           {effectiveLayout.map((slot, idx) => {
