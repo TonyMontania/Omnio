@@ -270,8 +270,16 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
-  padding: 12px 0 24px;
+  padding: 0 0 24px;
 }
+
+/* Greeting and a one- or two-line note about what's going on. */
+.home-welcome { margin: 4px 0 24px; }
+.home-welcome h1 {
+  margin: 0 0 6px; font-family: var(--font-display); font-size: clamp(24px, 2.6vw, 32px);
+  font-weight: 600; letter-spacing: -0.01em; color: var(--text);
+}
+.home-welcome p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-dim); }
 .home-widget {
   display: flex;
   flex-direction: column;

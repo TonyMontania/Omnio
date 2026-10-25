@@ -17,6 +17,8 @@ import {
 import WidgetPreview from './WidgetPreview'
 import type { PluginPageMeta } from '../plugins/registry'
 import { HomeIcon } from '../icons'
+import { greeting, welcomeLines } from './welcome'
+import { locale, t } from '../i18n'
 
 interface Props {
   items: Item[]
@@ -60,28 +62,26 @@ export default function HomeBoard(props: Props) {
   const [filterIdx, setFilterIdx] = useState<number | null>(null)
 
   const today = useMemo(() => new Date(), [])
-  const greeting = useMemo(() => {
-    const h = today.getHours()
-    return h < 6 ? 'Late night' : h < 12 ? 'Good morning' : h < 19 ? 'Good afternoon' : 'Good evening'
-  }, [today])
-  const dateLabel = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+  const hello = greeting(today)
+  const lines = useMemo(() => welcomeLines(items, today), [items, today])
+  const dateLabel = today.toLocaleDateString(locale(), { weekday: 'long', month: 'long', day: 'numeric' })
 
   // Greeting, date and the layout buttons live in the app's top bar.
   useEffect(() => {
     setPageMeta({
       icon: <HomeIcon />,
-      title: greeting,
+      title: t('Home'),
       actions: (
         <div className="ctl">
           <span className="home-date">{dateLabel}</span>
-          {editing && <button type="button" className="secondary-btn" onClick={() => setPickerOpen(true)}>+ Add widget</button>}
+          {editing && <button type="button" className="secondary-btn" onClick={() => setPickerOpen(true)}>{t('+ Add widget')}</button>}
           <button type="button" className={editing ? 'add-btn' : 'secondary-btn'} onClick={() => setEditing((v) => !v)}>
-            {editing ? '✓ Done' : '✎ Edit layout'}
+            {editing ? t('✓ Done') : t('✎ Edit layout')}
           </button>
         </div>
       ),
     })
-  }, [greeting, dateLabel, editing, setPageMeta])
+  }, [dateLabel, editing, setPageMeta])
 
   // The layout coming from settings might be empty (user cleared everything)
   // or missing (never touched). Both fall back to the default so the board
@@ -168,6 +168,10 @@ export default function HomeBoard(props: Props) {
       )}
 
       <div className="content-scroll">
+        <header className="home-welcome">
+          <h1>{hello}</h1>
+          {lines.map((line) => <p key={line}>{line}</p>)}
+        </header>
         <div className="home-board">
           {effectiveLayout.map((slot, idx) => {
             const w = getHomeWidget(slot.id)
