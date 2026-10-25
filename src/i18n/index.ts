@@ -23,10 +23,25 @@ const DICTIONARIES: Record<Language, Record<string, string>> = { en: {}, es }
 const LOCALES: Record<Language, string> = { en: 'en-US', es: 'es-AR' }
 
 let current: Language = 'en'
+const listeners = new Set<() => void>()
 
 export function setLanguage(language: Language): void {
-  current = DICTIONARIES[language] ? language : 'en'
-  if (typeof document !== 'undefined') document.documentElement.lang = current
+  const next = DICTIONARIES[language] ? language : 'en'
+  if (typeof document !== 'undefined') document.documentElement.lang = next
+  if (next === current) return
+  current = next
+  for (const fn of listeners) fn()
+}
+
+/** Runs `fn` whenever the interface language changes. */
+export function onLanguageChange(fn: () => void): () => void {
+  listeners.add(fn)
+  return () => listeners.delete(fn)
+}
+
+/** Compares two strings alphabetically in the interface language. */
+export function compareText(a: string, b: string): number {
+  return a.localeCompare(b, LOCALES[current], { sensitivity: 'base' })
 }
 
 export function getLanguage(): Language {

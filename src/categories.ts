@@ -9,7 +9,7 @@
 // every switch that doesn't handle it.
 
 import type { AnimeCategoryId, MangaCategoryId, CategoryId } from './types/items'
-import { t } from './i18n'
+import { compareText, onLanguageChange, t } from './i18n'
 
 export interface Category {
   id: CategoryId
@@ -27,9 +27,10 @@ function category<I extends CategoryId>(id: I, label: string, singular: string):
   }
 }
 
-// Sorted alphabetically by English label so every list surfaced in the UI
-// (Settings library toggles, category pickers, Stats) reads in the same
-// order. Change this list to change the display order everywhere.
+// Every list that shows the libraries (sidebar, Settings toggles, pickers,
+// Stats) follows this array's order, which is kept alphabetical in the
+// interface language: sortCategories() re-sorts it whenever the language
+// changes.
 export const CATEGORIES = [
   category('anime',         'Anime',          'anime'),
   category('libros',        'Books',          'book'),
@@ -44,6 +45,12 @@ export const CATEGORIES = [
   category('visual_novels', 'Visual Novels',  'visual novel'),
   category('comics_west',   'Western Comics', 'comic'),
 ] as const
+
+function sortCategories(): void {
+  (CATEGORIES as unknown as Category[]).sort((x, y) => compareText(x.label, y.label))
+}
+sortCategories()
+onLanguageChange(sortCategories)
 
 // Runtime tuple of every valid id, derived from CATEGORIES so it can't
 // drift. Consumers that need string comparisons at runtime (schemas,
