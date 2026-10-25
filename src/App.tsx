@@ -434,6 +434,14 @@ function statusRank<T extends string>(value: T | undefined, fallback: T, options
 // Date#getDay() index → the weekday values used by `airingDay`.
 const TODAY_WEEKDAY = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
+// Group covers close to square fill their tile; wider or taller logos
+// stay whole and centred (see .folder-art.logo in cards.css).
+function markSquareCover(e: React.SyntheticEvent<HTMLImageElement>) {
+  const img = e.currentTarget
+  const ratio = img.naturalWidth / Math.max(1, img.naturalHeight)
+  img.parentElement?.classList.toggle('fill', ratio > 0.85 && ratio < 1.18)
+}
+
 // Tab names of the item editor, translated when shown.
 const EDITOR_TAB_LABELS = {
   overview: tk('Overview'),
@@ -4537,7 +4545,7 @@ function App() {
                 </div>
               ) : showFolderListing ? (
                 <div className="content-scroll">
-                  <div className={`folder-grid folder-grid-${classicLayout}`}>
+                  <div className={`folder-grid folder-grid-${classicLayout} groups`}>
                     {categoryCollections.length === 0 && <p className="empty">{t('You haven\'t created any groups here yet.')}</p>}
                     {sortFolders(
                       categoryCollections.filter((c) => !search.trim() || c.name.toLowerCase().includes(search.trim().toLowerCase())),
@@ -4547,13 +4555,14 @@ function App() {
                       <div key={c.id} className="folder-card" onClick={() => { setActiveCollectionId(c.id); resetListControls(); setSortBy('custom') }}>
                         <button className="folder-edit" onClick={(e) => { e.stopPropagation(); openCollectionEditModal(c) }} title={t('Edit group')}>✎</button>
                         <button className="delete" onClick={(e) => { e.stopPropagation(); handleDeleteCollection(c.id) }}>✕</button>
-                        <div className="folder-art">
+                        <div className={c.cover ? 'folder-art logo' : 'folder-art'}>
+                          {c.cover && <img className="folder-backdrop" src={assetSrc(c.cover)} alt="" aria-hidden loading="lazy" />}
                           {c.cover
-                            ? <img className="folder-photo" src={assetSrc(c.cover)} alt={c.name} loading="lazy" />
+                            ? <img className="folder-photo" src={assetSrc(c.cover)} alt={c.name} loading="lazy" onLoad={markSquareCover} />
                             : <span className="folder-icon"><FolderIcon /></span>}
                         </div>
                         <h3 title={c.name}>{c.name}</h3>
-                        <span className="folder-count">{c.itemIds.length} {c.itemIds.length === 1 ? 'item' : 'items'}</span>
+                        <span className="folder-count">{plural(c.itemIds.length, '{n} item', '{n} items')}</span>
                       </div>
                     ))}
                   </div>

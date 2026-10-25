@@ -275,6 +275,18 @@
 .folder-art.circle { border-radius: 50%; }
 .folder-card:hover .folder-art { outline-color: var(--accent); transform: translateY(-2px); }
 .folder-photo { width: 100%; height: 100%; object-fit: cover; display: block; image-rendering: -webkit-optimize-contrast; }
+/* Group covers are usually logos of every shape (wide wordmarks, square
+   icons): show the whole image centred instead of cropping it, over a
+   blurred copy of itself so the empty sides keep its colors. */
+.folder-grid-grid.groups { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.folder-art.logo .folder-photo { position: relative; object-fit: contain; padding: 7%; }
+.folder-art.logo.fill .folder-photo { object-fit: cover; padding: 0; }
+.folder-art.logo.fill .folder-backdrop { display: none; }
+.folder-art.logo .folder-backdrop {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: blur(22px) saturate(1.2); opacity: .35; transform: scale(1.3);
+}
+.folder-grid-list .folder-art.logo .folder-photo, .folder-grid-compact .folder-art.logo .folder-photo { padding: 4%; }
 .folder-photo.placeholder {
   display: flex; align-items: center; justify-content: center;
   color: var(--text-faint); font-family: var(--font-display); font-size: 40px; font-weight: 600;
