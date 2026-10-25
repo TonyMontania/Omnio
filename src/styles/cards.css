@@ -280,7 +280,7 @@
    blurred copy of itself so the empty sides keep its colors. */
 .folder-grid-grid.groups { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 .folder-art.logo .folder-photo { position: relative; object-fit: contain; padding: 7%; }
-.folder-art.logo.fill .folder-photo { object-fit: cover; padding: 0; }
+.folder-art.logo.fill .folder-photo { padding: 0; }
 .folder-art.logo.fill .folder-backdrop { display: none; }
 .folder-art.logo .folder-backdrop {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;

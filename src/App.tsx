@@ -439,7 +439,7 @@ const TODAY_WEEKDAY = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', '
 function markSquareCover(e: React.SyntheticEvent<HTMLImageElement>) {
   const img = e.currentTarget
   const ratio = img.naturalWidth / Math.max(1, img.naturalHeight)
-  img.parentElement?.classList.toggle('fill', ratio > 0.85 && ratio < 1.18)
+  img.parentElement?.classList.toggle('fill', ratio > 0.96 && ratio < 1.04)
 }
 
 // Tab names of the item editor, translated when shown.
