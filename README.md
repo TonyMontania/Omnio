@@ -4,6 +4,8 @@
 
 # Omnio
 
+**English** · [Español](README.es.md)
+
 **Every hobby you track, in one app that lives on your computer.**
 
 Games · Music · Movies · Series · Anime · Donghua · Manga · Manhwa · Manhua · Comics · Books · Visual Novels
@@ -139,12 +141,14 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 **Track**
 
 - **12 libraries** — Games · Music · Movies · Series · Anime · Donghua · Manga · Manhwa · Manhua · Western Comics · Books · Visual Novels
-- **Tabbed editor** (Overview / Identity / Progress / Media / History / Related / Notes). Empty tabs auto-hide
-- **Full-screen edit modal** with live card + detail preview
+- **Tabbed editor** (Overview / Identity / Progress / Media / History / Related / Notes) with a live card + detail preview
+- **Views** — grid, list, compact, Kanban by status, release-year timeline and a diary of what you added and finished
+- **Custom fields** per library, shown in the editor and optionally as a chip on the card
 - **Bulk actions** — multi-select cards to change status, rating, tags, groups or move between libraries
 - **Tag hierarchy** — nest tags (`jrpg → turn-based`); filtering a parent matches every descendant
 - **Half-star ratings** in 0.5 steps
 - **Item templates** — save the defaults you want prefilled per category
+- **Playlists** — ordered lists that mix items from every library
 
 </td>
 <td width="33%" valign="top">
@@ -152,9 +156,12 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 **Discover**
 
 - **One-click metadata + covers** from 14 sources (see below). Cached locally for 24 h
-- **Quick-add via URL** — paste an IGDB / TMDb / AniList / VNDB / Steam URL into the title field, the fetcher opens pre-filled
+- **Quick add** from the sidebar, or paste an IGDB / TMDb / AniList / VNDB / Steam URL into the title field, the fetcher opens pre-filled
 - **Global search (Ctrl+K)** across every library with operator syntax (`favorite:true`, `year:>2020`, `status:playing`)
 - **Home widget board** — Continue where you left off, Currently airing, Upcoming this week, Cover carousel, Big numbers, On this day, Rating spread, Top of the year, Genre spotlight, Pick from your backlog and more. Drag & drop, resize, and quick-add from the sidebar
+- **Release calendar** — upcoming releases and airing dates, exportable to iCal
+- **Random picker** — let Omnio choose the next thing from your backlog
+- **Franchise timeline** across libraries, by sections or as a free-form diagram
 - **Statistics view** — per-category distribution + activity heatmap, cross-library genre matrix, monthly added-vs-finished chart, top rated / artists / genres / labels / devs / publishers / platforms
 - **Arcade section** — score / 1cc tracker for shmups and arcade games. Grid mode adapted from [doopu/1ccTracker](https://github.com/doopu/1ccTracker)
 
@@ -164,9 +171,10 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 **Own your data**
 
 - **Fully local** — no accounts, no telemetry, no analytics
-- **Import** — MAL / AniList XML, Steam, Letterboxd, IMDb, Backloggd, Serializd, Spotify, RateYourMusic, Kindle highlights, Last.fm (CSV + API sync), local music folder scan, Trakt.tv, Discogs, StoryGraph, Excel / CSV / Notion / TXT with Playnite / GOG / Goodreads presets
+- **Import** — MAL / AniList XML, Steam, Letterboxd, IMDb, Backloggd, Serializd, Spotify, RateYourMusic, Kindle highlights, Last.fm (CSV + API sync), local music folder scan, Trakt.tv, Discogs, StoryGraph, installed Steam / GOG / Epic games, Excel / CSV / Notion / TXT (Playnite, GOG and Goodreads exports are recognized automatically)
 - **Export** — static HTML site (searchable, light/dark), MAL XML, iCal for release calendar, per-category CSV, Yearly Wrapped PNG
-- **Rolling backups** — 5 automatic snapshots per save, restore any of them
+- **Rolling backups** — 5 automatic snapshots per save, restore any of them; optional scheduled copy to a folder (Dropbox, OneDrive…)
+- **Clean-up tools** — find duplicates, merge genre and role variants, audit missing fields, fix broken covers, check a music artist's discography for missing albums
 - **In-app updater** — checks GitHub Releases, downloads the matching build
 - **HTTP proxy** support for every outbound request
 - **11 themes × 8 accents** — Dark / Light / AMOLED / Nord / Tokyo Night / Solarized / Dracula / Catppuccin / Rosé Pine / Gruvbox / Everforest
@@ -260,11 +268,14 @@ Each library is its own JSON — editing one game only rewrites `games.json`, so
 - **Ctrl+K** — global search across every library
 - **Ctrl+F** — search inside the current library
 - **Ctrl+Z / Ctrl+Shift+Z** (or **Ctrl+Y**) — undo / redo
+- **Ctrl+H** — go to Home
 - **F5** — reload data from disk
 - **?** — full shortcut cheatsheet
 - **Right-click** — quick actions on any card
 - **Shift+click** — multi-select
 - **Esc** — close modal / panel
+
+Every shortcut can be changed or turned off in **Settings → Keyboard shortcuts**.
 
 ## Privacy
 
@@ -293,4 +304,4 @@ Each library is its own JSON — editing one game only rewrites `games.json`, so
 - Want to contribute? → [CONTRIBUTING.md](CONTRIBUTING.md) · [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - Security → [SECURITY.md](SECURITY.md)
 - Full field-by-field reference → [`docs/FIELDS.md`](docs/FIELDS.md)
-- Changelog → [releases page](https://github.com/TonyMontania/Omnio/releases)
+- Changelog → [CHANGELOG.md](CHANGELOG.md) · [releases page](https://github.com/TonyMontania/Omnio/releases)
