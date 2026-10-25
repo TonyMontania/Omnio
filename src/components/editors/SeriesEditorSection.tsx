@@ -9,6 +9,7 @@ import RewatchListEditor from './RewatchListEditor'
 import RelatedListEditor from './RelatedListEditor'
 import RecommendationsEditor from './RecommendationsEditor'
 import SeasonListEditor from './SeasonListEditor'
+import { t } from '../../i18n'
 
 type Setter<T> = (updater: T | ((prev: T) => T)) => void
 
@@ -75,121 +76,121 @@ export default function SeriesEditorSection(props: SeriesEditorSectionProps) {
   return (
     <>
       <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Series details</span>
-        <span className="form-section-hint">Cast, crew, network, seasons</span>
+        <span className="form-section-title">{t('Series details')}</span>
+        <span className="form-section-hint">{t('Cast, crew, network, seasons')}</span>
       </div>
       <div className="field-group">
-        <label>Description</label>
+        <label>{t('Description')}</label>
         <textarea value={seriesDescription} onChange={(e) => setSeriesDescription(e.target.value)} rows={3} />
       </div>
-      <TagEditor label="Directors" placeholder="Add director" tags={directors} onAdd={(d) => setDirectors((prev) => prev.includes(d) ? prev : [...prev, d])} onRemove={(i) => setDirectors((prev) => prev.filter((_, idx) => idx !== i))} />
-      <TagEditor label="Showrunners" placeholder="Add showrunner" tags={showrunners} onAdd={(s) => setShowrunners((prev) => prev.includes(s) ? prev : [...prev, s])} onRemove={(i) => setShowrunners((prev) => prev.filter((_, idx) => idx !== i))} />
-      <TagEditor label="Writers" placeholder="Add writer" tags={writers} onAdd={(w) => setWriters((prev) => prev.includes(w) ? prev : [...prev, w])} onRemove={(i) => setWriters((prev) => prev.filter((_, idx) => idx !== i))} />
-      <TagEditor label="Cast" placeholder="Add actor" tags={cast} onAdd={(c) => setCast((prev) => prev.includes(c) ? prev : [...prev, c])} onRemove={(i) => setCast((prev) => prev.filter((_, idx) => idx !== i))} />
-      <TagEditor label="Genres" placeholder="Add genre" tags={genres} onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])} onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))} />
+      <TagEditor label={t('Directors')} placeholder={t('Add director')} tags={directors} onAdd={(d) => setDirectors((prev) => prev.includes(d) ? prev : [...prev, d])} onRemove={(i) => setDirectors((prev) => prev.filter((_, idx) => idx !== i))} />
+      <TagEditor label={t('Showrunners')} placeholder={t('Add showrunner')} tags={showrunners} onAdd={(s) => setShowrunners((prev) => prev.includes(s) ? prev : [...prev, s])} onRemove={(i) => setShowrunners((prev) => prev.filter((_, idx) => idx !== i))} />
+      <TagEditor label={t('Writers')} placeholder={t('Add writer')} tags={writers} onAdd={(w) => setWriters((prev) => prev.includes(w) ? prev : [...prev, w])} onRemove={(i) => setWriters((prev) => prev.filter((_, idx) => idx !== i))} />
+      <TagEditor label={t('Cast')} placeholder={t('Add actor')} tags={cast} onAdd={(c) => setCast((prev) => prev.includes(c) ? prev : [...prev, c])} onRemove={(i) => setCast((prev) => prev.filter((_, idx) => idx !== i))} />
+      <TagEditor label={t('Genres')} placeholder={t('Add genre')} tags={genres} onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])} onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))} />
       <div className="form-section-header" data-belongs-to="progress">
-        <span className="form-section-title">Progress</span>
-        <span className="form-section-hint">Watch status · seasons watched · per-episode tracking</span>
+        <span className="form-section-title">{t('Progress')}</span>
+        <span className="form-section-hint">{t('Watch status · seasons watched · per-episode tracking')}</span>
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Watch status</label>
+          <label>{t('Watch status')}</label>
           <select value={seriesStatus} onChange={(e) => setSeriesStatus(e.target.value as SeriesStatus)}>
             {SERIES_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>Format</label>
+          <label>{t('Format')}</label>
           <select value={seriesFormat} onChange={(e) => setSeriesFormat(e.target.value as SeriesFormat | '')}>
-            <option value="">Unspecified</option>
+            <option value="">{t('Unspecified')}</option>
             {SERIES_FORMAT_OPTIONS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
           </select>
         </div>
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Network</label>
-          <input value={network} onChange={(e) => setNetwork(e.target.value)} placeholder="e.g. HBO, Netflix" />
+          <label>{t('Network')}</label>
+          <input value={network} onChange={(e) => setNetwork(e.target.value)} placeholder={t('e.g. HBO, Netflix')} />
         </div>
         <div className="field-group">
-          <label>Watched where</label>
+          <label>{t('Watched where')}</label>
           <select value={watchedWhere} onChange={(e) => setWatchedWhere(e.target.value as WatchLocation | '')}>
-            <option value="">Unspecified</option>
+            <option value="">{t('Unspecified')}</option>
             {WATCH_LOCATION_OPTIONS.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
           </select>
         </div>
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Country</label>
-          <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. USA" />
+          <label>{t('Country')}</label>
+          <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder={t('e.g. USA')} />
         </div>
         <div className="field-group">
-          <label>Language</label>
-          <input value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="e.g. English" />
+          <label>{t('Language')}</label>
+          <input value={language} onChange={(e) => setLanguage(e.target.value)} placeholder={t('e.g. English')} />
         </div>
         <div className="field-group">
-          <label>Content rating</label>
-          <input value={contentRating} onChange={(e) => setContentRating(e.target.value)} placeholder="e.g. TV-MA" />
-        </div>
-      </div>
-      <div className="field-row">
-        <div className="field-group">
-          <label>Number of seasons</label>
-          <input value={unitCount} onChange={(e) => handleUnitCountChange(e.target.value)} inputMode="numeric" placeholder="e.g. 5" />
-        </div>
-        <div className="field-group">
-          <label>Total episodes</label>
-          <input value={totalEpisodes} onChange={(e) => intHandler(setTotalEpisodes)(e.target.value)} inputMode="numeric" placeholder="e.g. 62" />
-        </div>
-        <div className="field-group">
-          <label>Episodes watched</label>
-          <input value={episodesWatched} onChange={(e) => intHandler(setEpisodesWatched)(e.target.value)} inputMode="numeric" placeholder="e.g. 40" />
-        </div>
-        <div className="field-group">
-          <label>Ep. duration (min)</label>
-          <input value={episodeDuration} onChange={(e) => intHandler(setEpisodeDuration)(e.target.value)} inputMode="numeric" placeholder="e.g. 45" />
+          <label>{t('Content rating')}</label>
+          <input value={contentRating} onChange={(e) => setContentRating(e.target.value)} placeholder={t('e.g. TV-MA')} />
         </div>
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>First season year</label>
+          <label>{t('Number of seasons')}</label>
+          <input value={unitCount} onChange={(e) => handleUnitCountChange(e.target.value)} inputMode="numeric" placeholder={t('e.g. 5')} />
+        </div>
+        <div className="field-group">
+          <label>{t('Total episodes')}</label>
+          <input value={totalEpisodes} onChange={(e) => intHandler(setTotalEpisodes)(e.target.value)} inputMode="numeric" placeholder={t('e.g. 62')} />
+        </div>
+        <div className="field-group">
+          <label>{t('Episodes watched')}</label>
+          <input value={episodesWatched} onChange={(e) => intHandler(setEpisodesWatched)(e.target.value)} inputMode="numeric" placeholder={t('e.g. 40')} />
+        </div>
+        <div className="field-group">
+          <label>{t('Ep. duration (min)')}</label>
+          <input value={episodeDuration} onChange={(e) => intHandler(setEpisodeDuration)(e.target.value)} inputMode="numeric" placeholder={t('e.g. 45')} />
+        </div>
+      </div>
+      <div className="field-row">
+        <div className="field-group">
+          <label>{t('First season year')}</label>
           <input value={startYear} onChange={(e) => yearHandler(setStartYear)(e.target.value)} inputMode="numeric" maxLength={4} />
         </div>
         <div className="field-group">
-          <label>Last season year</label>
+          <label>{t('Last season year')}</label>
           <input value={endYear} onChange={(e) => yearHandler(setEndYear)(e.target.value)} inputMode="numeric" maxLength={4} />
         </div>
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Aired from</label>
+          <label>{t('Aired from')}</label>
           <input type="date" value={airedFrom} onChange={(e) => setAiredFrom(e.target.value)} />
         </div>
         <div className="field-group">
-          <label>Aired to</label>
+          <label>{t('Aired to')}</label>
           <input type="date" value={airedTo} onChange={(e) => setAiredTo(e.target.value)} />
         </div>
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Start date</label>
+          <label>{t('Start date')}</label>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </div>
         <div className="field-group">
-          <label>Completion date</label>
+          <label>{t('Completion date')}</label>
           <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
         </div>
       </div>
       <div className="field-group">
-        <label>Franchise</label>
-        <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Star Trek" />
+        <label>{t('Franchise')}</label>
+        <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder={t('e.g. Star Trek')} />
       </div>
       <div className="form-section-header" data-belongs-to="related">
-        <span className="form-section-title">Related &amp; recommendations</span>
+        <span className="form-section-title">{t('Related & recommendations')}</span>
       </div>
       <div className="field-group">
-        <label>Related series</label>
+        <label>{t('Related series')}</label>
         <RelatedListEditor
           related={relatedItems}
               crossLibrary
@@ -198,59 +199,59 @@ export default function SeriesEditorSection(props: SeriesEditorSectionProps) {
           onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
           onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
           onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-          pickerPlaceholder="Add related series…"
+          pickerPlaceholder={t('Add related series…')}
         />
       </div>
       <div className="field-group">
-        <label>Recommendations</label>
+        <label>{t('Recommendations')}</label>
         <RecommendationsEditor
           ids={recommendedItems}
           options={items.filter((i) => i.categoryId === 'series' && i.id !== editingId)}
           onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
           onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-          pickerPlaceholder="Add recommended series…"
+          pickerPlaceholder={t('Add recommended series…')}
         />
       </div>
       <div className="form-section-header" data-belongs-to="overview">
-        <span className="form-section-title">Rating</span>
+        <span className="form-section-title">{t('Rating')}</span>
       </div>
       <div className="field-group">
-        <label>Rating</label>
+        <label>{t('Rating')}</label>
         <RatingPicker value={rating} onChange={setRating} />
       </div>
       <div className="form-section-header" data-belongs-to="notes">
-        <span className="form-section-title">Review</span>
-        <span className="form-section-hint">Your take on this series · with optional spoiler toggle</span>
+        <span className="form-section-title">{t('Review')}</span>
+        <span className="form-section-hint">{t('Your take on this series · with optional spoiler toggle')}</span>
       </div>
       <div className="field-group">
-        <label>Review</label>
-        <textarea value={seriesReview} onChange={(e) => setSeriesReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
+        <label>{t('Review')}</label>
+        <textarea value={seriesReview} onChange={(e) => setSeriesReview(e.target.value)} rows={3} placeholder={t('Your review (supports **bold**, *italic*, and "- " lists)')} />
         {seriesReview.trim() && (
           <div className="yesno">
-            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>Contains spoilers</button>
-            <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>No spoilers</button>
+            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>{t('Contains spoilers')}</button>
+            <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>{t('No spoilers')}</button>
           </div>
         )}
       </div>
       <div className="form-section-header" data-belongs-to="history">
-        <span className="form-section-title">Watch history</span>
+        <span className="form-section-title">{t('Watch history')}</span>
       </div>
       <div className="field-group">
-        <label>Watch history</label>
+        <label>{t('Watch history')}</label>
         <RewatchListEditor
           rewatches={rewatches}
           onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
           onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
           onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
           onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-          labels={{ rewatch: 'Rewatched', started: 'Started watching', finished: 'Finished watching', dropped: 'Dropped', note: 'Note' }}
+          labels={{ rewatch: t('Rewatched'), started: t('Started watching'), finished: t('Finished watching'), dropped: t('Dropped'), note: t('Note') }}
         />
       </div>
       <div className="field-group">
-        <label>Season list?</label>
+        <label>{t('Season list?')}</label>
         <div className="yesno">
-          <button type="button" className={hasSeasons ? 'pill active' : 'pill'} onClick={() => setHasSeasons(true)}>Yes</button>
-          <button type="button" className={!hasSeasons ? 'pill active' : 'pill'} onClick={() => { setHasSeasons(false); setSeasons([]) }}>No</button>
+          <button type="button" className={hasSeasons ? 'pill active' : 'pill'} onClick={() => setHasSeasons(true)}>{t('Yes')}</button>
+          <button type="button" className={!hasSeasons ? 'pill active' : 'pill'} onClick={() => { setHasSeasons(false); setSeasons([]) }}>{t('No')}</button>
         </div>
         {hasSeasons && (
           <SeasonListEditor

@@ -6,6 +6,7 @@
 
 import { useState } from 'react'
 import type { ChapterNote } from '../../types'
+import { t } from '../../i18n'
 
 type Props = {
   entries: ChapterNote[]
@@ -28,11 +29,11 @@ export default function ChapterNotesEditor({ entries, onChange }: Props) {
 
   return (
     <div className="field-group">
-      <label>Notes per chapter</label>
+      <label>{t('Notes per chapter')}</label>
       <div className="chapter-notes-add">
-        <input className="chapter-notes-num" placeholder="Ch. e.g. 1, Prologue…" value={chapter} onChange={(e) => setChapter(e.target.value)} />
-        <textarea className="chapter-notes-input" placeholder="Note…" value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
-        <button type="button" onClick={add} disabled={!note.trim()}>+ Add</button>
+        <input className="chapter-notes-num" placeholder={t('Ch. e.g. 1, Prologue…')} value={chapter} onChange={(e) => setChapter(e.target.value)} />
+        <textarea className="chapter-notes-input" placeholder={t('Note…')} value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+        <button type="button" onClick={add} disabled={!note.trim()}>{t('+ Add')}</button>
       </div>
       {entries.length > 0 && (
         <ul className="chapter-notes-list">
@@ -49,7 +50,7 @@ export default function ChapterNotesEditor({ entries, onChange }: Props) {
                 onChange={(e) => update(n.id, { note: e.target.value })}
                 rows={2}
               />
-              <button type="button" className="chapter-notes-delete" onClick={() => remove(n.id)} title="Delete">✕</button>
+              <button type="button" className="chapter-notes-delete" onClick={() => remove(n.id)} title={t('Delete')}>✕</button>
             </li>
           ))}
         </ul>

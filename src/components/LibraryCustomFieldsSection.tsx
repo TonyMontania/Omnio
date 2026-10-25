@@ -6,6 +6,7 @@
 
 import type { LibraryCustomFieldDef, LibraryCustomFieldValue } from '../types/customFields'
 import { normalizeLibraryCustomValue } from '../types/customFields'
+import { t } from '../i18n'
 
 interface Props {
   defs: LibraryCustomFieldDef[]
@@ -22,7 +23,7 @@ export default function LibraryCustomFieldsSection({ defs, values, onChange }: P
   }
   return (
     <div className="editor-section library-custom-fields-section">
-      <h4>Custom fields</h4>
+      <h4>{t('Custom fields')}</h4>
       {defs.map((def) => {
         const v = values[def.id]
         return (
@@ -54,8 +55,8 @@ function FieldInput({ def, value, onChange }: InputProps) {
     case 'boolean':
       return (
         <div className="yesno">
-          <button type="button" className={value === true ? 'pill active' : 'pill'} onClick={() => onChange(true)}>Yes</button>
-          <button type="button" className={value === false ? 'pill active' : 'pill'} onClick={() => onChange(false)}>No</button>
+          <button type="button" className={value === true ? 'pill active' : 'pill'} onClick={() => onChange(true)}>{t('Yes')}</button>
+          <button type="button" className={value === false ? 'pill active' : 'pill'} onClick={() => onChange(false)}>{t('No')}</button>
           <button type="button" className={value == null ? 'pill active' : 'pill'} onClick={() => onChange(null)}>—</button>
         </div>
       )

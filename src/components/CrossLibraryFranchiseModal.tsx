@@ -8,6 +8,7 @@ import { lazy, Suspense, useMemo, useState, type CSSProperties } from 'react'
 import type { Item, FranchiseSection, FranchiseGraph } from '../types'
 import { assetSrc } from '../types'
 import { CATEGORIES } from '../categories'
+import { plural, t } from '../i18n'
 
 // Code-split so users who never open graph mode don't pay for xyflow.
 const FranchiseGraphView = lazy(() => import('./FranchiseGraphView'))
@@ -104,15 +105,14 @@ export default function CrossLibraryFranchiseModal({ franchise, allItems, sectio
           <div>
             <h2 style={{ margin: 0 }}>{franchise}</h2>
             <p className="hint" style={{ margin: '4px 0 0' }}>
-              {items.length} item{items.length === 1 ? '' : 's'} across{' '}
-              {Array.from(byCategory.entries()).map(([id, n]) => `${catLabel(id)} (${n})`).join(' · ')}
+              {plural(items.length, '{n} item across {map}', '{n} items across {map}', { map: Array.from(byCategory.entries()).map(([id, n]) => `${catLabel(id)} (${n})`).join(' · ') })}
             </p>
           </div>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           {items.length === 0 ? (
-            <p className="hint">No items share the "{franchise}" franchise yet — set it on a few and they'll all show up here.</p>
+            <p className="hint">{t('No items share the "{franchise}" franchise yet — set it on a few and they\'ll all show up here.', { franchise: franchise })}</p>
           ) : (
             <>
               <div className="franchise-mode-row">
@@ -124,7 +124,7 @@ export default function CrossLibraryFranchiseModal({ franchise, allItems, sectio
                     className={mode === 'year' ? 'active' : ''}
                     onClick={() => onSetViewMode('year')}
                   >
-                    By year
+                    {t('By year')}
                   </button>
                   <button
                     type="button"
@@ -133,9 +133,9 @@ export default function CrossLibraryFranchiseModal({ franchise, allItems, sectio
                     className={mode === 'sections' ? 'active' : ''}
                     onClick={() => onSetViewMode('sections')}
                     disabled={sections.length === 0}
-                    title={sections.length === 0 ? 'Create sections first with Organize…' : undefined}
+                    title={sections.length === 0 ? t('Create sections first with Organize…') : undefined}
                   >
-                    By sections {sections.length > 0 && `(${sections.length})`}
+                    {t('By sections')}{' '}{sections.length > 0 && `(${sections.length})`}
                   </button>
                   <button
                     type="button"
@@ -143,9 +143,9 @@ export default function CrossLibraryFranchiseModal({ franchise, allItems, sectio
                     aria-selected={mode === 'graph'}
                     className={mode === 'graph' ? 'active' : ''}
                     onClick={() => onSetViewMode('graph')}
-                    title="Free-canvas diagram with covers, arrows and labels — good for Zelda-style timelines with branches and convergence"
+                    title={t('Free-canvas diagram with covers, arrows and labels — good for Zelda-style timelines with branches and convergence')}
                   >
-                    By graph {(graph?.nodes.length ?? 0) > 0 && `(${graph!.nodes.length})`}
+                    {t('By graph')}{' '}{(graph?.nodes.length ?? 0) > 0 && `(${graph!.nodes.length})`}
                   </button>
                 </div>
                 <button
@@ -153,7 +153,7 @@ export default function CrossLibraryFranchiseModal({ franchise, allItems, sectio
                   className="secondary-btn"
                   onClick={() => setOrganizeOpen(true)}
                 >
-                  Organize sections…
+                  {t('Organize sections…')}
                 </button>
               </div>
 
@@ -186,7 +186,7 @@ export default function CrossLibraryFranchiseModal({ franchise, allItems, sectio
                     if (rest.length === 0) return null
                     return (
                       <div className="franchise-section">
-                        <h3 className="franchise-section-title franchise-section-title-muted">Ungrouped</h3>
+                        <h3 className="franchise-section-title franchise-section-title-muted">{t('Ungrouped')}</h3>
                         <div className="franchise-cross-timeline">
                           {rest.map((it) => renderItem(it))}
                         </div>
@@ -197,7 +197,7 @@ export default function CrossLibraryFranchiseModal({ franchise, allItems, sectio
               )}
 
               {mode === 'graph' && (
-                <Suspense fallback={<p className="hint">Loading canvas…</p>}>
+                <Suspense fallback={<p className="hint">{t('Loading canvas…')}</p>}>
                   <FranchiseGraphView
                     franchise={franchise}
                     items={items}
@@ -329,11 +329,9 @@ function OrganizeSectionsModal({ franchise, items, sections, onSave, onClose }: 
       <div className="modal-panel organize-sections-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <h2 style={{ margin: 0 }}>Organize sections</h2>
+            <h2 style={{ margin: 0 }}>{t('Organize sections')}</h2>
             <p className="hint" style={{ margin: '4px 0 0' }}>
-              Arrange {franchise} as sections (Timeline A, Liberl Arc, Prime series…).
-              Each item belongs to at most one section; unassigned items keep showing at
-              the bottom of the by-sections view.
+              {t('Arrange {franchise} as sections (Timeline A, Liberl Arc, Prime series…). Each item belongs to at most one section; unassigned items keep showing at the bottom of the by-sections view.', { franchise: franchise })}
             </p>
           </div>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
@@ -344,14 +342,14 @@ function OrganizeSectionsModal({ franchise, items, sections, onSave, onClose }: 
             <div className="organize-add-row">
               <input
                 type="text"
-                placeholder="New section name…"
+                placeholder={t('New section name…')}
                 value={newSectionName}
                 onChange={(e) => setNewSectionName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') addSection() }}
               />
-              <button type="button" className="secondary-btn" onClick={addSection} disabled={!newSectionName.trim()}>Add</button>
+              <button type="button" className="secondary-btn" onClick={addSection} disabled={!newSectionName.trim()}>{t('Add')}</button>
             </div>
-            {draft.length === 0 && <p className="hint">No sections yet. Add one above.</p>}
+            {draft.length === 0 && <p className="hint">{t('No sections yet. Add one above.')}</p>}
             <ul>
               {draft.map((s, i) => (
                 <li key={s.id} className={s.id === activeId ? 'active' : ''}>
@@ -360,9 +358,9 @@ function OrganizeSectionsModal({ franchise, items, sections, onSave, onClose }: 
                     <span className="organize-section-count">{s.itemIds.length}</span>
                   </button>
                   <div className="organize-section-actions">
-                    <button type="button" title="Move up" disabled={i === 0} onClick={() => moveSection(s.id, -1)}>↑</button>
-                    <button type="button" title="Move down" disabled={i === draft.length - 1} onClick={() => moveSection(s.id, 1)}>↓</button>
-                    <button type="button" title="Delete" className="danger" onClick={() => deleteSection(s.id)}>✕</button>
+                    <button type="button" title={t('Move up')} disabled={i === 0} onClick={() => moveSection(s.id, -1)}>↑</button>
+                    <button type="button" title={t('Move down')} disabled={i === draft.length - 1} onClick={() => moveSection(s.id, 1)}>↓</button>
+                    <button type="button" title={t('Delete')} className="danger" onClick={() => deleteSection(s.id)}>✕</button>
                   </div>
                 </li>
               ))}
@@ -379,8 +377,8 @@ function OrganizeSectionsModal({ franchise, items, sections, onSave, onClose }: 
                   value={activeSection.name}
                   onChange={(e) => renameSection(activeSection.id, e.target.value)}
                 />
-                <div className="organize-panel-label">In this section (drag to reorder with ↑ / ↓):</div>
-                {activeSection.itemIds.length === 0 && <p className="hint">Empty. Pick items from the list below.</p>}
+                <div className="organize-panel-label">{t('In this section (drag to reorder with ↑ / ↓):')}</div>
+                {activeSection.itemIds.length === 0 && <p className="hint">{t('Empty. Pick items from the list below.')}</p>}
                 <ul className="organize-in-section">
                   {activeSection.itemIds.map((id, i) => {
                     const it = itemById.get(id)
@@ -395,15 +393,15 @@ function OrganizeSectionsModal({ franchise, items, sections, onSave, onClose }: 
                           <span className="organize-item-title">{it.title}</span>
                           <span className="organize-item-year">{Number.isFinite(releaseYear(it)) ? releaseYear(it) : '—'}</span>
                           <button type="button" className="organize-item-note-toggle" onClick={() => setEditingNoteFor(editing ? null : id)}>
-                            {note ? 'Note ✎' : '+ Note'}
+                            {note ? t('Note ✎') : t('+ Note')}
                           </button>
-                          <button type="button" className="organize-item-remove" onClick={() => toggleItem(id)} title="Remove from section">✕</button>
+                          <button type="button" className="organize-item-remove" onClick={() => toggleItem(id)} title={t('Remove from section')}>✕</button>
                         </div>
                         {editing && (
                           <input
                             type="text"
                             className="organize-item-note-input"
-                            placeholder="Short note (e.g. Kiryu dies, Unreleased Kiwami 4)…"
+                            placeholder={t('Short note (e.g. Kiryu dies, Unreleased Kiwami 4)…')}
                             value={note}
                             autoFocus
                             onChange={(e) => setNote(id, e.target.value)}
@@ -415,7 +413,7 @@ function OrganizeSectionsModal({ franchise, items, sections, onSave, onClose }: 
                     )
                   })}
                 </ul>
-                <div className="organize-panel-label">Available items in {franchise}:</div>
+                <div className="organize-panel-label">{t('Available items in {franchise}:', { franchise: franchise })}</div>
                 <ul className="organize-available">
                   {items.filter((it) => !activeSection.itemIds.includes(it.id)).map((it) => {
                     const other = otherSectionOf(it.id)
@@ -425,7 +423,7 @@ function OrganizeSectionsModal({ franchise, items, sections, onSave, onClose }: 
                           <span>{it.title}</span>
                           <span className="organize-available-meta">
                             {Number.isFinite(releaseYear(it)) ? releaseYear(it) : '—'}
-                            {other && <em> · in "{other.name}"</em>}
+                            {other && <em>{' '}{t('· in "{name}"', { name: other.name })}</em>}
                           </span>
                         </button>
                       </li>
@@ -434,13 +432,13 @@ function OrganizeSectionsModal({ franchise, items, sections, onSave, onClose }: 
                 </ul>
               </>
             ) : (
-              <p className="hint">Add or pick a section on the left to arrange its items.</p>
+              <p className="hint">{t('Add or pick a section on the left to arrange its items.')}</p>
             )}
           </div>
         </div>
         <div className="modal-actions" style={{ padding: '12px 16px', borderTop: '1px solid var(--border-soft)' }}>
-          <button type="button" className="ghost" onClick={onClose}>Cancel</button>
-          <button type="button" className="secondary-btn" onClick={() => onSave(draft.filter((s) => s.name.trim()))}>Save sections</button>
+          <button type="button" className="ghost" onClick={onClose}>{t('Cancel')}</button>
+          <button type="button" className="secondary-btn" onClick={() => onSave(draft.filter((s) => s.name.trim()))}>{t('Save sections')}</button>
         </div>
       </div>
     </div>

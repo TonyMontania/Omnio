@@ -13,6 +13,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item } from './types'
+import { plural, t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -57,7 +58,7 @@ export default function SpotifyImporter({ existingItems, onImport, onClose }: Pr
       const text = await file.text()
       const parsed = JSON.parse(text) as { albums?: SpotifyAlbum[] }
       const albums = parsed.albums
-      if (!Array.isArray(albums)) { setError('File does not look like YourLibrary.json (missing `albums` array).'); return }
+      if (!Array.isArray(albums)) { setError(t('File does not look like YourLibrary.json (missing `albums` array).')); return }
       const seen = new Set<string>()
       const rows: Row[] = []
       for (const a of albums) {
@@ -111,20 +112,18 @@ export default function SpotifyImporter({ existingItems, onImport, onClose }: Pr
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel letterboxd-importer" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 780, width: '94vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Import from Spotify</h2>
+          <h2>{t('Import from Spotify')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Request your Spotify data at <code>spotify.com/account/privacy</code> (arrives in ~5 days).
-            Extract the ZIP and drop <code>YourLibrary.json</code> here. Only saved albums are imported;
-            standalone tracks / followed artists are ignored (Omnio's Music library is album-first).
+            {t('Request your Spotify data at')}{' '}<code>spotify.com/account/privacy</code>{' '}{t('(arrives in ~5 days). Extract the ZIP and drop')}{' '}<code>{t('YourLibrary.json')}</code>{' '}{t('here. Only saved albums are imported; standalone tracks / followed artists are ignored (Omnio\'s Music library is album-first).')}
           </p>
           <div className="importer-dropzone">
             <input type="file" accept=".json" style={{ display: 'none' }} id="spotify-file"
               onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = '' }} />
             <label htmlFor="spotify-file" className="importer-file-btn">
-              {rows.length > 0 ? 'Pick different file' : '+ Pick YourLibrary.json'}
+              {rows.length > 0 ? t('Pick different file') : t('+ Pick YourLibrary.json')}
             </label>
             {fileName && <span className="importer-file-list">{fileName}</span>}
           </div>
@@ -132,18 +131,18 @@ export default function SpotifyImporter({ existingItems, onImport, onClose }: Pr
           {rows.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{rows.length} albums found</span>
-                <span className="importer-new">{rows.length - dupeCount} new</span>
-                <span className="importer-dupe">{dupeCount} already in library</span>
+                <span>{t('{rows} albums found', { rows: rows.length })}</span>
+                <span className="importer-new">{t('{rows} new', { rows: rows.length - dupeCount })}</span>
+                <span className="importer-dupe">{t('{dupeCount} already in library', { dupeCount: dupeCount })}</span>
                 <div className="importer-select-actions">
-                  <button type="button" onClick={() => setSelected(new Set(rows.filter((r) => !matches.get(r.key)).map((r) => r.key)))}>Select new only</button>
-                  <button type="button" onClick={() => setSelected(new Set(rows.map((r) => r.key)))}>Select all</button>
-                  <button type="button" onClick={() => setSelected(new Set())}>Select none</button>
+                  <button type="button" onClick={() => setSelected(new Set(rows.filter((r) => !matches.get(r.key)).map((r) => r.key)))}>{t('Select new only')}</button>
+                  <button type="button" onClick={() => setSelected(new Set(rows.map((r) => r.key)))}>{t('Select all')}</button>
+                  <button type="button" onClick={() => setSelected(new Set())}>{t('Select none')}</button>
                 </div>
               </div>
               <div className="importer-table-wrap">
                 <table className="importer-table">
-                  <thead><tr><th style={{ width: 32 }}></th><th>Album</th><th>Artist</th><th style={{ width: 90 }}>In lib</th></tr></thead>
+                  <thead><tr><th style={{ width: 32 }}></th><th>{t('Album')}</th><th>{t('Artist')}</th><th style={{ width: 90 }}>{t('In lib')}</th></tr></thead>
                   <tbody>
                     {rows.map((r) => {
                       const dupe = matches.get(r.key)
@@ -152,7 +151,7 @@ export default function SpotifyImporter({ existingItems, onImport, onClose }: Pr
                           <td><input type="checkbox" checked={selected.has(r.key)} onChange={() => toggle(r.key)} /></td>
                           <td>{r.title}</td>
                           <td>{r.artist}</td>
-                          <td>{dupe ? <span className="importer-badge dupe">In lib</span> : <span className="importer-badge new">New</span>}</td>
+                          <td>{dupe ? <span className="importer-badge dupe">{t('In lib')}</span> : <span className="importer-badge new">{t('New')}</span>}</td>
                         </tr>
                       )
                     })}
@@ -164,9 +163,9 @@ export default function SpotifyImporter({ existingItems, onImport, onClose }: Pr
         </div>
         {rows.length > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button type="button" className="primary-btn" disabled={selected.size === 0} onClick={handleImport}>
-              Import {selected.size} album{selected.size === 1 ? '' : 's'}
+              {plural(selected.size, 'Import {n} album', 'Import {n} albums')}
             </button>
           </div>
         )}

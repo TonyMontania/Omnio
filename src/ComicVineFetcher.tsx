@@ -7,6 +7,7 @@ import { useMemo } from 'react'
 import type { Item } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { t } from './i18n'
 
 interface Props {
   apiKey?: string
@@ -97,7 +98,7 @@ export default function ComicVineFetcher({ apiKey, initialQuery, onApply, onClos
 
   const search = async (q: string): Promise<FetcherResult<CvSearchHit>> => {
     const r = await window.ipcRenderer.invoke('comicvine:search', apiKey, q)
-    return r?.ok ? { ok: true, data: r.data as CvSearchHit[] } : { ok: false, error: r?.error ?? 'Search failed' }
+    return r?.ok ? { ok: true, data: r.data as CvSearchHit[] } : { ok: false, error: r?.error ?? t('Search failed') }
   }
 
   const apply = async (hit: CvSearchHit) => {
@@ -116,19 +117,15 @@ export default function ComicVineFetcher({ apiKey, initialQuery, onApply, onClos
 
   return (
     <FetcherModal<CvSearchHit>
-      title="ComicVine · Western Comics"
+      title={t('ComicVine · Western Comics')}
       disabled={!keyLooksSet}
       disabledMessage={
-        <>Set your ComicVine API key in Settings → Data → Integrations first.
-        Register a free one at <code>comicvine.gamespot.com/api/</code>.</>
+        <>{t('Set your ComicVine API key in Settings → Data → Integrations first. Register a free one at')}{' '}<code>comicvine.gamespot.com/api/</code>.</>
       }
       hint={
-        <>Applying overwrites title, description, cover, start year, total issues,
-        writers (into Authors), artists / pencilers / inkers / colorists (into Artists),
-        and the publisher (into Magazine / imprint). Rating, reading status, notes
-        and personal history are left alone.</>
+        <>{t('Applying overwrites title, description, cover, start year, total issues, writers (into Authors), artists / pencilers / inkers / colorists (into Artists), and the publisher (into Magazine / imprint). Rating, reading status, notes and personal history are left alone.')}</>
       }
-      placeholder="Search volume, e.g. 'saga' or 'watchmen'…"
+      placeholder={t('Search volume, e.g. \'saga\' or \'watchmen\'…')}
       initialQuery={initialQuery}
       onSearch={search}
       onApply={apply}
@@ -141,7 +138,7 @@ export default function ComicVineFetcher({ apiKey, initialQuery, onApply, onClos
         ].filter(Boolean).join(' · ')
         return {
           key: hit.id,
-          title: hit.name || '(untitled)',
+          title: hit.name || t('(untitled)'),
           sub,
           thumbUrl: hit.image?.small_url || hit.image?.medium_url,
           desc: hit.deck,

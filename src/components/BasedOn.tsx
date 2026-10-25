@@ -14,6 +14,7 @@ import { useMemo, useState } from 'react'
 import type { Item } from '../types'
 import { assetSrc } from '../types'
 import { CATEGORIES } from '../categories'
+import { t } from '../i18n'
 
 // ---- Picker (used inside editor panels) ----
 
@@ -54,13 +55,13 @@ export function BasedOnPicker({ currentItemId, value, onChange, allItems }: Pick
             <div className="based-on-linked-title">{linked.title}</div>
             <div className="based-on-linked-sub">{CATEGORIES.find((c) => c.id === linked.categoryId)?.label ?? linked.categoryId}</div>
           </div>
-          <button type="button" className="ghost" onClick={() => { onChange(''); setQuery('') }}>Unlink</button>
+          <button type="button" className="ghost" onClick={() => { onChange(''); setQuery('') }}>{t('Unlink')}</button>
         </div>
       ) : (
         <>
           <input
             type="text"
-            placeholder="Search another library item to link…"
+            placeholder={t('Search another library item to link…')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -110,7 +111,7 @@ export function BasedOnDisplay({ itemId, allItems, onNavigate }: DisplayProps) {
     <div className="based-on-display">
       {basedOn && (
         <div className="based-on-row">
-          <span className="based-on-label">Based on</span>
+          <span className="based-on-label">{t('Based on')}</span>
           <button type="button" className="based-on-chip" onClick={() => onNavigate(basedOn.id)}>
             {basedOn.cover
               ? <img className="based-on-chip-thumb" src={assetSrc(basedOn.cover)} alt="" />
@@ -122,7 +123,7 @@ export function BasedOnDisplay({ itemId, allItems, onNavigate }: DisplayProps) {
       )}
       {adaptations.length > 0 && (
         <div className="based-on-row">
-          <span className="based-on-label">Adapted as</span>
+          <span className="based-on-label">{t('Adapted as')}</span>
           <div className="based-on-chip-list">
             {adaptations.map((a) => (
               <button key={a.id} type="button" className="based-on-chip" onClick={() => onNavigate(a.id)}>

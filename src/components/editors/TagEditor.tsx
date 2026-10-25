@@ -1,8 +1,9 @@
 // Free-form tags input. Enter (or the Add button) commits the current draft.
 
 import { useState } from 'react'
+import { t } from '../../i18n'
 
-export default function TagEditor({ tags, onAdd, onRemove, label = 'Tags', placeholder = 'Add tag' }: { tags: string[]; onAdd: (v: string) => void; onRemove: (i: number) => void; label?: string; placeholder?: string }) {
+export default function TagEditor({ tags, onAdd, onRemove, label = t('Tags'), placeholder = t('Add tag') }: { tags: string[]; onAdd: (v: string) => void; onRemove: (i: number) => void; label?: string; placeholder?: string }) {
   const [input, setInput] = useState('')
   const handleAdd = () => { if (!input.trim()) return; onAdd(input.trim()); setInput('') }
 
@@ -16,7 +17,7 @@ export default function TagEditor({ tags, onAdd, onRemove, label = 'Tags', place
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
         />
-        <button type="button" onClick={handleAdd}>Add</button>
+        <button type="button" onClick={handleAdd}>{t('Add')}</button>
       </div>
       {tags.length > 0 && (
         <div className="tag-pill-list">

@@ -8,6 +8,7 @@ import type { TagPrefs } from './constants'
 import ServiceLogo from '../../components/ServiceLogo'
 import { formatBytes, formatDateTime } from '../../utils/format'
 import { FileIcon, SaveIcon } from '../../icons'
+import { locale, plural, t } from '../../i18n'
 
 interface Props {
   game: ErogeItem
@@ -33,11 +34,11 @@ type DetailTab = 'overview' | 'saves' | 'links' | 'more'
 const OTHER_GAMES_STALE_MS = 7 * 24 * 60 * 60 * 1000
 
 const BACKLOG_LABEL: Record<string, string> = {
-  playing: 'Playing', backlog: 'Backlog', played: 'Played',
+  playing: t('Playing'), backlog: t('Backlog'), played: t('Played'),
 }
-const BTN_COPY_OK = 'Link copied'
-const BTN_COPY_FAIL = 'Could not copy'
-const BTN_UP_TO_DATE = 'Up to date'
+const BTN_COPY_OK = t('Link copied')
+const BTN_COPY_FAIL = t('Could not copy')
+const BTN_UP_TO_DATE = t('Up to date')
 
 // Render the description string, expanding marker types the F95
 // fetcher produces:
@@ -80,7 +81,7 @@ function renderDescription(desc: string): React.ReactNode[] {
     if (m.index > last) {
       nodes.push(<React.Fragment key={`t${key}`}>{renderColored(desc.slice(last, m.index), `t${key}`)}</React.Fragment>)
     }
-    const title = m[1].trim() || 'Spoiler'
+    const title = m[1].trim() || t('Spoiler')
     const content = m[2].trim()
     nodes.push(
       <details key={`sp${key}`} className="er-spoiler">
@@ -179,7 +180,7 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
       if (thread && lastChange) {
         const patch = versionPatchFrom(game, thread, lastChange)
         onUpdateGame(patch as Partial<ErogeItem>)
-        setFlash(patch.updateAvailable ? `New version: ${thread.version}` : BTN_UP_TO_DATE)
+        setFlash(patch.updateAvailable ? t('New version: {version}', { version: thread.version }) : BTN_UP_TO_DATE)
         setChecking(false)
         return
       }
@@ -196,48 +197,48 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
         updateAvailable: different,
         status: (res.status as ErogeItem['status']) || game.status,
       })
-      setFlash(different ? `New version: ${res.version}` : BTN_UP_TO_DATE)
+      setFlash(different ? t('New version: {version}', { version: res.version }) : BTN_UP_TO_DATE)
     } catch (err) {
-      setFlash(`Error: ${(err as Error).message}`)
+      setFlash(t('Error: {message}', { message: (err as Error).message }))
     }
     setChecking(false)
   }
 
   const links = [
-    { url: game.link, service: 'f95' as const, label: 'F95Zone' },
-    { url: game.dlsiteUrl, service: 'dlsite' as const, label: 'DLsite' },
-    { url: game.steamUrl, service: 'steam' as const, label: 'Steam' },
+    { url: game.link, service: 'f95' as const, label: t('F95Zone') },
+    { url: game.dlsiteUrl, service: 'dlsite' as const, label: t('DLsite') },
+    { url: game.steamUrl, service: 'steam' as const, label: t('Steam') },
     { url: game.itchUrl, service: 'itch' as const, label: 'itch.io' },
-    { url: game.ryuugamesUrl, service: 'ryuugames' as const, label: 'Ryuugames' },
+    { url: game.ryuugamesUrl, service: 'ryuugames' as const, label: t('Ryuugames') },
   ].filter((l) => !!l.url) as { url: string; service: 'f95' | 'dlsite' | 'steam' | 'itch' | 'ryuugames'; label: string }[]
 
   const tabs: { id: DetailTab; label: string; count?: number }[] = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'saves', label: 'Saves', count: saves.length },
-    ...(links.length > 0 ? [{ id: 'links' as const, label: 'Links', count: links.length }] : []),
-    ...(otherGames.length > 0 || loadingOthers ? [{ id: 'more' as const, label: `More from ${creatorName || game.creator}`, count: otherGames.length }] : []),
+    { id: 'overview', label: t('Overview') },
+    { id: 'saves', label: t('Saves'), count: saves.length },
+    ...(links.length > 0 ? [{ id: 'links' as const, label: t('Links'), count: links.length }] : []),
+    ...(otherGames.length > 0 || loadingOthers ? [{ id: 'more' as const, label: t('More from {creatorName}', { creatorName: creatorName || game.creator }), count: otherGames.length }] : []),
   ]
   const activeTab = tabs.some((t) => t.id === tab) ? tab : 'overview'
   const hasUpdate = !!game.updateAvailable && !game.archived
   const facts = [
-    game.backlogStatus ? { label: 'Progress', value: BACKLOG_LABEL[game.backlogStatus] } : null,
-    game.version ? { label: 'Installed', value: game.version } : null,
-    game.finishedVersion ? { label: 'Finished', value: game.finishedVersion } : null,
-    game.latestVersion ? { label: 'Latest', value: game.latestVersion } : null,
-    game.releaseDate ? { label: 'Released', value: game.releaseDate } : null,
-    game.threadUpdated ? { label: 'Thread updated', value: game.threadUpdated } : null,
-    game.language ? { label: 'Language', value: game.language } : null,
-    game.dlsiteId ? { label: 'DLsite', value: game.dlsiteId } : null,
+    game.backlogStatus ? { label: t('Progress'), value: BACKLOG_LABEL[game.backlogStatus] } : null,
+    game.version ? { label: t('Installed'), value: game.version } : null,
+    game.finishedVersion ? { label: t('Finished'), value: game.finishedVersion } : null,
+    game.latestVersion ? { label: t('Latest'), value: game.latestVersion } : null,
+    game.releaseDate ? { label: t('Released'), value: game.releaseDate } : null,
+    game.threadUpdated ? { label: t('Thread updated'), value: game.threadUpdated } : null,
+    game.language ? { label: t('Language'), value: game.language } : null,
+    game.dlsiteId ? { label: t('DLsite'), value: game.dlsiteId } : null,
   ].filter((f): f is { label: string; value: string } => f !== null)
 
   const menu: { label: string; onClick: () => void; danger?: boolean }[] = [
-    { label: game.favorite ? 'Remove from favorites' : 'Add to favorites', onClick: () => onUpdateGame({ favorite: !game.favorite }) },
+    { label: game.favorite ? t('Remove from favorites') : t('Add to favorites'), onClick: () => onUpdateGame({ favorite: !game.favorite }) },
     ...(game.link ? [
-      { label: 'Copy F95 link', onClick: () => void copyLink() },
-      { label: 'Open on F95Zone', onClick: () => window.open(game.link, '_blank', 'noreferrer') },
+      { label: t('Copy F95 link'), onClick: () => void copyLink() },
+      { label: t('Open on F95Zone'), onClick: () => window.open(game.link, '_blank', 'noreferrer') },
     ] : []),
-    { label: game.archived ? 'Unarchive' : 'Archive (skip update checks)', onClick: () => onUpdateGame({ archived: !game.archived }) },
-    { label: 'Delete', onClick: onDelete, danger: true },
+    { label: game.archived ? t('Unarchive') : t('Archive (skip update checks)'), onClick: () => onUpdateGame({ archived: !game.archived }) },
+    { label: t('Delete'), onClick: onDelete, danger: true },
   ]
 
   return (
@@ -246,17 +247,17 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
         <div className="er-hero-stage">
           {cover && <img className="er-hero-bg" src={cover} alt="" aria-hidden />}
           {cover
-            ? <img className="er-hero-image zoomable" src={cover} alt={game.name} data-zoom-label="Cover" title="Click to view full size" />
-            : <span className="er-hero-nocover">No cover</span>}
+            ? <img className="er-hero-image zoomable" src={cover} alt={game.name} data-zoom-label={t('Cover')} title={t('Click to view full size')} />
+            : <span className="er-hero-nocover">{t('No cover')}</span>}
         </div>
         <div className="er-hero-body">
           <div className="er-hero-info">
             <div className="er-hero-chips">
               {game.status && <span className={`er-chip st-${game.status.toLowerCase()}`}>{game.status}</span>}
-              {game.vn && <span className="er-chip">VN</span>}
-              {game.favorite && <span className="er-chip fav">★ Favorite</span>}
-              {game.archived && <span className="er-chip">Archived</span>}
-              {hasUpdate && <span className="er-chip update">{game.latestVersion ? `${game.latestVersion} available` : 'Update available'}</span>}
+              {game.vn && <span className="er-chip">{t('VN')}</span>}
+              {game.favorite && <span className="er-chip fav">{t('★ Favorite')}</span>}
+              {game.archived && <span className="er-chip">{t('Archived')}</span>}
+              {hasUpdate && <span className="er-chip update">{game.latestVersion ? t('{latestVersion} available', { latestVersion: game.latestVersion }) : t('Update available')}</span>}
             </div>
             <h1 className="er-hero-title">{game.name}</h1>
             {game.originalTitle && <div className="er-hero-original">{game.originalTitle}</div>}
@@ -265,12 +266,12 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
           <div className="er-hero-actions">
               {isF95 && (
                 <button className="er-btn er-btn-primary" onClick={checkUpdate} disabled={checking}>
-                  {checking ? 'Checking…' : 'Check update'}
+                  {checking ? t('Checking…') : t('Check update')}
                 </button>
               )}
-              <button className="er-btn" onClick={onEdit}>Edit</button>
+              <button className="er-btn" onClick={onEdit}>{t('Edit')}</button>
               <div className="er-menu-wrap">
-                <button className="er-btn er-btn-icon" aria-label="More actions" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>⋯</button>
+                <button className="er-btn er-btn-icon" aria-label={t('More actions')} aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>⋯</button>
                 {menuOpen && (
                   <div className="er-menu" role="menu" onMouseLeave={() => setMenuOpen(false)}>
                     {menu.map((m) => (
@@ -304,9 +305,9 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
           {game.lastCheckedAt && (
             <p className="er-checked">
               {hasUpdate
-                ? <>Version <b>{game.latestVersion}</b> is out. You have {game.version || 'no version set'}.</>
-                : <>Up to date.</>}
-              {' '}Checked {new Date(game.lastCheckedAt).toLocaleString()}.
+                ? <>{t('Version')}{' '}<b>{game.latestVersion}</b>{' '}{t('is out. You have {version}.', { version: game.version || t('no version set') })}</>
+                : <>{t('Up to date.')}</>}
+              {' '}{t('Checked {date}.', { date: new Date(game.lastCheckedAt).toLocaleString(locale()) })}
             </p>
           )}
           {game.tags && game.tags.length > 0 && (
@@ -320,7 +321,7 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
           )}
           {game.description
             ? <div className="er-detail-desc">{renderDescription(game.description)}</div>
-            : <p className="er-empty-note">No description yet. Import from F95 or add one in Edit.</p>}
+            : <p className="er-empty-note">{t('No description yet. Import from F95 or add one in Edit.')}</p>}
         </div>
       )}
 
@@ -329,20 +330,20 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
           {saves.length === 0 ? (
             <div className="er-saves-empty">
               <span className="er-saves-empty-icon" aria-hidden><SaveIcon size={28} /></span>
-              <p>No saves stored yet. Keep copies of your save files here, in a folder that's only for this game.</p>
+              <p>{t('No saves stored yet. Keep copies of your save files here, in a folder that\'s only for this game.')}</p>
               <div className="er-panel-actions">
-                <button className="er-btn er-btn-primary" onClick={async () => { await savesAdd(game.name); refreshSaves() }}>+ Add save files</button>
-                <button className="er-btn" onClick={() => savesOpenFolder(game.name)}>Open folder</button>
+                <button className="er-btn er-btn-primary" onClick={async () => { await savesAdd(game.name); refreshSaves() }}>{t('+ Add save files')}</button>
+                <button className="er-btn" onClick={() => savesOpenFolder(game.name)}>{t('Open folder')}</button>
               </div>
             </div>
           ) : (
             <>
               <div className="er-panel-head">
-                <span>{saves.length} save{saves.length === 1 ? '' : 's'} · {formatBytes(saves.reduce((n, x) => n + x.size, 0))}</span>
+                <span>{plural(saves.length, '{n} save · {reduce}', '{n} saves · {reduce}', { reduce: formatBytes(saves.reduce((n, x) => n + x.size, 0)) })}</span>
                 <div className="er-panel-actions">
-                  <button className="er-btn er-btn-sm er-btn-primary" onClick={async () => { await savesAdd(game.name); refreshSaves() }}>+ Add</button>
-                  <button className="er-btn er-btn-sm" onClick={() => savesOpenFolder(game.name)}>Open folder</button>
-                  <button className="er-btn er-btn-sm er-btn-danger" onClick={async () => { if (confirm('Delete all saves?')) { await savesDeleteAll(game.name); refreshSaves() } }}>Delete all</button>
+                  <button className="er-btn er-btn-sm er-btn-primary" onClick={async () => { await savesAdd(game.name); refreshSaves() }}>{t('+ Add')}</button>
+                  <button className="er-btn er-btn-sm" onClick={() => savesOpenFolder(game.name)}>{t('Open folder')}</button>
+                  <button className="er-btn er-btn-sm er-btn-danger" onClick={async () => { if (confirm(t('Delete all saves?'))) { await savesDeleteAll(game.name); refreshSaves() } }}>{t('Delete all')}</button>
                 </div>
               </div>
               {saves.map((s) => (
@@ -353,8 +354,8 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
                     <span className="er-save-sub">{formatBytes(s.size)} · {formatDateTime(new Date(s.mtime).toISOString())}</span>
                   </div>
                   <div className="er-save-actions">
-                    <button className="er-btn er-btn-sm" onClick={() => savesReveal(game.name, s.name)}>View</button>
-                    <button className="er-btn er-btn-sm er-btn-danger" aria-label={`Delete ${s.name}`} onClick={async () => { if (confirm(`Delete ${s.name}?`)) { await savesDelete(game.name, s.name); refreshSaves() } }}>×</button>
+                    <button className="er-btn er-btn-sm" onClick={() => savesReveal(game.name, s.name)}>{t('View')}</button>
+                    <button className="er-btn er-btn-sm er-btn-danger" aria-label={t('Delete {name}', { name: s.name })} onClick={async () => { if (confirm(t('Delete {name}?', { name: s.name }))) { await savesDelete(game.name, s.name); refreshSaves() } }}>×</button>
                   </div>
                 </div>
               ))}
@@ -377,7 +378,7 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
 
       {activeTab === 'more' && (
         otherGames.length === 0 ? (
-          <p className="er-empty-note">Looking up other games on F95…</p>
+          <p className="er-empty-note">{t('Looking up other games on F95…')}</p>
         ) : (
           <div className="er-other-grid">
             {otherGames.map((row) => row.libGame ? (
@@ -385,12 +386,12 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
                 <div className="gc-banner">
                   {row.libGame.coverFile
                     ? <img src={assetUrl('cover', row.libGame.coverFile)} alt="" loading="lazy" />
-                    : <div className="gc-nocover">No cover</div>}
+                    : <div className="gc-nocover">{t('No cover')}</div>}
                 </div>
                 <div className="gc-info"><div className="gc-name">{row.title}</div></div>
               </button>
             ) : (
-              <a key={row.key} className="er-card er-other-card" href={row.url} target="_blank" rel="noreferrer" title={`${row.title} — open on F95Zone`}>
+              <a key={row.key} className="er-card er-other-card" href={row.url} target="_blank" rel="noreferrer" title={t('{title} — open on F95Zone', { title: row.title })}>
                 <div className="gc-banner">
                   <div className="gc-nocover er-other-f95"><ServiceLogo service="f95" size={44} /></div>
                 </div>

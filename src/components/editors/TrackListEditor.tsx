@@ -6,6 +6,7 @@ import { useState } from 'react'
 import type { Track } from '../../types'
 import { StarRatingInput } from '../../StarRating'
 import { numColumnWidth } from '../../utils/numColumn'
+import { plural, t } from '../../i18n'
 
 export default function TrackListEditor({ tracks, mainArtist, albumTitle, discCount, onAdd, onRemove, onToggleFavorite, onRatingChange, onArtistChange, onFillAllArtist, onToggleListened, onLyricsChange, onNumberChange, onNameChange, onDurationChange, onDiscChange }: {
   tracks: Track[]; mainArtist: string; albumTitle?: string
@@ -35,21 +36,21 @@ export default function TrackListEditor({ tracks, mainArtist, albumTitle, discCo
   const [fetching, setFetching] = useState<string | null>(null)
   const [viewing, setViewing] = useState<Track | null>(null)
 
-  const fetchLyrics = async (t: Track) => {
+  const fetchLyrics = async (track: Track) => {
     if (!onLyricsChange) return
-    setFetching(t.id)
+    setFetching(track.id)
     const res = await window.ipcRenderer.invoke(
       'lrclib:track',
-      t.name,
-      (t.artist || mainArtist).trim(),
+      track.name,
+      (track.artist || mainArtist).trim(),
       albumTitle,
     ) as { ok: true; data: { lyrics: string; synced: boolean } } | { ok: false; error: string }
     setFetching(null)
     if (res.ok) {
-      onLyricsChange(t.id, res.data.lyrics)
-      setViewing({ ...t, lyrics: res.data.lyrics })
+      onLyricsChange(track.id, res.data.lyrics)
+      setViewing({ ...track, lyrics: res.data.lyrics })
     } else {
-      window.dispatchEvent(new CustomEvent('omnio-toast', { detail: `Lyrics: ${res.error}` }))
+      window.dispatchEvent(new CustomEvent('omnio-toast', { detail: t('Lyrics: {error}', { error: res.error }) }))
     }
   }
 
@@ -86,26 +87,26 @@ export default function TrackListEditor({ tracks, mainArtist, albumTitle, discCo
     return Array.from(map.entries()).map(([disc, list]) => ({ disc, list }))
   })()
 
-  const renderTrackRow = (t: Track) => (
-    <tr key={t.id}>
+  const renderTrackRow = (tr: Track) => (
+    <tr key={tr.id}>
       <td className="col-fav">
-        <button type="button" className={t.favorite ? 'track-fav active' : 'track-fav'} onClick={() => onToggleFavorite(t.id)}>★</button>
+        <button type="button" className={tr.favorite ? 'track-fav active' : 'track-fav'} onClick={() => onToggleFavorite(tr.id)}>★</button>
       </td>
       <td className="col-num">
         {onNumberChange
-          ? <input className="track-num-cell" value={t.number} onChange={(e) => onNumberChange(t.id, e.target.value)} placeholder="—" />
-          : t.number}
+          ? <input className="track-num-cell" value={tr.number} onChange={(e) => onNumberChange(tr.id, e.target.value)} placeholder="—" />
+          : tr.number}
       </td>
       <td className="col-title">
         {onNameChange
-          ? <input className="track-name-cell" value={t.name} onChange={(e) => onNameChange(t.id, e.target.value)} placeholder="Track name" />
-          : t.name}
+          ? <input className="track-name-cell" value={tr.name} onChange={(e) => onNameChange(tr.id, e.target.value)} placeholder={t('Track name')} />
+          : tr.name}
       </td>
-      <td className="col-artist"><input className="track-artist-cell" value={t.artist ?? ''} onChange={(e) => onArtistChange(t.id, e.target.value)} placeholder="—" /></td>
+      <td className="col-artist"><input className="track-artist-cell" value={tr.artist ?? ''} onChange={(e) => onArtistChange(tr.id, e.target.value)} placeholder="—" /></td>
       <td className="col-duration">
         {onDurationChange
-          ? <input className="track-dur-cell" value={t.duration ?? ''} onChange={(e) => onDurationChange(t.id, e.target.value)} placeholder="3:40" />
-          : t.duration}
+          ? <input className="track-dur-cell" value={tr.duration ?? ''} onChange={(e) => onDurationChange(tr.id, e.target.value)} placeholder="3:40" />
+          : tr.duration}
       </td>
       {isMultiDisc && onDiscChange && (
         <td className="col-disc">
@@ -114,29 +115,29 @@ export default function TrackListEditor({ tracks, mainArtist, albumTitle, discCo
             className="track-disc-cell"
             min={1}
             max={parsedDiscs}
-            value={t.disc && Number(t.disc) >= 1 && Number(t.disc) <= parsedDiscs ? t.disc : '1'}
+            value={tr.disc && Number(tr.disc) >= 1 && Number(tr.disc) <= parsedDiscs ? tr.disc : '1'}
             onChange={(e) => {
               const raw = e.target.value.replace(/[^\d]/g, '')
               const n = Math.max(1, Math.min(parsedDiscs, parseInt(raw || '1', 10)))
-              onDiscChange(t.id, String(n))
+              onDiscChange(tr.id, String(n))
             }}
           />
         </td>
       )}
       <td className="col-rating">
-        <StarRatingInput value={t.rating ?? 0} onChange={(v) => onRatingChange(t.id, v)} />
+        <StarRatingInput value={tr.rating ?? 0} onChange={(v) => onRatingChange(tr.id, v)} />
       </td>
       <td className="col-listened">
-        <button type="button" className={t.listened ? 'track-listened-check active' : 'track-listened-check'} onClick={() => onToggleListened(t.id)}>{t.listened ? '✓' : ''}</button>
+        <button type="button" className={tr.listened ? 'track-listened-check active' : 'track-listened-check'} onClick={() => onToggleListened(tr.id)}>{tr.listened ? '✓' : ''}</button>
       </td>
       {onLyricsChange && (
         <td className="col-lyrics">
-          {t.lyrics
-            ? <button type="button" className="track-lyrics-btn has" onClick={() => setViewing(t)}>View</button>
-            : <button type="button" className="track-lyrics-btn" onClick={() => fetchLyrics(t)} disabled={fetching === t.id}>{fetching === t.id ? '…' : 'Fetch'}</button>}
+          {tr.lyrics
+            ? <button type="button" className="track-lyrics-btn has" onClick={() => setViewing(tr)}>{t('View')}</button>
+            : <button type="button" className="track-lyrics-btn" onClick={() => fetchLyrics(tr)} disabled={fetching === tr.id}>{fetching === tr.id ? '…' : t('Fetch')}</button>}
         </td>
       )}
-      <td><button type="button" className="track-remove" onClick={() => onRemove(t.id)}>✕</button></td>
+      <td><button type="button" className="track-remove" onClick={() => onRemove(tr.id)}>✕</button></td>
       <td className="col-spacer"></td>
     </tr>
   )
@@ -145,36 +146,36 @@ export default function TrackListEditor({ tracks, mainArtist, albumTitle, discCo
     <div className="track-editor">
       <div className="track-editor-row">
         <input className="track-num" placeholder="01" value={number} onChange={(e) => setNumber(e.target.value)} />
-        <input className="track-name" placeholder="Track name" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className="track-artist-input" placeholder="Artist" value={artist} onChange={(e) => setArtist(e.target.value)} />
+        <input className="track-name" placeholder={t('Track name')} value={name} onChange={(e) => setName(e.target.value)} />
+        <input className="track-artist-input" placeholder={t('Artist')} value={artist} onChange={(e) => setArtist(e.target.value)} />
         <input className="track-dur" placeholder="3:40" value={duration} onChange={(e) => setDuration(e.target.value)} />
         {isMultiDisc && (
-          <select className="track-disc-input" value={addDisc} onChange={(e) => setAddDisc(e.target.value)} title="Which disc this track lives on">
+          <select className="track-disc-input" value={addDisc} onChange={(e) => setAddDisc(e.target.value)} title={t('Which disc this track lives on')}>
             {Array.from({ length: parsedDiscs }, (_, i) => String(i + 1)).map((d) => (
-              <option key={d} value={d}>Disc {d}</option>
+              <option key={d} value={d}>{t('Disc {d}', { d: d })}</option>
             ))}
           </select>
         )}
-        <button type="button" onClick={handleAdd}>Add</button>
+        <button type="button" onClick={handleAdd}>{t('Add')}</button>
       </div>
       {tracks.length > 0 && (
         <>
-          <button type="button" className="fill-artist-btn" onClick={onFillAllArtist}>Fill all with main artist</button>
+          <button type="button" className="fill-artist-btn" onClick={onFillAllArtist}>{t('Fill all with main artist')}</button>
           {groupedTracks.map(({ disc, list }) => (
             <div key={disc || 'single'} className="track-disc-group">
-              {isMultiDisc && <div className="track-disc-divider">Disc {disc} <span className="track-disc-count">· {list.length} {list.length === 1 ? 'track' : 'tracks'}</span></div>}
+              {isMultiDisc && <div className="track-disc-divider">{t('Disc {disc}', { disc: disc })}{' '}<span className="track-disc-count">· {plural(list.length, '{n} track', '{n} tracks')}</span></div>}
               <table className="track-table">
                 <thead>
                   <tr>
                     <th className="col-fav"></th>
                     <th className="col-num" style={{ width: numColumnWidth(tracks.map((t) => t.number)) }}>#</th>
-                    <th className="col-title">Title</th>
-                    <th className="col-artist">Artist</th>
-                    <th className="col-duration">Duration</th>
-                    {isMultiDisc && <th className="col-disc">Disc</th>}
-                    <th className="col-rating">Rating</th>
-                    <th className="col-listened">Listened</th>
-                    {onLyricsChange && <th className="col-lyrics">Lyrics</th>}
+                    <th className="col-title">{t('Title')}</th>
+                    <th className="col-artist">{t('Artist')}</th>
+                    <th className="col-duration">{t('Duration')}</th>
+                    {isMultiDisc && <th className="col-disc">{t('Disc')}</th>}
+                    <th className="col-rating">{t('Rating')}</th>
+                    <th className="col-listened">{t('Listened')}</th>
+                    {onLyricsChange && <th className="col-lyrics">{t('Lyrics')}</th>}
                     <th />
                     <th className="col-spacer"></th>
                   </tr>
@@ -197,9 +198,9 @@ export default function TrackListEditor({ tracks, mainArtist, albumTitle, discCo
               <pre className="track-lyrics-view">{viewing.lyrics}</pre>
             </div>
             <div className="modal-footer">
-              <button type="button" className="ghost-btn" onClick={() => { onLyricsChange(viewing.id, undefined); setViewing(null) }}>Clear lyrics</button>
-              <button type="button" className="ghost-btn" onClick={() => fetchLyrics(viewing)}>Re-fetch</button>
-              <button type="button" className="primary-btn" onClick={() => setViewing(null)}>Close</button>
+              <button type="button" className="ghost-btn" onClick={() => { onLyricsChange(viewing.id, undefined); setViewing(null) }}>{t('Clear lyrics')}</button>
+              <button type="button" className="ghost-btn" onClick={() => fetchLyrics(viewing)}>{t('Re-fetch')}</button>
+              <button type="button" className="primary-btn" onClick={() => setViewing(null)}>{t('Close')}</button>
             </div>
           </div>
         </div>

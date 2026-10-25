@@ -7,6 +7,7 @@
 
 import type { AnyItem } from '../types/entities'
 import { assetSrc } from '../types'
+import { locale, t } from '../i18n'
 
 interface Props {
   items: AnyItem[]
@@ -32,7 +33,7 @@ function monthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 function monthLabel(d: Date): string {
-  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+  return d.toLocaleDateString(locale(), { month: 'long', year: 'numeric' })
 }
 
 function reviewFor(it: AnyItem): string | undefined {
@@ -48,7 +49,7 @@ export default function DiaryView({ items, onOpen }: Props) {
   entries.sort((a, b) => b.date.getTime() - a.date.getTime())
 
   if (entries.length === 0) {
-    return <p className="hint">Nothing dated yet. Add items or set a "Finished on" date to see them here.</p>
+    return <p className="hint">{t('Nothing dated yet. Add items or set a "Finished on" date to see them here.')}</p>
   }
 
   // Bucket by month for the sidebar labels.
@@ -71,7 +72,7 @@ export default function DiaryView({ items, onOpen }: Props) {
                 <li key={`${e.item.id}-${i}`} className="diary-entry" onClick={() => onOpen(e.item)}>
                   <div className="diary-entry-day">
                     <span className="diary-entry-num">{e.date.getDate()}</span>
-                    <span className="diary-entry-dow">{e.date.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+                    <span className="diary-entry-dow">{e.date.toLocaleDateString(locale(), { weekday: 'short' })}</span>
                   </div>
                   <div className="diary-entry-cover">
                     {e.item.cover
@@ -81,7 +82,7 @@ export default function DiaryView({ items, onOpen }: Props) {
                   <div className="diary-entry-body">
                     <div className="diary-entry-title">{e.item.title}</div>
                     <div className="diary-entry-meta">
-                      <span className={`diary-entry-kind kind-${e.kind}`}>{e.kind === 'finished' ? 'Finished' : 'Added'}</span>
+                      <span className={`diary-entry-kind kind-${e.kind}`}>{e.kind === 'finished' ? t('Finished') : t('Added')}</span>
                       {e.item.rating ? <span className="diary-entry-rating">★ {e.item.rating}</span> : null}
                     </div>
                     {review && <p className="diary-entry-review">{review.length > 240 ? review.slice(0, 240) + '…' : review}</p>}

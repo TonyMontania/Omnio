@@ -25,6 +25,7 @@
 import { useMemo, useState } from 'react'
 import type { Item } from './types'
 import { parseCsv, colIndex } from './utils/csv'
+import { locale, plural, t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -172,7 +173,7 @@ export default function LastfmImporter({ existingItems, onImport, onClose }: Pro
       const text = await file.text()
       const rows = parseScrobbles(text)
       if (rows.length === 0) {
-        setError('No scrobbles found. Expected artist, album, track, date columns.')
+        setError(t('No scrobbles found. Expected artist, album, track, date columns.'))
         setBusy(false)
         return
       }
@@ -246,17 +247,14 @@ export default function LastfmImporter({ existingItems, onImport, onClose }: Pro
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel lastfm-importer" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 820, width: '94vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Import Last.fm scrobbles</h2>
+          <h2>{t('Import Last.fm scrobbles')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Drop a scrobble history CSV — the format most exporters produce
-            (lastfm-to-csv, benjaminbenben's tool, benjcunningham/lastexport,
-            etc.). Columns can be in any order as long as they're named
+            {t('Drop a scrobble history CSV — the format most exporters produce (lastfm-to-csv, benjaminbenben\'s tool, benjcunningham/lastexport, etc.). Columns can be in any order as long as they\'re named')}
             <code>artist</code>, <code>album</code>, <code>track</code>, <code>date</code> /
-            <code>timestamp</code>. Scrobbles are aggregated to unique albums
-            so nothing floods the preview.
+            <code>timestamp</code>{t('. Scrobbles are aggregated to unique albums so nothing floods the preview.')}
           </p>
 
           <div className="importer-dropzone">
@@ -272,7 +270,7 @@ export default function LastfmImporter({ existingItems, onImport, onClose }: Pro
               }}
             />
             <label htmlFor="lastfm-file-input" className="importer-file-btn">
-              {busy ? 'Reading…' : albums.length > 0 ? 'Pick different file' : '+ Pick scrobble CSV'}
+              {busy ? t('Reading…') : albums.length > 0 ? t('Pick different file') : t('+ Pick scrobble CSV')}
             </label>
             {fileName && <span className="importer-file-list">{fileName}</span>}
           </div>
@@ -282,12 +280,12 @@ export default function LastfmImporter({ existingItems, onImport, onClose }: Pro
           {albums.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{totalScrobbles.toLocaleString()} scrobbles · {albums.length} unique albums {orphanCount > 0 && <>· {orphanCount} track-only scrobbles ignored</>}</span>
-                <span className="importer-new">{summary.toCreate} to create</span>
-                <span className="importer-dupe">{summary.toMark} to mark listened</span>
+                <span>{t('{totalScrobbles} scrobbles · {albums} unique albums', { totalScrobbles: totalScrobbles.toLocaleString(locale()), albums: albums.length })}{' '}{orphanCount > 0 && <>{t('· {orphanCount} track-only scrobbles ignored', { orphanCount: orphanCount })}</>}</span>
+                <span className="importer-new">{t('{toCreate} to create', { toCreate: summary.toCreate })}</span>
+                <span className="importer-dupe">{t('{toMark} to mark listened', { toMark: summary.toMark })}</span>
                 <div className="importer-select-actions">
-                  <button type="button" onClick={() => bulkSetNew('create')}>Create all new</button>
-                  <button type="button" onClick={() => bulkSetNew('skip')}>Skip all new</button>
+                  <button type="button" onClick={() => bulkSetNew('create')}>{t('Create all new')}</button>
+                  <button type="button" onClick={() => bulkSetNew('skip')}>{t('Skip all new')}</button>
                 </div>
               </div>
 
@@ -295,11 +293,11 @@ export default function LastfmImporter({ existingItems, onImport, onClose }: Pro
                 <table className="importer-table">
                   <thead>
                     <tr>
-                      <th>Album</th>
-                      <th>Artist</th>
-                      <th style={{ width: 70 }}>Plays</th>
-                      <th style={{ width: 110 }}>Last played</th>
-                      <th style={{ width: 170 }}>Action</th>
+                      <th>{t('Album')}</th>
+                      <th>{t('Artist')}</th>
+                      <th style={{ width: 70 }}>{t('Plays')}</th>
+                      <th style={{ width: 110 }}>{t('Last played')}</th>
+                      <th style={{ width: 170 }}>{t('Action')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -314,9 +312,9 @@ export default function LastfmImporter({ existingItems, onImport, onClose }: Pro
                           <td>{a.lastPlayed ?? '—'}</td>
                           <td>
                             <select value={action} onChange={(e) => setAction(a.key, e.target.value as Action)}>
-                              {match && <option value="mark">Mark listened</option>}
-                              <option value="create">Create in Music</option>
-                              <option value="skip">Skip</option>
+                              {match && <option value="mark">{t('Mark listened')}</option>}
+                              <option value="create">{t('Create in Music')}</option>
+                              <option value="skip">{t('Skip')}</option>
                             </select>
                           </td>
                         </tr>
@@ -330,14 +328,14 @@ export default function LastfmImporter({ existingItems, onImport, onClose }: Pro
         </div>
         {albums.length > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button
               type="button"
               className="primary-btn"
               disabled={summary.toMark + summary.toCreate === 0}
               onClick={handleImport}
             >
-              Apply to {summary.toMark + summary.toCreate} album{summary.toMark + summary.toCreate === 1 ? '' : 's'}
+              {plural(summary.toMark + summary.toCreate, 'Apply to {n} album', 'Apply to {n} albums')}
             </button>
           </div>
         )}

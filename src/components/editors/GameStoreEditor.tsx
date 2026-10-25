@@ -5,6 +5,7 @@
 // run there" — one visual home makes it easier to skim.
 
 import type { StoreLink, StoreSlug, Purchase, DeckCompat, ProtonRating } from '../../types/entities'
+import { t } from '../../i18n'
 
 interface Props {
   storeLinks: StoreLink[]
@@ -18,35 +19,35 @@ interface Props {
 }
 
 const STORE_OPTIONS: { value: StoreSlug; label: string }[] = [
-  { value: 'steam',      label: 'Steam' },
-  { value: 'gog',        label: 'GOG' },
-  { value: 'epic',       label: 'Epic Games' },
+  { value: 'steam',      label: t('Steam') },
+  { value: 'gog',        label: t('GOG') },
+  { value: 'epic',       label: t('Epic Games') },
   { value: 'itch',       label: 'itch.io' },
-  { value: 'humble',     label: 'Humble' },
-  { value: 'ubi',        label: 'Ubisoft Connect' },
-  { value: 'ea',         label: 'EA App' },
-  { value: 'battlenet',  label: 'Battle.net' },
-  { value: 'rockstar',   label: 'Rockstar' },
-  { value: 'nintendo',   label: 'Nintendo eShop' },
-  { value: 'playstation',label: 'PlayStation Store' },
-  { value: 'xbox',       label: 'Xbox / Microsoft' },
-  { value: 'official',   label: 'Official site' },
-  { value: 'other',      label: 'Other' },
+  { value: 'humble',     label: t('Humble') },
+  { value: 'ubi',        label: t('Ubisoft Connect') },
+  { value: 'ea',         label: t('EA App') },
+  { value: 'battlenet',  label: t('Battle.net') },
+  { value: 'rockstar',   label: t('Rockstar') },
+  { value: 'nintendo',   label: t('Nintendo eShop') },
+  { value: 'playstation',label: t('PlayStation Store') },
+  { value: 'xbox',       label: t('Xbox / Microsoft') },
+  { value: 'official',   label: t('Official site') },
+  { value: 'other',      label: t('Other') },
 ]
 
 const DECK_OPTIONS: { value: DeckCompat; label: string; hint: string }[] = [
-  { value: 'verified',    label: 'Verified',    hint: 'Runs great, no tweaks.' },
-  { value: 'playable',    label: 'Playable',    hint: 'Runs, minor tweaks may help.' },
-  { value: 'unsupported', label: 'Unsupported', hint: 'Anti-cheat, controls, or launch issues.' },
-  { value: 'unknown',     label: 'Unknown',     hint: 'Not tested yet.' },
+  { value: 'verified',    label: t('Verified'),    hint: t('Runs great, no tweaks.') },
+  { value: 'playable',    label: t('Playable'),    hint: t('Runs, minor tweaks may help.') },
+  { value: 'unsupported', label: t('Unsupported'), hint: t('Anti-cheat, controls, or launch issues.') },
+  { value: 'unknown',     label: t('Unknown'),     hint: t('Not tested yet.') },
 ]
 
 const PROTON_OPTIONS: { value: ProtonRating; label: string }[] = [
-  { value: 'platinum', label: 'Platinum — flawless out of the box' },
-  { value: 'gold',     label: 'Gold — works with tweaks' },
-  { value: 'silver',   label: 'Silver — playable with issues' },
-  { value: 'bronze',   label: 'Bronze — starts but rough' },
-  { value: 'borked',   label: 'Borked — does not run' },
+  { value: 'platinum', label: t('Platinum — flawless out of the box') },
+  { value: 'gold',     label: t('Gold — works with tweaks') },
+  { value: 'silver',   label: t('Silver — playable with issues') },
+  { value: 'bronze',   label: t('Bronze — starts but rough') },
+  { value: 'borked',   label: t('Borked — does not run') },
 ]
 
 export default function GameStoreEditor({
@@ -77,11 +78,11 @@ export default function GameStoreEditor({
     <div className="game-store-editor">
       <div className="field-group">
         <div className="game-store-head">
-          <label>Store links</label>
-          <button type="button" className="secondary-btn" onClick={addStore}>+ Add store</button>
+          <label>{t('Store links')}</label>
+          <button type="button" className="secondary-btn" onClick={addStore}>{t('+ Add store')}</button>
         </div>
         {storeLinks.length === 0 ? (
-          <p className="hint">One row per storefront where this game lives — Steam, GOG, Nintendo eShop…</p>
+          <p className="hint">{t('One row per storefront where this game lives — Steam, GOG, Nintendo eShop…')}</p>
         ) : (
           <ul className="game-store-list">
             {storeLinks.map((s) => (
@@ -98,11 +99,11 @@ export default function GameStoreEditor({
                   onChange={(e) => patchStore(s.id, (x) => ({ ...x, url: e.target.value }))}
                 />
                 <input
-                  placeholder="Note (family library, gift, …)"
+                  placeholder={t('Note (family library, gift, …)')}
                   value={s.note ?? ''}
                   onChange={(e) => patchStore(s.id, (x) => ({ ...x, note: e.target.value || undefined }))}
                 />
-                <button type="button" className="game-store-remove" onClick={() => removeStore(s.id)} title="Remove link" aria-label="Remove store link">✕</button>
+                <button type="button" className="game-store-remove" onClick={() => removeStore(s.id)} title={t('Remove link')} aria-label={t('Remove store link')}>✕</button>
               </li>
             ))}
           </ul>
@@ -111,22 +112,22 @@ export default function GameStoreEditor({
 
       <div className="field-group">
         <div className="game-store-head">
-          <label>Purchase log</label>
-          <button type="button" className="secondary-btn" onClick={addPurchase}>+ Add purchase</button>
+          <label>{t('Purchase log')}</label>
+          <button type="button" className="secondary-btn" onClick={addPurchase}>{t('+ Add purchase')}</button>
         </div>
         {purchases.length === 0 ? (
-          <p className="hint">One row per time you bought this game — sale, gift, bundle, physical copy.</p>
+          <p className="hint">{t('One row per time you bought this game — sale, gift, bundle, physical copy.')}</p>
         ) : (
           <ul className="game-purchase-list">
             {purchases.map((p) => (
               <li key={p.id} className="game-purchase">
                 <input type="date" value={p.date ?? ''} onChange={(e) => patchPurchase(p.id, (x) => ({ ...x, date: e.target.value || undefined }))} />
-                <input placeholder="Price (e.g. 19.99, ¥2200)" value={p.price ?? ''} onChange={(e) => patchPurchase(p.id, (x) => ({ ...x, price: e.target.value || undefined }))} />
-                <input placeholder="Currency (USD, EUR…)" value={p.currency ?? ''} onChange={(e) => patchPurchase(p.id, (x) => ({ ...x, currency: e.target.value || undefined }))} />
-                <input placeholder="Store" value={p.storeLabel ?? ''} onChange={(e) => patchPurchase(p.id, (x) => ({ ...x, storeLabel: e.target.value || undefined }))} />
-                <input placeholder="Discount (-75%, $40 off)" value={p.discount ?? ''} onChange={(e) => patchPurchase(p.id, (x) => ({ ...x, discount: e.target.value || undefined }))} />
-                <input placeholder="Note (gift, bundle, resale…)" value={p.note ?? ''} onChange={(e) => patchPurchase(p.id, (x) => ({ ...x, note: e.target.value || undefined }))} />
-                <button type="button" className="game-store-remove" onClick={() => removePurchase(p.id)} title="Remove purchase" aria-label="Remove purchase">✕</button>
+                <input placeholder={t('Price (e.g. 19.99, ¥2200)')} value={p.price ?? ''} onChange={(e) => patchPurchase(p.id, (x) => ({ ...x, price: e.target.value || undefined }))} />
+                <input placeholder={t('Currency (USD, EUR…)')} value={p.currency ?? ''} onChange={(e) => patchPurchase(p.id, (x) => ({ ...x, currency: e.target.value || undefined }))} />
+                <input placeholder={t('Store')} value={p.storeLabel ?? ''} onChange={(e) => patchPurchase(p.id, (x) => ({ ...x, storeLabel: e.target.value || undefined }))} />
+                <input placeholder={t('Discount (-75%, $40 off)')} value={p.discount ?? ''} onChange={(e) => patchPurchase(p.id, (x) => ({ ...x, discount: e.target.value || undefined }))} />
+                <input placeholder={t('Note (gift, bundle, resale…)')} value={p.note ?? ''} onChange={(e) => patchPurchase(p.id, (x) => ({ ...x, note: e.target.value || undefined }))} />
+                <button type="button" className="game-store-remove" onClick={() => removePurchase(p.id)} title={t('Remove purchase')} aria-label={t('Remove purchase')}>✕</button>
               </li>
             ))}
           </ul>
@@ -135,16 +136,16 @@ export default function GameStoreEditor({
 
       <div className="field-row">
         <div className="field-group">
-          <label>Steam Deck compatibility</label>
+          <label>{t('Steam Deck compatibility')}</label>
           <select value={deckCompat ?? ''} onChange={(e) => onDeckCompatChange((e.target.value || undefined) as DeckCompat | undefined)}>
-            <option value="">— not tracked</option>
+            <option value="">{t('— not tracked')}</option>
             {DECK_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>ProtonDB rating</label>
+          <label>{t('ProtonDB rating')}</label>
           <select value={protonRating ?? ''} onChange={(e) => onProtonRatingChange((e.target.value || undefined) as ProtonRating | undefined)}>
-            <option value="">— not tracked</option>
+            <option value="">{t('— not tracked')}</option>
             {PROTON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>

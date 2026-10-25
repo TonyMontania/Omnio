@@ -25,7 +25,7 @@ export function formatDate(iso: string): string {
 
 // Format a `YYYY-MM-DD` string without letting the timezone shift the day.
 // `new Date("2009-04-28")` parses as UTC midnight, which in any TZ west of
-// UTC toLocaleDateString()s as the *previous* day (e.g. "4/27/2009" in
+// UTC toLocaleDateString(locale())s as the *previous* day (e.g. "4/27/2009" in
 // America/*). Parsing the components manually and passing (y, m-1, d) to
 // the Date constructor builds a local-midnight date instead, so what the
 // user typed in the picker is what the detail view shows.

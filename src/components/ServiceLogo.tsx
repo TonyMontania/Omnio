@@ -48,6 +48,7 @@ import goodreadsSvg from '../assets/service-logos/goodreads.svg'
 // plugin's link row shows real logos instead of stylised typography.
 import f95Png from '../assets/service-logos/f95zone.png'
 import dlsitePng from '../assets/service-logos/dlsite.png'
+import { t } from '../i18n'
 
 export type ServiceName =
   | 'mal' | 'anilist' | 'kitsu'
@@ -141,31 +142,31 @@ export default function ServiceLogo({ service, size = 18, style }: Props) {
   const sz = { width: size, height: size, ...style } satisfies CSSProperties
   switch (service) {
     case 'serializd':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#7c4dff" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="15" fill="#fff">S</text></svg>
+      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#7c4dff" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="15" fill="#fff">{t('S')}</text></svg>
     case 'goodreads':
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#553b08" /><text x="16" y="22" textAnchor="middle" fontFamily="Georgia, serif" fontStyle="italic" fontWeight="900" fontSize="16" fill="#fff">g</text></svg>
     case 'storygraph':
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#f4b06a" /><path d="M6 22 L11 15 L15 19 L20 10 L26 22" fill="none" stroke="#3d2b1f" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
     case 'rym':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#132831" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="11" fill="#f2c400">RYM</text></svg>
+      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#132831" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="11" fill="#f2c400">{t('RYM')}</text></svg>
     case 'backloggd':
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#1e2a3a" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="14" fill="#f6c04f">b</text></svg>
     case 'igdb':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#9147ff" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">IGDB</text></svg>
+      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#9147ff" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">{t('IGDB')}</text></svg>
     case 'sgdb':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#0e1725" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#f8b118">SGDB</text></svg>
+      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#0e1725" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#f8b118">{t('SGDB')}</text></svg>
     case 'pcgw':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#000" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">PCGW</text></svg>
+      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#000" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">{t('PCGW')}</text></svg>
     case 'anidb':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#2f5cba" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="11" fill="#fff">DB</text></svg>
+      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#2f5cba" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="11" fill="#fff">{t('DB')}</text></svg>
     case 'vndb':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#348017" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">VNDB</text></svg>
+      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#348017" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">{t('VNDB')}</text></svg>
     case 'mangadex':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#ff6740" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="14" fill="#fff">M</text></svg>
+      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#ff6740" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="14" fill="#fff">{t('M')}</text></svg>
     case 'comicvine':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#0072b0" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="14" fill="#fff">C</text></svg>
+      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#0072b0" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="14" fill="#fff">{t('C')}</text></svg>
     case 'csv':
-      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#1e7d3a" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">CSV</text></svg>
+      return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#1e7d3a" /><text x="16" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#fff">{t('CSV')}</text></svg>
     case 'ryuugames':
       return <svg viewBox="0 0 32 32" style={sz}><rect width="32" height="32" rx="5" fill="#0e5c2e" /><text x="16" y="24" textAnchor="middle" fontFamily="'Yu Mincho', 'MS Mincho', serif" fontWeight="700" fontSize="20" fill="#fff">龍</text></svg>
     default:

@@ -6,6 +6,7 @@
 import type { Item, AnimeFormat, AnimeSeason, AiringStatus, AgeRating, PublicationStatus } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { t } from './i18n'
 
 type Kind = 'anime' | 'manga'
 
@@ -132,7 +133,7 @@ function hitToPatch(kind: Kind, h: KitsuHit): Partial<Item> {
 export default function KitsuFetcher({ initialQuery, kind, categoryId, onApply, onClose }: Props) {
   const search = async (q: string): Promise<FetcherResult<KitsuHit>> => {
     const r = await window.ipcRenderer.invoke('kitsu:search', q, kind)
-    return r?.ok ? { ok: true, data: r.data as KitsuHit[] } : { ok: false, error: r?.error ?? 'Search failed' }
+    return r?.ok ? { ok: true, data: r.data as KitsuHit[] } : { ok: false, error: r?.error ?? t('Search failed') }
   }
 
   const apply = async (h: KitsuHit) => {
@@ -153,16 +154,13 @@ export default function KitsuFetcher({ initialQuery, kind, categoryId, onApply, 
 
   return (
     <FetcherModal<KitsuHit>
-      title={kind === 'anime' ? 'Kitsu · Anime' : 'Kitsu · Manga'}
+      title={kind === 'anime' ? t('Kitsu · Anime') : t('Kitsu · Manga')}
       hint={
-        <>Free, no API key. Best used as a fallback when AniList / MAL
-        {kind === 'manga' ? ' / MangaDex' : ''} miss a title. Applying overwrites
-        title, alt titles, description, cover, banner, dates, {kind === 'anime'
-          ? 'format, airing status, total episodes and episode duration'
-          : 'total chapters and volumes'}. Rating, notes, watch/read status and
-        personal history are left alone.</>
+        <>{t('Free, no API key. Best used as a fallback when AniList / MAL{value} miss a title. Applying overwrites title, alt titles, description, cover, banner, dates, {value2}. Rating, notes, watch/read status and personal history are left alone.', { value: kind === 'manga' ? t(' / MangaDex') : '', value2: kind === 'anime'
+          ? t('format, airing status, total episodes and episode duration')
+          : t('total chapters and volumes') })}</>
       }
-      placeholder={`Search ${kind}…`}
+      placeholder={t('Search {kind}…', { kind: kind })}
       initialQuery={initialQuery}
       onSearch={search}
       onApply={apply}

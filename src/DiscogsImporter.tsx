@@ -15,6 +15,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item, MusicType } from './types'
+import { plural, t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -140,7 +141,7 @@ export default function DiscogsImporter({ existingItems, onImport, onClose }: Pr
   }, [releases, existingItems])
 
   const handleFetch = async () => {
-    if (!username.trim()) { setError('Enter a Discogs username.'); return }
+    if (!username.trim()) { setError(t('Enter a Discogs username.')); return }
     setError(null)
     setBusy(true)
     try {
@@ -245,21 +246,18 @@ export default function DiscogsImporter({ existingItems, onImport, onClose }: Pr
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel discogs-importer" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 860, width: '95vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Import from Discogs</h2>
+          <h2>{t('Import from Discogs')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Reads your Discogs collection (folder 0 — "All"). Public collections work with just your
-            username. Private collections need a <b>Personal Access Token</b> from
-            <b> discogs.com/settings/developers</b> (click "Generate new token", paste it below).
-            Cover URLs stay remote — re-fetch on-disk copies later via MusicBrainz if you
-            want them portable.
+            {t('Reads your Discogs collection (folder 0 — "All"). Public collections work with just your username. Private collections need a')}{' '}<b>{t('Personal Access Token')}</b> from
+            <b> discogs.com/settings/developers</b>{' '}{t('(click "Generate new token", paste it below). Cover URLs stay remote — re-fetch on-disk copies later via MusicBrainz if you want them portable.')}
           </p>
 
           <div className="discogs-creds">
             <label>
-              <span>Username</span>
+              <span>{t('Username')}</span>
               <input
                 type="text"
                 value={username}
@@ -269,41 +267,41 @@ export default function DiscogsImporter({ existingItems, onImport, onClose }: Pr
               />
             </label>
             <label>
-              <span>Personal Access Token <em>(optional, needed for private)</em></span>
+              <span>{t('Personal Access Token')}{' '}<em>{t('(optional, needed for private)')}</em></span>
               <input
                 type="password"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                placeholder="XxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx"
+                placeholder={t('XxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx')}
                 autoComplete="off"
                 onKeyDown={(e) => { if (e.key === 'Enter') handleFetch() }}
               />
             </label>
             <button type="button" className="importer-file-btn" onClick={handleFetch} disabled={busy || !username.trim()}>
-              {busy ? 'Fetching…' : releases.length > 0 ? 'Re-fetch' : 'Fetch collection'}
+              {busy ? t('Fetching…') : releases.length > 0 ? t('Re-fetch') : t('Fetch collection')}
             </button>
           </div>
 
           {error && <p className="save-files-error">{error}</p>}
-          {truncated && <p className="hint" style={{ color: 'var(--text-dim)' }}>Collection truncated at 2 000 releases ({totalPages} pages total on Discogs).</p>}
+          {truncated && <p className="hint" style={{ color: 'var(--text-dim)' }}>{t('Collection truncated at 2 000 releases ({totalPages} pages total on Discogs).', { totalPages: totalPages })}</p>}
 
           {releases.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{releases.length} unique release{releases.length === 1 ? '' : 's'}</span>
-                <span className="importer-new">{summary.toCreate} to create</span>
-                <span className="importer-dupe">{summary.toApply} to apply</span>
+                <span>{plural(releases.length, '{n} unique release', '{n} unique releases')}</span>
+                <span className="importer-new">{t('{toCreate} to create', { toCreate: summary.toCreate })}</span>
+                <span className="importer-dupe">{t('{toApply} to apply', { toApply: summary.toApply })}</span>
               </div>
               <div className="importer-table-wrap">
                 <table className="importer-table">
                   <thead>
                     <tr>
-                      <th>Album</th>
-                      <th>Artist</th>
-                      <th style={{ width: 60 }}>Year</th>
-                      <th style={{ width: 60 }}>Rating</th>
-                      <th style={{ width: 100 }}>Format</th>
-                      <th style={{ width: 170 }}>Action</th>
+                      <th>{t('Album')}</th>
+                      <th>{t('Artist')}</th>
+                      <th style={{ width: 60 }}>{t('Year')}</th>
+                      <th style={{ width: 60 }}>{t('Rating')}</th>
+                      <th style={{ width: 100 }}>{t('Format')}</th>
+                      <th style={{ width: 170 }}>{t('Action')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -319,9 +317,9 @@ export default function DiscogsImporter({ existingItems, onImport, onClose }: Pr
                           <td>{r.formats?.join(', ') ?? '—'}</td>
                           <td>
                             <select value={action} onChange={(e) => setAction(r.key, e.target.value as Action)}>
-                              {match && <option value="apply">Apply to existing</option>}
-                              <option value="create">Create in Music</option>
-                              <option value="skip">Skip</option>
+                              {match && <option value="apply">{t('Apply to existing')}</option>}
+                              <option value="create">{t('Create in Music')}</option>
+                              <option value="skip">{t('Skip')}</option>
                             </select>
                           </td>
                         </tr>
@@ -335,14 +333,14 @@ export default function DiscogsImporter({ existingItems, onImport, onClose }: Pr
         </div>
         {releases.length > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button
               type="button"
               className="primary-btn"
               disabled={summary.toApply + summary.toCreate === 0}
               onClick={handleImport}
             >
-              Apply to {summary.toApply + summary.toCreate} release{summary.toApply + summary.toCreate === 1 ? '' : 's'}
+              {plural(summary.toApply + summary.toCreate, 'Apply to {n} release', 'Apply to {n} releases')}
             </button>
           </div>
         )}

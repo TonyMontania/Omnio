@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { t, tk } from './i18n'
 
 type Kind = 'grids' | 'heroes' | 'logos'
 
@@ -37,9 +38,14 @@ interface Asset {
 }
 
 const KIND_LABEL: Record<Kind, string> = {
-  grids: 'Cover',
-  heroes: 'Banner',
-  logos: 'Logo',
+  grids: tk('Cover'),
+  heroes: tk('Banner'),
+  logos: tk('Logo'),
+}
+const KIND_PLURAL: Record<Kind, string> = {
+  grids: tk('covers'),
+  heroes: tk('banners'),
+  logos: tk('logos'),
 }
 const KIND_TO_LOCAL: Record<Kind, string> = {
   grids: 'cover',
@@ -67,7 +73,7 @@ export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, 
   }, [onClose])
 
   const searchGame = async () => {
-    if (!keyLooksSet) { setGameSearchError('No API key configured'); return }
+    if (!keyLooksSet) { setGameSearchError(t('No API key configured')); return }
     if (!query.trim()) return
     setGameSearchLoading(true)
     setGameSearchError(null)
@@ -76,7 +82,7 @@ export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, 
     const r = await window.ipcRenderer.invoke('sgdb:search', apiKey, query.trim())
     setGameSearchLoading(false)
     if (r?.ok) setGames((r.data as Game[]) ?? [])
-    else setGameSearchError(r?.error ?? 'Search failed')
+    else setGameSearchError(r?.error ?? t('Search failed'))
   }
 
   // Auto-run first search if we have both key and query on mount.
@@ -92,7 +98,7 @@ export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, 
     const r = await window.ipcRenderer.invoke('sgdb:assets', apiKey, kind, g.id)
     setAssetsLoading(false)
     if (r?.ok) setAssets((r.data as Asset[]) ?? [])
-    else setAssetsError(r?.error ?? 'Failed to load assets')
+    else setAssetsError(r?.error ?? t('Failed to load assets'))
   }
 
   const pickAsset = async (a: Asset) => {
@@ -109,21 +115,20 @@ export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, 
     const rel = await downloadImageAsset( a.url, 'videojuegos', folderKind, assetBasename(hint, filenameKind))
     setDownloading(null)
     if (rel) { onPick(rel); onClose() }
-    else alert('Download failed. Try another asset or check your connection.')
+    else alert(t('Download failed. Try another asset or check your connection.'))
   }
 
   return (
     <div className="modal-overlay">
       <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>SteamGridDB · {KIND_LABEL[kind]}</h2>
+          <h2>{t('SteamGridDB · {KIND_LABEL}', { KIND_LABEL: t(KIND_LABEL[kind]) })}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           {!keyLooksSet && (
             <p className="hint" style={{ color: 'var(--danger)' }}>
-              Set your SteamGridDB API key in Settings → Data → Integrations first.
-              Register a free one at <code>steamgriddb.com/profile/preferences/api</code>.
+              {t('Set your SteamGridDB API key in Settings → Data → Integrations first. Register a free one at')}{' '}<code>steamgriddb.com/profile/preferences/api</code>.
             </p>
           )}
 
@@ -132,11 +137,11 @@ export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') searchGame() }}
-              placeholder="Search a game…"
+              placeholder={t('Search a game…')}
               disabled={!keyLooksSet}
             />
             <button type="button" className="secondary-btn" onClick={searchGame} disabled={!keyLooksSet || gameSearchLoading}>
-              {gameSearchLoading ? 'Searching…' : 'Search'}
+              {gameSearchLoading ? t('Searching…') : t('Search')}
             </button>
           </div>
 
@@ -158,13 +163,13 @@ export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, 
           {game && (
             <>
               <p className="fetch-selected-game">
-                <span>Showing {KIND_LABEL[kind].toLowerCase()}s for <strong>{game.name}</strong></span>
-                <button type="button" className="link-btn" onClick={() => { setGame(null); setAssets([]) }}>← different game</button>
+                <span>{t('Showing {kinds} for', { kinds: t(KIND_PLURAL[kind]) })}{' '}<strong>{game.name}</strong></span>
+                <button type="button" className="link-btn" onClick={() => { setGame(null); setAssets([]) }}>{t('← different game')}</button>
               </p>
-              {assetsLoading && <p className="hint">Loading artwork…</p>}
+              {assetsLoading && <p className="hint">{t('Loading artwork…')}</p>}
               {assetsError && <p className="hint" style={{ color: 'var(--danger)' }}>{assetsError}</p>}
               {!assetsLoading && !assetsError && assets.length === 0 && (
-                <p className="hint">No {KIND_LABEL[kind].toLowerCase()}s uploaded for this game yet.</p>
+                <p className="hint">{t('No {kinds} uploaded for this game yet.', { kinds: t(KIND_PLURAL[kind]) })}</p>
               )}
               {assets.length > 0 && (
                 <div className={`fetch-asset-grid ${kind}`}>
@@ -175,10 +180,10 @@ export default function SteamGridDbPicker({ apiKey, initialQuery, kind, onPick, 
                       className={`fetch-asset ${downloading === a.id ? 'downloading' : ''}`}
                       onClick={() => pickAsset(a)}
                       disabled={downloading !== null}
-                      title={a.notes || `${a.width}×${a.height}`}
+                      title={a.notes || t('{width}×{height}', { width: a.width, height: a.height })}
                     >
                       <img src={a.thumb} alt="" loading="lazy" />
-                      {downloading === a.id && <span className="fetch-asset-status">Downloading…</span>}
+                      {downloading === a.id && <span className="fetch-asset-status">{t('Downloading…')}</span>}
                     </button>
                   ))}
                 </div>

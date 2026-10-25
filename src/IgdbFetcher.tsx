@@ -6,6 +6,7 @@ import { useMemo } from 'react'
 import type { Item, AgeRating, GameSource } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { t } from './i18n'
 
 interface Props {
   clientId?: string
@@ -200,7 +201,7 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
 
   const search = async (q: string): Promise<FetcherResult<Game>> => {
     const r = await window.ipcRenderer.invoke('igdb:search', clientId, clientSecret, q)
-    if (!r?.ok) return { ok: false, error: r?.error ?? 'Search failed' }
+    if (!r?.ok) return { ok: false, error: r?.error ?? t('Search failed') }
     // Re-sort by rating count so the main game surfaces above DLCs /
     // bundles / region variants that IGDB's own relevance mixes in.
     const games = (r.data as Game[]).slice().sort((a, b) => (b.total_rating_count ?? 0) - (a.total_rating_count ?? 0))
@@ -241,20 +242,15 @@ export default function IgdbFetcher({ clientId, clientSecret, initialQuery, onAp
 
   return (
     <FetcherModal<Game>
-      title="IGDB · Games"
+      title={t('IGDB · Games')}
       disabled={!authReady}
       disabledMessage={
-        <>Set your IGDB Client ID + Client Secret in Settings → Data → Integrations first.
-        Get them free at <code>dev.twitch.tv/console/apps</code> (create an app, category "Application Integration",
-        redirect URL <code>http://localhost</code>).</>
+        <>{t('Set your IGDB Client ID + Client Secret in Settings → Data → Integrations first. Get them free at')}{' '}<code>dev.twitch.tv/console/apps</code>{' '}{t('(create an app, category "Application Integration", redirect URL')}{' '}<code>http://localhost</code>).</>
       }
       hint={
-        <>Applying overwrites title, alternative titles, description (summary + storyline),
-        cover, banner (first artwork or screenshot), release date, developers, publishers,
-        platforms, genres + themes, franchise/series and age rating (ESRB, falls back to
-        PEGI). Rating, time played, achievements, notes and status are left alone.</>
+        <>{t('Applying overwrites title, alternative titles, description (summary + storyline), cover, banner (first artwork or screenshot), release date, developers, publishers, platforms, genres + themes, franchise/series and age rating (ESRB, falls back to PEGI). Rating, time played, achievements, notes and status are left alone.')}</>
       }
-      placeholder="Search a game…"
+      placeholder={t('Search a game…')}
       initialQuery={initialQuery}
       onSearch={search}
       onApply={apply}

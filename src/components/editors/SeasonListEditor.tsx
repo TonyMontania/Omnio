@@ -6,6 +6,7 @@ import { useState } from 'react'
 import type { Season, Episode } from '../../types'
 import { StarRatingInput } from '../../StarRating'
 import { numColumnWidth } from '../../utils/numColumn'
+import { t } from '../../i18n'
 
 export default function SeasonListEditor({ seasons, onAdd, onRemove, onUpdate, onToggleWatched, onRatingChange, onBulkAdd, onEpisodesChange }: {
   seasons: Season[]
@@ -58,15 +59,15 @@ export default function SeasonListEditor({ seasons, onAdd, onRemove, onUpdate, o
   return (
     <div className="track-editor">
       <div className="track-editor-row">
-        <input className="track-num" placeholder="S#" value={number} onChange={(e) => setNumber(e.target.value)} />
-        <input className="track-name" placeholder="Season title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <input className="track-num" placeholder="Year" value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" />
-        <input className="track-num" placeholder="Eps" value={totalEps} onChange={(e) => setTotalEps(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
-        <button type="button" onClick={handleAdd}>Add</button>
+        <input className="track-num" placeholder={t('S#')} value={number} onChange={(e) => setNumber(e.target.value)} />
+        <input className="track-name" placeholder={t('Season title (optional)')} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input className="track-num" placeholder={t('Year')} value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" />
+        <input className="track-num" placeholder={t('Eps')} value={totalEps} onChange={(e) => setTotalEps(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
+        <button type="button" onClick={handleAdd}>{t('Add')}</button>
       </div>
       <div className="track-editor-row">
-        <input className="track-num" placeholder="Count" value={bulkCount} onChange={(e) => setBulkCount(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
-        <button type="button" onClick={handleBulk}>Bulk add seasons</button>
+        <input className="track-num" placeholder={t('Count')} value={bulkCount} onChange={(e) => setBulkCount(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
+        <button type="button" onClick={handleBulk}>{t('Bulk add seasons')}</button>
       </div>
       {seasons.length > 0 && (
         <div className="season-list">
@@ -78,10 +79,10 @@ export default function SeasonListEditor({ seasons, onAdd, onRemove, onUpdate, o
               <div key={s.id} className="season-row">
                 <div className="season-head">
                   <button type="button" className="season-expand" onClick={() => setExpanded(isOpen ? null : s.id)}>{isOpen ? '▾' : '▸'}</button>
-                  <span className="season-label">S{s.number}</span>
-                  <input className="track-artist-cell" placeholder="Title" value={s.title ?? ''} onChange={(e) => onUpdate(s.id, { title: e.target.value })} />
-                  <input className="track-num" placeholder="Year" value={s.year ?? ''} onChange={(e) => onUpdate(s.id, { year: e.target.value.replace(/\D/g, '').slice(0, 4) })} />
-                  <input className="track-num" placeholder="Eps" value={s.totalEpisodes ?? ''} onChange={(e) => onUpdate(s.id, { totalEpisodes: e.target.value.replace(/\D/g, '') })} />
+                  <span className="season-label">{t('S{number}', { number: s.number })}</span>
+                  <input className="track-artist-cell" placeholder={t('Title')} value={s.title ?? ''} onChange={(e) => onUpdate(s.id, { title: e.target.value })} />
+                  <input className="track-num" placeholder={t('Year')} value={s.year ?? ''} onChange={(e) => onUpdate(s.id, { year: e.target.value.replace(/\D/g, '').slice(0, 4) })} />
+                  <input className="track-num" placeholder={t('Eps')} value={s.totalEpisodes ?? ''} onChange={(e) => onUpdate(s.id, { totalEpisodes: e.target.value.replace(/\D/g, '') })} />
                   <span className="season-count">{epsWatched}/{epsTotal || '?'}</span>
                   <StarRatingInput value={s.rating ?? 0} onChange={(v) => onRatingChange(s.id, v)} />
                   <button type="button" className={s.watched ? 'track-listened-check active' : 'track-listened-check'} onClick={() => onToggleWatched(s.id)}>{s.watched ? '✓' : ''}</button>
@@ -90,17 +91,17 @@ export default function SeasonListEditor({ seasons, onAdd, onRemove, onUpdate, o
                 {isOpen && (
                   <div className="season-episodes">
                     <div className="track-editor-row">
-                      <button type="button" onClick={() => addEpisodeToSeason(s)}>+ Add episode</button>
-                      <button type="button" onClick={() => bulkAddEpisodesToSeason(s, parseInt(s.totalEpisodes || '0', 10))} disabled={!s.totalEpisodes}>Fill from total ({s.totalEpisodes || 0})</button>
+                      <button type="button" onClick={() => addEpisodeToSeason(s)}>{t('+ Add episode')}</button>
+                      <button type="button" onClick={() => bulkAddEpisodesToSeason(s, parseInt(s.totalEpisodes || '0', 10))} disabled={!s.totalEpisodes}>{t('Fill from total ({totalEpisodes})', { totalEpisodes: s.totalEpisodes || 0 })}</button>
                     </div>
                     {s.episodes && s.episodes.length > 0 && (
                       <table className="track-table">
                         <thead>
                           <tr>
                             <th className="col-num" style={{ width: numColumnWidth(s.episodes.map((ep) => ep.number)) }}>#</th>
-                            <th className="col-title">Title</th>
-                            <th className="col-listened">Watched</th>
-                            <th className="col-rating">Rating</th>
+                            <th className="col-title">{t('Title')}</th>
+                            <th className="col-listened">{t('Watched')}</th>
+                            <th className="col-rating">{t('Rating')}</th>
                             <th />
                             <th className="col-spacer"></th>
                           </tr>

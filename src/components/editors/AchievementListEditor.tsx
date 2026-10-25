@@ -8,6 +8,7 @@
 
 import { useState } from 'react'
 import type { Achievement } from '../../types'
+import { t } from '../../i18n'
 
 type Props = {
   entries: Achievement[]
@@ -43,11 +44,11 @@ export default function AchievementListEditor({ entries, onChange }: Props) {
 
   return (
     <div className="field-group">
-      <label>Achievement list <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>{unlockedCount} / {entries.length} unlocked</span></label>
+      <label>{t('Achievement list')}{' '}<span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>{t('{unlockedCount} / {entries} unlocked', { unlockedCount: unlockedCount, entries: entries.length })}</span></label>
       <div className="achievement-add-row">
-        <input placeholder="Achievement name" value={name} onChange={(e) => setName(e.target.value)} />
-        <input placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
-        <button type="button" onClick={add} disabled={!name.trim()}>+ Add</button>
+        <input placeholder={t('Achievement name')} value={name} onChange={(e) => setName(e.target.value)} />
+        <input placeholder={t('Description (optional)')} value={description} onChange={(e) => setDescription(e.target.value)} />
+        <button type="button" onClick={add} disabled={!name.trim()}>{t('+ Add')}</button>
       </div>
       {sorted.length > 0 && (
         <ul className="achievement-list">
@@ -57,18 +58,18 @@ export default function AchievementListEditor({ entries, onChange }: Props) {
                 type="button"
                 className="achievement-toggle"
                 onClick={() => toggleUnlocked(a.id)}
-                title={a.unlockedAt ? 'Mark as locked' : 'Mark as unlocked'}
+                title={a.unlockedAt ? t('Mark as locked') : t('Mark as unlocked')}
               >{a.unlockedAt ? '★' : '☆'}</button>
               <div className="achievement-body">
                 <input className="achievement-name" value={a.name} onChange={(e) => updateField(a.id, 'name', e.target.value)} />
                 {a.description !== undefined && (
-                  <input className="achievement-desc" placeholder="Description" value={a.description ?? ''} onChange={(e) => updateField(a.id, 'description', e.target.value || undefined)} />
+                  <input className="achievement-desc" placeholder={t('Description')} value={a.description ?? ''} onChange={(e) => updateField(a.id, 'description', e.target.value || undefined)} />
                 )}
                 {a.unlockedAt && (
                   <input className="achievement-date" type="date" value={a.unlockedAt.slice(0, 10)} onChange={(e) => updateField(a.id, 'unlockedAt', e.target.value || undefined)} />
                 )}
               </div>
-              <button type="button" className="achievement-delete" onClick={() => remove(a.id)} title="Delete">✕</button>
+              <button type="button" className="achievement-delete" onClick={() => remove(a.id)} title={t('Delete')}>✕</button>
             </li>
           ))}
         </ul>

@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { invoke } from '../utils/ipc'
 import { FileIcon, FolderIcon } from '../icons'
+import { t } from '../i18n'
 
 interface CommonLocation { name: string; path: string }
 interface DirEntry { name: string; isDir: boolean; size: number }
@@ -126,7 +127,7 @@ export default function FilePicker({
       if (info.parent) setCwd(info.parent)
       if (mode === 'save') setFilename(pathInput.split(/[\\/]/).pop() ?? '')
     } else {
-      setError(`Path not found: ${pathInput}`)
+      setError(t('Path not found: {pathInput}', { pathInput: pathInput }))
     }
   }
 
@@ -140,7 +141,7 @@ export default function FilePicker({
       setNewFolderName('')
       await loadListing(cwd)
     } else {
-      setError(`Could not create folder: ${(r as { ok: false; error: string }).error}`)
+      setError(t('Could not create folder: {error}', { error: (r as { ok: false; error: string }).error }))
     }
   }
 
@@ -162,7 +163,7 @@ export default function FilePicker({
       <div className="modal file-picker" onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
           <h2>{title}</h2>
-          <button className="modal-close" onClick={onCancel} title="Close" aria-label="Close">✕</button>
+          <button className="modal-close" onClick={onCancel} title={t('Close')} aria-label={t('Close')}>✕</button>
         </header>
 
         <div className="file-picker-toolbar">
@@ -170,35 +171,35 @@ export default function FilePicker({
             type="button"
             className="secondary-btn compact"
             onClick={goUp}
-            title="Parent folder"
-            aria-label="Go up"
+            title={t('Parent folder')}
+            aria-label={t('Go up')}
           >↑</button>
           <input
             className="file-picker-path"
             value={pathInput}
             onChange={(e) => setPathInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') void navigateFromInput() }}
-            placeholder="Type a path and press Enter"
+            placeholder={t('Type a path and press Enter')}
           />
           <button
             type="button"
             className="secondary-btn compact"
             onClick={() => setNewFolderMode(true)}
-            title="Create folder in this directory"
-          >+ Folder</button>
+            title={t('Create folder in this directory')}
+          >{t('+ Folder')}</button>
           <label className="file-picker-hidden-toggle">
             <input
               type="checkbox"
               checked={showHidden}
               onChange={(e) => setShowHidden(e.target.checked)}
             />
-            <span>Hidden</span>
+            <span>{t('Hidden')}</span>
           </label>
         </div>
 
         <div className="file-picker-body">
           <aside className="file-picker-sidebar">
-            <div className="file-picker-side-heading">Quick access</div>
+            <div className="file-picker-side-heading">{t('Quick access')}</div>
             <ul>
               {locations.map((loc) => (
                 <li
@@ -219,7 +220,7 @@ export default function FilePicker({
               <div className="file-picker-newfolder">
                 <input
                   autoFocus
-                  placeholder="New folder name"
+                  placeholder={t('New folder name')}
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
                   onKeyDown={(e) => {
@@ -227,17 +228,17 @@ export default function FilePicker({
                     if (e.key === 'Escape') { setNewFolderMode(false); setNewFolderName('') }
                   }}
                 />
-                <button type="button" className="primary-btn compact" onClick={createNewFolder}>Create</button>
-                <button type="button" className="secondary-btn compact" onClick={() => { setNewFolderMode(false); setNewFolderName('') }}>Cancel</button>
+                <button type="button" className="primary-btn compact" onClick={createNewFolder}>{t('Create')}</button>
+                <button type="button" className="secondary-btn compact" onClick={() => { setNewFolderMode(false); setNewFolderName('') }}>{t('Cancel')}</button>
               </div>
             )}
             {error && <div className="file-picker-error">{error}</div>}
             {busy ? (
-              <p className="hint" style={{ padding: 12 }}>Loading…</p>
+              <p className="hint" style={{ padding: 12 }}>{t('Loading…')}</p>
             ) : (
               <ul ref={listRef} className="file-picker-list">
                 {filteredEntries.length === 0 && (
-                  <li className="empty">Empty folder.</li>
+                  <li className="empty">{t('Empty folder.')}</li>
                 )}
                 {filteredEntries.map((entry) => (
                   <li
@@ -266,7 +267,7 @@ export default function FilePicker({
 
         {mode === 'save' && (
           <div className="file-picker-savebar">
-            <label>Filename</label>
+            <label>{t('Filename')}</label>
             <div className="file-picker-filename-row">
               <input
                 value={filename}
@@ -278,14 +279,14 @@ export default function FilePicker({
             </div>
             {finalPath && (
               <p className="hint" style={{ marginTop: 6 }}>
-                Final path: <code>{finalPath}</code>
+                {t('Final path:')}{' '}<code>{finalPath}</code>
               </p>
             )}
           </div>
         )}
 
         <div className="file-picker-actions">
-          <button type="button" className="secondary-btn" onClick={onCancel}>Cancel</button>
+          <button type="button" className="secondary-btn" onClick={onCancel}>{t('Cancel')}</button>
           <div style={{ flex: 1 }} />
           {mode === 'save' && (
             <button
@@ -293,7 +294,7 @@ export default function FilePicker({
               className="primary-btn"
               onClick={() => onPickFolder?.(finalPath)}
               disabled={!canSave}
-            >Save</button>
+            >{t('Save')}</button>
           )}
           {mode === 'folder' && (
             <button
@@ -301,7 +302,7 @@ export default function FilePicker({
               className="primary-btn"
               onClick={() => onPickFolder?.(cwd)}
               disabled={!canPickFolder}
-            >Select this folder</button>
+            >{t('Select this folder')}</button>
           )}
         </div>
       </div>

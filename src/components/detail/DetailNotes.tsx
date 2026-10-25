@@ -2,8 +2,9 @@
 // 5-line component in every detail modal — extracted so tweaks land once.
 
 import { renderMiniMarkdown } from '../../types'
+import { t } from '../../i18n'
 
-export default function DetailNotes({ notes, label = 'Notes' }: { notes?: string; label?: string }) {
+export default function DetailNotes({ notes, label = t('Notes') }: { notes?: string; label?: string }) {
   if (!notes) return null
   return (
     <div className="field-group">

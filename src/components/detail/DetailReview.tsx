@@ -4,6 +4,7 @@
 
 import { useState } from 'react'
 import { renderMiniMarkdown } from '../../types'
+import { t } from '../../i18n'
 
 export default function DetailReview({ review, hasSpoilers }: {
   review?: string
@@ -13,10 +14,10 @@ export default function DetailReview({ review, hasSpoilers }: {
   if (!review) return null
   return (
     <div className="field-group">
-      <label>Review{hasSpoilers ? ' (spoilers)' : ''}</label>
+      <label>{t('Review{value}', { value: hasSpoilers ? t(' (spoilers)') : '' })}</label>
       {hasSpoilers && !revealed ? (
         <button type="button" className="spoiler-reveal-btn" onClick={() => setRevealed(true)}>
-          ⚠ This review contains spoilers — click to reveal
+          {t('⚠ This review contains spoilers — click to reveal')}
         </button>
       ) : (
         <div className="notes-preview" dangerouslySetInnerHTML={{ __html: renderMiniMarkdown(review) }} />

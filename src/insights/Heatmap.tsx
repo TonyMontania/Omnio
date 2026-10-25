@@ -4,6 +4,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item } from '../types'
+import { plural, t } from '../i18n'
 
 interface Props {
   items: Item[]
@@ -105,9 +106,9 @@ export default function Heatmap({ items, label }: Props) {
     <div className="heatmap">
       <div className="heatmap-head">
         <div className="heatmap-title">
-          <h4>{label ?? 'Completion activity'}</h4>
+          <h4>{label ?? t('Completion activity')}</h4>
           <span className="heatmap-meta">
-            {total} {total === 1 ? 'item' : 'items'} finished in {year}
+            {plural(total, '{n} item finished in {year}', '{n} items finished in {year}', { year: year })}
           </span>
         </div>
         <div className="heatmap-years">
@@ -136,7 +137,7 @@ export default function Heatmap({ items, label }: Props) {
                   <div
                     key={cell.key}
                     className={`heatmap-cell l${level(cell.count)}${cell.inYear ? '' : ' outside'}`}
-                    title={cell.inYear ? `${cell.key} · ${cell.count} ${cell.count === 1 ? 'item' : 'items'}` : ''}
+                    title={cell.inYear ? plural(cell.count, '{key} · {n} item', '{key} · {n} items', { key: cell.key }) : ''}
                   />
                 ))}
               </div>
@@ -146,9 +147,9 @@ export default function Heatmap({ items, label }: Props) {
       </div>
 
       <div className="heatmap-legend">
-        <span>Less</span>
+        <span>{t('Less')}</span>
         {[0, 1, 2, 3, 4].map((l) => <div key={l} className={`heatmap-cell l${l}`} />)}
-        <span>More</span>
+        <span>{t('More')}</span>
       </div>
     </div>
   )

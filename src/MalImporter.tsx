@@ -5,6 +5,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item, AnimeStatus, MangaStatus } from './types'
+import { t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -76,9 +77,9 @@ function normalizeDate(s?: string): string | undefined {
 function parseXml(xml: string): { entries: Parsed[]; error?: string } {
   const doc = new DOMParser().parseFromString(xml, 'application/xml')
   const err = doc.querySelector('parsererror')
-  if (err) return { entries: [], error: 'Not a valid XML file.' }
+  if (err) return { entries: [], error: t('Not a valid XML file.') }
   const root = doc.querySelector('myanimelist')
-  if (!root) return { entries: [], error: 'Root element <myanimelist> is missing. Is this a MAL/AniList export?' }
+  if (!root) return { entries: [], error: t('Root element <myanimelist> is missing. Is this a MAL/AniList export?') }
   const out: Parsed[] = []
   root.querySelectorAll('anime').forEach((el) => {
     const title = textAny(el, ['series_title', 'anime_title'])
@@ -194,8 +195,8 @@ export default function MalImporter({ existingItems, onImport, onClose }: Props)
       const doc = new DOMParser().parseFromString(txt, 'application/xml')
       const rawCount = doc.querySelectorAll('anime, manga').length
       setError(rawCount > 0
-        ? `Found ${rawCount} <anime>/<manga> element(s) but none had a title — this XML uses field names Omnio doesn't recognize.`
-        : 'No <anime> or <manga> entries found.')
+        ? t('Found {rawCount} <anime>/<manga> element(s) but none had a title — this XML uses field names Omnio doesn\'t recognize.', { rawCount: rawCount })
+        : t('No <anime> or <manga> entries found.'))
       return
     }
     setParsed(r.entries)
@@ -221,43 +222,39 @@ export default function MalImporter({ existingItems, onImport, onClose }: Props)
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Import from MyAnimeList / AniList XML</h2>
+          <h2>{t('Import from MyAnimeList / AniList XML')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Works with the native MyAnimeList export (Profile → Export) and with the AniList
-            scraper's <code>_anilistanime</code> / <code>_anilistmanga</code> XML. Unzip the
-            <code>.gz</code> if you got one and pick the <code>.xml</code> here.
-            Imported items land in the <em>Anime</em> and <em>Manga</em> libraries with title,
-            episodes/chapters, rating, status, start/finish dates, tags and notes filled in.
-            Covers and descriptions can be added afterwards using the AniList metadata fetcher.
+            {t('Works with the native MyAnimeList export (Profile → Export) and with the AniList scraper\'s')}{' '}<code>_anilistanime</code> / <code>_anilistmanga</code>{' '}{t('XML. Unzip the')}
+            <code>.gz</code>{' '}{t('if you got one and pick the')}{' '}<code>.xml</code>{' '}{t('here. Imported items land in the')}{' '}<em>{t('Anime')}</em> and <em>{t('Manga')}</em>{' '}{t('libraries with title, episodes/chapters, rating, status, start/finish dates, tags and notes filled in. Covers and descriptions can be added afterwards using the AniList metadata fetcher.')}
           </p>
           <label className="upload-btn" style={{ alignSelf: 'flex-start', cursor: 'pointer' }}>
-            {filename ? `Selected: ${filename}` : 'Choose XML file…'}
+            {filename ? t('Selected: {filename}', { filename: filename }) : t('Choose XML file…')}
             <input type="file" accept=".xml" style={{ display: 'none' }} onChange={handleFile} />
           </label>
           {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
           {parsed && (
             <>
               <div className="mal-import-summary">
-                <div><strong>{parsed.length}</strong> entries parsed</div>
+                <div><strong>{parsed.length}</strong>{' '}{t('entries parsed')}</div>
                 <div><span>{parsed.filter((p) => p.kind === 'anime').length}</span> anime</div>
                 <div><span>{parsed.filter((p) => p.kind === 'manga').length}</span> manga</div>
               </div>
               <label className="mal-skip">
                 <input type="checkbox" checked={skipExisting} onChange={(e) => setSkipExisting(e.target.checked)} />
-                Skip titles that already exist in your library (case-insensitive match)
+                {t('Skip titles that already exist in your library (case-insensitive match)')}
               </label>
               <div className="mal-import-summary">
-                <div><strong>{toImport.length}</strong> ready to import</div>
-                {skipped > 0 && <div className="hint">{skipped} skipped as duplicates</div>}
+                <div><strong>{toImport.length}</strong>{' '}{t('ready to import')}</div>
+                {skipped > 0 && <div className="hint">{t('{skipped} skipped as duplicates', { skipped: skipped })}</div>}
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button type="button" className="secondary-btn" onClick={onClose}>Cancel</button>
+                <button type="button" className="secondary-btn" onClick={onClose}>{t('Cancel')}</button>
                 <button type="button" className="primary" onClick={doImport} disabled={toImport.length === 0}
                   style={{ background: 'var(--accent)', color: '#1a1408', padding: '8px 16px', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600 }}>
-                  Import {toImport.length} · {animeCount} anime, {mangaCount} manga
+                  {t('Import {toImport} · {animeCount} anime, {mangaCount} manga', { toImport: toImport.length, animeCount: animeCount, mangaCount: mangaCount })}
                 </button>
               </div>
             </>

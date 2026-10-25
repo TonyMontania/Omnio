@@ -14,6 +14,7 @@
 import { useMemo } from 'react'
 import type { BandMember, Item, MusicArtist } from '../types'
 import { isFormerMember } from '../types'
+import { t } from '../i18n'
 
 interface Props {
   artist: MusicArtist
@@ -96,7 +97,7 @@ interface RowData {
 function segmentsFor(m: BandMember, bandStart: number, bandEnd: number, colorCache: Map<string, string>): RowData {
   const primaryStart = pickYear(m.joinedIn) ?? bandStart
   const primaryEnd = isFormerMember(m) ? (pickYear(m.leftIn) ?? bandEnd) : bandEnd
-  const primaryRole = m.roles[0] ?? 'Member'
+  const primaryRole = m.roles[0] ?? t('Member')
   const primary: Segment = {
     fromYear: primaryStart,
     toYear: primaryEnd,
@@ -109,7 +110,7 @@ function segmentsFor(m: BandMember, bandStart: number, bandEnd: number, colorCac
     const from = pickYear(s.from)
     const to = pickYear(s.to) ?? bandEnd
     if (from === undefined) continue
-    const role = s.roles[0] ?? 'Member'
+    const role = s.roles[0] ?? t('Member')
     const seg: Segment = { fromYear: from, toYear: to, role, color: colorFor(role, colorCache) }
     // Overlap with primary = simultaneous second role → inner strip.
     // Fully disjoint = side bar in its own space.
@@ -222,7 +223,7 @@ export default function BandTimeline({ artist, releases }: Props) {
 
   return (
     <div className="band-timeline">
-      <svg viewBox={`0 0 ${leftLabelWidth + chartWidth + 20} ${totalHeight}`} role="img" aria-label={`Timeline for ${artist.name}`}>
+      <svg viewBox={`0 0 ${leftLabelWidth + chartWidth + 20} ${totalHeight}`} role="img" aria-label={t('Timeline for {name}', { name: artist.name })}>
         {/* Member rows: primary bar + optional inner overlay strip for
             simultaneous secondary stints + side-bar segments for stints
             that fall outside the primary tenure. Inner strip is ~45% of
@@ -246,7 +247,7 @@ export default function BandTimeline({ artist, releases }: Props) {
                 const w = Math.max(1, yearToX(seg.primary.toYear) - x)
                 return (
                   <rect x={x} y={y} width={w} height={rowHeight} fill={seg.primary.color} rx={2}>
-                    <title>{`${row.member.name} — ${seg.primary.role} (${rangeLabel(seg.primary)})`}</title>
+                    <title>{t('{name} — {role} ({primary})', { name: row.member.name, role: seg.primary.role, primary: rangeLabel(seg.primary) })}</title>
                   </rect>
                 )
               })()}
@@ -256,7 +257,7 @@ export default function BandTimeline({ artist, releases }: Props) {
                 const w = Math.max(1, yearToX(s.toYear) - x)
                 return (
                   <rect key={`sb${si}`} x={x} y={y} width={w} height={rowHeight} fill={s.color} rx={2}>
-                    <title>{`${row.member.name} — ${s.role} (${rangeLabel(s)})`}</title>
+                    <title>{t('{name} — {role} ({s})', { name: row.member.name, role: s.role, s: rangeLabel(s) })}</title>
                   </rect>
                 )
               })}
@@ -266,7 +267,7 @@ export default function BandTimeline({ artist, releases }: Props) {
                 const w = Math.max(1, yearToX(s.toYear) - x)
                 return (
                   <rect key={`ov${si}`} x={x} y={overlayY} width={w} height={overlayHeight} fill={s.color}>
-                    <title>{`${row.member.name} — also ${s.role} (${rangeLabel(s)})`}</title>
+                    <title>{t('{name} — also {role} ({s})', { name: row.member.name, role: s.role, s: rangeLabel(s) })}</title>
                   </rect>
                 )
               })}
@@ -290,7 +291,7 @@ export default function BandTimeline({ artist, releases }: Props) {
               strokeWidth={1.5}
               strokeDasharray="3 2"
             >
-              <title>{`${a.title} (${a.year})`}</title>
+              <title>{t('{title} ({year})', { title: a.title, year: a.year })}</title>
             </line>
           )
         })}
@@ -322,7 +323,7 @@ export default function BandTimeline({ artist, releases }: Props) {
         {albumYears.length > 0 && (
           <span className="band-timeline-legend-item">
             <span className="band-timeline-swatch dashed" />
-            Studio album
+            {t('Studio album')}
           </span>
         )}
       </div>

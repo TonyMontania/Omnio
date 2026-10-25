@@ -13,6 +13,7 @@
 import { useMemo, useState } from 'react'
 import type { Item, GameStatus } from './types'
 import { parseCsv, colIndex } from './utils/csv'
+import { plural, t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -101,7 +102,7 @@ export default function BackloggdImporter({ existingItems, onImport, onClose }: 
     try {
       const text = await file.text()
       const table = parseCsv(text)
-      if (table.length < 2) { setError('CSV is empty or missing headers.'); return }
+      if (table.length < 2) { setError(t('CSV is empty or missing headers.')); return }
       const headers = table[0]
       const parsed: Row[] = []
       for (const r of table.slice(1)) {
@@ -153,19 +154,18 @@ export default function BackloggdImporter({ existingItems, onImport, onClose }: 
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel letterboxd-importer" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 780, width: '94vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Import from Backloggd</h2>
+          <h2>{t('Import from Backloggd')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Export from Backloggd via Profile → Settings → Import/Export. Drop the CSV
-            here. Ratings on the 10-point scale get halved to Omnio's 5-point.
+            {t('Export from Backloggd via Profile → Settings → Import/Export. Drop the CSV here. Ratings on the 10-point scale get halved to Omnio\'s 5-point.')}
           </p>
           <div className="importer-dropzone">
             <input type="file" accept=".csv" style={{ display: 'none' }} id="backloggd-file"
               onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = '' }} />
             <label htmlFor="backloggd-file" className="importer-file-btn">
-              {rows.length > 0 ? 'Pick different file' : '+ Pick CSV'}
+              {rows.length > 0 ? t('Pick different file') : t('+ Pick CSV')}
             </label>
             {fileName && <span className="importer-file-list">{fileName}</span>}
           </div>
@@ -173,18 +173,18 @@ export default function BackloggdImporter({ existingItems, onImport, onClose }: 
           {rows.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{rows.length} games found</span>
-                <span className="importer-new">{rows.length - dupeCount} new</span>
-                <span className="importer-dupe">{dupeCount} already in library</span>
+                <span>{t('{rows} games found', { rows: rows.length })}</span>
+                <span className="importer-new">{t('{rows} new', { rows: rows.length - dupeCount })}</span>
+                <span className="importer-dupe">{t('{dupeCount} already in library', { dupeCount: dupeCount })}</span>
                 <div className="importer-select-actions">
-                  <button type="button" onClick={() => setSelected(new Set(rows.filter((r) => !matches.get(r.key)).map((r) => r.key)))}>Select new only</button>
-                  <button type="button" onClick={() => setSelected(new Set(rows.map((r) => r.key)))}>Select all</button>
-                  <button type="button" onClick={() => setSelected(new Set())}>Select none</button>
+                  <button type="button" onClick={() => setSelected(new Set(rows.filter((r) => !matches.get(r.key)).map((r) => r.key)))}>{t('Select new only')}</button>
+                  <button type="button" onClick={() => setSelected(new Set(rows.map((r) => r.key)))}>{t('Select all')}</button>
+                  <button type="button" onClick={() => setSelected(new Set())}>{t('Select none')}</button>
                 </div>
               </div>
               <div className="importer-table-wrap">
                 <table className="importer-table">
-                  <thead><tr><th style={{ width: 32 }}></th><th>Title</th><th style={{ width: 60 }}>Year</th><th style={{ width: 70 }}>Rating</th><th style={{ width: 90 }}>Status</th><th style={{ width: 60 }}>Hours</th><th style={{ width: 90 }}>In lib</th></tr></thead>
+                  <thead><tr><th style={{ width: 32 }}></th><th>{t('Title')}</th><th style={{ width: 60 }}>{t('Year')}</th><th style={{ width: 70 }}>{t('Rating')}</th><th style={{ width: 90 }}>{t('Status')}</th><th style={{ width: 60 }}>{t('Hours')}</th><th style={{ width: 90 }}>{t('In lib')}</th></tr></thead>
                   <tbody>
                     {rows.map((r) => {
                       const dupe = matches.get(r.key)
@@ -196,7 +196,7 @@ export default function BackloggdImporter({ existingItems, onImport, onClose }: 
                           <td>{r.rating ? r.rating.toFixed(1) : '—'}</td>
                           <td>{r.status ?? '—'}</td>
                           <td>{r.playTime ?? '—'}</td>
-                          <td>{dupe ? <span className="importer-badge dupe">In lib</span> : <span className="importer-badge new">New</span>}</td>
+                          <td>{dupe ? <span className="importer-badge dupe">{t('In lib')}</span> : <span className="importer-badge new">{t('New')}</span>}</td>
                         </tr>
                       )
                     })}
@@ -208,9 +208,9 @@ export default function BackloggdImporter({ existingItems, onImport, onClose }: 
         </div>
         {rows.length > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button type="button" className="primary-btn" disabled={selected.size === 0} onClick={handleImport}>
-              Import {selected.size} game{selected.size === 1 ? '' : 's'}
+              {plural(selected.size, 'Import {n} game', 'Import {n} games')}
             </button>
           </div>
         )}

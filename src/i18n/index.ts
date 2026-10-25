@@ -22,12 +22,26 @@ const DICTIONARIES: Record<Language, Record<string, string>> = { en: {}, es }
 // Locale used for dates and numbers in each language.
 const LOCALES: Record<Language, string> = { en: 'en-US', es: 'es-AR' }
 
-let current: Language = 'en'
+// Remembered between launches so strings built when a module loads (option
+// tables, default labels) come out in the right language from the start.
+const STORAGE_KEY = 'omnio.language'
+
+function storedLanguage(): Language {
+  try {
+    const v = globalThis.localStorage?.getItem(STORAGE_KEY)
+    return v === 'es' ? 'es' : 'en'
+  } catch {
+    return 'en'
+  }
+}
+
+let current: Language = storedLanguage()
 const listeners = new Set<() => void>()
 
 export function setLanguage(language: Language): void {
   const next = DICTIONARIES[language] ? language : 'en'
   if (typeof document !== 'undefined') document.documentElement.lang = next
+  try { globalThis.localStorage?.setItem(STORAGE_KEY, next) } catch { /* private mode */ }
   if (next === current) return
   current = next
   for (const fn of listeners) fn()
@@ -54,10 +68,10 @@ export function locale(): string {
 }
 
 /** Translate an English interface string, filling `{name}` placeholders. */
-export function t(text: string, vars?: Record<string, string | number>): string {
+export function t(text: string, vars?: Record<string, unknown>): string {
   const out = DICTIONARIES[current][text] ?? text
   if (!vars) return out
-  return out.replace(/\{(\w+)\}/g, (whole, name: string) => (name in vars ? String(vars[name]) : whole))
+  return out.replace(/\{(\w+)\}/g, (whole, name: string) => (name in vars ? String(vars[name] ?? '') : whole))
 }
 
 /**
@@ -69,7 +83,7 @@ export function tk(text: string): string {
   return text
 }
 
-/** Singular / plural form for `n`, translated. Both forms may use `{n}`. */
-export function plural(n: number, one: string, other: string): string {
-  return t(n === 1 ? one : other, { n: n.toLocaleString(locale()) })
+/** Singular / plural form for `n`, translated. Both forms may use `{n}` and any of `vars`. */
+export function plural(n: number, one: string, other: string, vars?: Record<string, unknown>): string {
+  return t(n === 1 ? one : other, { ...vars, n: n.toLocaleString(locale()) })
 }

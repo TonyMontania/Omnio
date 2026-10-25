@@ -9,6 +9,7 @@ import ArcadeRunEditor from './ArcadeRunEditor'
 import ArcadeMiniGrid from './ArcadeMiniGrid'
 import GridEditor from './GridEditor'
 import ScoreChart from './ScoreChart'
+import { locale, t } from '../i18n'
 
 type Tab = 'grid' | 'runs' | 'progression'
 
@@ -55,9 +56,9 @@ export default function ArcadeGameDetail(props: Props) {
   const gridEmpty = isGrid && ((game.grid?.characters.length ?? 0) === 0 || (game.grid?.difficulties.length ?? 0) === 0)
   const pbSub = pb.run ? [pb.run.character, pb.run.difficulty, pb.run.date].filter(Boolean).join(' · ') : ''
   const tabs: { id: Tab; label: string; count?: number; hidden?: boolean }[] = [
-    { id: 'grid', label: 'Grid', hidden: !isGrid },
-    { id: 'runs', label: 'Runs', count: game.runs.length },
-    { id: 'progression', label: 'Progression', hidden: !hasScores },
+    { id: 'grid', label: t('Grid'), hidden: !isGrid },
+    { id: 'runs', label: t('Runs'), count: game.runs.length },
+    { id: 'progression', label: t('Progression'), hidden: !hasScores },
   ]
 
   return (
@@ -66,13 +67,13 @@ export default function ArcadeGameDetail(props: Props) {
         <div className="hero-stage no-banner">
           {game.logo && <img className="hero-bg" src={game.logo} alt="" aria-hidden />}
           {game.logo
-            ? <img className="arcade-hero-logo zoomable" src={game.logo} alt={game.title} data-zoom-label="Logo" />
+            ? <img className="arcade-hero-logo zoomable" src={game.logo} alt={game.title} data-zoom-label={t('Logo')} />
             : <span className="arcade-hero-abbr">{(game.abbreviation || game.title).slice(0, 6)}</span>}
         </div>
         <div className="hero-body">
           <div className="hero-text">
             <div className="hero-chips">
-              <span>{isGrid ? 'Grid' : 'Score log'}</span>
+              <span>{isGrid ? t('Grid') : t('Score log')}</span>
               {clears.length > 0 && <span>1cc</span>}
               {game.abbreviation && <span>{game.abbreviation}</span>}
             </div>
@@ -80,24 +81,24 @@ export default function ArcadeGameDetail(props: Props) {
               className="arcade-title-input"
               value={game.title}
               onChange={(e) => onUpdate({ title: e.target.value })}
-              placeholder="Game title"
-              aria-label="Game title"
-              title="Click to rename"
+              placeholder={t('Game title')}
+              aria-label={t('Game title')}
+              title={t('Click to rename')}
             />
           </div>
           <div className="hero-actions">
             {isGrid && (
               <button type="button" className="add-btn" onClick={() => { setTab('grid'); setEditingAxes((v) => !v) }}>
-                {editingAxes ? '✓ Done' : '✎ Edit axes'}
+                {editingAxes ? t('✓ Done') : t('✎ Edit axes')}
               </button>
             )}
             <div className="pop-wrap" ref={menuRef}>
-              <button type="button" className={`icon-btn${menuOpen ? ' on' : ''}`} aria-label="More actions" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>⋯</button>
+              <button type="button" className={`icon-btn${menuOpen ? ' on' : ''}`} aria-label={t('More actions')} aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>⋯</button>
               {menuOpen && (
                 <div className="pop" role="menu">
                   <div className="pop-list">
                     <button type="button" role="menuitem" className="danger" onClick={() => { setMenuOpen(false); onDelete() }}>
-                      <span className="pop-icon" aria-hidden>✕</span>Delete game
+                      <span className="pop-icon" aria-hidden>✕</span>{t('Delete game')}
                     </button>
                   </div>
                 </div>
@@ -106,10 +107,10 @@ export default function ArcadeGameDetail(props: Props) {
           </div>
         </div>
         <dl className="hero-stats">
-          <div><dt>Personal best</dt><dd>{pb.score !== undefined ? pb.score.toLocaleString() : '—'}{pbSub && <small>{pbSub}</small>}</dd></div>
-          <div><dt>Runs</dt><dd>{game.runs.length}</dd></div>
-          {isGrid && <div><dt>1cc clears</dt><dd>{clears.length}</dd></div>}
-          {isGrid && <div><dt>First 1cc</dt><dd>{clears[0] ? clears[0].date : '—'}{clears[0] && <small>{[clears[0].character, clears[0].difficulty].filter(Boolean).join(' · ')}</small>}</dd></div>}
+          <div><dt>{t('Personal best')}</dt><dd>{pb.score !== undefined ? pb.score.toLocaleString(locale()) : '—'}{pbSub && <small>{pbSub}</small>}</dd></div>
+          <div><dt>{t('Runs')}</dt><dd>{game.runs.length}</dd></div>
+          {isGrid && <div><dt>{t('1cc clears')}</dt><dd>{clears.length}</dd></div>}
+          {isGrid && <div><dt>{t('First 1cc')}</dt><dd>{clears[0] ? clears[0].date : '—'}{clears[0] && <small>{[clears[0].character, clears[0].difficulty].filter(Boolean).join(' · ')}</small>}</dd></div>}
         </dl>
       </header>
 
@@ -126,7 +127,7 @@ export default function ArcadeGameDetail(props: Props) {
           <>
             {editingAxes && <GridEditor game={game} onUpdate={onUpdate} />}
             {gridEmpty
-              ? !editingAxes && <p className="hint">This grid has no axes yet. Click <b>✎ Edit axes</b> to add characters and difficulties.</p>
+              ? !editingAxes && <p className="hint">{t('This grid has no axes yet. Click')}{' '}<b>{t('✎ Edit axes')}</b>{' '}{t('to add characters and difficulties.')}</p>
               : <div className="arcade-detail-grid-wrap"><ArcadeMiniGrid game={game} onOpen={() => { /* already in detail */ }} /></div>}
           </>
         )}

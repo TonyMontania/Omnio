@@ -10,6 +10,7 @@ import type { CategoryId } from '../types/items'
 import { assetSrc } from '../types'
 import { getUniversalStatusOptions, getUniversalStatusValue } from '../utils/statusUniversal'
 import { statusTone } from '../utils/statusUniversal'
+import { t } from '../i18n'
 
 interface Props {
   items: AnyItem[]
@@ -113,7 +114,7 @@ export default function KanbanView({ items, categoryId, onOpen, onSetStatus }: P
   }, [draggingId])
 
   if (columns.length === 0) {
-    return <p className="hint">This library doesn't have a status enum, so a Kanban view can't be built.</p>
+    return <p className="hint">{t('This library doesn\'t have a status enum, so a Kanban view can\'t be built.')}</p>
   }
 
   // Card pointerdown: record the anchor point but don't commit to a
@@ -160,7 +161,7 @@ export default function KanbanView({ items, categoryId, onOpen, onSetStatus }: P
               <span className="kanban-col-count">{list.length}</span>
             </header>
             <div className="kanban-col-body">
-              {list.length === 0 && <p className="kanban-col-empty">Drop items here</p>}
+              {list.length === 0 && <p className="kanban-col-empty">{t('Drop items here')}</p>}
               {list.map((it) => (
                 <div
                   key={it.id}

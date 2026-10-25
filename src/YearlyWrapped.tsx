@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react'
 import type { Item } from './types'
 import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
+import { t } from './i18n'
 
 interface Props {
   items: Item[]
@@ -90,7 +91,7 @@ async function drawWrapped(snap: WrappedSnapshot): Promise<string> {
 
   ctx.fillStyle = TEXT
   ctx.font = `600 140px ${DISPLAY}`
-  ctx.fillText(`Wrapped ${snap.year}`, 60, 130)
+  ctx.fillText(t('Wrapped {year}', { year: snap.year }), 60, 130)
 
   // Hero row — up to 3 tiles.
   let y = 340
@@ -123,7 +124,7 @@ async function drawWrapped(snap: WrappedSnapshot): Promise<string> {
   if (snap.categoryLines.length > 0) {
     ctx.fillStyle = TEXT
     ctx.font = `600 42px ${DISPLAY}`
-    ctx.fillText('By library', 60, y)
+    ctx.fillText(t('By library'), 60, y)
     y += 70
     for (const c of snap.categoryLines) {
       ctx.fillStyle = ACCENT
@@ -150,7 +151,7 @@ async function drawWrapped(snap: WrappedSnapshot): Promise<string> {
   if (snap.topRated.length > 0) {
     ctx.fillStyle = TEXT
     ctx.font = `600 42px ${DISPLAY}`
-    ctx.fillText('Top rated', 60, y)
+    ctx.fillText(t('Top rated'), 60, y)
     y += 70
     const covers = await Promise.all(snap.topRated.map((t) =>
       t.coverSrc ? loadImage(t.coverSrc).catch(() => null) : Promise.resolve(null),
@@ -194,7 +195,7 @@ async function drawWrapped(snap: WrappedSnapshot): Promise<string> {
   if (snap.highlights.length > 0) {
     ctx.fillStyle = TEXT
     ctx.font = `600 42px ${DISPLAY}`
-    ctx.fillText('Highlights', 60, y)
+    ctx.fillText(t('Highlights'), 60, y)
     y += 70
     const cols = snap.highlights.length
     const colW = (W - 60 * 2 - 20 * (cols - 1)) / cols
@@ -341,12 +342,12 @@ export default function YearlyWrapped({ items, onClose }: Props) {
     setExporting(true)
     try {
       const categoryLines: WrappedSnapshot['categoryLines'] = []
-      if (games.length > 0)  categoryLines.push({ label: 'Games',           count: games.length,  sub: totalPlayHours ? `${totalPlayHours.toFixed(1)}h played` : undefined })
-      if (movies.length > 0) categoryLines.push({ label: 'Movies',          count: movies.length })
-      if (series.length > 0) categoryLines.push({ label: 'Series',          count: series.length, sub: totalEpisodes ? `${totalEpisodes} episodes` : undefined })
-      if (anime.length > 0)  categoryLines.push({ label: 'Anime + Donghua', count: anime.length,  sub: totalEpisodes ? `${totalEpisodes} episodes` : undefined })
-      if (manga.length > 0)  categoryLines.push({ label: 'Comics + Manga',  count: manga.length,  sub: totalChapters ? `${totalChapters} chapters` : undefined })
-      if (music.length > 0)  categoryLines.push({ label: 'Music',           count: music.length })
+      if (games.length > 0)  categoryLines.push({ label: t('Games'),           count: games.length,  sub: totalPlayHours ? `${totalPlayHours.toFixed(1)}h played` : undefined })
+      if (movies.length > 0) categoryLines.push({ label: t('Movies'),          count: movies.length })
+      if (series.length > 0) categoryLines.push({ label: t('Series'),          count: series.length, sub: totalEpisodes ? `${totalEpisodes} episodes` : undefined })
+      if (anime.length > 0)  categoryLines.push({ label: t('Anime + Donghua'), count: anime.length,  sub: totalEpisodes ? `${totalEpisodes} episodes` : undefined })
+      if (manga.length > 0)  categoryLines.push({ label: t('Comics + Manga'),  count: manga.length,  sub: totalChapters ? `${totalChapters} chapters` : undefined })
+      if (music.length > 0)  categoryLines.push({ label: t('Music'),           count: music.length })
       const snap: WrappedSnapshot = {
         year,
         totalFinished: finishedInYear.length,
@@ -361,9 +362,9 @@ export default function YearlyWrapped({ items, onClose }: Props) {
           coverSrc: assetSrc(it.cover),
         })),
         highlights: [
-          topDevs.length ? { label: 'Developers', entries: topDevs } : null,
-          topStudios.length ? { label: 'Studios',    entries: topStudios } : null,
-          topGenres.length ? { label: 'Genres',     entries: topGenres } : null,
+          topDevs.length ? { label: t('Developers'), entries: topDevs } : null,
+          topStudios.length ? { label: t('Studios'),    entries: topStudios } : null,
+          topGenres.length ? { label: t('Genres'),     entries: topGenres } : null,
         ].filter((x): x is { label: string; entries: [string, number][] } => x !== null),
       }
       const dataUrl = await drawWrapped(snap)
@@ -378,7 +379,7 @@ export default function YearlyWrapped({ items, onClose }: Props) {
       <div className="modal-panel wrapped-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>
-            <span className="wrapped-year">Wrapped {year}</span>
+            <span className="wrapped-year">{t('Wrapped {year}', { year: year })}</span>
           </h2>
           <div className="wrapped-year-picker">
             {availableYears.map((y) => (
@@ -391,60 +392,60 @@ export default function YearlyWrapped({ items, onClose }: Props) {
             onClick={handleExportPng}
             disabled={exporting || finishedInYear.length === 0}
             style={{ marginRight: 8 }}
-          >{exporting ? 'Rendering…' : '⬇ Export as image'}</button>
+          >{exporting ? t('Rendering…') : t('⬇ Export as image')}</button>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           {finishedInYear.length === 0 ? (
             <p className="hint">
-              You didn't mark anything as finished in {year}. Fill in the <em>Completion date</em>
-              or <em>Listened on</em> field on your items and come back.
+              {t('You didn\'t mark anything as finished in {year}. Fill in the', { year: year })}{' '}<em>{t('Completion date')}</em>
+              or <em>{t('Listened on')}</em>{' '}{t('field on your items and come back.')}
             </p>
           ) : (
             <>
               <div className="wrapped-hero">
                 <div className="wrapped-big">
                   <div className="n">{finishedInYear.length}</div>
-                  <div className="l">items finished</div>
+                  <div className="l">{t('items finished')}</div>
                 </div>
                 {avgRating && (
                   <div className="wrapped-big">
                     <div className="n"><span className="accent">★</span> {avgRating}</div>
-                    <div className="l">average rating</div>
+                    <div className="l">{t('average rating')}</div>
                   </div>
                 )}
                 {bestMonth && (
                   <div className="wrapped-big">
                     <div className="n">{monthName(bestMonth[0])}</div>
-                    <div className="l">busiest month · {bestMonth[1]} finished</div>
+                    <div className="l">{t('busiest month · {bestMonth} finished', { bestMonth: bestMonth[1] })}</div>
                   </div>
                 )}
               </div>
 
               <div className="wrapped-cats">
                 {games.length > 0 && (
-                  <CatBlock label="Games" count={games.length}
+                  <CatBlock label={t('Games')} count={games.length}
                     subline={totalPlayHours ? `${totalPlayHours.toFixed(1)}h played` : undefined} />
                 )}
-                {movies.length > 0 && <CatBlock label="Movies" count={movies.length} />}
+                {movies.length > 0 && <CatBlock label={t('Movies')} count={movies.length} />}
                 {series.length > 0 && (
-                  <CatBlock label="Series" count={series.length}
+                  <CatBlock label={t('Series')} count={series.length}
                     subline={totalEpisodes ? `${totalEpisodes} episodes` : undefined} />
                 )}
                 {anime.length > 0 && (
-                  <CatBlock label="Anime + Donghua" count={anime.length}
+                  <CatBlock label={t('Anime + Donghua')} count={anime.length}
                     subline={totalEpisodes ? `${totalEpisodes} episodes` : undefined} />
                 )}
                 {manga.length > 0 && (
-                  <CatBlock label="Comics + Manga" count={manga.length}
+                  <CatBlock label={t('Comics + Manga')} count={manga.length}
                     subline={totalChapters ? `${totalChapters} chapters` : undefined} />
                 )}
-                {music.length > 0 && <CatBlock label="Music" count={music.length} />}
+                {music.length > 0 && <CatBlock label={t('Music')} count={music.length} />}
               </div>
 
               {topRated.length > 0 && (
                 <div className="wrapped-section">
-                  <h3>Top rated</h3>
+                  <h3>{t('Top rated')}</h3>
                   <div className="wrapped-cover-strip">
                     {topRated.map((it) => (
                       <div key={it.id} className="wrapped-cover">
@@ -461,11 +462,11 @@ export default function YearlyWrapped({ items, onClose }: Props) {
 
               {(topDevs.length > 0 || topStudios.length > 0 || topGenres.length > 0) && (
                 <div className="wrapped-section">
-                  <h3>Highlights</h3>
+                  <h3>{t('Highlights')}</h3>
                   <div className="wrapped-highlights">
-                    {topDevs.length > 0 && <TopList label="Developers" data={topDevs} />}
-                    {topStudios.length > 0 && <TopList label="Studios" data={topStudios} />}
-                    {topGenres.length > 0 && <TopList label="Genres" data={topGenres} />}
+                    {topDevs.length > 0 && <TopList label={t('Developers')} data={topDevs} />}
+                    {topStudios.length > 0 && <TopList label={t('Studios')} data={topStudios} />}
+                    {topGenres.length > 0 && <TopList label={t('Genres')} data={topGenres} />}
                   </div>
                 </div>
               )}

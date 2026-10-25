@@ -6,6 +6,7 @@
 import type { Item, PublicationStatus, BookFormat } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { t } from './i18n'
 
 interface Props {
   initialQuery: string
@@ -78,7 +79,7 @@ async function hitToPatch(hit: OlHit): Promise<Partial<Item>> {
 export default function OpenLibraryFetcher({ initialQuery, onApply, onClose }: Props) {
   const search = async (q: string): Promise<FetcherResult<OlHit>> => {
     const r = await window.ipcRenderer.invoke('openlibrary:search', q)
-    return r?.ok ? { ok: true, data: r.data as OlHit[] } : { ok: false, error: r?.error ?? 'Search failed' }
+    return r?.ok ? { ok: true, data: r.data as OlHit[] } : { ok: false, error: r?.error ?? t('Search failed') }
   }
 
   const apply = async (h: OlHit) => {
@@ -93,9 +94,9 @@ export default function OpenLibraryFetcher({ initialQuery, onApply, onClose }: P
 
   return (
     <FetcherModal<OlHit>
-      title="OpenLibrary"
-      hint={<>Free, no API key. Search across every book in OpenLibrary and apply title, authors, publisher, page count, ISBN and first-publish year. Reading status, rating and notes are left alone.</>}
-      placeholder="Search a book…"
+      title={t('OpenLibrary')}
+      hint={<>{t('Free, no API key. Search across every book in OpenLibrary and apply title, authors, publisher, page count, ISBN and first-publish year. Reading status, rating and notes are left alone.')}</>}
+      placeholder={t('Search a book…')}
       initialQuery={initialQuery}
       onSearch={search}
       onApply={apply}

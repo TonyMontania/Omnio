@@ -8,6 +8,7 @@ import { fileToDataUrl } from '../../utils/files'
 import EditorShell, { type EditorTab, type EditorTabId } from '../../components/editor-shell/EditorShell'
 import { Check, DetailPreview, EditorDialog, Field, Group, ImageSlot, ImportBox, ImportReview, TogglePill, Toggles } from '../../components/editor-shell/parts'
 import ErogeCard from './ErogeCard'
+import { locale, t } from '../../i18n'
 
 interface Props {
   initial?: ErogeItem | null
@@ -112,19 +113,19 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     if (!patched.coverFile) {
       const attempts = [res.coverUrl, ...(res.coverFallbacks ?? [])].filter(Boolean)
       if (attempts.length === 0) {
-        coverDiag = 'no cover URL found in the post'
+        coverDiag = t('no cover URL found in the post')
       } else {
-        setF95Status(`Downloading cover… (0/${attempts.length})`)
+        setF95Status(t('Downloading cover… (0/{attempts})', { attempts: attempts.length }))
         const gameName = res.name || patched.name || 'game'
         const errors: string[] = []
         for (let i = 0; i < attempts.length; i++) {
-          setF95Status(`Downloading cover… (${i + 1}/${attempts.length})`)
+          setF95Status(t('Downloading cover… ({i}/{attempts})', { i: i + 1, attempts: attempts.length }))
           const dl = await f95DownloadCover(gameName, attempts[i], f95Cookie)
           if (dl.ok) { patched = { ...patched, coverFile: dl.filename }; break }
           errors.push(dl.error)
         }
         if (!patched.coverFile) {
-          coverDiag = `cover could not be downloaded (${attempts.length} attempts): ${errors[0]}`
+          coverDiag = t('cover could not be downloaded ({attempts} attempts): {errors}', { attempts: attempts.length, errors: errors[0] })
         }
       }
     }
@@ -137,7 +138,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     if (!text) return
     if (text.startsWith('<') || /<html|bbWrapper/i.test(text)) {
       if (!looksLikeF95Thread(text)) {
-        setImportStatus('That doesn\'t look like an F95 thread page. Copy the whole page source with Ctrl+U, then Ctrl+A and Ctrl+C.')
+        setImportStatus(t('That doesn\'t look like an F95 thread page. Copy the whole page source with Ctrl+U, then Ctrl+A and Ctrl+C.'))
         return
       }
       const url = f95PageUrl(text) || game.link || ''
@@ -159,7 +160,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
       await doF95Import('current', text)
       return
     }
-    setImportStatus('Paste an F95Zone or Ryuugames link, or an F95 thread page.')
+    setImportStatus(t('Paste an F95Zone or Ryuugames link, or an F95 thread page.'))
   }
 
   // Actually run the import and either update the current draft (mode
@@ -175,13 +176,13 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
         setGame(outcome.patched)
         if (stage === 'import') setStage('review')
         const post = findDuplicate(allGames, game.id, { dlsiteId: outcome.res.dlsiteId, dlsiteUrl: outcome.res.dlsiteUrl })
-        const dupWarn = post ? ` (⚠ already exists as "${post.name}")` : ''
+        const dupWarn = post ? ` ${t('(⚠ already exists as "{name}")', { name: post.name })}` : ''
         const coverWarn = outcome.coverDiag ? ` — ${outcome.coverDiag}` : ''
         setF95Status((outcome.res.fromCache
-          ? '✓ Imported from F95Checker’s cache — F95Zone is blocking direct requests, so store links and the release date are missing. Use "Paste page" for everything.'
+          ? t('✓ Imported from F95Checker’s cache — F95Zone is blocking direct requests, so store links and the release date are missing. Use "Paste page" for everything.')
           : outcome.res.storeLinksHidden
-            ? '✓ Imported — F95 hides store links without login; use Ryuugames for dlsite/steam.'
-            : '✓ Imported') + dupWarn + coverWarn)
+            ? t('✓ Imported — F95 hides store links without login; use Ryuugames for dlsite/steam.')
+            : t('✓ Imported')) + dupWarn + coverWarn)
       } else {
         // Save the merged metadata straight into the existing game
         // and close the editor — the parent already has that game
@@ -189,7 +190,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
         onSave({ ...outcome.patched, updatedAt: Date.now() })
       }
     } catch (err) {
-      setF95Status(`Error: ${(err as Error).message}`)
+      setF95Status(t('Error: {message}', { message: (err as Error).message }))
     }
     setImporting(false)
   }
@@ -227,7 +228,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     const res = await ryuuFetch(url)
     let patched = mergeRyuu(target, res, url)
     if (res.coverUrl && !patched.coverFile) {
-      setRyuuStatus('Downloading cover…')
+      setRyuuStatus(t('Downloading cover…'))
       const cover = await ryuuDownloadCover(patched.name || res.title || 'game', res.coverUrl)
       if (cover) patched = { ...patched, coverFile: cover }
     }
@@ -244,12 +245,12 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
         setGame(outcome.patched)
         if (stage === 'import') setStage('review')
         const post = findDuplicate(allGames, game.id, { dlsiteId: outcome.res.dlsiteId, dlsiteUrl: outcome.res.dlsiteUrl })
-        setRyuuStatus(post ? `✓ Imported (⚠ already exists as "${post.name}")` : '✓ Imported')
+        setRyuuStatus(post ? t('✓ Imported (⚠ already exists as "{name}")', { name: post.name }) : t('✓ Imported'))
       } else {
         onSave({ ...outcome.patched, updatedAt: Date.now() })
       }
     } catch (err) {
-      setRyuuStatus(`Error: ${(err as Error).message}`)
+      setRyuuStatus(t('Error: {message}', { message: (err as Error).message }))
     }
     setImporting(false)
   }
@@ -258,7 +259,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     const dataUrl = await fileToDataUrl(file)
     const res = await assetSaveDataUrl('cover', dataUrl, `${game.name || 'game'} cover`)
     if (res.ok) set('coverFile', res.filename)
-    else alert(`Error: ${res.error}`)
+    else alert(t('Error: {error}', { error: res.error }))
   }
 
   async function removeCover() {
@@ -290,7 +291,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
 
   const cover = game.coverFile ? assetUrl('cover', game.coverFile) : undefined
   const progressLabel = game.backlogStatus ? BACKLOG_LABELS[game.backlogStatus] : ''
-  const importPlaceholder = 'Paste an F95 or Ryuugames link — or the thread\'s page source (Ctrl+U, Ctrl+A, Ctrl+C) if F95 is blocking'
+  const importPlaceholder = t('Paste an F95 or Ryuugames link — or the thread\'s page source (Ctrl+U, Ctrl+A, Ctrl+C) if F95 is blocking')
   const importBox = (large: boolean) => (
     <ImportBox
       value={importText}
@@ -305,18 +306,18 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
 
   const dupDialog = dupPrompt && (
     <EditorDialog
-      title="Game already in library"
+      title={t('Game already in library')}
       width={480}
       onClose={() => setDupPrompt(null)}
       actions={<>
-        <button type="button" className="es-btn" onClick={() => setDupPrompt(null)}>Cancel</button>
-        <button type="button" className="es-btn" onClick={() => runDupChoice('add')}>Add anyway</button>
-        <button type="button" className="es-btn primary" onClick={() => runDupChoice('merge')}>Only add metadata</button>
+        <button type="button" className="es-btn" onClick={() => setDupPrompt(null)}>{t('Cancel')}</button>
+        <button type="button" className="es-btn" onClick={() => runDupChoice('add')}>{t('Add anyway')}</button>
+        <button type="button" className="es-btn primary" onClick={() => runDupChoice('merge')}>{t('Only add metadata')}</button>
       </>}
     >
-      <p>The link you pasted is already associated with <b style={{ color: 'var(--text)' }}>«{dupPrompt.duplicate.name}»</b>.</p>
-      <p><b>Add anyway</b> creates a separate entry and fills its empty fields with whatever the importer returns.</p>
-      <p><b>Only add metadata</b> doesn&apos;t create anything: it fills the missing fields of the existing game and discards this one.</p>
+      <p>{t('The link you pasted is already associated with')}{' '}<b style={{ color: 'var(--text)' }}>«{dupPrompt.duplicate.name}»</b>.</p>
+      <p><b>{t('Add anyway')}</b>{' '}{t('creates a separate entry and fills its empty fields with whatever the importer returns.')}</p>
+      <p><b>{t('Only add metadata')}</b>{' '}{t('doesn\'t create anything: it fills the missing fields of the existing game and discards this one.')}</p>
     </EditorDialog>
   )
 
@@ -324,11 +325,11 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     return (
       <>
         <EditorDialog
-          title="Add a game"
+          title={t('Add a game')}
           onClose={onCancel}
           actions={<>
-            <button type="button" className="es-link" onClick={() => setStage('form')}>Fill it in by hand</button>
-            <button type="button" className="es-btn" onClick={onCancel}>Cancel</button>
+            <button type="button" className="es-link" onClick={() => setStage('form')}>{t('Fill it in by hand')}</button>
+            <button type="button" className="es-btn" onClick={onCancel}>{t('Cancel')}</button>
           </>}
         >
           {importBox(true)}
@@ -341,11 +342,11 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
   if (stage === 'review') {
     return (
       <EditorDialog
-        title="Review"
+        title={t('Review')}
         onClose={onCancel}
         actions={<>
-          <button type="button" className="es-btn" onClick={() => setStage('form')}>Edit details</button>
-          <button type="button" className="es-btn primary" onClick={save}>Save</button>
+          <button type="button" className="es-btn" onClick={() => setStage('form')}>{t('Edit details')}</button>
+          <button type="button" className="es-btn primary" onClick={save}>{t('Save')}</button>
         </>}
       >
         <ImportReview
@@ -354,15 +355,15 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
           meta={[game.status, game.vn ? 'VN' : '', game.engine, game.version, game.creator].filter(Boolean).join(' · ')}
           status={importStatus}
           fields={[
-            { label: 'Cover', filled: !!game.coverFile },
-            { label: 'Creator', filled: !!game.creator },
-            { label: 'Version', filled: !!game.version },
-            { label: 'Engine', filled: !!game.engine },
-            { label: 'Status', filled: !!game.status },
-            { label: 'Release date', filled: !!game.releaseDate },
-            { label: 'Description', filled: !!game.description },
-            { label: 'Tags', filled: !!game.tags?.length },
-            { label: 'Store links', filled: !!(game.dlsiteUrl || game.steamUrl || game.itchUrl) },
+            { label: t('Cover'), filled: !!game.coverFile },
+            { label: t('Creator'), filled: !!game.creator },
+            { label: t('Version'), filled: !!game.version },
+            { label: t('Engine'), filled: !!game.engine },
+            { label: t('Status'), filled: !!game.status },
+            { label: t('Release date'), filled: !!game.releaseDate },
+            { label: t('Description'), filled: !!game.description },
+            { label: t('Tags'), filled: !!game.tags?.length },
+            { label: t('Store links'), filled: !!(game.dlsiteUrl || game.steamUrl || game.itchUrl) },
           ]}
         />
       </EditorDialog>
@@ -375,15 +376,15 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     {
       id: 'overview',
       content: <>
-        <Group title="Fetch metadata" hint={isEdit ? 'Refreshes empty fields' : 'Fills the form for you'}>
+        <Group title={t('Fetch metadata')} hint={isEdit ? t('Refreshes empty fields') : t('Fills the form for you')}>
           {importBox(false)}
         </Group>
-        <Field label="Name" wide><input type="text" required value={game.name} onChange={(e) => set('name', e.target.value)} autoFocus={isEdit === false && !game.name} /></Field>
-        <ImageSlot label="Cover" src={cover} shape="wide" onFile={setCoverFromFile} onRemove={removeCover} />
+        <Field label={t('Name')} wide><input type="text" required value={game.name} onChange={(e) => set('name', e.target.value)} autoFocus={isEdit === false && !game.name} /></Field>
+        <ImageSlot label={t('Cover')} src={cover} shape="wide" onFile={setCoverFromFile} onRemove={removeCover} />
         <div className="es-field">
-          <span className="es-label">Favorite</span>
+          <span className="es-label">{t('Favorite')}</span>
           <Toggles>
-            <TogglePill on={!!game.favorite} icon="★" label="Mark as favorite" onLabel="Favorite" onChange={(v) => set('favorite', v)} />
+            <TogglePill on={!!game.favorite} icon="★" label="Mark as favorite" onLabel={t('Favorite')} onChange={(v) => set('favorite', v)} />
           </Toggles>
         </div>
       </>,
@@ -391,53 +392,53 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
     {
       id: 'identity',
       content: <>
-        <Field label="Original title" wide><input type="text" value={game.originalTitle ?? ''} onChange={(e) => set('originalTitle', e.target.value)} placeholder="蒼海のレディ・スパイ" /></Field>
-        <Field label="Creator"><input type="text" value={game.creator ?? ''} onChange={(e) => set('creator', e.target.value)} /></Field>
-        <Field label="Language"><input type="text" value={game.language ?? ''} onChange={(e) => set('language', e.target.value)} placeholder="Japanese, English" /></Field>
-        <Field label="Engine">
+        <Field label={t('Original title')} wide><input type="text" value={game.originalTitle ?? ''} onChange={(e) => set('originalTitle', e.target.value)} placeholder="蒼海のレディ・スパイ" /></Field>
+        <Field label={t('Creator')}><input type="text" value={game.creator ?? ''} onChange={(e) => set('creator', e.target.value)} /></Field>
+        <Field label={t('Language')}><input type="text" value={game.language ?? ''} onChange={(e) => set('language', e.target.value)} placeholder={t('Japanese, English')} /></Field>
+        <Field label={t('Engine')}>
           <select value={game.engine ?? ''} onChange={(e) => set('engine', e.target.value)}>
             <option value="">—</option>
             {ENGINES.map((en) => <option key={en.label} value={en.label}>{en.label}</option>)}
           </select>
         </Field>
-        <Field label="Installed version"><input type="text" value={game.version ?? ''} onChange={(e) => set('version', e.target.value)} placeholder="v0.7" /></Field>
-        <Field label="Release date" hint="YY/MM/DD"><input type="text" value={game.releaseDate ?? ''} onChange={(e) => set('releaseDate', e.target.value)} placeholder="24/06/02" /></Field>
-        <Check label="Visual novel" checked={!!game.vn} onChange={(v) => set('vn', v)} />
-        <Field label="Tags" wide hint="comma separated">
-          <input type="text" value={(game.tags ?? []).join(', ')} placeholder="Filled from F95"
+        <Field label={t('Installed version')}><input type="text" value={game.version ?? ''} onChange={(e) => set('version', e.target.value)} placeholder="v0.7" /></Field>
+        <Field label={t('Release date')} hint={t('YY/MM/DD')}><input type="text" value={game.releaseDate ?? ''} onChange={(e) => set('releaseDate', e.target.value)} placeholder="24/06/02" /></Field>
+        <Check label={t('Visual novel')} checked={!!game.vn} onChange={(v) => set('vn', v)} />
+        <Field label={t('Tags')} wide hint={t('comma separated')}>
+          <input type="text" value={(game.tags ?? []).join(', ')} placeholder={t('Filled from F95')}
             onChange={(e) => set('tags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))} />
         </Field>
-        <Field label="Description" wide>
-          <textarea rows={8} value={game.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Your notes or the fetched description" />
+        <Field label={t('Description')} wide>
+          <textarea rows={8} value={game.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder={t('Your notes or the fetched description')} />
         </Field>
       </>,
     },
     {
       id: 'progress',
       content: <>
-        <Field label="Development status">
+        <Field label={t('Development status')}>
           <select value={game.status ?? ''} onChange={(e) => set('status', e.target.value as F95Status)}>
             <option value="">—</option>
             {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </Field>
-        <Field label="My progress">
+        <Field label={t('My progress')}>
           <select value={game.backlogStatus ?? ''} onChange={(e) => set('backlogStatus', e.target.value as BacklogStatus)}>
             <option value="">—</option>
             {BACKLOG_STATUSES.map((s) => <option key={s} value={s}>{BACKLOG_LABELS[s]}</option>)}
           </select>
         </Field>
-        <Field label="Finished version" wide>
+        <Field label={t('Finished version')} wide>
           <div className="es-inline">
-            <input type="text" value={game.finishedVersion ?? ''} onChange={(e) => set('finishedVersion', e.target.value)} placeholder="Last version you finished" />
+            <input type="text" value={game.finishedVersion ?? ''} onChange={(e) => set('finishedVersion', e.target.value)} placeholder={t('Last version you finished')} />
             {game.version && game.finishedVersion !== game.version && (
-              <button type="button" className="es-btn small" onClick={() => set('finishedVersion', game.version)}>Same as installed ({game.version})</button>
+              <button type="button" className="es-btn small" onClick={() => set('finishedVersion', game.version)}>{t('Same as installed ({version})', { version: game.version })}</button>
             )}
           </div>
         </Field>
-        <Group title="Archive" hint="Archived games are skipped by update checks">
+        <Group title={t('Archive')} hint={t('Archived games are skipped by update checks')}>
           <Toggles>
-            <TogglePill on={!!game.archived} icon="⏸" label="Archive" onLabel="Archived" onChange={(v) => set('archived', v)} />
+            <TogglePill on={!!game.archived} icon="⏸" label={t('Archive')} onLabel={t('Archived')} onChange={(v) => set('archived', v)} />
           </Toggles>
         </Group>
       </>,
@@ -446,12 +447,12 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
       id: 'links',
       count: linkCount,
       content: <>
-        <Field label="DLsite ID"><input type="text" value={game.dlsiteId ?? ''} onChange={(e) => set('dlsiteId', e.target.value)} placeholder="RJ01234567" /></Field>
-        <Field label="DLsite URL"><input type="text" value={game.dlsiteUrl ?? ''} onChange={(e) => set('dlsiteUrl', e.target.value)} placeholder="https://www.dlsite.com/…" /></Field>
-        <Field label="Steam URL"><input type="text" value={game.steamUrl ?? ''} onChange={(e) => set('steamUrl', e.target.value)} placeholder="https://store.steampowered.com/app/…" /></Field>
-        <Field label="itch.io URL"><input type="text" value={game.itchUrl ?? ''} onChange={(e) => set('itchUrl', e.target.value)} placeholder="https://creator.itch.io/game" /></Field>
-        <Field label="Ryuugames URL"><input type="text" value={game.ryuugamesUrl ?? ''} onChange={(e) => set('ryuugamesUrl', e.target.value)} placeholder="https://www.ryuugames.com/…" /></Field>
-        <Field label="F95 link"><input type="text" value={game.link ?? ''} onChange={(e) => set('link', e.target.value)} placeholder="https://f95zone.to/threads/…" /></Field>
+        <Field label={t('DLsite ID')}><input type="text" value={game.dlsiteId ?? ''} onChange={(e) => set('dlsiteId', e.target.value)} placeholder={t('RJ01234567')} /></Field>
+        <Field label={t('DLsite URL')}><input type="text" value={game.dlsiteUrl ?? ''} onChange={(e) => set('dlsiteUrl', e.target.value)} placeholder="https://www.dlsite.com/…" /></Field>
+        <Field label={t('Steam URL')}><input type="text" value={game.steamUrl ?? ''} onChange={(e) => set('steamUrl', e.target.value)} placeholder="https://store.steampowered.com/app/…" /></Field>
+        <Field label={t('itch.io URL')}><input type="text" value={game.itchUrl ?? ''} onChange={(e) => set('itchUrl', e.target.value)} placeholder="https://creator.itch.io/game" /></Field>
+        <Field label={t('Ryuugames URL')}><input type="text" value={game.ryuugamesUrl ?? ''} onChange={(e) => set('ryuugamesUrl', e.target.value)} placeholder="https://www.ryuugames.com/…" /></Field>
+        <Field label={t('F95 link')}><input type="text" value={game.link ?? ''} onChange={(e) => set('link', e.target.value)} placeholder="https://f95zone.to/threads/…" /></Field>
       </>,
     },
   ]
@@ -459,7 +460,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
   return (
     <>
       <EditorShell
-        title={isEdit ? 'Edit game' : 'New game'}
+        title={isEdit ? t('Edit game') : t('New game')}
         preview={{
           card: <ErogeCard game={game} onOpen={noop} onToggleFav={noop} />,
           detail: (
@@ -469,12 +470,12 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
               subtitle={game.originalTitle}
               chips={[game.status, progressLabel, game.vn ? 'VN' : ''].filter(Boolean) as string[]}
               facts={[
-                ['Creator', game.creator],
-                ['Engine', game.engine],
-                ['Version', game.version],
-                ['Finished', game.finishedVersion],
-                ['Released', game.releaseDate],
-                ['Language', game.language],
+                [t('Creator'), game.creator],
+                [t('Engine'), game.engine],
+                [t('Version'), game.version],
+                [t('Finished'), game.finishedVersion],
+                [t('Released'), game.releaseDate],
+                [t('Language'), game.language],
               ]}
               description={game.description}
             />
@@ -482,7 +483,7 @@ export default function ErogeEditor({ initial, allGames, f95Cookie, onSave, onCa
         }}
         previewMode={previewMode}
         onPreviewMode={setPreviewMode}
-        previewNote={initial?.createdAt ? `Added ${new Date(initial.createdAt).toLocaleDateString()}` : undefined}
+        previewNote={initial?.createdAt ? t('Added {date}', { date: new Date(initial.createdAt).toLocaleDateString(locale()) }) : undefined}
         tabs={tabs}
         activeTab={tab}
         onTab={setTab}

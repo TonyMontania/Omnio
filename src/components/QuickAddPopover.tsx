@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { CategoryId } from '../types/items'
 import { CATEGORIES } from '../categories'
 import { CategoryIcon } from '../icons'
+import { t } from '../i18n'
 
 interface Props {
   enabledCategories: string[]
@@ -40,12 +41,12 @@ export default function QuickAddPopover({ enabledCategories, onSubmit, onClose }
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel quick-add-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Quick add</h2>
-          <button type="button" className="panel-close" onClick={onClose} aria-label="Close">✕</button>
+          <h2>{t('Quick add')}</h2>
+          <button type="button" className="panel-close" onClick={onClose} aria-label={t('Close')}>✕</button>
         </div>
         <div className="modal-body">
-          <p className="hint">Drop a stub into a library — you can flesh it out from the full editor later.</p>
-          <div className="quick-add-libs" role="radiogroup" aria-label="Library">
+          <p className="hint">{t('Drop a stub into a library — you can flesh it out from the full editor later.')}</p>
+          <div className="quick-add-libs" role="radiogroup" aria-label={t('Library')}>
             {cats.map((c) => (
               <button
                 key={c.id}
@@ -65,14 +66,14 @@ export default function QuickAddPopover({ enabledCategories, onSubmit, onClose }
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
-            placeholder={`Title of ${article} ${singular}…`}
+            placeholder={t('Title of {article} {singular}…', { article: article, singular: singular })}
             className="quick-add-input"
-            aria-label="Title"
+            aria-label={t('Title')}
           />
         </div>
         <div className="modal-actions">
-          <button type="button" className="secondary-btn" onClick={onClose}>Cancel</button>
-          <button type="button" className="primary-btn" onClick={submit} disabled={!canSubmit}>+ Add</button>
+          <button type="button" className="secondary-btn" onClick={onClose}>{t('Cancel')}</button>
+          <button type="button" className="primary-btn" onClick={submit} disabled={!canSubmit}>{t('+ Add')}</button>
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ import type { Item } from './types'
 import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
 import { DiceIcon } from './icons'
+import { plural, t } from './i18n'
 
 // Each library has a canonical cover ratio so the pick preview doesn't
 // distort or scroll. Music covers are square; movies use the theatrical
@@ -75,16 +76,16 @@ export default function RandomizerModal({ items, enabledCategories, onOpenItem, 
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel randomizer-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Pick something to start</h2>
-          <button type="button" className="panel-close" onClick={onClose} aria-label="Close">✕</button>
+          <h2>{t('Pick something to start')}</h2>
+          <button type="button" className="panel-close" onClick={onClose} aria-label={t('Close')}>✕</button>
         </div>
         <div className="modal-body">
           <div className="randomizer-from">
-            <select className="ctl-select" value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Library">
-              <option value="all">Any library</option>
+            <select className="ctl-select" value={category} onChange={(e) => setCategory(e.target.value)} aria-label={t('Library')}>
+              <option value="all">{t('Any library')}</option>
               {catOptions.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
-            <span className="randomizer-pool">{pool.length} {pool.length === 1 ? 'item' : 'items'} waiting to be started</span>
+            <span className="randomizer-pool">{plural(pool.length, '{n} item waiting to be started', '{n} items waiting to be started')}</span>
           </div>
 
           {pick ? (
@@ -94,7 +95,7 @@ export default function RandomizerModal({ items, enabledCategories, onOpenItem, 
                 className="randomizer-pick-cover"
                 onClick={() => { onOpenItem(pick); onClose() }}
                 style={{ aspectRatio: coverAspect(pick.categoryId) }}
-                title="Open"
+                title={t('Open')}
               >
                 {pick.cover
                   ? <img src={assetSrc(pick.cover)} alt="" />
@@ -112,18 +113,18 @@ export default function RandomizerModal({ items, enabledCategories, onOpenItem, 
             </div>
           ) : (
             <p className="hint" style={{ textAlign: 'center', padding: '32px 0' }}>
-              Nothing waiting in that library. Try another one.
+              {t('Nothing waiting in that library. Try another one.')}
             </p>
           )}
-          <p className="randomizer-hint">Picks from backlog / plan-to items; for Music and Movies, from what you haven't listened to or watched yet.</p>
+          <p className="randomizer-hint">{t('Picks from backlog / plan-to items; for Music and Movies, from what you haven\'t listened to or watched yet.')}</p>
         </div>
         <div className="modal-footer">
           <button type="button" className="secondary-btn" disabled={pool.length < 2} onClick={() => setRollNonce((n) => n + 1)}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <DiceIcon /> Re-roll
+              <DiceIcon />{' '}{t('Re-roll')}
             </span>
           </button>
-          <button type="button" className="primary-btn" disabled={!pick} onClick={() => { if (pick) { onOpenItem(pick); onClose() } }}>Open</button>
+          <button type="button" className="primary-btn" disabled={!pick} onClick={() => { if (pick) { onOpenItem(pick); onClose() } }}>{t('Open')}</button>
         </div>
       </div>
     </div>

@@ -17,6 +17,7 @@ import type {
 } from '../../types'
 import { assetSrc } from '../../types'
 import { CATEGORIES } from '../../categories'
+import { t } from '../../i18n'
 
 type ItemNodeData = { item: Item; onOpen: (id: string) => void }
 function ItemNode({ data }: NodeProps<Node<ItemNodeData>>) {
@@ -54,7 +55,7 @@ function LabelNode({ data }: NodeProps<Node<LabelNodeData>>) {
       <Handle type="source" position={Position.Bottom} id="b" />
       <Handle type="target" position={Position.Left}   id="l" />
       <Handle type="source" position={Position.Right}  id="r" />
-      <span>{text || '(empty)'}</span>
+      <span>{text || t('(empty)')}</span>
     </div>
   )
 }
@@ -131,7 +132,7 @@ function Inner({ graph, items, currentId, onNavigate }: Props) {
   const edgeTypes = useMemo(() => ({ labeled: LabeledEdge }), [])
 
   if (rfNodes.length === 0) {
-    return <p className="hint">No items from this category live on the diagram yet — open the full canvas to add them.</p>
+    return <p className="hint">{t('No items from this category live on the diagram yet — open the full canvas to add them.')}</p>
   }
 
   return (

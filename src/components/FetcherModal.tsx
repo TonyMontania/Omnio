@@ -3,6 +3,7 @@
 // auto-search on mount and the results list live here.
 
 import { useEffect, useState, type ReactNode } from 'react'
+import { t } from '../i18n'
 
 export interface FetcherHit {
   key: string | number
@@ -54,7 +55,7 @@ export function FetcherModal<T>({
     const r = await onSearch(query.trim())
     setLoading(false)
     if (r.ok) setResults(r.data ?? [])
-    else setError(r.error ?? 'Search failed')
+    else setError(r.error ?? t('Search failed'))
   }
 
   useEffect(() => {
@@ -87,17 +88,17 @@ export function FetcherModal<T>({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') doSearch() }}
-              placeholder={placeholder ?? 'Search…'}
+              placeholder={placeholder ?? t('Search…')}
               disabled={disabled}
               autoFocus
             />
             <button type="button" className="secondary-btn" onClick={doSearch} disabled={disabled || loading}>
-              {loading ? 'Searching…' : 'Search'}
+              {loading ? t('Searching…') : t('Search')}
             </button>
           </div>
           {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
           {!loading && !error && results.length === 0 && query && !disabled && (
-            <p className="hint">No matches. Try a different spelling.</p>
+            <p className="hint">{t('No matches. Try a different spelling.')}</p>
           )}
           {results.length > 0 && (
             <ul className="anilist-results">
@@ -120,9 +121,9 @@ export function FetcherModal<T>({
                       <div className="anilist-text">
                         <div className="anilist-title">{m.title}</div>
                         {m.sub && <div className="anilist-sub">{m.sub}</div>}
-                        {m.desc && <div className="anilist-desc">{m.desc.length > 180 ? `${m.desc.slice(0, 180)}…` : m.desc}</div>}
+                        {m.desc && <div className="anilist-desc">{m.desc.length > 180 ? t('{desc}…', { desc: m.desc.slice(0, 180) }) : m.desc}</div>}
                       </div>
-                      {applyingKey === m.key && <span className="anilist-applying">Applying…</span>}
+                      {applyingKey === m.key && <span className="anilist-applying">{t('Applying…')}</span>}
                     </button>
                   </li>
                 )

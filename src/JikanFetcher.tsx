@@ -7,6 +7,7 @@
 import type { Item, AnimeFormat, AnimeSource, Demographic, AgeRating, AiringStatus } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { t } from './i18n'
 
 type MediaType = 'anime' | 'manga'
 
@@ -104,7 +105,7 @@ function extractDurationMinutes(s?: string): string | undefined {
 export default function JikanFetcher({ initialQuery, kind, categoryId, onApply, onClose }: Props) {
   const search = async (q: string): Promise<FetcherResult<JikanMedia>> => {
     const r = await window.ipcRenderer.invoke('jikan:search', q, kind)
-    return r?.ok ? { ok: true, data: r.data as JikanMedia[] } : { ok: false, error: r?.error ?? 'Search failed' }
+    return r?.ok ? { ok: true, data: r.data as JikanMedia[] } : { ok: false, error: r?.error ?? t('Search failed') }
   }
 
   const apply = async (m: JikanMedia) => {
@@ -162,14 +163,11 @@ export default function JikanFetcher({ initialQuery, kind, categoryId, onApply, 
 
   return (
     <FetcherModal<JikanMedia>
-      title={`MyAnimeList · ${kind === 'anime' ? 'Anime' : 'Manga'}`}
+      title={t('MyAnimeList · {value}', { value: kind === 'anime' ? t('Anime') : t('Manga') })}
       hint={
-        <>Via Jikan (unofficial MAL proxy — no API key needed). Applying overwrites the
-        standard fields (title, description, cover, dates, episodes/chapters, studios,
-        source, genres, authors, serialization, demographic, age rating, airing
-        status). Rating, notes and personal history are left alone.</>
+        <>{t('Via Jikan (unofficial MAL proxy — no API key needed). Applying overwrites the standard fields (title, description, cover, dates, episodes/chapters, studios, source, genres, authors, serialization, demographic, age rating, airing status). Rating, notes and personal history are left alone.')}</>
       }
-      placeholder={`Search ${kind}…`}
+      placeholder={t('Search {kind}…', { kind: kind })}
       initialQuery={initialQuery}
       onSearch={search}
       onApply={apply}

@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import type { ArcadeGame, RunFlag } from '../types/arcade'
 import { RUN_FLAG_OPTIONS } from '../types/arcade'
+import { t } from '../i18n'
 
 interface Props {
   game: ArcadeGame
@@ -61,12 +62,12 @@ export default function GridEditor({ game, onUpdate }: Props) {
   return (
     <div className="grid-editor">
       <div className="field-group">
-        <label>Rows — Difficulties (top-to-bottom)</label>
+        <label>{t('Rows — Difficulties (top-to-bottom)')}</label>
         <div className="tag-list">
           {grid.difficulties.map((d, i) => (
             <span key={i} className="tag-chip">
               {d}
-              <button type="button" onClick={() => removeDifficulty(i)} title="Remove">✕</button>
+              <button type="button" onClick={() => removeDifficulty(i)} title={t('Remove')}>✕</button>
             </span>
           ))}
         </div>
@@ -75,14 +76,14 @@ export default function GridEditor({ game, onUpdate }: Props) {
             value={diffDraft}
             onChange={(e) => setDiffDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addDifficulty() } }}
-            placeholder="Add difficulty (e.g. Lunatic, Hard, Normal, Easy)"
+            placeholder={t('Add difficulty (e.g. Lunatic, Hard, Normal, Easy)')}
           />
-          <button type="button" onClick={addDifficulty}>+ Add</button>
+          <button type="button" onClick={addDifficulty}>{t('+ Add')}</button>
         </div>
       </div>
 
       <div className="field-group">
-        <label>Columns — Characters (left-to-right)</label>
+        <label>{t('Columns — Characters (left-to-right)')}</label>
         <div className="grid-editor-chars">
           {grid.characters.map((c, i) => (
             <div key={i} className="grid-editor-char">
@@ -93,9 +94,9 @@ export default function GridEditor({ game, onUpdate }: Props) {
                 onChange={(e) => setCode(i, e.target.value.toUpperCase())}
                 maxLength={4}
                 placeholder="code"
-                title="Short code shown under the mini-grid"
+                title={t('Short code shown under the mini-grid')}
               />
-              <button type="button" onClick={() => removeCharacter(i)} title="Remove">✕</button>
+              <button type="button" onClick={() => removeCharacter(i)} title={t('Remove')}>✕</button>
             </div>
           ))}
         </div>
@@ -103,7 +104,7 @@ export default function GridEditor({ game, onUpdate }: Props) {
           <input
             value={charDraft}
             onChange={(e) => setCharDraft(e.target.value)}
-            placeholder="Character / ship / loadout (e.g. Reimu A)"
+            placeholder={t('Character / ship / loadout (e.g. Reimu A)')}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCharacter() } }}
           />
           <input
@@ -111,15 +112,15 @@ export default function GridEditor({ game, onUpdate }: Props) {
             onChange={(e) => setCharCodeDraft(e.target.value.toUpperCase())}
             maxLength={4}
             className="grid-editor-code"
-            placeholder="Code"
+            placeholder={t('Code')}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCharacter() } }}
           />
-          <button type="button" onClick={addCharacter}>+ Add</button>
+          <button type="button" onClick={addCharacter}>{t('+ Add')}</button>
         </div>
       </div>
 
       <div className="field-group">
-        <label>Legend — Flags to display in the grid</label>
+        <label>{t('Legend — Flags to display in the grid')}</label>
         <div className="arcade-flag-row">
           {RUN_FLAG_OPTIONS.map((o) => (
             <button

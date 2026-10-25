@@ -16,6 +16,7 @@ import RewatchListEditor from './RewatchListEditor'
 import RelatedListEditor from './RelatedListEditor'
 import RecommendationsEditor from './RecommendationsEditor'
 import ChapterNotesEditor from './ChapterNotesEditor'
+import { t } from '../../i18n'
 
 type Setter<T> = (updater: T | ((prev: T) => T)) => void
 
@@ -67,36 +68,36 @@ export default function BookEditorSection(props: BookEditorSectionProps) {
   return (
     <>
       <div className="form-section-header" data-belongs-to="overview">
-        <span className="form-section-title">Reading status</span>
+        <span className="form-section-title">{t('Reading status')}</span>
       </div>
       <div className="field-group">
-        <label>Status</label>
+        <label>{t('Status')}</label>
         <select value={bookStatus} onChange={(e) => setBookStatus(e.target.value as BookStatus)}>
           {BOOK_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
       </div>
 
       <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Book details</span>
-        <span className="form-section-hint">Authors, publisher, series, ISBN, format, source</span>
+        <span className="form-section-title">{t('Book details')}</span>
+        <span className="form-section-hint">{t('Authors, publisher, series, ISBN, format, source')}</span>
       </div>
       <TagEditor
-        label="Authors"
+        label={t('Authors')}
         tags={mangaAuthors}
         onAdd={(a) => setMangaAuthors((prev) => prev.includes(a) ? prev : [...prev, a])}
         onRemove={(i) => setMangaAuthors((prev) => prev.filter((_, idx) => idx !== i))}
-        placeholder="Add author"
+        placeholder={t('Add author')}
       />
       <div className="field-grid two">
         <div className="field-group">
-          <label>Format</label>
+          <label>{t('Format')}</label>
           <select value={bookFormat} onChange={(e) => setBookFormat(e.target.value as BookFormat | '')}>
             <option value="">—</option>
             {BOOK_FORMAT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>Publication status</label>
+          <label>{t('Publication status')}</label>
           <select value={pubStatus} onChange={(e) => setPubStatus(e.target.value as PublicationStatus | '')}>
             <option value="">—</option>
             {PUBLICATION_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -105,16 +106,16 @@ export default function BookEditorSection(props: BookEditorSectionProps) {
       </div>
       <div className="field-grid two">
         <div className="field-group">
-          <label>Publisher</label>
-          <input value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder="e.g. Tor Books" />
+          <label>{t('Publisher')}</label>
+          <input value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder={t('e.g. Tor Books')} />
         </div>
         <div className="field-group">
-          <label>ISBN</label>
+          <label>{t('ISBN')}</label>
           <div style={{ display: 'flex', gap: 6 }}>
             <input
               value={isbn}
               onChange={(e) => setIsbn(e.target.value)}
-              placeholder="e.g. 978-0-7653-1178-8"
+              placeholder={t('e.g. 978-0-7653-1178-8')}
               style={{ flex: 1 }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && isbn.trim()) {
@@ -127,114 +128,114 @@ export default function BookEditorSection(props: BookEditorSectionProps) {
               type="button"
               className="secondary-btn"
               disabled={!isbn.trim()}
-              title="Fetch title, authors, publisher, page count and cover from OpenLibrary using this ISBN. Overwrites those fields — leaves your reading status, rating, notes and log alone."
+              title={t('Fetch title, authors, publisher, page count and cover from OpenLibrary using this ISBN. Overwrites those fields — leaves your reading status, rating, notes and log alone.')}
               onClick={() => window.dispatchEvent(new CustomEvent('omnio-book-isbn-lookup', { detail: isbn.trim() }))}
-            >Lookup</button>
+            >{t('Lookup')}</button>
           </div>
           <p className="hint" style={{ marginTop: 4 }}>
-            Paste the ISBN off the back cover (or barcode) — 10 or 13 digits, dashes optional. <b>Lookup</b> or Enter fills the rest.
+            {t('Paste the ISBN off the back cover (or barcode) — 10 or 13 digits, dashes optional.')}{' '}<b>{t('Lookup')}</b>{' '}{t('or Enter fills the rest.')}
           </p>
         </div>
       </div>
       <div className="field-grid two">
         <div className="field-group">
-          <label>Series / saga</label>
-          <input value={saga} onChange={(e) => setSaga(e.target.value)} placeholder="e.g. The Stormlight Archive" />
+          <label>{t('Series / saga')}</label>
+          <input value={saga} onChange={(e) => setSaga(e.target.value)} placeholder={t('e.g. The Stormlight Archive')} />
         </div>
         <div className="field-group">
-          <label>Book # in series</label>
-          <input value={sagaIndex} onChange={(e) => setSagaIndex(e.target.value)} placeholder="e.g. Book 1" />
+          <label>{t('Book # in series')}</label>
+          <input value={sagaIndex} onChange={(e) => setSagaIndex(e.target.value)} placeholder={t('e.g. Book 1')} />
         </div>
       </div>
       <div className="field-grid two">
         <div className="field-group">
-          <label>Source</label>
+          <label>{t('Source')}</label>
           <select value={bookSource} onChange={(e) => setBookSource(e.target.value as BookSource | '')}>
             <option value="">—</option>
             {BOOK_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>Translator</label>
-          <input value={translator} onChange={(e) => setTranslator(e.target.value)} placeholder="Optional" />
+          <label>{t('Translator')}</label>
+          <input value={translator} onChange={(e) => setTranslator(e.target.value)} placeholder={t('Optional')} />
         </div>
       </div>
       <div className="field-group">
-        <label>Description</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={8} placeholder="Book synopsis" />
+        <label>{t('Description')}</label>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={8} placeholder={t('Book synopsis')} />
       </div>
 
       <div className="form-section-header" data-belongs-to="progress">
-        <span className="form-section-title">Progress</span>
-        <span className="form-section-hint">Pages read / total · start date</span>
+        <span className="form-section-title">{t('Progress')}</span>
+        <span className="form-section-hint">{t('Pages read / total · start date')}</span>
       </div>
       <div className="field-grid two">
         <div className="field-group">
-          <label>Pages read</label>
-          <input value={pagesRead} onChange={(e) => setPagesRead(e.target.value.replace(/[^\d]/g, ''))} placeholder="e.g. 120" />
+          <label>{t('Pages read')}</label>
+          <input value={pagesRead} onChange={(e) => setPagesRead(e.target.value.replace(/[^\d]/g, ''))} placeholder={t('e.g. 120')} />
         </div>
         <div className="field-group">
-          <label>Total pages</label>
-          <input value={totalPages} onChange={(e) => setTotalPages(e.target.value.replace(/[^\d]/g, ''))} placeholder="e.g. 350" />
+          <label>{t('Total pages')}</label>
+          <input value={totalPages} onChange={(e) => setTotalPages(e.target.value.replace(/[^\d]/g, ''))} placeholder={t('e.g. 350')} />
         </div>
       </div>
       <div className="field-group">
-        <label>Started reading</label>
+        <label>{t('Started reading')}</label>
         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
       </div>
 
       <div className="form-section-header" data-belongs-to="overview">
-        <span className="form-section-title">Rating &amp; completion</span>
+        <span className="form-section-title">{t('Rating & completion')}</span>
       </div>
       <div className="field-group">
-        <label>Rating</label>
+        <label>{t('Rating')}</label>
         <RatingPicker value={rating} onChange={setRating} />
       </div>
       <div className="field-group">
-        <label>Completion date</label>
+        <label>{t('Completion date')}</label>
         <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
       </div>
 
       <div className="form-section-header" data-belongs-to="notes">
-        <span className="form-section-title">Review</span>
-        <span className="form-section-hint">Your take · with optional spoiler toggle</span>
+        <span className="form-section-title">{t('Review')}</span>
+        <span className="form-section-hint">{t('Your take · with optional spoiler toggle')}</span>
       </div>
       <div className="field-group">
-        <label>Review</label>
-        <textarea value={bookReview} onChange={(e) => setBookReview(e.target.value)} rows={4} placeholder="Your review" />
+        <label>{t('Review')}</label>
+        <textarea value={bookReview} onChange={(e) => setBookReview(e.target.value)} rows={4} placeholder={t('Your review')} />
         {bookReview.trim() && (
           <div className="field-inline">
-            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(!hasSpoilers)}>Contains spoilers</button>
+            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(!hasSpoilers)}>{t('Contains spoilers')}</button>
           </div>
         )}
       </div>
       <ChapterNotesEditor entries={chapterNotes} onChange={setChapterNotes} />
 
       <div className="form-section-header" data-belongs-to="history">
-        <span className="form-section-title">Reread history</span>
-        <span className="form-section-hint">Log each reread with date + optional rating and notes</span>
+        <span className="form-section-title">{t('Reread history')}</span>
+        <span className="form-section-hint">{t('Log each reread with date + optional rating and notes')}</span>
       </div>
       <div className="field-group">
-        <label>Reading history</label>
+        <label>{t('Reading history')}</label>
         <RewatchListEditor
           rewatches={rewatches}
           onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
           onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
           onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
           onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-          labels={{ rewatch: 'Reread', started: 'Started reading', finished: 'Finished reading', dropped: 'Dropped', note: 'Note' }}
+          labels={{ rewatch: t('Reread'), started: t('Started reading'), finished: t('Finished reading'), dropped: t('Dropped'), note: t('Note') }}
         />
       </div>
 
       <div className="form-section-header" data-belongs-to="related">
-        <span className="form-section-title">Related &amp; recommendations</span>
+        <span className="form-section-title">{t('Related & recommendations')}</span>
       </div>
       <div className="field-group">
-        <label>Franchise</label>
-        <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Cosmere, Middle-earth…" />
+        <label>{t('Franchise')}</label>
+        <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder={t('e.g. Cosmere, Middle-earth…')} />
       </div>
       <div className="field-group">
-        <label>Related books</label>
+        <label>{t('Related books')}</label>
         <RelatedListEditor
           related={relatedItems}
           options={items.filter((i) => i.categoryId === 'libros' && i.id !== editingId)}
@@ -243,17 +244,17 @@ export default function BookEditorSection(props: BookEditorSectionProps) {
           onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
           onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
           onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-          pickerPlaceholder="Add related item… (any library)"
+          pickerPlaceholder={t('Add related item… (any library)')}
         />
       </div>
       <div className="field-group">
-        <label>Recommendations</label>
+        <label>{t('Recommendations')}</label>
         <RecommendationsEditor
           ids={recommendedItems}
           options={items.filter((i) => i.categoryId === 'libros' && i.id !== editingId)}
           onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
           onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-          pickerPlaceholder="Add recommended book…"
+          pickerPlaceholder={t('Add recommended book…')}
         />
       </div>
     </>

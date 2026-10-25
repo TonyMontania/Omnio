@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import type { DlcEntry, GameStatus } from '../../types'
 import { GAME_STATUS_OPTIONS } from '../../types'
+import { t } from '../../i18n'
 
 export default function GameSubItems({
   question, enabled, onToggle, entries, onAdd, onRemove, onStatusChange, placeholder, showStatus = true,
@@ -19,8 +20,8 @@ export default function GameSubItems({
     <div className="field-group">
       <label>{question}</label>
       <div className="yesno">
-        <button type="button" className={enabled ? 'pill active' : 'pill'} onClick={() => onToggle(true)}>Yes</button>
-        <button type="button" className={!enabled ? 'pill active' : 'pill'} onClick={() => onToggle(false)}>No</button>
+        <button type="button" className={enabled ? 'pill active' : 'pill'} onClick={() => onToggle(true)}>{t('Yes')}</button>
+        <button type="button" className={!enabled ? 'pill active' : 'pill'} onClick={() => onToggle(false)}>{t('No')}</button>
       </div>
       {enabled && (
         <div className="tag-list-field">
@@ -31,7 +32,7 @@ export default function GameSubItems({
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
             />
-            <button type="button" onClick={handleAdd}>Add</button>
+            <button type="button" onClick={handleAdd}>{t('Add')}</button>
           </div>
           {entries.length > 0 && (
             <ul className="tag-list">

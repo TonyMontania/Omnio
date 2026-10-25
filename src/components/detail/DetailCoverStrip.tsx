@@ -5,6 +5,7 @@
 
 import type { Item, RelationKind } from '../../types'
 import { getRelationLabel, assetSrc } from '../../types'
+import { t } from '../../i18n'
 
 export interface StripEntry {
   item: Item
@@ -26,7 +27,7 @@ export default function DetailCoverStrip({ label, entries, onNavigate }: {
             ? getRelationLabel(badge as RelationKind)
             : badge
           return (
-            <button key={item.id} type="button" className="cover-strip-item" onClick={() => onNavigate(item.id)} title={badgeLabel ? `${item.title} — ${badgeLabel}` : item.title}>
+            <button key={item.id} type="button" className="cover-strip-item" onClick={() => onNavigate(item.id)} title={badgeLabel ? t('{title} — {badgeLabel}', { title: item.title, badgeLabel: badgeLabel }) : item.title}>
               {item.cover
                 ? <img src={assetSrc(item.cover)} alt={item.title} />
                 : <div className="cover-strip-placeholder">{item.title.slice(0, 2).toUpperCase()}</div>}

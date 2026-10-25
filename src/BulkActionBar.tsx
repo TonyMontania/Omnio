@@ -10,6 +10,7 @@ import {
 } from './types'
 import { CATEGORIES, isAnimeLikeCategory } from './categories'
 import type { CategoryId } from './types/items'
+import { plural, t } from './i18n'
 
 interface Props {
   items: Item[]                       // full library
@@ -84,16 +85,16 @@ export default function BulkActionBar({
   }
 
   return (
-    <div className="bulk-bar" role="toolbar" aria-label="Bulk actions">
+    <div className="bulk-bar" role="toolbar" aria-label={t('Bulk actions')}>
       <div className="bulk-bar-inner">
         <div className="bulk-count">
           <strong>{selectedIds.size}</strong>
-          <span>{selectedIds.size === 1 ? 'item' : 'items'} selected</span>
+          <span>{plural(selectedIds.size, 'item selected', 'items selected')}</span>
         </div>
         <div className="bulk-actions">
           {statusOptions && (
             <div className="bulk-drop">
-              <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'status' ? null : 'status')}>Status ▾</button>
+              <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'status' ? null : 'status')}>{t('Status ▾')}</button>
               {menu === 'status' && (
                 <div className="bulk-menu">
                   {statusOptions.map((o) => (
@@ -104,52 +105,52 @@ export default function BulkActionBar({
             </div>
           )}
           <div className="bulk-drop">
-            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'tag-add' ? null : 'tag-add')}>+ Tag</button>
+            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'tag-add' ? null : 'tag-add')}>{t('+ Tag')}</button>
             {menu === 'tag-add' && (
               <div className="bulk-menu">
-                <input autoFocus placeholder="Tag to add" value={draft} onChange={(e) => setDraft(e.target.value)}
+                <input autoFocus placeholder={t('Tag to add')} value={draft} onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') commitTag('add') }} />
-                <button type="button" onClick={() => commitTag('add')}>Add to all</button>
+                <button type="button" onClick={() => commitTag('add')}>{t('Add to all')}</button>
               </div>
             )}
           </div>
           <div className="bulk-drop">
-            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'tag-remove' ? null : 'tag-remove')}>− Tag</button>
+            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'tag-remove' ? null : 'tag-remove')}>{t('− Tag')}</button>
             {menu === 'tag-remove' && (
               <div className="bulk-menu">
-                <input autoFocus placeholder="Tag to remove" value={draft} onChange={(e) => setDraft(e.target.value)}
+                <input autoFocus placeholder={t('Tag to remove')} value={draft} onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') commitTag('remove') }} />
-                <button type="button" onClick={() => commitTag('remove')}>Remove from all</button>
+                <button type="button" onClick={() => commitTag('remove')}>{t('Remove from all')}</button>
               </div>
             )}
           </div>
           <div className="bulk-drop">
-            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'genre-add' ? null : 'genre-add')}>+ Genre</button>
+            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'genre-add' ? null : 'genre-add')}>{t('+ Genre')}</button>
             {menu === 'genre-add' && (
               <div className="bulk-menu">
-                <input autoFocus placeholder="Genre to add" value={draft} onChange={(e) => setDraft(e.target.value)}
+                <input autoFocus placeholder={t('Genre to add')} value={draft} onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') commitGenre('add') }} />
-                <button type="button" onClick={() => commitGenre('add')}>Add to all</button>
+                <button type="button" onClick={() => commitGenre('add')}>{t('Add to all')}</button>
               </div>
             )}
           </div>
           <div className="bulk-drop">
-            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'genre-remove' ? null : 'genre-remove')}>− Genre</button>
+            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'genre-remove' ? null : 'genre-remove')}>{t('− Genre')}</button>
             {menu === 'genre-remove' && (
               <div className="bulk-menu">
-                <input autoFocus placeholder="Genre to remove" value={draft} onChange={(e) => setDraft(e.target.value)}
+                <input autoFocus placeholder={t('Genre to remove')} value={draft} onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') commitGenre('remove') }} />
-                <button type="button" onClick={() => commitGenre('remove')}>Remove from all</button>
+                <button type="button" onClick={() => commitGenre('remove')}>{t('Remove from all')}</button>
               </div>
             )}
           </div>
           <div className="bulk-drop">
-            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'rating' ? null : 'rating')}>Rating ▾</button>
+            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'rating' ? null : 'rating')}>{t('Rating ▾')}</button>
             {menu === 'rating' && (
               <div className="bulk-menu bulk-menu-rating">
                 {[0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map((r) => (
                   <button key={r} type="button" onClick={() => commitRating(r)}>
-                    {r === 0 ? 'Clear' : `★ ${r}`}
+                    {r === 0 ? t('Clear') : t('★ {r}', { r: r })}
                   </button>
                 ))}
               </div>
@@ -157,7 +158,7 @@ export default function BulkActionBar({
           </div>
           {singleCategory && groupsForCategory.length > 0 && (
             <div className="bulk-drop">
-              <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'group' ? null : 'group')}>Add to group ▾</button>
+              <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'group' ? null : 'group')}>{t('Add to group ▾')}</button>
               {menu === 'group' && (
                 <div className="bulk-menu">
                   {groupsForCategory.map((g) => (
@@ -168,7 +169,7 @@ export default function BulkActionBar({
             </div>
           )}
           <div className="bulk-drop">
-            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'move' ? null : 'move')}>Move to library ▾</button>
+            <button type="button" className="secondary-btn" onClick={() => setMenu(menu === 'move' ? null : 'move')}>{t('Move to library ▾')}</button>
             {menu === 'move' && (
               <div className="bulk-menu">
                 {CATEGORIES.filter((c) => c.id !== singleCategory).map((c) => (
@@ -177,10 +178,10 @@ export default function BulkActionBar({
               </div>
             )}
           </div>
-          <button type="button" className="secondary-btn" onClick={onExportHtml}>Export as HTML…</button>
-          <button type="button" className="danger-btn" onClick={onDelete}>Delete</button>
+          <button type="button" className="secondary-btn" onClick={onExportHtml}>{t('Export as HTML…')}</button>
+          <button type="button" className="danger-btn" onClick={onDelete}>{t('Delete')}</button>
         </div>
-        <button type="button" className="bulk-clear" onClick={onClear} title="Clear selection (Esc)">✕</button>
+        <button type="button" className="bulk-clear" onClick={onClear} title={t('Clear selection (Esc)')}>✕</button>
       </div>
     </div>
   )

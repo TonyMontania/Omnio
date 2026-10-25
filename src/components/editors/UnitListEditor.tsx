@@ -8,6 +8,7 @@ import type React from 'react'
 import { useState } from 'react'
 import { StarRatingInput } from '../../StarRating'
 import { numColumnWidth } from '../../utils/numColumn'
+import { t } from '../../i18n'
 
 export interface UnitLike {
   id: string
@@ -77,25 +78,25 @@ export function UnitListEditor({
     <div className="track-editor">
       <div className="track-editor-row">
         <input className="track-num" placeholder={config.numberPlaceholder} value={number} onChange={(e) => setNumber(e.target.value)} />
-        <input className="track-name" placeholder={`${config.noun.charAt(0).toUpperCase() + config.noun.slice(1)} title (optional)`} value={title} onChange={(e) => setTitle(e.target.value)} />
-        <button type="button" onClick={handleAdd}>Add</button>
+        <input className="track-name" placeholder={config.noun === 'chapter' ? t('Chapter title (optional)') : t('Episode title (optional)')} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <button type="button" onClick={handleAdd}>{t('Add')}</button>
       </div>
       <div className="track-editor-row">
-        <input className="track-num" placeholder="Count" value={bulkCount} onChange={(e) => setBulkCount(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
-        <button type="button" onClick={handleBulk}>Bulk add {config.noun}s</button>
+        <input className="track-num" placeholder={t('Count')} value={bulkCount} onChange={(e) => setBulkCount(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
+        <button type="button" onClick={handleBulk}>{config.noun === 'chapter' ? t('Bulk add chapters') : t('Bulk add episodes')}</button>
       </div>
       {units.length > 0 && (
         <table className="track-table">
           <thead>
             <tr>
               <th className="col-num" style={{ width: numColumnWidth(units.map((u) => u.number)) }}>#</th>
-              <th className="col-title">Title</th>
-              {config.showAirdate && <th className="col-airdate">Air date</th>}
-              {config.showLength && <th className="col-length">Length</th>}
+              <th className="col-title">{t('Title')}</th>
+              {config.showAirdate && <th className="col-airdate">{t('Air date')}</th>}
+              {config.showLength && <th className="col-length">{t('Length')}</th>}
               <th className="col-listened">{config.doneLabel}</th>
-              <th className="col-rating">Rating</th>
-              {config.showFiller && <th className="col-fav">Filler</th>}
-              {config.showScanlator && <th className="col-artist">Scanlator</th>}
+              <th className="col-rating">{t('Rating')}</th>
+              {config.showFiller && <th className="col-fav">{t('Filler')}</th>}
+              {config.showScanlator && <th className="col-artist">{t('Scanlator')}</th>}
               <th />
               <th className="col-spacer"></th>
             </tr>
@@ -145,7 +146,7 @@ export function UnitListEditor({
                     <td className="col-rating"><StarRatingInput value={u.rating ?? 0} onChange={(v) => onRatingChange(u.id, v)} /></td>
                     {config.showFiller && (
                       <td className="col-fav">
-                        <button type="button" className={u.filler ? 'track-fav active' : 'track-fav'} onClick={() => onToggleFiller?.(u.id)}>F</button>
+                        <button type="button" className={u.filler ? 'track-fav active' : 'track-fav'} onClick={() => onToggleFiller?.(u.id)}>{t('F')}</button>
                       </td>
                     )}
                     {config.showScanlator && (

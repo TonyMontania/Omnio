@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { AnimeSeason, Item } from './types'
 import { getCurrentAnimeSeason } from './utils/airing'
 import { ANIME_FORMAT_MAP, aniListCover, aniListTitle, formatCountdown, matchAniListMedia, type AniListMedia } from './utils/anilist'
+import { t } from './i18n'
 
 interface Props {
   categoryId: 'anime' | 'donghua'
@@ -11,7 +12,7 @@ interface Props {
 }
 
 const SEASONS: AnimeSeason[] = ['winter', 'spring', 'summer', 'fall']
-const SEASON_LABEL: Record<AnimeSeason, string> = { winter: 'Winter', spring: 'Spring', summer: 'Summer', fall: 'Fall' }
+const SEASON_LABEL: Record<AnimeSeason, string> = { winter: t('Winter'), spring: t('Spring'), summer: t('Summer'), fall: t('Fall') }
 
 function shiftSeason(s: { season: AnimeSeason; year: number }, delta: -1 | 1) {
   const idx = SEASONS.indexOf(s.season) + delta
@@ -36,7 +37,7 @@ export default function SeasonBrowser({ categoryId, items, onAdd, onClose }: Pro
     void (async () => {
       const r = await window.ipcRenderer.invoke('anilist:season', period.season, period.year, page)
       if (cancelled) return
-      if (!r?.ok) { setError(r?.error ?? 'Could not load the season'); setMedia((m) => m ?? []); return }
+      if (!r?.ok) { setError(r?.error ?? t('Could not load the season')); setMedia((m) => m ?? []); return }
       const list = r.data as AniListMedia[]
       setHasMore(list.length === 50)
       setMedia((prev) => (page === 1 ? list : [...(prev ?? []), ...list]))
@@ -70,20 +71,20 @@ export default function SeasonBrowser({ categoryId, items, onAdd, onClose }: Pro
     <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={onClose}>
       <div className="modal-panel fetch-modal season-browser" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{SEASON_LABEL[period.season]} {period.year} on AniList</h2>
+          <h2>{t('{SEASON_LABEL} {year} on AniList', { SEASON_LABEL: SEASON_LABEL[period.season], year: period.year })}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <div className="season-browser-nav">
             <button type="button" className="secondary-btn" onClick={() => go(-1)}>← {SEASON_LABEL[shiftSeason(period, -1).season]}</button>
-            <span className="hint">Most popular first · {categoryId === 'donghua' ? 'Chinese productions' : 'excluding Chinese productions'}</span>
+            <span className="hint">{t('Most popular first · {value}', { value: categoryId === 'donghua' ? t('Chinese productions') : t('excluding Chinese productions') })}</span>
             <button type="button" className="secondary-btn" onClick={() => go(1)}>{SEASON_LABEL[shiftSeason(period, 1).season]} →</button>
           </div>
           {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
           {media === null ? (
-            <p className="hint">Loading the season…</p>
+            <p className="hint">{t('Loading the season…')}</p>
           ) : shown.length === 0 ? (
-            <p className="hint">Nothing found for this season.</p>
+            <p className="hint">{t('Nothing found for this season.')}</p>
           ) : (
             <div className="season-browser-grid">
               {shown.map((m) => {
@@ -98,13 +99,13 @@ export default function SeasonBrowser({ categoryId, items, onAdd, onClose }: Pro
                   <div key={m.id} className="season-card">
                     <div className="season-card-cover">
                       {aniListCover(m) && <img src={aniListCover(m)} alt="" loading="lazy" />}
-                      {next && <span className="season-card-next">Ep {next.episode} · {formatCountdown(next.airingAt)}</span>}
+                      {next && <span className="season-card-next">{t('Ep {episode} · {airingAt}', { episode: next.episode, airingAt: formatCountdown(next.airingAt) })}</span>}
                     </div>
                     <div className="season-card-title" title={aniListTitle(m)}>{aniListTitle(m)}</div>
                     <div className="season-card-meta">{meta}</div>
                     {owned
-                      ? <span className="season-card-owned">In library</span>
-                      : <button type="button" className="secondary-btn compact" disabled={adding !== null} onClick={() => void add(m)}>{adding === m.id ? 'Adding…' : '+ Add'}</button>}
+                      ? <span className="season-card-owned">{t('In library')}</span>
+                      : <button type="button" className="secondary-btn compact" disabled={adding !== null} onClick={() => void add(m)}>{adding === m.id ? t('Adding…') : t('+ Add')}</button>}
                   </div>
                 )
               })}
@@ -112,7 +113,7 @@ export default function SeasonBrowser({ categoryId, items, onAdd, onClose }: Pro
           )}
           {hasMore && media && (
             <div style={{ textAlign: 'center', marginTop: 14 }}>
-              <button type="button" className="secondary-btn" onClick={() => setPage((p) => p + 1)}>Load more</button>
+              <button type="button" className="secondary-btn" onClick={() => setPage((p) => p + 1)}>{t('Load more')}</button>
             </div>
           )}
         </div>

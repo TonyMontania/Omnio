@@ -7,6 +7,7 @@ import type { Item, MusicArtist } from './types'
 import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
 import { getUniversalStatusOptions, getUniversalStatusValue, statusTone } from './utils/statusUniversal'
+import { t } from './i18n'
 
 // Action verbs the palette can execute on Enter. Each maps to a
 // callback wired at the App level so we don't reach into router
@@ -168,13 +169,13 @@ function parseAction(raw: string, items: Item[] = []): CmdKAction[] {
   if (verb === 'open' || verb === 'go' || verb === 'goto') {
     type ViewKey = 'home' | 'calendar' | 'stats' | 'settings' | 'arcade' | 'randomizer'
     const views: { key: string; view: ViewKey; label: string }[] = [
-      { key: 'home', view: 'home', label: 'Open Home' },
-      { key: 'calendar', view: 'calendar', label: 'Open Release calendar' },
-      { key: 'stats', view: 'stats', label: 'Open Statistics' },
-      { key: 'settings', view: 'settings', label: 'Open Settings' },
-      { key: 'arcade', view: 'arcade', label: 'Open Arcade' },
-      { key: 'random', view: 'randomizer', label: 'Open Random picker' },
-      { key: 'randomizer', view: 'randomizer', label: 'Open Random picker' },
+      { key: 'home', view: 'home', label: t('Open Home') },
+      { key: 'calendar', view: 'calendar', label: t('Open Release calendar') },
+      { key: 'stats', view: 'stats', label: t('Open Statistics') },
+      { key: 'settings', view: 'settings', label: t('Open Settings') },
+      { key: 'arcade', view: 'arcade', label: t('Open Arcade') },
+      { key: 'random', view: 'randomizer', label: t('Open Random picker') },
+      { key: 'randomizer', view: 'randomizer', label: t('Open Random picker') },
     ]
     for (const v of views) {
       if (!arg || v.key.startsWith(argLower)) out.push({ kind: 'open-view', view: v.view, label: v.label })
@@ -184,7 +185,7 @@ function parseAction(raw: string, items: Item[] = []): CmdKAction[] {
       const label = cat.label.toLowerCase()
       const id = cat.id.toLowerCase()
       if (!arg || label.startsWith(argLower) || id.startsWith(argLower) || label.includes(argLower)) {
-        out.push({ kind: 'open-library', categoryId: cat.id, label: `Open ${cat.label} library` })
+        out.push({ kind: 'open-library', categoryId: cat.id, label: t('Open {label} library', { label: cat.label }) })
       }
     }
   }
@@ -192,7 +193,7 @@ function parseAction(raw: string, items: Item[] = []): CmdKAction[] {
   if (verb === 'library' || verb === 'lib') {
     for (const cat of CATEGORIES) {
       if (!arg || cat.label.toLowerCase().includes(argLower) || cat.id.toLowerCase().includes(argLower)) {
-        out.push({ kind: 'open-library', categoryId: cat.id, label: `Open ${cat.label} library` })
+        out.push({ kind: 'open-library', categoryId: cat.id, label: t('Open {label} library', { label: cat.label }) })
       }
     }
   }
@@ -201,7 +202,7 @@ function parseAction(raw: string, items: Item[] = []): CmdKAction[] {
     const franchises = collectFranchises(items)
     for (const f of franchises) {
       if (!arg || f.toLowerCase().includes(argLower)) {
-        out.push({ kind: 'franchise', franchise: f, label: `Show cross-library timeline: ${f}` })
+        out.push({ kind: 'franchise', franchise: f, label: t('Show cross-library timeline: {f}', { f: f }) })
       }
     }
   }
@@ -211,8 +212,8 @@ function parseAction(raw: string, items: Item[] = []): CmdKAction[] {
     const catByToken = first && CATEGORIES.find((c) => c.id.toLowerCase() === first || c.label.toLowerCase() === first)
     const title = catByToken ? rest.slice(1).join(' ').trim() : arg
     if (title) {
-      if (catByToken) out.push({ kind: 'add-item', categoryId: catByToken.id, title, label: `Add “${title}” to ${catByToken.label}` })
-      else out.push({ kind: 'add-item', title, label: `Add “${title}” to current library` })
+      if (catByToken) out.push({ kind: 'add-item', categoryId: catByToken.id, title, label: t('Add “{title}” to {label}', { title: title, label: catByToken.label }) })
+      else out.push({ kind: 'add-item', title, label: t('Add “{title}” to current library', { title: title }) })
     }
   }
   return out
@@ -293,8 +294,8 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
     if (!grouped[key]) grouped[key] = []
     grouped[key].push(h)
   }
-  const groupLabel = (k: string) => k === '_actions' ? 'Actions'
-    : k === '_artists' ? 'Artists'
+  const groupLabel = (k: string) => k === '_actions' ? t('Actions')
+    : k === '_artists' ? t('Artists')
     : (CATEGORIES.find((c) => c.id === k)?.label ?? k)
 
   return (
@@ -305,30 +306,27 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
           <input
             ref={inputRef}
             className="cmdk-input"
-            placeholder="Search everything…"
+            placeholder={t('Search everything…')}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             autoFocus
           />
-          <kbd className="cmdk-kbd">Esc</kbd>
+          <kbd className="cmdk-kbd">{t('Esc')}</kbd>
         </div>
         <div className="cmdk-results" ref={listRef}>
           {!q.trim() && (
             <div className="cmdk-hint">
-              <p style={{ margin: '0 0 8px' }}>Search across every library — titles, artists, alt titles, tags.</p>
+              <p style={{ margin: '0 0 8px' }}>{t('Search across every library — titles, artists, alt titles, tags.')}</p>
               <p style={{ margin: '0 0 6px', fontSize: 11.5 }}>
-                Operators: <code>status:completed</code>, <code>year:2024</code>, <code>year:&gt;2020</code>,
-                &nbsp;<code>rating:&gt;=4</code>, <code>tag:jrpg</code>, <code>category:musica</code>,
-                &nbsp;<code>favorite:true</code>. Combine freely with free-text.
+                {t('Operators:')}{' '}<code>status:completed</code>, <code>year:2024</code>, <code>{t('year:>2020')}</code>{t(',  ')}<code>{t('rating:>=4')}</code>, <code>tag:jrpg</code>, <code>category:musica</code>{t(',  ')}<code>favorite:true</code>{t('. Combine freely with free-text.')}
               </p>
               <p style={{ margin: 0, fontSize: 11.5 }}>
-                Actions: <code>open home</code>, <code>open calendar</code>, <code>open games</code>,
-                &nbsp;<code>library music</code>, <code>add game Hollow Knight</code>.
+                {t('Actions:')}{' '}<code>{t('open home')}</code>, <code>{t('open calendar')}</code>, <code>{t('open games')}</code>{t(',  ')}<code>{t('library music')}</code>, <code>{t('add game Hollow Knight')}</code>.
               </p>
             </div>
           )}
           {q.trim() && hits.length === 0 && (
-            <p className="cmdk-hint">No matches.</p>
+            <p className="cmdk-hint">{t('No matches.')}</p>
           )}
           {Object.entries(grouped).map(([groupKey, groupHits]) => (
             <div key={groupKey} className="cmdk-group">
@@ -343,11 +341,11 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
                 const statusLabel = it ? getUniversalStatusOptions(it.categoryId).find((o) => o.value === statusValue)?.label : undefined
                 const sub = it
                   ? [it.artist ?? (it.devs ?? it.authors ?? it.studios ?? it.directors)?.slice(0, 2).join(', '), it.releaseYear || (it.releaseDate ? it.releaseDate.slice(0, 4) : null)].filter(Boolean).join(' · ')
-                  : ar ? (ar.origin || 'Artist')
-                  : (ac?.kind === 'add-item' ? 'Add'
-                    : ac?.kind === 'open-view' ? 'Navigate'
-                    : ac?.kind === 'franchise' ? 'Franchise'
-                    : 'Open library')
+                  : ar ? (ar.origin || t('Artist'))
+                  : (ac?.kind === 'add-item' ? t('Add')
+                    : ac?.kind === 'open-view' ? t('Navigate')
+                    : ac?.kind === 'franchise' ? t('Franchise')
+                    : t('Open library'))
                 const cover = assetSrc(it?.cover ?? ar?.photo)
                 const key = `${h.kind}-${it?.id ?? ar?.id ?? idx}`
                 return (
@@ -380,8 +378,8 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
         </div>
         <div className="cmdk-foot">
           <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
-          <span><kbd>Enter</kbd> open</span>
-          <span><kbd>Esc</kbd> close</span>
+          <span><kbd>{t('Enter')}</kbd> open</span>
+          <span><kbd>{t('Esc')}</kbd> close</span>
         </div>
       </div>
     </div>

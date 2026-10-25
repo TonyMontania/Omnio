@@ -9,6 +9,7 @@
 import { useMemo, useState } from 'react'
 import type { Item } from '../types'
 import { CATEGORIES } from '../categories'
+import { locale, t } from '../i18n'
 
 interface Props {
   items: Item[]
@@ -29,7 +30,7 @@ function monthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 function monthLabel(d: Date): string {
-  return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' })
+  return d.toLocaleDateString(locale(), { month: 'short', year: '2-digit' })
 }
 
 function isFinished(it: Item): boolean {
@@ -115,16 +116,16 @@ export default function BacklogChart({ items, enabledCategories }: Props) {
     <div className="backlog-chart">
       <div className="backlog-chart-header">
         <div>
-          <h3 className="insights-subheading" style={{ margin: 0 }}>Added vs finished</h3>
-          <span className="hint">Two bars per month — items you added, items you finished. Not a scoreboard, just what happened.</span>
+          <h3 className="insights-subheading" style={{ margin: 0 }}>{t('Added vs finished')}</h3>
+          <span className="hint">{t('Two bars per month — items you added, items you finished. Not a scoreboard, just what happened.')}</span>
         </div>
         <div className="backlog-chart-controls">
           <select value={scope} onChange={(e) => setScope(e.target.value)}>
-            <option value="all">All libraries</option>
+            <option value="all">{t('All libraries')}</option>
             {cats.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
           <select value={monthsToShow} onChange={(e) => setMonthsToShow(parseInt(e.target.value, 10))}>
-            {[6, 12, 24, 36].map((n) => <option key={n} value={n}>{n} months</option>)}
+            {[6, 12, 24, 36].map((n) => <option key={n} value={n}>{t('{n2} months', { n2: n })}</option>)}
           </select>
         </div>
       </div>
@@ -134,7 +135,7 @@ export default function BacklogChart({ items, enabledCategories }: Props) {
           const addedPct = (b.added / max) * 100
           const donePct = (b.completed / max) * 100
           return (
-            <div key={b.key} className="backlog-chart-col" title={`${b.label} · added ${b.added} · finished ${b.completed}`}>
+            <div key={b.key} className="backlog-chart-col" title={t('{label} · added {added} · finished {completed}', { label: b.label, added: b.added, completed: b.completed })}>
               <div className="backlog-chart-bars">
                 <div
                   className="backlog-chart-bar bar-added"
@@ -153,9 +154,9 @@ export default function BacklogChart({ items, enabledCategories }: Props) {
 
       <div className="backlog-chart-legend">
         <span className="legend-swatch swatch-added"></span>
-        <span>Added ({totalAdded})</span>
+        <span>{t('Added ({totalAdded})', { totalAdded: totalAdded })}</span>
         <span className="legend-swatch swatch-done"></span>
-        <span>Finished ({totalDone})</span>
+        <span>{t('Finished ({totalDone})', { totalDone: totalDone })}</span>
       </div>
     </div>
   )

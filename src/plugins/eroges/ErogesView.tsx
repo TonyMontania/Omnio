@@ -18,6 +18,7 @@ import ErogeDetailView from './ErogeDetailView'
 import ErogeEditor from './ErogeEditor'
 import ErogesControls, { type ErogeFilter, type ErogeSort } from './ErogesControls'
 import './eroges.css'
+import { plural, t } from '../../i18n'
 
 type Tab =
   | { kind: 'all' }
@@ -135,7 +136,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
     )
     setPageMeta({
       icon: <HeartIcon />,
-      title: 'Eroges',
+      title: t('Eroges'),
       count: { n: visible.length, unit: visible.length === 1 ? 'game' : 'games' },
       chips,
       actions,
@@ -194,7 +195,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
   const UPDATE_CHECK_CONCURRENCY = 4
   async function checkAllUpdates() {
     const targets = tabGames.filter((g) => !g.archived && g.link && /f95zone/i.test(g.link))
-    if (targets.length === 0) { alert('No games with an F95 link in this view.'); return }
+    if (targets.length === 0) { alert(t('No games with an F95 link in this view.')); return }
     setCheckingAll({ done: 0, total: targets.length })
     let done = 0
     const tick = () => { done += 1; setCheckingAll({ done, total: targets.length }) }
@@ -257,7 +258,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
       tick()
     })
     setCheckingAll(null)
-    if (blocked) alert(`${F95_BLOCKED} ${direct.length} game${direct.length === 1 ? '' : 's'} couldn't be checked. Try again later.`)
+    if (blocked) alert(plural(direct.length, '{F95_BLOCKED} {n} game couldn\'t be checked. Try again later.', '{F95_BLOCKED} {n} games couldn\'t be checked. Try again later.', { F95_BLOCKED: F95_BLOCKED }))
   }
 
   // -- render ------------------------------------------------------
@@ -270,7 +271,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
           game={detailGame}
           f95Cookie={data.settings?.f95Cookie}
           onEdit={() => setEditingId(detailGame.id)}
-          onDelete={() => { if (confirm(`Delete "${detailGame.name}"?`)) deleteGame(detailGame.id) }}
+          onDelete={() => { if (confirm(t('Delete "{name}"?', { name: detailGame.name }))) deleteGame(detailGame.id) }}
           onUpdateGame={(patch) => patchGame(detailGame.id, patch)}
           onCacheFields={(patch) => cacheGameFields(detailGame.id, patch)}
           allGames={data.games}
@@ -280,7 +281,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
       ) : (
         <>
           {visible.length === 0 ? (
-            <div className="er-empty">No games in this view.</div>
+            <div className="er-empty">{t('No games in this view.')}</div>
           ) : layout === 'list' ? (
             <div className="er-list">
               {visible.map((g) => (
@@ -333,7 +334,7 @@ export default function ErogesView({ setPageMeta, cardFields }: PluginViewProps)
             try {
               await saveData(nextData)
             } catch (err) {
-              alert(`Could not save the settings: ${(err as Error).message}`)
+              alert(t('Could not save the settings: {message}', { message: (err as Error).message }))
             }
           }}
           onCancel={() => setShowSettings(false)}
@@ -366,36 +367,34 @@ function SettingsModal({ initial, onSave, onCancel }: {
   return (
     <div className="er-modal-backdrop" onClick={onCancel}>
       <div className="er-modal" onClick={(e) => e.stopPropagation()} style={{ width: 560 }}>
-        <h2>Eroges settings</h2>
+        <h2>{t('Eroges settings')}</h2>
         <p className="er-settings-hint">
-          F95 hides store links from anonymous visitors. By pasting your session cookies, the importer
-          can read the DLsite / Steam links automatically.
+          {t('F95 hides store links from anonymous visitors. By pasting your session cookies, the importer can read the DLsite / Steam links automatically.')}
         </p>
         <p className="er-settings-hint">
-          How to get them: on F95 (logged in) → DevTools (F12) → Application → Cookies → f95zone.to.
-          Copy the values of <code>xf_user</code> and <code>xf_session</code> and paste them below in this format:
+          {t('How to get them: on F95 (logged in) → DevTools (F12) → Application → Cookies → f95zone.to. Copy the values of')}{' '}<code>xf_user</code> {t('and')} <code>xf_session</code>{' '}{t('and paste them below in this format:')}
         </p>
-        <pre className="er-settings-pre">xf_user=&lt;value&gt;; xf_session=&lt;value&gt;</pre>
+        <pre className="er-settings-pre">{t('xf_user=<value>; xf_session=<value>')}</pre>
         <label className="er-settings-field">
-          Cookie header
-          <textarea value={cookie} onChange={(e) => setCookie(e.target.value)} rows={3} placeholder="xf_user=1234%2C....; xf_session=abcdef..." />
+          {t('Cookie header')}
+          <textarea value={cookie} onChange={(e) => setCookie(e.target.value)} rows={3} placeholder={t('xf_user=1234%2C....; xf_session=abcdef...')} />
         </label>
         <p className="er-settings-note">
-          Saved only in your Omnio data folder (<code>data/plugins/eroges.json</code>). It never leaves your machine.
+          {t('Saved only in your Omnio data folder (')}<code>data/plugins/eroges.json</code>{t('). It never leaves your machine.')}
         </p>
         <label className="er-settings-field">
-          Tags you like
-          <input type="text" value={preferred} onChange={(e) => setPreferred(e.target.value)} placeholder="e.g. romance, vanilla, sandbox" />
+          {t('Tags you like')}
+          <input type="text" value={preferred} onChange={(e) => setPreferred(e.target.value)} placeholder={t('e.g. romance, vanilla, sandbox')} />
         </label>
         <label className="er-settings-field">
-          Tags to avoid
-          <input type="text" value={avoided} onChange={(e) => setAvoided(e.target.value)} placeholder="e.g. horror, grinding" />
+          {t('Tags to avoid')}
+          <input type="text" value={avoided} onChange={(e) => setAvoided(e.target.value)} placeholder={t('e.g. horror, grinding')} />
         </label>
-        <p className="er-settings-note">Comma separated. Games carrying these F95 tags are highlighted on their card and detail page.</p>
+        <p className="er-settings-note">{t('Comma separated. Games carrying these F95 tags are highlighted on their card and detail page.')}</p>
         <div className="er-modal-actions">
-          <button className="er-btn" onClick={onCancel}>Cancel</button>
-          {initial.f95Cookie && <button className="er-btn er-btn-danger" onClick={() => save('')}>Clear cookie</button>}
-          <button className="er-btn er-btn-primary" onClick={() => save(cookie)}>Save</button>
+          <button className="er-btn" onClick={onCancel}>{t('Cancel')}</button>
+          {initial.f95Cookie && <button className="er-btn er-btn-danger" onClick={() => save('')}>{t('Clear cookie')}</button>}
+          <button className="er-btn er-btn-primary" onClick={() => save(cookie)}>{t('Save')}</button>
         </div>
       </div>
     </div>

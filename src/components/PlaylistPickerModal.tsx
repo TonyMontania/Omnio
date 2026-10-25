@@ -4,6 +4,7 @@
 
 import { useState } from 'react'
 import type { Playlist } from '../types/playlists'
+import { plural, t } from '../i18n'
 
 interface Props {
   playlists: Playlist[]
@@ -25,11 +26,11 @@ export default function PlaylistPickerModal({ playlists, itemCategoryId, itemId,
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal playlist-picker" onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
-          <h2>Add to playlist</h2>
+          <h2>{t('Add to playlist')}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </header>
         <ul className="playlist-picker-list">
-          {playlists.length === 0 && <li className="empty">You don't have any playlists yet — create one below.</li>}
+          {playlists.length === 0 && <li className="empty">{t('You don\'t have any playlists yet — create one below.')}</li>}
           {playlists.map((p) => {
             const already = alreadyIn(p)
             return (
@@ -39,20 +40,20 @@ export default function PlaylistPickerModal({ playlists, itemCategoryId, itemId,
                 onClick={() => { if (!already) { onPick(p.id); onClose() } }}
               >
                 <span className="playlist-picker-name">{p.name}</span>
-                <span className="playlist-picker-count">{p.entries.length} item{p.entries.length === 1 ? '' : 's'}</span>
-                {already && <span className="playlist-picker-tag">Already added</span>}
+                <span className="playlist-picker-count">{plural(p.entries.length, '{n} item', '{n} items')}</span>
+                {already && <span className="playlist-picker-tag">{t('Already added')}</span>}
               </li>
             )
           })}
         </ul>
         <div className="playlist-picker-create">
           <input
-            placeholder="New playlist name"
+            placeholder={t('New playlist name')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') createAndPick() }}
           />
-          <button className="primary-btn" onClick={createAndPick} disabled={!name.trim()}>+ Create and add</button>
+          <button className="primary-btn" onClick={createAndPick} disabled={!name.trim()}>{t('+ Create and add')}</button>
         </div>
       </div>
     </div>

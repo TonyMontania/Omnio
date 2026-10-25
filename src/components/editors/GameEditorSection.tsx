@@ -20,6 +20,7 @@ import ScreenshotsGallery from './ScreenshotsGallery'
 import AnimeItemPicker from './AnimeItemPicker'
 import PlaythroughsEditor from './PlaythroughsEditor'
 import GameStoreEditor from './GameStoreEditor'
+import { t } from '../../i18n'
 
 type Setter<T> = (updater: T | ((prev: T) => T)) => void
 
@@ -113,70 +114,70 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
   return (
     <>
       <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Identity</span>
-        <span className="form-section-hint">Devs, publishers, platforms, release date</span>
+        <span className="form-section-title">{t('Identity')}</span>
+        <span className="form-section-hint">{t('Devs, publishers, platforms, release date')}</span>
       </div>
       <TagEditor
-        label="Developers"
-        placeholder="Add developer"
+        label={t('Developers')}
+        placeholder={t('Add developer')}
         tags={devs}
         onAdd={(v) => setDevs((prev) => prev.includes(v) ? prev : [...prev, v])}
         onRemove={(i) => setDevs((prev) => prev.filter((_, idx) => idx !== i))}
       />
       <TagEditor
-        label="Publishers"
-        placeholder="Add publisher"
+        label={t('Publishers')}
+        placeholder={t('Add publisher')}
         tags={publishers}
         onAdd={(v) => setPublishers((prev) => prev.includes(v) ? prev : [...prev, v])}
         onRemove={(i) => setPublishers((prev) => prev.filter((_, idx) => idx !== i))}
       />
       <div className="field-group">
-        <label>Release date</label>
+        <label>{t('Release date')}</label>
         <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
       </div>
       <div className="field-group">
-        <label>Description</label>
+        <label>{t('Description')}</label>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
       </div>
       <div className="field-group">
-        <label>Platforms</label>
+        <label>{t('Platforms')}</label>
         <PlatformEditor value={platforms} onChange={setPlatforms} existing={Array.from(new Set(items.filter((i) => i.categoryId === 'videojuegos').flatMap((i) => i.platforms || [])))} />
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Copy type</label>
+          <label>{t('Copy type')}</label>
           <select value={ownership} onChange={(e) => setOwnership(e.target.value as Ownership | '')}>
-            <option value="">Unspecified</option>
+            <option value="">{t('Unspecified')}</option>
             {OWNERSHIP_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
       </div>
       <TagEditor
-        label="Alternative titles"
-        placeholder="Add title (regional, original…)"
+        label={t('Alternative titles')}
+        placeholder={t('Add title (regional, original…)')}
         tags={alternativeTitles}
         onAdd={(t) => setAlternativeTitles((prev) => prev.includes(t) ? prev : [...prev, t])}
         onRemove={(i) => setAlternativeTitles((prev) => prev.filter((_, idx) => idx !== i))}
       />
       <TagEditor
-        label="Genres"
-        placeholder="Add genre"
+        label={t('Genres')}
+        placeholder={t('Add genre')}
         tags={genres}
         onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
         onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))}
       />
       <div className="field-row">
         <div className="field-group">
-          <label>Source</label>
+          <label>{t('Source')}</label>
           <select value={gameSource} onChange={(e) => setGameSource(e.target.value as GameSource | '')}>
-            <option value="">Unspecified</option>
+            <option value="">{t('Unspecified')}</option>
             {GAME_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>Age rating</label>
+          <label>{t('Age rating')}</label>
           <select value={ageRating} onChange={(e) => setAgeRating(e.target.value as AgeRating | '')}>
-            <option value="">Unspecified</option>
+            <option value="">{t('Unspecified')}</option>
             {AGE_RATING_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </div>
@@ -186,7 +187,7 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
         const linked = items.find((i) => i.id === originalWorkId)
         return (
           <div className="field-group">
-            <label>Original work</label>
+            <label>{t('Original work')}</label>
             {linked ? (
               <div className="tag-pill-list">
                 <span className="tag-pill">
@@ -199,21 +200,21 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
                 options={items.filter((i) => i.categoryId === 'videojuegos' && i.id !== editingId)}
                 excludeIds={[]}
                 onPick={(id) => setOriginalWorkId(id)}
-                placeholder="Search another game to link as the original…"
+                placeholder={t('Search another game to link as the original…')}
               />
             )}
-            <p className="hint">Points at the game this one derives from — e.g. Freedom Cry is a standalone expansion of AC IV: Black Flag. Both cards will show the link.</p>
+            <p className="hint">{t('Points at the game this one derives from — e.g. Freedom Cry is a standalone expansion of AC IV: Black Flag. Both cards will show the link.')}</p>
           </div>
         )
       })()}
       <div className="field-group">
-        <label>Franchise</label>
-        <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. The Legend of Zelda" />
+        <label>{t('Franchise')}</label>
+        <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder={t('e.g. The Legend of Zelda')} />
       </div>
 
       <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Ownership</span>
-        <span className="form-section-hint">Store links · purchases · Deck &amp; Proton compat</span>
+        <span className="form-section-title">{t('Ownership')}</span>
+        <span className="form-section-hint">{t('Store links · purchases · Deck & Proton compat')}</span>
       </div>
       <GameStoreEditor
         storeLinks={storeLinks}
@@ -227,26 +228,26 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
       />
 
       <div className="form-section-header" data-belongs-to="progress">
-        <span className="form-section-title">Progress</span>
-        <span className="form-section-hint">Status · time played · achievements · save files</span>
+        <span className="form-section-title">{t('Progress')}</span>
+        <span className="form-section-hint">{t('Status · time played · achievements · save files')}</span>
       </div>
       <div className="field-group">
-        <label>Status</label>
+        <label>{t('Status')}</label>
         <select value={gameStatus} onChange={(e) => setGameStatus(e.target.value as GameStatus)}>
           {GAME_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
       </div>
       <div className="field-group">
-        <label>Time played (hours.minutes)</label>
-        <input placeholder="e.g. 22.49" value={playTime} onChange={(e) => handlePlayTimeChange(e.target.value)} inputMode="decimal" />
+        <label>{t('Time played (hours.minutes)')}</label>
+        <input placeholder={t('e.g. 22.49')} value={playTime} onChange={(e) => handlePlayTimeChange(e.target.value)} inputMode="decimal" />
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Achievements unlocked</label>
+          <label>{t('Achievements unlocked')}</label>
           <input placeholder="0" value={achievementsUnlocked} onChange={(e) => setAchievementsUnlocked(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
         </div>
         <div className="field-group">
-          <label>Achievements total</label>
+          <label>{t('Achievements total')}</label>
           <input placeholder="0" value={achievementsTotal} onChange={(e) => setAchievementsTotal(e.target.value.replace(/\D/g, ''))} inputMode="numeric" />
         </div>
       </div>
@@ -268,8 +269,8 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
       />
 
       <div className="form-section-header" data-belongs-to="media">
-        <span className="form-section-title">Screenshots</span>
-        <span className="form-section-hint">Personal screenshot gallery for this game</span>
+        <span className="form-section-title">{t('Screenshots')}</span>
+        <span className="form-section-hint">{t('Personal screenshot gallery for this game')}</span>
       </div>
       <ScreenshotsGallery
         gameTitle={title}
@@ -279,53 +280,53 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
       />
 
       <div className="form-section-header" data-belongs-to="overview">
-        <span className="form-section-title">Rating &amp; completion</span>
+        <span className="form-section-title">{t('Rating & completion')}</span>
       </div>
       <div className="field-group">
-        <label>Rating</label>
+        <label>{t('Rating')}</label>
         <RatingPicker value={rating} onChange={setRating} />
       </div>
       <div className="field-group">
-        <label>Completion date</label>
+        <label>{t('Completion date')}</label>
         <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
       </div>
 
       <div className="form-section-header" data-belongs-to="notes">
-        <span className="form-section-title">Review</span>
-        <span className="form-section-hint">Your take on this game · with optional spoiler toggle</span>
+        <span className="form-section-title">{t('Review')}</span>
+        <span className="form-section-hint">{t('Your take on this game · with optional spoiler toggle')}</span>
       </div>
       <div className="field-group">
-        <label>Review</label>
-        <textarea value={gameReview} onChange={(e) => setGameReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
+        <label>{t('Review')}</label>
+        <textarea value={gameReview} onChange={(e) => setGameReview(e.target.value)} rows={3} placeholder={t('Your review (supports **bold**, *italic*, and "- " lists)')} />
         {gameReview.trim() && (
           <div className="yesno">
-            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>Contains spoilers</button>
-            <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>No spoilers</button>
+            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>{t('Contains spoilers')}</button>
+            <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>{t('No spoilers')}</button>
           </div>
         )}
       </div>
       <div className="form-section-header" data-belongs-to="history">
-        <span className="form-section-title">Play history</span>
-        <span className="form-section-hint">Every replay / campaign log</span>
+        <span className="form-section-title">{t('Play history')}</span>
+        <span className="form-section-hint">{t('Every replay / campaign log')}</span>
       </div>
       <div className="field-group">
-        <label>Play history</label>
+        <label>{t('Play history')}</label>
         <RewatchListEditor
           rewatches={rewatches}
           onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
           onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
           onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
           onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-          labels={{ rewatch: 'Replayed', started: 'Started playing', finished: 'Finished playing', dropped: 'Dropped', note: 'Note' }}
+          labels={{ rewatch: t('Replayed'), started: t('Started playing'), finished: t('Finished playing'), dropped: t('Dropped'), note: t('Note') }}
         />
       </div>
       <div className="form-section-header" data-belongs-to="related">
-        <span className="form-section-title">Related &amp; recommendations</span>
-        <span className="form-section-hint">DLC, expansions, bundles, sequels, hand-picked recs</span>
+        <span className="form-section-title">{t('Related & recommendations')}</span>
+        <span className="form-section-hint">{t('DLC, expansions, bundles, sequels, hand-picked recs')}</span>
       </div>
       <GameSubItems
-        question="Has DLC or expansions?"
-        placeholder="DLC/expansion name"
+        question={t('Has DLC or expansions?')}
+        placeholder={t('DLC/expansion name')}
         enabled={hasDlc}
         onToggle={(v) => { setHasDlc(v); if (!v) setDlcList([]) }}
         entries={dlcList}
@@ -334,8 +335,8 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
         onStatusChange={(id, s) => setDlcList((prev) => prev.map((d) => (d.id === id ? { ...d, status: s } : d)))}
       />
       <GameSubItems
-        question="Has addons or packs?"
-        placeholder="Addon/pack name"
+        question={t('Has addons or packs?')}
+        placeholder={t('Addon/pack name')}
         enabled={hasAddons}
         onToggle={(v) => { setHasAddons(v); if (!v) setAddonsList([]) }}
         entries={addonsList}
@@ -352,7 +353,7 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
         onRequestSgdb={(entryId, title) => setBundleSgdbFor({ entryId, title })}
       />
       <div className="field-group">
-        <label>Related games</label>
+        <label>{t('Related games')}</label>
         <RelatedListEditor
           related={relatedItems}
           options={items.filter((i) => i.categoryId === 'videojuegos' && i.id !== editingId)}
@@ -361,17 +362,17 @@ export default function GameEditorSection(props: GameEditorSectionProps) {
           onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
           onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
           onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-          pickerPlaceholder="Add related item… (any library)"
+          pickerPlaceholder={t('Add related item… (any library)')}
         />
       </div>
       <div className="field-group">
-        <label>Recommendations</label>
+        <label>{t('Recommendations')}</label>
         <RecommendationsEditor
           ids={recommendedItems}
           options={items.filter((i) => i.categoryId === 'videojuegos' && i.id !== editingId)}
           onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
           onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-          pickerPlaceholder="Add recommended game…"
+          pickerPlaceholder={t('Add recommended game…')}
         />
       </div>
     </>

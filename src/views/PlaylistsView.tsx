@@ -15,12 +15,13 @@ import { CATEGORIES } from '../categories'
 import { assetSrc } from '../types'
 import type { PluginPageMeta } from '../plugins/registry'
 import PageControls from '../components/PageControls'
+import { t } from '../i18n'
 
 type Sort = 'recent' | 'alpha' | 'count'
 const SORTS: { value: Sort; label: string }[] = [
-  { value: 'recent', label: 'Most recent' },
-  { value: 'alpha', label: 'Alphabetical' },
-  { value: 'count', label: 'Most items' },
+  { value: 'recent', label: t('Most recent') },
+  { value: 'alpha', label: t('Alphabetical') },
+  { value: 'count', label: t('Most items') },
 ]
 
 interface Props {
@@ -91,22 +92,22 @@ export default function PlaylistsView({ playlists, items, onChange, onOpenItem, 
 
   useEffect(() => {
     if (active) {
-      setPageMeta({ icon: <PlaylistGlyph />, title: 'Playlists', onBack: () => setActiveId(null) })
+      setPageMeta({ icon: <PlaylistGlyph />, title: t('Playlists'), onBack: () => setActiveId(null) })
       return
     }
     setPageMeta({
       icon: <PlaylistGlyph />,
-      title: 'Playlists',
+      title: t('Playlists'),
       count: { n: playlists.length, unit: playlists.length === 1 ? 'playlist' : 'playlists' },
       actions: (
         <PageControls
           search={search}
           onSearch={setSearch}
-          searchPlaceholder="Search playlists"
+          searchPlaceholder={t('Search playlists')}
           sort={sort}
           sortOptions={SORTS}
           onSort={setSort}
-          create={{ label: '+ New playlist', placeholder: 'Playlist name', onCreate: createPlaylist }}
+          create={{ label: t('+ New playlist'), placeholder: t('Playlist name'), onCreate: createPlaylist }}
         />
       ),
     })
@@ -125,33 +126,33 @@ export default function PlaylistsView({ playlists, items, onChange, onOpenItem, 
             <div className="hero-cover square"><Collage covers={entries.map((e) => itemById.get(e.itemId))} /></div>
             <div className="hero-text">
               <div className="hero-chips">
-                <span>Playlist</span>
+                <span>{t('Playlist')}</span>
                 <span>{entries.length} {entries.length === 1 ? 'item' : 'items'}</span>
                 {libs > 0 && <span>{libs} {libs === 1 ? 'library' : 'libraries'}</span>}
               </div>
               <input
                 className="playlists-title-input"
                 value={active.name}
-                aria-label="Playlist name"
+                aria-label={t('Playlist name')}
                 onChange={(e) => updateActive((p) => ({ ...p, name: e.target.value, updatedAt: Date.now() }))}
               />
               <textarea
                 className="playlists-description"
-                placeholder="Add a description — what's the idea behind this list?"
+                placeholder={t('Add a description — what\'s the idea behind this list?')}
                 value={active.description ?? ''}
                 rows={2}
                 onChange={(e) => updateActive((p) => ({ ...p, description: e.target.value, updatedAt: Date.now() }))}
               />
             </div>
             <div className="hero-actions">
-              <button type="button" className="add-btn" onClick={() => setPickerOpen(true)}>+ Add items</button>
+              <button type="button" className="add-btn" onClick={() => setPickerOpen(true)}>{t('+ Add items')}</button>
               <div className="pop-wrap" ref={menuRef}>
-                <button type="button" className={`icon-btn${menuOpen ? ' on' : ''}`} aria-label="More actions" onClick={() => setMenuOpen((v) => !v)}>⋯</button>
+                <button type="button" className={`icon-btn${menuOpen ? ' on' : ''}`} aria-label={t('More actions')} onClick={() => setMenuOpen((v) => !v)}>⋯</button>
                 {menuOpen && (
                   <div className="pop" role="menu">
                     <div className="pop-list">
                       <button type="button" role="menuitem" className="danger" onClick={() => { setMenuOpen(false); deleteActive() }}>
-                        <span className="pop-icon" aria-hidden>✕</span>Delete playlist
+                        <span className="pop-icon" aria-hidden>✕</span>{t('Delete playlist')}
                       </button>
                     </div>
                   </div>
@@ -162,7 +163,7 @@ export default function PlaylistsView({ playlists, items, onChange, onOpenItem, 
         </header>
 
         {entries.length === 0 ? (
-          <p className="empty">This playlist is empty. Add items with <b>+ Add items</b>.</p>
+          <p className="empty">{t('This playlist is empty. Add items with')}{' '}<b>{t('+ Add items')}</b>.</p>
         ) : (
           <ol className="playlists-entries">
             {entries.map((entry, i) => {
@@ -178,14 +179,14 @@ export default function PlaylistsView({ playlists, items, onChange, onOpenItem, 
                   </button>
                   <div className="playlists-entry-body">
                     <div className="playlists-entry-title" onClick={() => it && onOpenItem(it)}>
-                      {it?.title ?? <em>Item deleted</em>}
+                      {it?.title ?? <em>{t('Item deleted')}</em>}
                     </div>
                     <div className="playlists-entry-meta">{cat}</div>
                   </div>
                   <div className="playlists-entry-actions">
-                    <button title="Move up" disabled={i === 0} onClick={() => updateActive((p) => playlistReorder(p, i, i - 1))}>↑</button>
-                    <button title="Move down" disabled={i === entries.length - 1} onClick={() => updateActive((p) => playlistReorder(p, i, i + 1))}>↓</button>
-                    <button title="Remove from playlist" className="danger" onClick={() => updateActive((p) => playlistRemove(p, entry.categoryId, entry.itemId))}>✕</button>
+                    <button title={t('Move up')} disabled={i === 0} onClick={() => updateActive((p) => playlistReorder(p, i, i - 1))}>↑</button>
+                    <button title={t('Move down')} disabled={i === entries.length - 1} onClick={() => updateActive((p) => playlistReorder(p, i, i + 1))}>↓</button>
+                    <button title={t('Remove from playlist')} className="danger" onClick={() => updateActive((p) => playlistRemove(p, entry.categoryId, entry.itemId))}>✕</button>
                   </div>
                 </li>
               )
@@ -215,9 +216,9 @@ export default function PlaylistsView({ playlists, items, onChange, onOpenItem, 
   return (
     <div className="content-scroll playlists-view">
       {playlists.length === 0 ? (
-        <p className="empty">No playlists yet. A playlist is an ordered list that can mix items from every library — a rewatch queue, a study reading list, a soundtrack in the order you like it. Start one with <b>+ New playlist</b>.</p>
+        <p className="empty">{t('No playlists yet. A playlist is an ordered list that can mix items from every library — a rewatch queue, a study reading list, a soundtrack in the order you like it. Start one with')}{' '}<b>{t('+ New playlist')}</b>.</p>
       ) : shown.length === 0 ? (
-        <p className="empty">No playlists match your search.</p>
+        <p className="empty">{t('No playlists match your search.')}</p>
       ) : (
         <div className="playlists-grid">
           {shown.map((p) => {
@@ -275,23 +276,23 @@ function PlaylistItemPicker({ items, existing, onClose, onPick }: PickerProps) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal playlists-picker" onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
-          <h2>Add items to playlist</h2>
+          <h2>{t('Add items to playlist')}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </header>
         <div className="playlists-picker-tools">
           <input
             autoFocus
-            placeholder="Search titles…"
+            placeholder={t('Search titles…')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="all">Every library</option>
+            <option value="all">{t('Every library')}</option>
             {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
         </div>
         <ul className="playlists-picker-list">
-          {filtered.length === 0 && <li className="empty">No matches.</li>}
+          {filtered.length === 0 && <li className="empty">{t('No matches.')}</li>}
           {filtered.map((it) => {
             const key = `${it.categoryId}:${it.id}`
             const already = existingKeys.has(key)
@@ -310,7 +311,7 @@ function PlaylistItemPicker({ items, existing, onClose, onPick }: PickerProps) {
                   <div className="playlists-picker-title">{it.title}</div>
                   <div className="playlists-picker-cat">{CATEGORIES.find((c) => c.id === it.categoryId)?.label ?? it.categoryId}</div>
                 </div>
-                {already && <span className="playlists-picker-tag">Added</span>}
+                {already && <span className="playlists-picker-tag">{t('Added')}</span>}
               </li>
             )
           })}

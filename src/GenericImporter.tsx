@@ -24,6 +24,7 @@ import {
   ANIME_STATUS_OPTIONS, SERIES_STATUS_OPTIONS,
   BOOK_STATUS_OPTIONS,
 } from './types'
+import { t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -105,17 +106,17 @@ async function parseFile(file: File): Promise<{ table?: ParsedTable; error?: str
     const txt = await file.text()
     const delim = name.endsWith('.tsv') ? '\t' : ','
     const rows = parseCsv(txt, delim)
-    if (rows.length === 0) return { error: 'The CSV file is empty.' }
+    if (rows.length === 0) return { error: t('The CSV file is empty.') }
     return { table: { headers: rows[0], rows: rows.slice(1), format: 'csv' } }
   }
   if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.xlsm')) {
     const buf = await file.arrayBuffer()
     const wb = XLSX.read(buf, { type: 'array' })
     const sheetName = wb.SheetNames[0]
-    if (!sheetName) return { error: 'The Excel file has no sheets.' }
+    if (!sheetName) return { error: t('The Excel file has no sheets.') }
     const sheet = wb.Sheets[sheetName]
     const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, blankrows: false, defval: '' }) as unknown[][]
-    if (rows.length === 0) return { error: 'The Excel sheet is empty.' }
+    if (rows.length === 0) return { error: t('The Excel sheet is empty.') }
     return {
       table: {
         headers: rows[0].map((v) => String(v ?? '').trim()),
@@ -124,7 +125,7 @@ async function parseFile(file: File): Promise<{ table?: ParsedTable; error?: str
       },
     }
   }
-  return { error: 'Unsupported file. Pick a .xlsx, .csv, .tsv or .txt file.' }
+  return { error: t('Unsupported file. Pick a .xlsx, .csv, .tsv or .txt file.') }
 }
 
 // External-tracker status vocabulary → Omnio's internal enum. Playnite
@@ -217,30 +218,30 @@ function toItem(row: string[], mapping: FieldTarget[], categoryId: CategoryId): 
 }
 
 const FIELD_LABELS: Record<FieldTarget, string> = {
-  ignore: '— Ignore column —',
-  title: 'Title',
-  rating: 'Rating (0-5)',
-  notes: 'Notes',
-  tags: 'Tags (comma-separated)',
-  genres: 'Genres (comma-separated)',
-  status: 'Status',
-  releaseYear: 'Release year',
-  releaseDate: 'Release date (YYYY-MM-DD)',
-  artist: 'Artist',
-  devs: 'Developers',
-  publishers: 'Publishers',
-  platforms: 'Platforms',
-  directors: 'Directors',
-  cast: 'Cast',
-  chaptersRead: 'Chapters read',
-  episodesWatched: 'Episodes watched',
-  playTime: 'Time played',
-  authors: 'Authors',
-  publisher: 'Publisher',
-  saga: 'Series / saga',
-  sagaIndex: 'Book # in series',
-  pagesRead: 'Pages read',
-  totalPages: 'Total pages',
+  ignore: t('— Ignore column —'),
+  title: t('Title'),
+  rating: t('Rating (0-5)'),
+  notes: t('Notes'),
+  tags: t('Tags (comma-separated)'),
+  genres: t('Genres (comma-separated)'),
+  status: t('Status'),
+  releaseYear: t('Release year'),
+  releaseDate: t('Release date (YYYY-MM-DD)'),
+  artist: t('Artist'),
+  devs: t('Developers'),
+  publishers: t('Publishers'),
+  platforms: t('Platforms'),
+  directors: t('Directors'),
+  cast: t('Cast'),
+  chaptersRead: t('Chapters read'),
+  episodesWatched: t('Episodes watched'),
+  playTime: t('Time played'),
+  authors: t('Authors'),
+  publisher: t('Publisher'),
+  saga: t('Series / saga'),
+  sagaIndex: t('Book # in series'),
+  pagesRead: t('Pages read'),
+  totalPages: t('Total pages'),
   isbn: 'ISBN',
 }
 
@@ -258,7 +259,7 @@ export default function GenericImporter({ existingItems, onImport, onClose }: Pr
     if (!f) return
     setFilename(f.name)
     const r = await parseFile(f)
-    if (r.error || !r.table) { setError(r.error ?? 'Parse failed'); return }
+    if (r.error || !r.table) { setError(r.error ?? t('Parse failed')); return }
     setTable(r.table)
     setMapping(r.table.headers.map(autoMap))
   }
@@ -287,24 +288,22 @@ export default function GenericImporter({ existingItems, onImport, onClose }: Pr
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel fetch-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Import from Excel · CSV · Notion · TXT</h2>
+          <h2>{t('Import from Excel · CSV · Notion · TXT')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Supported formats: <code>.xlsx</code> · <code>.xls</code> · <code>.csv</code> · <code>.tsv</code> · <code>.txt</code>.
-            Notion databases export as CSV (Export → CSV) and work as-is. TXT files should have one title per line —
-            no columns to map.
+            {t('Supported formats:')}{' '}<code>.xlsx</code> · <code>.xls</code> · <code>.csv</code> · <code>.tsv</code> · <code>.txt</code>{t('. Notion databases export as CSV (Export → CSV) and work as-is. TXT files should have one title per line — no columns to map.')}
           </p>
           <label className="upload-btn" style={{ alignSelf: 'flex-start', cursor: 'pointer' }}>
-            {filename ? `Selected: ${filename}` : 'Choose file…'}
+            {filename ? t('Selected: {filename}', { filename: filename }) : t('Choose file…')}
             <input type="file" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.txt" style={{ display: 'none' }} onChange={handleFile} />
           </label>
           {error && <p className="hint" style={{ color: 'var(--danger)' }}>{error}</p>}
           {table && (
             <>
               <div className="field-group">
-                <label>Target library</label>
+                <label>{t('Target library')}</label>
                 <select value={targetCategory} onChange={(e) => setTargetCategory(e.target.value as CategoryId)}>
                   {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                 </select>
@@ -312,11 +311,11 @@ export default function GenericImporter({ existingItems, onImport, onClose }: Pr
 
               {table.format !== 'txt' && (
                 <div className="import-mapping">
-                  <span className="import-mapping-label">Column mapping ({table.headers.length} columns, {table.rows.length} rows)</span>
+                  <span className="import-mapping-label">{t('Column mapping ({headers} columns, {rows} rows)', { headers: table.headers.length, rows: table.rows.length })}</span>
                   <div className="import-mapping-grid">
                     {table.headers.map((h, idx) => (
                       <div key={idx} className="import-mapping-row">
-                        <span className="import-mapping-col">{h || <em>(unnamed)</em>}</span>
+                        <span className="import-mapping-col">{h || <em>{t('(unnamed)')}</em>}</span>
                         <select
                           value={mapping[idx] ?? 'ignore'}
                           onChange={(e) => setMapping((prev) => prev.map((v, i) => i === idx ? e.target.value as FieldTarget : v))}
@@ -333,11 +332,11 @@ export default function GenericImporter({ existingItems, onImport, onClose }: Pr
 
               {preview.length > 0 && (
                 <div className="import-preview">
-                  <span className="import-mapping-label">Preview (first 5 rows)</span>
+                  <span className="import-mapping-label">{t('Preview (first 5 rows)')}</span>
                   <div className="import-preview-scroll">
                     <table className="import-preview-table">
                       <thead>
-                        <tr>{table.headers.map((h, i) => <th key={i}>{h || `col ${i + 1}`}</th>)}</tr>
+                        <tr>{table.headers.map((h, i) => <th key={i}>{h || t('col {i}', { i: i + 1 })}</th>)}</tr>
                       </thead>
                       <tbody>
                         {preview.map((r, ri) => (
@@ -351,17 +350,17 @@ export default function GenericImporter({ existingItems, onImport, onClose }: Pr
 
               <label className="mal-skip" style={{ marginTop: 8 }}>
                 <input type="checkbox" checked={skipExisting} onChange={(e) => setSkipExisting(e.target.checked)} />
-                Skip titles already in the target library (case-insensitive match)
+                {t('Skip titles already in the target library (case-insensitive match)')}
               </label>
               <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
-                <button type="button" className="secondary-btn" onClick={onClose}>Cancel</button>
+                <button type="button" className="secondary-btn" onClick={onClose}>{t('Cancel')}</button>
                 <button type="button" onClick={doImport} disabled={!hasTitle || readyItems.length === 0}
                   style={{ background: 'var(--accent)', color: '#1a1408', padding: '8px 16px', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600 }}>
-                  Import {readyItems.length} items
+                  {t('Import {readyItems} items', { readyItems: readyItems.length })}
                 </button>
-                {dupCount > 0 && <span className="hint">{dupCount} skipped as duplicates</span>}
+                {dupCount > 0 && <span className="hint">{t('{dupCount} skipped as duplicates', { dupCount: dupCount })}</span>}
               </div>
-              {!hasTitle && <p className="hint" style={{ color: 'var(--danger)' }}>Map at least one column to <em>Title</em>.</p>}
+              {!hasTitle && <p className="hint" style={{ color: 'var(--danger)' }}>{t('Map at least one column to')}{' '}<em>{t('Title')}</em>.</p>}
             </>
           )}
         </div>

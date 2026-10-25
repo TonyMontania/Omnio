@@ -9,6 +9,7 @@
 import { useMemo, useState } from 'react'
 import type { Item, SeriesStatus } from './types'
 import { parseCsv, colIndex } from './utils/csv'
+import { plural, t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -119,7 +120,7 @@ export default function SerializdImporter({ existingItems, onImport, onClose }: 
       // First non-whitespace char decides JSON vs CSV — cheap and reliable.
       const firstChar = text.trimStart()[0]
       const parsed = firstChar === '{' || firstChar === '[' ? fromJson(text) : fromCsv(text)
-      if (parsed.length === 0) { setError('No rows found. Expected Serializd JSON or CSV export.'); return }
+      if (parsed.length === 0) { setError(t('No rows found. Expected Serializd JSON or CSV export.')); return }
       parsed.sort((a, b) => a.title.localeCompare(b.title))
       setRows(parsed)
       setFileName(file.name)
@@ -163,19 +164,18 @@ export default function SerializdImporter({ existingItems, onImport, onClose }: 
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel letterboxd-importer" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 780, width: '94vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Import from Serializd</h2>
+          <h2>{t('Import from Serializd')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Drop your Serializd JSON or CSV export. Ratings on the 10-point
-            scale get halved to Omnio's 5-star.
+            {t('Drop your Serializd JSON or CSV export. Ratings on the 10-point scale get halved to Omnio\'s 5-star.')}
           </p>
           <div className="importer-dropzone">
             <input type="file" accept=".json,.csv" style={{ display: 'none' }} id="serializd-file"
               onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = '' }} />
             <label htmlFor="serializd-file" className="importer-file-btn">
-              {rows.length > 0 ? 'Pick different file' : '+ Pick JSON / CSV'}
+              {rows.length > 0 ? t('Pick different file') : t('+ Pick JSON / CSV')}
             </label>
             {fileName && <span className="importer-file-list">{fileName}</span>}
           </div>
@@ -183,18 +183,18 @@ export default function SerializdImporter({ existingItems, onImport, onClose }: 
           {rows.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{rows.length} shows found</span>
-                <span className="importer-new">{rows.length - dupeCount} new</span>
-                <span className="importer-dupe">{dupeCount} already in library</span>
+                <span>{t('{rows} shows found', { rows: rows.length })}</span>
+                <span className="importer-new">{t('{rows} new', { rows: rows.length - dupeCount })}</span>
+                <span className="importer-dupe">{t('{dupeCount} already in library', { dupeCount: dupeCount })}</span>
                 <div className="importer-select-actions">
-                  <button type="button" onClick={() => setSelected(new Set(rows.filter((r) => !matches.get(r.key)).map((r) => r.key)))}>Select new only</button>
-                  <button type="button" onClick={() => setSelected(new Set(rows.map((r) => r.key)))}>Select all</button>
-                  <button type="button" onClick={() => setSelected(new Set())}>Select none</button>
+                  <button type="button" onClick={() => setSelected(new Set(rows.filter((r) => !matches.get(r.key)).map((r) => r.key)))}>{t('Select new only')}</button>
+                  <button type="button" onClick={() => setSelected(new Set(rows.map((r) => r.key)))}>{t('Select all')}</button>
+                  <button type="button" onClick={() => setSelected(new Set())}>{t('Select none')}</button>
                 </div>
               </div>
               <div className="importer-table-wrap">
                 <table className="importer-table">
-                  <thead><tr><th style={{ width: 32 }}></th><th>Title</th><th style={{ width: 60 }}>Year</th><th style={{ width: 70 }}>Rating</th><th style={{ width: 110 }}>Status</th><th style={{ width: 90 }}>In lib</th></tr></thead>
+                  <thead><tr><th style={{ width: 32 }}></th><th>{t('Title')}</th><th style={{ width: 60 }}>{t('Year')}</th><th style={{ width: 70 }}>{t('Rating')}</th><th style={{ width: 110 }}>{t('Status')}</th><th style={{ width: 90 }}>{t('In lib')}</th></tr></thead>
                   <tbody>
                     {rows.map((r) => {
                       const dupe = matches.get(r.key)
@@ -205,7 +205,7 @@ export default function SerializdImporter({ existingItems, onImport, onClose }: 
                           <td>{r.year ?? '—'}</td>
                           <td>{r.rating ? r.rating.toFixed(1) : '—'}</td>
                           <td>{r.status ?? '—'}</td>
-                          <td>{dupe ? <span className="importer-badge dupe">In lib</span> : <span className="importer-badge new">New</span>}</td>
+                          <td>{dupe ? <span className="importer-badge dupe">{t('In lib')}</span> : <span className="importer-badge new">{t('New')}</span>}</td>
                         </tr>
                       )
                     })}
@@ -217,9 +217,9 @@ export default function SerializdImporter({ existingItems, onImport, onClose }: 
         </div>
         {rows.length > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button type="button" className="primary-btn" disabled={selected.size === 0} onClick={handleImport}>
-              Import {selected.size} show{selected.size === 1 ? '' : 's'}
+              {plural(selected.size, 'Import {n} show', 'Import {n} shows')}
             </button>
           </div>
         )}

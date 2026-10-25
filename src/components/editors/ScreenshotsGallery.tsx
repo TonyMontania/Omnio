@@ -7,6 +7,7 @@ import { useRef, useState } from 'react'
 import type { Screenshot } from '../../types'
 import { assetSrc } from '../../types'
 import ImageLightbox from '../ImageLightbox'
+import { t } from '../../i18n'
 
 type Props = {
   gameTitle: string
@@ -23,7 +24,7 @@ export default function ScreenshotsGallery({ gameTitle, categoryId, screenshots,
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   const upload = async (files: FileList | File[]) => {
-    if (!gameTitle.trim()) { setError('Give the game a title before adding screenshots.'); return }
+    if (!gameTitle.trim()) { setError(t('Give the game a title before adding screenshots.')); return }
     setError(null)
     setBusy(true)
     const added: Screenshot[] = []
@@ -40,7 +41,7 @@ export default function ScreenshotsGallery({ gameTitle, categoryId, screenshots,
           new Uint8Array(buf),
         ) as { ok: boolean; entry?: Screenshot; error?: string }
         if (res.ok && res.entry) added.push(res.entry)
-        else setError(res.error ?? `Failed to save ${f.name}`)
+        else setError(res.error ?? t('Failed to save {name}', { name: f.name }))
       }
       if (added.length > 0) onChange([...added, ...screenshots])
     } finally {
@@ -59,7 +60,7 @@ export default function ScreenshotsGallery({ gameTitle, categoryId, screenshots,
 
   return (
     <div className="field-group">
-      <label>Screenshots</label>
+      <label>{t('Screenshots')}</label>
       <div
         className={dragOver ? 'screenshots-drop dragover' : 'screenshots-drop'}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
@@ -81,9 +82,9 @@ export default function ScreenshotsGallery({ gameTitle, categoryId, screenshots,
           }}
         />
         <button type="button" className="save-files-add" onClick={() => inputRef.current?.click()} disabled={busy}>
-          {busy ? 'Uploading…' : '+ Add screenshots'}
+          {busy ? t('Uploading…') : t('+ Add screenshots')}
         </button>
-        <span className="save-files-hint">Drag images here · multiple accepted · any image format</span>
+        <span className="save-files-hint">{t('Drag images here · multiple accepted · any image format')}</span>
       </div>
       {error && <p className="save-files-error">{error}</p>}
       {screenshots.length > 0 && (
@@ -95,15 +96,15 @@ export default function ScreenshotsGallery({ gameTitle, categoryId, screenshots,
                 alt={s.caption || s.filename}
                 loading="lazy"
                 onClick={() => setLightboxIndex(i)}
-                title="Click to view full size"
+                title={t('Click to view full size')}
               />
               <input
                 className="screenshot-caption"
-                placeholder="Caption (optional)"
+                placeholder={t('Caption (optional)')}
                 value={s.caption ?? ''}
                 onChange={(e) => setCaption(s.id, e.target.value)}
               />
-              <button type="button" className="screenshot-delete" onClick={() => remove(s)} title="Delete">✕</button>
+              <button type="button" className="screenshot-delete" onClick={() => remove(s)} title={t('Delete')}>✕</button>
             </figure>
           ))}
         </div>

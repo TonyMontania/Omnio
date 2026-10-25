@@ -9,6 +9,7 @@
 import { useState } from 'react'
 import type { BandMember, MemberStint, MemberStatus } from '../../types'
 import { BAND_ROLE_SUGGESTIONS, MEMBER_STATUS_OPTIONS, getMemberStatus, isFormerMember } from '../../types'
+import { t } from '../../i18n'
 
 export default function BandMembersEditor({ members, onChange }: {
   members: BandMember[]
@@ -78,7 +79,7 @@ export default function BandMembersEditor({ members, onChange }: {
             <div className="band-member-top">
               <input
                 className="band-member-name"
-                placeholder="Member name"
+                placeholder={t('Member name')}
                 value={m.name}
                 onChange={(e) => patchMember(m.id, { name: e.target.value })}
               />
@@ -95,7 +96,7 @@ export default function BandMembersEditor({ members, onChange }: {
                     former: next === 'former' || next === 'former-touring',
                   })
                 }}
-                title="Member status"
+                title={t('Member status')}
               >
                 {MEMBER_STATUS_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -105,21 +106,21 @@ export default function BandMembersEditor({ members, onChange }: {
                 type="button"
                 className={m.deceased ? 'pill active band-member-deceased' : 'pill band-member-deceased'}
                 onClick={() => patchMember(m.id, { deceased: !m.deceased })}
-                title={m.deceased ? 'Marked as deceased — click to undo' : 'Mark as deceased'}
+                title={m.deceased ? t('Marked as deceased — click to undo') : t('Mark as deceased')}
               >†</button>
               <button type="button" className="track-remove" onClick={() => removeMember(m.id)}>✕</button>
             </div>
             <div className="band-member-period">
               <input
                 className="band-member-year"
-                placeholder="Joined (e.g. 1998)"
+                placeholder={t('Joined (e.g. 1998)')}
                 value={m.joinedIn ?? ''}
                 onChange={(e) => patchMember(m.id, { joinedIn: e.target.value })}
               />
               {isFormerMember(m) && (
                 <input
                   className="band-member-year"
-                  placeholder="Left (e.g. 2004)"
+                  placeholder={t('Left (e.g. 2004)')}
                   value={m.leftIn ?? ''}
                   onChange={(e) => patchMember(m.id, { leftIn: e.target.value })}
                 />
@@ -134,12 +135,12 @@ export default function BandMembersEditor({ members, onChange }: {
             )}
             <div className="tag-list-input">
               <input
-                placeholder="Add role (Vocals, Guitar…)"
+                placeholder={t('Add role (Vocals, Guitar…)')}
                 value={draft}
                 onChange={(e) => setRoleDraft((d) => ({ ...d, [m.id]: e.target.value }))}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addRole(m.id, draft) } }}
               />
-              <button type="button" onClick={() => addRole(m.id, draft)}>Add</button>
+              <button type="button" onClick={() => addRole(m.id, draft)}>{t('Add')}</button>
             </div>
             {suggestions.length > 0 && (
               <div className="platform-suggestions">
@@ -161,16 +162,16 @@ export default function BandMembersEditor({ members, onChange }: {
               return (
                 <div key={s.id} className="band-stint">
                   <div className="band-stint-head">
-                    <span className="band-stint-label">{s.touring ? 'Touring' : 'Also'}</span>
+                    <span className="band-stint-label">{s.touring ? t('Touring') : t('Also')}</span>
                     <input
                       className="band-member-year"
-                      placeholder="From"
+                      placeholder={t('From')}
                       value={s.from ?? ''}
                       onChange={(e) => patchStint(m.id, s.id, { from: e.target.value })}
                     />
                     <input
                       className="band-member-year"
-                      placeholder="To"
+                      placeholder={t('To')}
                       value={s.to ?? ''}
                       onChange={(e) => patchStint(m.id, s.id, { to: e.target.value })}
                     />
@@ -178,8 +179,8 @@ export default function BandMembersEditor({ members, onChange }: {
                       type="button"
                       className={s.touring ? 'pill active' : 'pill'}
                       onClick={() => patchStint(m.id, s.id, { touring: !s.touring })}
-                      title="Toggle: this stint was touring-only"
-                    >Touring</button>
+                      title={t('Toggle: this stint was touring-only')}
+                    >{t('Touring')}</button>
                     <button type="button" className="track-remove" onClick={() => removeStint(m.id, s.id)}>✕</button>
                   </div>
                   {s.roles.length > 0 && (
@@ -191,12 +192,12 @@ export default function BandMembersEditor({ members, onChange }: {
                   )}
                   <div className="tag-list-input">
                     <input
-                      placeholder="Add role for this stint"
+                      placeholder={t('Add role for this stint')}
                       value={sDraft}
                       onChange={(e) => setRoleDraft((d) => ({ ...d, [stintKey]: e.target.value }))}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addStintRole(m.id, s.id, sDraft) } }}
                     />
-                    <button type="button" onClick={() => addStintRole(m.id, s.id, sDraft)}>Add</button>
+                    <button type="button" onClick={() => addStintRole(m.id, s.id, sDraft)}>{t('Add')}</button>
                   </div>
                   {sSuggestions.length > 0 && (
                     <div className="platform-suggestions">
@@ -208,11 +209,11 @@ export default function BandMembersEditor({ members, onChange }: {
                 </div>
               )
             })}
-            <button type="button" className="upload-btn band-stint-add" onClick={() => addStint(m.id)}>+ Add stint (different role period)</button>
+            <button type="button" className="upload-btn band-stint-add" onClick={() => addStint(m.id)}>{t('+ Add stint (different role period)')}</button>
           </div>
         )
       })}
-      <button type="button" className="upload-btn" onClick={addMember}>+ Add member</button>
+      <button type="button" className="upload-btn" onClick={addMember}>{t('+ Add member')}</button>
     </div>
   )
 }

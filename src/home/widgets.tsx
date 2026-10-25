@@ -10,6 +10,7 @@ import { CalendarIcon } from '../icons'
 import { registerHomeWidget, type WidgetSize } from './registry'
 import { RUN_FLAG_OPTIONS } from '../types/arcade'
 import FillGrid from './FillGrid'
+import { locale, plural, t } from '../i18n'
 
 function recencyScore(it: Item): number {
   const f = it.finishedAt ? new Date(it.finishedAt).getTime() : 0
@@ -17,12 +18,12 @@ function recencyScore(it: Item): number {
   return Math.max(f, c)
 }
 function inProgressLabel(it: Item): string | null {
-  if (it.gameStatus === 'playing') return 'Playing'
-  if (it.watchStatus === 'watching') return 'Watching'
-  if (it.seriesStatus === 'watching') return 'Watching'
-  if (it.mangaStatus === 'reading') return 'Reading'
-  if (it.bookStatus === 'reading') return 'Reading'
-  if (it.visualNovelStatus === 'playing') return 'Playing'
+  if (it.gameStatus === 'playing') return t('Playing')
+  if (it.watchStatus === 'watching') return t('Watching')
+  if (it.seriesStatus === 'watching') return t('Watching')
+  if (it.mangaStatus === 'reading') return t('Reading')
+  if (it.bookStatus === 'reading') return t('Reading')
+  if (it.visualNovelStatus === 'playing') return t('Playing')
   return null
 }
 function parseISODate(s?: string): Date | null {
@@ -38,13 +39,13 @@ function parseYear(y?: string): Date | null {
 function currentProgressLine(it: Item): string | null {
   const ep = parseInt(it.episodesWatched ?? '', 10)
   const totalEp = parseInt(it.totalEpisodes ?? '', 10)
-  if (!isNaN(ep) && ep > 0) return isNaN(totalEp) || totalEp <= 0 ? `Episode ${ep}` : `Episode ${ep} of ${totalEp}`
+  if (!isNaN(ep) && ep > 0) return isNaN(totalEp) || totalEp <= 0 ? t('Episode {ep}', { ep: ep }) : t('Episode {ep} of {totalEp}', { ep: ep, totalEp: totalEp })
   const ch = parseInt(it.chaptersRead ?? '', 10)
   const totalCh = parseInt(it.totalChapters ?? '', 10)
-  if (!isNaN(ch) && ch > 0) return isNaN(totalCh) || totalCh <= 0 ? `Chapter ${ch}` : `Chapter ${ch} of ${totalCh}`
+  if (!isNaN(ch) && ch > 0) return isNaN(totalCh) || totalCh <= 0 ? t('Chapter {ch}', { ch: ch }) : t('Chapter {ch} of {totalCh}', { ch: ch, totalCh: totalCh })
   const pg = parseInt(it.pagesRead ?? '', 10)
   const totalPg = parseInt(it.totalPages ?? '', 10)
-  if (!isNaN(pg) && pg > 0) return isNaN(totalPg) || totalPg <= 0 ? `Page ${pg}` : `Page ${pg} of ${totalPg}`
+  if (!isNaN(pg) && pg > 0) return isNaN(totalPg) || totalPg <= 0 ? t('Page {pg}', { pg: pg }) : t('Page {pg} of {totalPg}', { pg: pg, totalPg: totalPg })
   const play = parseFloat(it.playTime ?? '')
   if (!isNaN(play) && play > 0) return `${play.toFixed(1)}h played`
   return null
@@ -52,8 +53,8 @@ function currentProgressLine(it: Item): string | null {
 
 registerHomeWidget({
   id: 'currently',
-  label: 'Currently',
-  description: 'Everything you\'re actively playing / watching / reading, newest first.',
+  label: t('Currently'),
+  description: t('Everything you\'re actively playing / watching / reading, newest first.'),
   defaultSize: 'large',
   sizesSupported: ['medium', 'large'],
   render: (ctx, size) => {
@@ -63,13 +64,13 @@ registerHomeWidget({
       if (label) rows.push({ item: it, label })
     }
     rows.sort((a, b) => recencyScore(b.item) - recencyScore(a.item))
-    if (rows.length === 0) return <p className="hint">Nothing in progress right now.</p>
+    if (rows.length === 0) return <p className="hint">{t('Nothing in progress right now.')}</p>
 
     if (size === 'medium') {
       return (
         <FillGrid items={rows} minWidth={140} gap={14} rows={2} className="home-current-list">
           {({ item, label }) => (
-            <button key={item.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(item)} title={`${item.title} — ${label}`}>
+            <button key={item.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(item)} title={t('{title} — {label}', { title: item.title, label: label })}>
               <div className="home-current-cover">
                 {item.cover
                   ? <img src={assetSrc(item.cover)} alt="" loading="lazy" />
@@ -92,7 +93,7 @@ registerHomeWidget({
           type="button"
           className="home-currently-hero"
           onClick={() => ctx.onOpenItem(hero.item)}
-          title={`${hero.item.title} — ${hero.label}`}
+          title={t('{title} — {label}', { title: hero.item.title, label: hero.label })}
           style={hero.item.cover ? { '--hero-cover': `url(${assetSrc(hero.item.cover)})` } as React.CSSProperties : undefined}
         >
           <div className="home-currently-hero-bg" aria-hidden />
@@ -113,7 +114,7 @@ registerHomeWidget({
         {rest.length > 0 && (
           <FillGrid items={rest} minWidth={130} gap={12} rows={1} className="home-currently-rest">
             {({ item, label }) => (
-              <button key={item.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(item)} title={`${item.title} — ${label}`}>
+              <button key={item.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(item)} title={t('{title} — {label}', { title: item.title, label: label })}>
                 <div className="home-current-cover">
                   {item.cover
                     ? <img src={assetSrc(item.cover)} alt="" loading="lazy" />
@@ -133,8 +134,8 @@ registerHomeWidget({
 
 registerHomeWidget({
   id: 'upcoming',
-  label: 'Upcoming',
-  description: 'Release / airing dates within the next 30 days.',
+  label: t('Upcoming'),
+  description: t('Release / airing dates within the next 30 days.'),
   defaultSize: 'large',
   sizesSupported: ['medium', 'large'],
   render: (ctx, size) => {
@@ -145,12 +146,12 @@ registerHomeWidget({
     for (const it of ctx.items) {
       const d = parseISODate(it.releaseDate) ?? parseISODate(it.airedFrom) ?? parseYear(it.releaseYear) ?? parseYear(it.startYear)
       if (!d || d < startOfToday || d > horizon) continue
-      out.push({ item: it, date: d, label: it.airedFrom && !it.releaseDate ? 'Airs from' : 'Release' })
+      out.push({ item: it, date: d, label: it.airedFrom && !it.releaseDate ? t('Airs from') : t('Release') })
     }
     out.sort((a, b) => a.date.getTime() - b.date.getTime())
     const cap = size === 'medium' ? 4 : 6
     const list = out.slice(0, cap)
-    if (list.length === 0) return <p className="hint">Nothing scheduled in the next 30 days.</p>
+    if (list.length === 0) return <p className="hint">{t('Nothing scheduled in the next 30 days.')}</p>
     return (
       <>
         <div className="home-upcoming-list">
@@ -164,7 +165,7 @@ registerHomeWidget({
               <div className="home-upcoming-body">
                 <div className="home-upcoming-title">{e.item.title}</div>
                 <div className="home-upcoming-sub">
-                  {e.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {e.date.toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' })}
                   {' · '}{e.label}
                   {' · '}{CATEGORIES.find((c) => c.id === e.item.categoryId)?.label}
                 </div>
@@ -174,7 +175,7 @@ registerHomeWidget({
         </div>
         <div style={{ marginTop: 10, textAlign: 'right' }}>
           <button type="button" className="ghost-btn" onClick={ctx.onOpenCalendar}>
-            <CalendarIcon /> Full calendar
+            <CalendarIcon />{' '}{t('Full calendar')}
           </button>
         </div>
       </>
@@ -185,19 +186,19 @@ registerHomeWidget({
 
 registerHomeWidget({
   id: 'recently-rated',
-  label: 'Recently rated',
-  description: 'Items you gave 4★ or more, newest first — a personal "recently loved" strip.',
+  label: t('Recently rated'),
+  description: t('Items you gave 4★ or more, newest first — a personal "recently loved" strip.'),
   defaultSize: 'medium',
   sizesSupported: ['small', 'medium', 'large'],
   render: (ctx, size) => {
     const list = ctx.items
       .filter((i) => (i.rating ?? 0) >= 4)
       .sort((a, b) => recencyScore(b) - recencyScore(a))
-    if (list.length === 0) return <p className="hint">Rate some items ★ 4 or higher to see them here.</p>
+    if (list.length === 0) return <p className="hint">{t('Rate some items ★ 4 or higher to see them here.')}</p>
     return (
       <FillGrid items={list} minWidth={140} gap={14} rows={size === 'small' ? 1 : 2} className="home-current-list">
         {(it) => (
-          <button key={it.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(it)} title={`${it.title} — ★${it.rating}`}>
+          <button key={it.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(it)} title={t('{title} — ★{rating}', { title: it.title, rating: it.rating })}>
             <div className="home-current-cover">
               {it.cover
                 ? <img src={assetSrc(it.cover)} alt="" loading="lazy" />
@@ -250,17 +251,17 @@ const BacklogPickWidget = ({ ctx, size }: { ctx: import('./registry').HomeContex
     return pool.slice(0, cap)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backlog, seed])
-  if (backlog.length === 0) return <p className="hint">Nothing in a backlog status right now.</p>
+  if (backlog.length === 0) return <p className="hint">{t('Nothing in a backlog status right now.')}</p>
   return (
     <div className="home-backlog-pick">
       <div className="home-backlog-head">
-        <span className="hint" style={{ margin: 0 }}>Random from {backlog.length.toLocaleString()} in your backlog</span>
+        <span className="hint" style={{ margin: 0 }}>{t('Random from {backlog} in your backlog', { backlog: backlog.length.toLocaleString(locale()) })}</span>
         <button
           type="button"
           className="home-backlog-reshuffle"
           onClick={() => setSeed((s) => s + 1)}
-          title="Reshuffle"
-          aria-label="Reshuffle"
+          title={t('Reshuffle')}
+          aria-label={t('Reshuffle')}
         >↻</button>
       </div>
       <div className="home-backlog-list">
@@ -293,8 +294,8 @@ const BacklogPickWidget = ({ ctx, size }: { ctx: import('./registry').HomeContex
 
 registerHomeWidget({
   id: 'pick-from-backlog',
-  label: 'Pick from your backlog',
-  description: 'A shuffle of a few things sitting in a backlog / plan-to status — helps break decision paralysis.',
+  label: t('Pick from your backlog'),
+  description: t('A shuffle of a few things sitting in a backlog / plan-to status — helps break decision paralysis.'),
   defaultSize: 'medium',
   sizesSupported: ['small', 'medium', 'large'],
   render: (ctx, size) => <BacklogPickWidget ctx={ctx} size={size} />,
@@ -305,14 +306,14 @@ registerHomeWidget({
 // "today" column gets a subtle highlight so you spot new episodes fast.
 registerHomeWidget({
   id: 'weekly-airing',
-  label: 'This week (airing)',
-  description: 'Anime, donghua and series that air each weekday. Missing weekdays get a placeholder — set Airs on in the editor.',
+  label: t('This week (airing)'),
+  description: t('Anime, donghua and series that air each weekday. Missing weekdays get a placeholder — set Airs on in the editor.'),
   defaultSize: 'large',
   sizesSupported: ['medium', 'large'],
   render: (ctx, size) => {
     const AIRING_CATS = new Set(['anime', 'donghua', 'series'])
     const airing = ctx.items.filter((i) => AIRING_CATS.has(i.categoryId) && isCurrentlyAiring(i) && airingWeekday(i))
-    if (airing.length === 0) return <p className="hint">Nothing airing on a set weekday. Add <b>Airs on</b> in the anime / series editor to fill this grid.</p>
+    if (airing.length === 0) return <p className="hint">{t('Nothing airing on a set weekday. Add')}{' '}<b>{t('Airs on')}</b>{' '}{t('in the anime / series editor to fill this grid.')}</p>
     const buckets = new Map<Weekday, Item[]>()
     for (const w of WEEKDAY_OPTIONS) buckets.set(w.value, [])
     for (const item of airing) buckets.get(airingWeekday(item)!)?.push(item)
@@ -330,7 +331,7 @@ registerHomeWidget({
             <div key={day.value} className={`home-weekly-day${isToday ? ' today' : ''}`}>
               <div className="home-weekly-day-head">
                 <span className="home-weekly-day-name">{day.short}</span>
-                {isToday && <span className="home-weekly-day-badge">Today</span>}
+                {isToday && <span className="home-weekly-day-badge">{t('Today')}</span>}
               </div>
               {list.length === 0 ? (
                 <div className="home-weekly-day-empty">—</div>
@@ -377,29 +378,29 @@ function nextUnitFor(it: Item): { label: string; sub?: string } | null {
   if (ep !== null && ep >= 0) {
     const next = ep + 1
     if (totEp !== null && totEp > 0 && next > totEp) return null
-    return { label: `Episode ${next}`, sub: totEp ? `of ${totEp}` : undefined }
+    return { label: t('Episode {next}', { next: next }), sub: totEp ? `of ${totEp}` : undefined }
   }
   const ch = parseNum(it.chaptersRead)
   const totCh = parseNum(it.totalChapters)
   if (ch !== null && ch >= 0) {
     const next = ch + 1
     if (totCh !== null && totCh > 0 && next > totCh) return null
-    return { label: `Chapter ${next}`, sub: totCh ? `of ${totCh}` : undefined }
+    return { label: t('Chapter {next}', { next: next }), sub: totCh ? `of ${totCh}` : undefined }
   }
   const pg = parseNum(it.pagesRead)
   const totPg = parseNum(it.totalPages)
   if (pg !== null && pg >= 0) {
     const next = pg + 1
     if (totPg !== null && totPg > 0 && next > totPg) return null
-    return { label: `Page ${next}`, sub: totPg ? `of ${totPg}` : undefined }
+    return { label: t('Page {next}', { next: next }), sub: totPg ? `of ${totPg}` : undefined }
   }
   return null
 }
 
 registerHomeWidget({
   id: 'continue-watching',
-  label: 'Continue where you left off',
-  description: 'The next episode / chapter / page for each series, anime, manga and book you have in progress.',
+  label: t('Continue where you left off'),
+  description: t('The next episode / chapter / page for each series, anime, manga and book you have in progress.'),
   defaultSize: 'large',
   sizesSupported: ['medium', 'large'],
   render: (ctx) => {
@@ -411,7 +412,7 @@ registerHomeWidget({
       rows.push({ item: it, next })
     }
     rows.sort((a, b) => recencyScore(b.item) - recencyScore(a.item))
-    if (rows.length === 0) return <p className="hint">Nothing with a next-unit set yet. Fill in <b>Episodes watched</b> / <b>Chapters read</b> / <b>Pages read</b> to see resumable items here.</p>
+    if (rows.length === 0) return <p className="hint">{t('Nothing with a next-unit set yet. Fill in')}{' '}<b>{t('Episodes watched')}</b> / <b>{t('Chapters read')}</b> / <b>{t('Pages read')}</b>{' '}{t('to see resumable items here.')}</p>
     return (
       <FillGrid items={rows} minWidth={240} gap={12} rows={2} stretch className="home-continue-grid">
         {({ item, next }) => {
@@ -422,7 +423,7 @@ registerHomeWidget({
               type="button"
               className="home-continue-card"
               onClick={() => ctx.onOpenItem(item)}
-              title={`${item.title} — ${next.label}${next.sub ? ` ${next.sub}` : ''}`}
+              title={t('{title} — {label}{value}', { title: item.title, label: next.label, value: next.sub ? ` ${t('{sub}', { sub: next.sub })}` : '' })}
             >
               <div className="home-continue-cover">
                 {item.cover
@@ -448,7 +449,7 @@ registerHomeWidget({
 
 function relativeDay(ms: number, now: number): string {
   const days = Math.max(0, Math.floor((now - ms) / (24 * 60 * 60 * 1000)))
-  return days === 0 ? 'Today' : days === 1 ? 'Yesterday' : days < 30 ? `${days}d ago` : new Date(ms).toLocaleDateString()
+  return days === 0 ? t('Today') : days === 1 ? t('Yesterday') : days < 30 ? t('{days}d ago', { days: days }) : new Date(ms).toLocaleDateString(locale())
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -468,13 +469,13 @@ function CoverCard({ item, badge, onOpen }: { item: Item; badge?: string; onOpen
 
 registerHomeWidget({
   id: 'recently-added',
-  label: 'Recently added',
-  description: 'The newest items in your libraries, newest first.',
+  label: t('Recently added'),
+  description: t('The newest items in your libraries, newest first.'),
   defaultSize: 'large',
   sizesSupported: ['small', 'medium', 'large'],
   render: (ctx, size) => {
     const list = [...ctx.items].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
-    if (list.length === 0) return <p className="hint">Nothing added yet.</p>
+    if (list.length === 0) return <p className="hint">{t('Nothing added yet.')}</p>
     const now = Date.now()
     return (
       <FillGrid items={list} minWidth={140} gap={14} rows={size === 'small' ? 1 : 2} className="home-current-list">
@@ -486,13 +487,13 @@ registerHomeWidget({
 
 registerHomeWidget({
   id: 'pinned',
-  label: 'Pinned',
-  description: 'Items you pinned from the right-click menu, in the order you pinned them.',
+  label: t('Pinned'),
+  description: t('Items you pinned from the right-click menu, in the order you pinned them.'),
   defaultSize: 'large',
   sizesSupported: ['small', 'medium', 'large'],
   render: (ctx, size) => {
     const list = ctx.items.filter((i) => i.pinnedAt).sort((a, b) => (a.pinnedAt ?? 0) - (b.pinnedAt ?? 0))
-    if (list.length === 0) return <p className="hint">Right-click any card and choose <b>Pin to Home</b> to keep it here.</p>
+    if (list.length === 0) return <p className="hint">{t('Right-click any card and choose')}{' '}<b>{t('Pin to Home')}</b>{' '}{t('to keep it here.')}</p>
     return (
       <FillGrid items={list} minWidth={140} gap={14} rows={size === 'small' ? 1 : 3} className="home-current-list">
         {(it) => <CoverCard key={it.id} item={it} onOpen={ctx.onOpenItem} />}
@@ -503,8 +504,8 @@ registerHomeWidget({
 
 registerHomeWidget({
   id: 'shmup-1cc',
-  label: 'Recent 1cc clears',
-  description: 'Your latest one-credit clears logged in Arcade.',
+  label: t('Recent 1cc clears'),
+  description: t('Your latest one-credit clears logged in Arcade.'),
   defaultSize: 'medium',
   sizesSupported: ['small', 'medium', 'large'],
   libraryFilter: false,
@@ -513,7 +514,7 @@ registerHomeWidget({
       .filter((r) => r.flags.includes('1cc'))
       .map((r) => ({ game: g, run: r })))
     if (clears.length === 0) {
-      return <p className="hint">Log a run with the <b>1cc</b> flag in Arcade and it shows up here.</p>
+      return <p className="hint">{t('Log a run with the')}{' '}<b>1cc</b>{' '}{t('flag in Arcade and it shows up here.')}</p>
     }
     clears.sort((a, b) => (b.run.date ?? '').localeCompare(a.run.date ?? ''))
     const games = new Set(clears.map((c) => c.game.id)).size
@@ -521,7 +522,7 @@ registerHomeWidget({
     return (
       <div className="home-1cc">
         <div className="home-1cc-total">
-          <b>{clears.length}</b> 1cc {clears.length === 1 ? 'clear' : 'clears'} across <b>{games}</b> {games === 1 ? 'game' : 'games'}
+          <b>{clears.length}</b>{' '}{plural(clears.length, '1cc clear across', '1cc clears across')}{' '}<b>{games}</b> {games === 1 ? 'game' : 'games'}
         </div>
         <ul className="home-1cc-list">
           {clears.slice(0, cap).map(({ game, run }) => (
@@ -533,7 +534,7 @@ registerHomeWidget({
                 <span className="home-1cc-body">
                   <span className="home-1cc-title">{game.title}</span>
                   <span className="home-1cc-meta">
-                    {[run.character, run.difficulty, run.score ? run.score.toLocaleString() : ''].filter(Boolean).join(' · ')}
+                    {[run.character, run.difficulty, run.score ? run.score.toLocaleString(locale()) : ''].filter(Boolean).join(' · ')}
                   </span>
                 </span>
                 <span className="home-1cc-flags">
@@ -583,17 +584,17 @@ function finalizedThisYear(items: Item[]): number {
 
 registerHomeWidget({
   id: 'big-numbers',
-  label: 'Big numbers',
-  description: 'Scrapbook-style totals — items in your library, hours logged, finished this year, favorites.',
+  label: t('Big numbers'),
+  description: t('Scrapbook-style totals — items in your library, hours logged, finished this year, favorites.'),
   defaultSize: 'large',
   sizesSupported: ['medium', 'large'],
   render: (ctx, size) => {
     const items = ctx.items
     const tiles = [
-      { label: 'Items in your library', value: items.length.toLocaleString() },
-      { label: 'Finished this year',    value: finalizedThisYear(items).toLocaleString() },
-      { label: 'Hours logged',          value: `${totalHoursLogged(items).toLocaleString()}h` },
-      { label: 'Loved (★4+)',           value: items.filter((i) => (i.rating ?? 0) >= 4).length.toLocaleString() },
+      { label: t('Items in your library'), value: items.length.toLocaleString(locale()) },
+      { label: t('Finished this year'),    value: finalizedThisYear(items).toLocaleString(locale()) },
+      { label: t('Hours logged'),          value: `${totalHoursLogged(items).toLocaleString(locale())}h` },
+      { label: t('Loved (★4+)'),           value: items.filter((i) => (i.rating ?? 0) >= 4).length.toLocaleString(locale()) },
     ]
     return (
       <div className={`home-bignum-grid home-bignum-grid-${size}`}>
@@ -614,8 +615,8 @@ registerHomeWidget({
 
 registerHomeWidget({
   id: 'upcoming-week',
-  label: 'Upcoming this week',
-  description: 'Release / airing dates in the next 7 days.',
+  label: t('Upcoming this week'),
+  description: t('Release / airing dates in the next 7 days.'),
   defaultSize: 'medium',
   sizesSupported: ['small', 'medium', 'large'],
   render: (ctx, size) => {
@@ -626,12 +627,12 @@ registerHomeWidget({
     for (const it of ctx.items) {
       const d = parseISODate(it.releaseDate) ?? parseISODate(it.airedFrom) ?? parseYear(it.releaseYear) ?? parseYear(it.startYear)
       if (!d || d < start || d > horizon) continue
-      out.push({ item: it, date: d, label: it.airedFrom && !it.releaseDate ? 'Airs from' : 'Release' })
+      out.push({ item: it, date: d, label: it.airedFrom && !it.releaseDate ? t('Airs from') : t('Release') })
     }
     out.sort((a, b) => a.date.getTime() - b.date.getTime())
     const cap = size === 'small' ? 3 : size === 'medium' ? 5 : 8
     const list = out.slice(0, cap)
-    if (list.length === 0) return <p className="hint">Nothing scheduled this week.</p>
+    if (list.length === 0) return <p className="hint">{t('Nothing scheduled this week.')}</p>
     return (
       <div className="home-upcoming-list">
         {list.map((e, i) => (
@@ -644,7 +645,7 @@ registerHomeWidget({
             <div className="home-upcoming-body">
               <div className="home-upcoming-title">{e.item.title}</div>
               <div className="home-upcoming-sub">
-                {e.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                {e.date.toLocaleDateString(locale(), { weekday: 'short', month: 'short', day: 'numeric' })}
                 {' · '}{e.label}
               </div>
             </div>
@@ -662,8 +663,8 @@ registerHomeWidget({
 
 registerHomeWidget({
   id: 'currently-airing',
-  label: 'Currently airing',
-  description: 'Anime, donghua and series that are on air right now.',
+  label: t('Currently airing'),
+  description: t('Anime, donghua and series that are on air right now.'),
   defaultSize: 'medium',
   sizesSupported: ['medium', 'large'],
   render: (ctx, size) => {
@@ -677,7 +678,7 @@ registerHomeWidget({
       // calendar quarter, the show still shows up here.
       .filter((i) => isCurrentlyAiring(i))
       .sort((a, b) => recencyScore(b) - recencyScore(a))
-    if (list.length === 0) return <p className="hint">Nothing airing in your library right now.</p>
+    if (list.length === 0) return <p className="hint">{t('Nothing airing in your library right now.')}</p>
     return (
       <FillGrid items={list} minWidth={140} gap={14} rows={size === 'medium' ? 1 : 2} className="home-current-list">
         {(it) => (
@@ -686,7 +687,7 @@ registerHomeWidget({
               {it.cover
                 ? <img src={assetSrc(it.cover)} alt="" loading="lazy" />
                 : <span>{it.title.charAt(0).toUpperCase()}</span>}
-              <span className="home-current-badge">Airing</span>
+              <span className="home-current-badge">{t('Airing')}</span>
             </div>
             <div className="home-current-title">{it.title}</div>
           </button>
@@ -702,13 +703,13 @@ registerHomeWidget({
 
 registerHomeWidget({
   id: 'cover-carousel',
-  label: 'Cover carousel',
-  description: 'Auto-scrolling ribbon of covers from your library. Purely decorative — click any cover to open.',
+  label: t('Cover carousel'),
+  description: t('Auto-scrolling ribbon of covers from your library. Purely decorative — click any cover to open.'),
   defaultSize: 'medium',
   sizesSupported: ['medium', 'large'],
   render: (ctx) => {
     const withCover = ctx.items.filter((i) => !!i.cover)
-    if (withCover.length === 0) return <p className="hint">Add items with covers to fill this carousel.</p>
+    if (withCover.length === 0) return <p className="hint">{t('Add items with covers to fill this carousel.')}</p>
     // Deterministic shuffle so re-renders don't reshuffle mid-hover.
     const seeded = withCover.slice().sort((a, b) => (a.id > b.id ? 1 : -1))
     const strip = seeded.slice(0, 40)
@@ -769,8 +770,8 @@ function collectAnniversaries(items: Item[], now: Date): AnniversaryHit[] {
 
 registerHomeWidget({
   id: 'on-this-day',
-  label: 'On this day',
-  description: 'Items you finished on today\'s date in past years. Hides itself when there\'s nothing to show.',
+  label: t('On this day'),
+  description: t('Items you finished on today\'s date in past years. Hides itself when there\'s nothing to show.'),
   defaultSize: 'medium',
   sizesSupported: ['small', 'medium', 'large'],
   render: (ctx, size) => {
@@ -793,7 +794,7 @@ registerHomeWidget({
           <div key={yearsAgo} className="home-on-this-day-group">
             <div className="home-on-this-day-header">
               <span className="home-on-this-day-when">
-                {yearsAgo === 1 ? 'One year ago' : `${yearsAgo} years ago`}
+                {yearsAgo === 1 ? t('One year ago') : t('{yearsAgo} years ago', { yearsAgo: yearsAgo })}
               </span>
               <span className="home-on-this-day-year">{now.getFullYear() - yearsAgo}</span>
             </div>
@@ -839,8 +840,8 @@ registerHomeWidget({
 // ★4 column. Purely informational, no comparisons across time.
 registerHomeWidget({
   id: 'rating-spread',
-  label: 'Rating spread',
-  description: 'A quick bar chart of how many items you rated at each star level.',
+  label: t('Rating spread'),
+  description: t('A quick bar chart of how many items you rated at each star level.'),
   defaultSize: 'medium',
   sizesSupported: ['small', 'medium', 'large'],
   render: (ctx) => {
@@ -852,7 +853,7 @@ registerHomeWidget({
       buckets[idx]++
     }
     const total = buckets.reduce((a, b) => a + b, 0)
-    if (total === 0) return <p className="hint">Rate some items to fill in the spread.</p>
+    if (total === 0) return <p className="hint">{t('Rate some items to fill in the spread.')}</p>
     const max = Math.max(...buckets, 1)
     return (
       <div className="home-rating-spread">
@@ -867,11 +868,11 @@ registerHomeWidget({
               <div className="home-rating-track">
                 <div className="home-rating-bar" style={{ width: `${pct}%` }} />
               </div>
-              <span className="home-rating-count">{count.toLocaleString()}</span>
+              <span className="home-rating-count">{count.toLocaleString(locale())}</span>
             </div>
           )
         })}
-        <div className="home-rating-footer">{total.toLocaleString()} rated</div>
+        <div className="home-rating-footer">{t('{total} rated', { total: total.toLocaleString(locale()) })}</div>
       </div>
     )
   },
@@ -881,8 +882,8 @@ registerHomeWidget({
 // oldest first so today lands at the bottom (chronological reading).
 registerHomeWidget({
   id: 'finished-this-week',
-  label: 'Finished this week',
-  description: 'Items you finished in the last 7 days.',
+  label: t('Finished this week'),
+  description: t('Items you finished in the last 7 days.'),
   defaultSize: 'medium',
   sizesSupported: ['small', 'medium', 'large'],
   render: (ctx, size) => {
@@ -896,15 +897,15 @@ registerHomeWidget({
       rows.push({ item: it, when: t })
     }
     rows.sort((a, b) => b.when - a.when)
-    if (rows.length === 0) return <p className="hint">Nothing marked finished in the last 7 days.</p>
+    if (rows.length === 0) return <p className="hint">{t('Nothing marked finished in the last 7 days.')}</p>
     return (
       <FillGrid items={rows} minWidth={140} gap={14} rows={size === 'small' ? 1 : 2} className="home-current-list">
         {({ item, when }) => {
           const d = new Date(when)
           const relDays = Math.max(0, Math.round((now - when) / (24 * 60 * 60 * 1000)))
-          const rel = relDays === 0 ? 'Today' : relDays === 1 ? 'Yesterday' : `${relDays}d ago`
+          const rel = relDays === 0 ? t('Today') : relDays === 1 ? t('Yesterday') : t('{relDays}d ago', { relDays: relDays })
           return (
-            <button key={item.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(item)} title={`${item.title} — ${d.toLocaleDateString()}`}>
+            <button key={item.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(item)} title={t('{title} — {d}', { title: item.title, d: d.toLocaleDateString(locale()) })}>
               <div className="home-current-cover">
                 {item.cover
                   ? <img src={assetSrc(item.cover)} alt="" loading="lazy" />
@@ -925,8 +926,8 @@ registerHomeWidget({
 // picks lead. Hides itself entirely if nothing qualifies yet.
 registerHomeWidget({
   id: 'top-of-year',
-  label: 'Top of the year (so far)',
-  description: 'Items you rated ★4+ and finished this year. Hides itself when the list is empty.',
+  label: t('Top of the year (so far)'),
+  description: t('Items you rated ★4+ and finished this year. Hides itself when the list is empty.'),
   defaultSize: 'medium',
   sizesSupported: ['medium', 'large'],
   render: (ctx) => {
@@ -941,7 +942,7 @@ registerHomeWidget({
     return (
       <FillGrid items={rows} minWidth={140} gap={14} rows={2} className="home-current-list">
         {(it) => (
-          <button key={it.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(it)} title={`${it.title} — ★${it.rating}`}>
+          <button key={it.id} type="button" className="home-current-card" onClick={() => ctx.onOpenItem(it)} title={t('{title} — ★{rating}', { title: it.title, rating: it.rating })}>
             <div className="home-current-cover">
               {it.cover
                 ? <img src={assetSrc(it.cover)} alt="" loading="lazy" />
@@ -973,17 +974,17 @@ const FavoritesShuffleWidget = ({ ctx, size }: { ctx: import('./registry').HomeC
     return pool.slice(0, cap)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favorites, seed])
-  if (favorites.length === 0) return <p className="hint">Rate some items ★ 5 to build a favorites pool.</p>
+  if (favorites.length === 0) return <p className="hint">{t('Rate some items ★ 5 to build a favorites pool.')}</p>
   return (
     <div className="home-backlog-pick">
       <div className="home-backlog-head">
-        <span className="hint" style={{ margin: 0 }}>Random from {favorites.length.toLocaleString()} ★5 favorites</span>
+        <span className="hint" style={{ margin: 0 }}>{t('Random from {favorites} ★5 favorites', { favorites: favorites.length.toLocaleString(locale()) })}</span>
         <button
           type="button"
           className="home-backlog-reshuffle"
           onClick={() => setSeed((s) => s + 1)}
-          title="Reshuffle"
-          aria-label="Reshuffle"
+          title={t('Reshuffle')}
+          aria-label={t('Reshuffle')}
         >↻</button>
       </div>
       <div className="home-backlog-list">
@@ -1016,8 +1017,8 @@ const FavoritesShuffleWidget = ({ ctx, size }: { ctx: import('./registry').HomeC
 
 registerHomeWidget({
   id: 'random-favorites',
-  label: 'Random from favorites',
-  description: 'A shuffle of a few things you rated ★5 — rediscovery, not shame.',
+  label: t('Random from favorites'),
+  description: t('A shuffle of a few things you rated ★5 — rediscovery, not shame.'),
   defaultSize: 'medium',
   sizesSupported: ['small', 'medium', 'large'],
   render: (ctx, size) => <FavoritesShuffleWidget ctx={ctx} size={size} />,
@@ -1028,8 +1029,8 @@ registerHomeWidget({
 // than a bar chart.
 registerHomeWidget({
   id: 'genre-spotlight',
-  label: 'Genre spotlight',
-  description: 'Your top 5 genres by count, with a mini cover strip of items in each.',
+  label: t('Genre spotlight'),
+  description: t('Your top 5 genres by count, with a mini cover strip of items in each.'),
   defaultSize: 'medium',
   sizesSupported: ['medium', 'large'],
   render: (ctx) => {
@@ -1043,7 +1044,7 @@ registerHomeWidget({
         list.push(it); bucket.set(key, list)
       }
     }
-    if (bucket.size === 0) return <p className="hint">Add genres to items to see spotlights here.</p>
+    if (bucket.size === 0) return <p className="hint">{t('Add genres to items to see spotlights here.')}</p>
     const top = Array.from(bucket.entries())
       .sort(([, a], [, b]) => b.length - a.length)
       .slice(0, 5)
@@ -1055,7 +1056,7 @@ registerHomeWidget({
             <div key={genre} className="home-genre-row">
               <div className="home-genre-meta">
                 <div className="home-genre-name">{genre}</div>
-                <div className="home-genre-count">{list.length.toLocaleString()}</div>
+                <div className="home-genre-count">{list.length.toLocaleString(locale())}</div>
               </div>
               <div className="home-genre-covers">
                 {covers.map((it) => (
@@ -1082,15 +1083,15 @@ registerHomeWidget({
 
 registerHomeWidget({
   id: 'empty-hint',
-  label: 'Empty board hint',
-  description: 'Shown when the layout has no widgets — points to Edit layout.',
+  label: t('Empty board hint'),
+  description: t('Shown when the layout has no widgets — points to Edit layout.'),
   defaultSize: 'large',
   sizesSupported: ['large'],
   libraryFilter: false,
   render: () => (
     <div className="home-empty-hint">
-      <h3>Your home board is empty.</h3>
-      <p>Click <b>Edit layout</b> above to add widgets — libraries, upcoming releases, recently rated, and more.</p>
+      <h3>{t('Your home board is empty.')}</h3>
+      <p>{t('Click')}{' '}<b>{t('Edit layout')}</b>{' '}{t('above to add widgets — libraries, upcoming releases, recently rated, and more.')}</p>
     </div>
   ),
 })

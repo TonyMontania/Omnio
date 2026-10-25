@@ -3,6 +3,7 @@ import type { ErogeItem } from './types'
 import { assetUrl } from './ipc'
 import type { TagPrefs } from './constants'
 import TagSignals from './TagSignals'
+import { t } from '../../i18n'
 
 interface Props {
   game: ErogeItem
@@ -27,16 +28,16 @@ function ErogeCardImpl({ game, onOpen, onToggleFav, cardFields, tagPrefs }: Prop
       <div className="gc-banner">
         {cover
           ? <img src={cover} alt="" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-          : <div className="gc-nocover">No cover</div>}
+          : <div className="gc-nocover">{t('No cover')}</div>}
         {hasUpdate && (
-          <span className="gc-update" title={`New version: ${game.latestVersion ?? '?'}`}>
-            {game.latestVersion ? `${game.latestVersion} new` : 'Update'}
+          <span className="gc-update" title={t('New version: {latestVersion}', { latestVersion: game.latestVersion ?? '?' })}>
+            {game.latestVersion ? t('{latestVersion} new', { latestVersion: game.latestVersion }) : t('Update')}
           </span>
         )}
         <button
           type="button"
           className={`gc-fav${game.favorite ? ' on' : ''}`}
-          title={game.favorite ? 'Remove from favorites' : 'Add to favorites'}
+          title={game.favorite ? t('Remove from favorites') : t('Add to favorites')}
           aria-pressed={!!game.favorite}
           onClick={(e) => { e.stopPropagation(); onToggleFav(game.id) }}
         >★</button>

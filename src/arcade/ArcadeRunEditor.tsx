@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import type { ArcadeGame, Run, RunFlag } from '../types/arcade'
 import { RUN_FLAG_OPTIONS } from '../types/arcade'
+import { locale, t } from '../i18n'
 
 interface Props {
   game: ArcadeGame
@@ -61,48 +62,48 @@ export default function ArcadeRunEditor({ game, onAdd, onRemove }: Props) {
       <div className="arcade-run-form">
         <div className="field-row">
           <div className="field-group">
-            <label>Date</label>
+            <label>{t('Date')}</label>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           <div className="field-group">
-            <label>Character</label>
+            <label>{t('Character')}</label>
             {characters.length > 0
               ? <select value={character} onChange={(e) => setCharacter(e.target.value)}>
                   <option value="">—</option>
                   {characters.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
-              : <input value={character} onChange={(e) => setCharacter(e.target.value)} placeholder="Optional" />}
+              : <input value={character} onChange={(e) => setCharacter(e.target.value)} placeholder={t('Optional')} />}
           </div>
           <div className="field-group">
-            <label>Difficulty</label>
+            <label>{t('Difficulty')}</label>
             {difficulties.length > 0
               ? <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
                   <option value="">—</option>
                   {difficulties.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
-              : <input value={difficulty} onChange={(e) => setDifficulty(e.target.value)} placeholder="Optional" />}
+              : <input value={difficulty} onChange={(e) => setDifficulty(e.target.value)} placeholder={t('Optional')} />}
           </div>
         </div>
         <div className="field-row">
           <div className="field-group">
-            <label>Score</label>
-            <input value={score} onChange={(e) => setScore(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="e.g. 1200000000" />
+            <label>{t('Score')}</label>
+            <input value={score} onChange={(e) => setScore(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder={t('e.g. 1200000000')} />
           </div>
           <div className="field-group">
-            <label>Credits</label>
-            <input value={credits} onChange={(e) => setCredits(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="1 for 1cc" />
+            <label>{t('Credits')}</label>
+            <input value={credits} onChange={(e) => setCredits(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder={t('1 for 1cc')} />
           </div>
           <div className="field-group">
-            <label>Misses</label>
+            <label>{t('Misses')}</label>
             <input value={misses} onChange={(e) => setMisses(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="0-9" />
           </div>
           <div className="field-group">
-            <label>Bombs</label>
+            <label>{t('Bombs')}</label>
             <input value={bombs} onChange={(e) => setBombs(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="0-9" />
           </div>
         </div>
         <div className="field-group">
-          <label>Flags</label>
+          <label>{t('Flags')}</label>
           <div className="arcade-flag-row">
             {RUN_FLAG_OPTIONS.filter((o) => flagOptions.includes(o.value)).map((o) => (
               <button
@@ -116,11 +117,11 @@ export default function ArcadeRunEditor({ game, onAdd, onRemove }: Props) {
           </div>
         </div>
         <div className="field-group">
-          <label>Notes</label>
-          <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
+          <label>{t('Notes')}</label>
+          <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('Optional')} />
         </div>
         <div>
-          <button type="button" className="primary-btn" onClick={submit}>Log run</button>
+          <button type="button" className="primary-btn" onClick={submit}>{t('Log run')}</button>
         </div>
       </div>
 
@@ -128,15 +129,15 @@ export default function ArcadeRunEditor({ game, onAdd, onRemove }: Props) {
         <table className="arcade-run-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Character</th>
-              <th>Difficulty</th>
-              <th>Score</th>
-              <th>Credits</th>
-              <th>Misses</th>
-              <th>Bombs</th>
-              <th>Flags</th>
-              <th>Notes</th>
+              <th>{t('Date')}</th>
+              <th>{t('Character')}</th>
+              <th>{t('Difficulty')}</th>
+              <th>{t('Score')}</th>
+              <th>{t('Credits')}</th>
+              <th>{t('Misses')}</th>
+              <th>{t('Bombs')}</th>
+              <th>{t('Flags')}</th>
+              <th>{t('Notes')}</th>
               <th />
             </tr>
           </thead>
@@ -146,7 +147,7 @@ export default function ArcadeRunEditor({ game, onAdd, onRemove }: Props) {
                 <td>{r.date}</td>
                 <td>{r.character ?? '—'}</td>
                 <td>{r.difficulty ?? '—'}</td>
-                <td>{r.score?.toLocaleString() ?? '—'}</td>
+                <td>{r.score?.toLocaleString(locale()) ?? '—'}</td>
                 <td>{r.credits ?? '—'}</td>
                 <td>{r.misses ?? '—'}</td>
                 <td>{r.bombs ?? '—'}</td>

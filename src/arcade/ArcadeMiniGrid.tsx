@@ -7,6 +7,7 @@
 
 import { useMemo } from 'react'
 import type { ArcadeGame, Run, RunFlag } from '../types/arcade'
+import { t } from '../i18n'
 
 interface CellState {
   cleared: boolean
@@ -71,7 +72,7 @@ export default function ArcadeMiniGrid({ game, onOpen, onCellClick }: Props) {
           </div>
           <span className="arcade-mini-abbr">{abbr}</span>
         </button>
-        <div className="arcade-mini-empty hint">no grid</div>
+        <div className="arcade-mini-empty hint">{t('no grid')}</div>
       </div>
     )
   }
@@ -104,8 +105,8 @@ export default function ArcadeMiniGrid({ game, onOpen, onCellClick }: Props) {
                       type="button"
                       className={classes.join(' ')}
                       onClick={() => onCellClick?.(c, d)}
-                      title={`${c} · ${d}${cell.cleared ? ' — ' + Array.from(cell.flags).join(', ') : ''}`}
-                      aria-label={`${c} on ${d}`}
+                      title={t('{c} · {d}{from}', { c: c, d: d, from: cell.cleared ? ' — ' + Array.from(cell.flags).join(', ') : '' })}
+                      aria-label={t('{c} on {d}', { c: c, d: d })}
                     />
                   </td>
                 )

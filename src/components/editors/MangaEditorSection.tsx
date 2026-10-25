@@ -18,6 +18,7 @@ import RelatedListEditor from './RelatedListEditor'
 import RecommendationsEditor from './RecommendationsEditor'
 import ChapterListEditor from './ChapterListEditor'
 import VolumeCoverEditor from './VolumeCoverEditor'
+import { t } from '../../i18n'
 
 type Setter<T> = (updater: T | ((prev: T) => T)) => void
 
@@ -80,48 +81,48 @@ export default function MangaEditorSection(props: MangaEditorSectionProps) {
   return (
     <>
       <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Publication details</span>
-        <span className="form-section-hint">Authors, artists, chapters, magazine</span>
+        <span className="form-section-title">{t('Publication details')}</span>
+        <span className="form-section-hint">{t('Authors, artists, chapters, magazine')}</span>
       </div>
       <TagEditor
-        label="Authors"
-        placeholder="Add author"
+        label={t('Authors')}
+        placeholder={t('Add author')}
         tags={mangaAuthors}
         onAdd={(a) => setMangaAuthors((prev) => prev.includes(a) ? prev : [...prev, a])}
         onRemove={(i) => setMangaAuthors((prev) => prev.filter((_, idx) => idx !== i))}
       />
       <TagEditor
-        label="Artists"
-        placeholder="Add artist"
+        label={t('Artists')}
+        placeholder={t('Add artist')}
         tags={mangaArtists}
         onAdd={(a) => setMangaArtists((prev) => prev.includes(a) ? prev : [...prev, a])}
         onRemove={(i) => setMangaArtists((prev) => prev.filter((_, idx) => idx !== i))}
       />
       <div className="field-group">
-        <label>Description</label>
+        <label>{t('Description')}</label>
         <textarea value={mangaDescription} onChange={(e) => setMangaDescription(e.target.value)} rows={3} />
       </div>
       <TagEditor
-        label="Genres"
-        placeholder="Add genre"
+        label={t('Genres')}
+        placeholder={t('Add genre')}
         tags={genres}
         onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
         onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))}
       />
       <div className="form-section-header" data-belongs-to="progress">
-        <span className="form-section-title">Progress</span>
-        <span className="form-section-hint">Reading status · chapters / volumes read · chapter list</span>
+        <span className="form-section-title">{t('Progress')}</span>
+        <span className="form-section-hint">{t('Reading status · chapters / volumes read · chapter list')}</span>
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Publication status</label>
+          <label>{t('Publication status')}</label>
           <select value={pubStatus} onChange={(e) => setPubStatus(e.target.value as PublicationStatus | '')}>
-            <option value="">Unknown</option>
+            <option value="">{t('Unknown')}</option>
             {PUBLICATION_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>Reading status</label>
+          <label>{t('Reading status')}</label>
           <select value={readingStatus} onChange={(e) => setReadingStatus(e.target.value as MangaStatus)}>
             {MANGA_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
@@ -129,126 +130,126 @@ export default function MangaEditorSection(props: MangaEditorSectionProps) {
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Chapters read</label>
-          <input value={chaptersRead} onChange={(e) => intHandler(setChaptersRead)(e.target.value)} inputMode="numeric" placeholder="e.g. 45" />
+          <label>{t('Chapters read')}</label>
+          <input value={chaptersRead} onChange={(e) => intHandler(setChaptersRead)(e.target.value)} inputMode="numeric" placeholder={t('e.g. 45')} />
         </div>
         <div className="field-group">
-          <label>Total chapters (if known)</label>
-          <input value={totalChapters} onChange={(e) => intHandler(setTotalChapters)(e.target.value)} inputMode="numeric" placeholder="e.g. 120" />
-        </div>
-      </div>
-      <div className="field-row">
-        <div className="field-group">
-          <label>Volumes read</label>
-          <input value={volumesRead} onChange={(e) => intHandler(setVolumesRead)(e.target.value)} inputMode="numeric" placeholder="e.g. 5" />
-        </div>
-        <div className="field-group">
-          <label>Total volumes (if known)</label>
-          <input value={totalVolumesM} onChange={(e) => intHandler(setTotalVolumesM)(e.target.value)} inputMode="numeric" placeholder="e.g. 14" />
+          <label>{t('Total chapters (if known)')}</label>
+          <input value={totalChapters} onChange={(e) => intHandler(setTotalChapters)(e.target.value)} inputMode="numeric" placeholder={t('e.g. 120')} />
         </div>
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Publication date</label>
+          <label>{t('Volumes read')}</label>
+          <input value={volumesRead} onChange={(e) => intHandler(setVolumesRead)(e.target.value)} inputMode="numeric" placeholder={t('e.g. 5')} />
+        </div>
+        <div className="field-group">
+          <label>{t('Total volumes (if known)')}</label>
+          <input value={totalVolumesM} onChange={(e) => intHandler(setTotalVolumesM)(e.target.value)} inputMode="numeric" placeholder={t('e.g. 14')} />
+        </div>
+      </div>
+      <div className="field-row">
+        <div className="field-group">
+          <label>{t('Publication date')}</label>
           <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
         </div>
         <div className="field-group">
-          <label>Start date (personal)</label>
+          <label>{t('Start date (personal)')}</label>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </div>
         <div className="field-group">
-          <label>Finished on</label>
+          <label>{t('Finished on')}</label>
           <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
         </div>
       </div>
       <div className="form-section-header" data-belongs-to="overview">
-        <span className="form-section-title">Rating</span>
+        <span className="form-section-title">{t('Rating')}</span>
       </div>
       <div className="field-group">
-        <label>Rating</label>
+        <label>{t('Rating')}</label>
         <RatingPicker value={rating} onChange={setRating} />
       </div>
       <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Extended identity</span>
-        <span className="form-section-hint">Alt titles · source · age rating · magazine</span>
+        <span className="form-section-title">{t('Extended identity')}</span>
+        <span className="form-section-hint">{t('Alt titles · source · age rating · magazine')}</span>
       </div>
       <TagEditor
-        label="Alternative titles"
-        placeholder="Add title (romaji, English, synonym…)"
+        label={t('Alternative titles')}
+        placeholder={t('Add title (romaji, English, synonym…)')}
         tags={alternativeTitles}
         onAdd={(t) => setAlternativeTitles((prev) => prev.includes(t) ? prev : [...prev, t])}
         onRemove={(i) => setAlternativeTitles((prev) => prev.filter((_, idx) => idx !== i))}
       />
       <div className="field-row">
         <div className="field-group">
-          <label>Source</label>
+          <label>{t('Source')}</label>
           <select value={mangaSource} onChange={(e) => setMangaSource(e.target.value as MangaSource | '')}>
-            <option value="">Unspecified</option>
+            <option value="">{t('Unspecified')}</option>
             {MANGA_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>Age rating</label>
+          <label>{t('Age rating')}</label>
           <select value={ageRating} onChange={(e) => setAgeRating(e.target.value as AgeRating | '')}>
-            <option value="">Unspecified</option>
+            <option value="">{t('Unspecified')}</option>
             {AGE_RATING_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>Magazine / serialization</label>
-          <input value={magazine} onChange={(e) => setMagazine(e.target.value)} placeholder="e.g. Weekly Shonen Jump" />
+          <label>{t('Magazine / serialization')}</label>
+          <input value={magazine} onChange={(e) => setMagazine(e.target.value)} placeholder={t('e.g. Weekly Shonen Jump')} />
         </div>
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Ownership</label>
+          <label>{t('Ownership')}</label>
           <select value={mediaOwnership} onChange={(e) => setMediaOwnership(e.target.value as MediaOwnership | '')}>
-            <option value="">— unspecified</option>
+            <option value="">{t('— unspecified')}</option>
             {MEDIA_OWNERSHIP_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>MangaDex ID <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>Enables the "New chapters" link in the detail view</span></label>
-          <input value={mangadexId} onChange={(e) => setMangadexId(e.target.value)} placeholder="e.g. a1c7c817-4e59-43b7-9365-09675a149a6f" />
+          <label>{t('MangaDex ID')}{' '}<span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>{t('Enables the "New chapters" link in the detail view')}</span></label>
+          <input value={mangadexId} onChange={(e) => setMangadexId(e.target.value)} placeholder={t('e.g. a1c7c817-4e59-43b7-9365-09675a149a6f')} />
         </div>
       </div>
       <div className="form-section-header" data-belongs-to="notes">
-        <span className="form-section-title">Review</span>
-        <span className="form-section-hint">Your take · with optional spoiler toggle</span>
+        <span className="form-section-title">{t('Review')}</span>
+        <span className="form-section-hint">{t('Your take · with optional spoiler toggle')}</span>
       </div>
       <div className="field-group">
-        <label>Review</label>
-        <textarea value={mangaReview} onChange={(e) => setMangaReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
+        <label>{t('Review')}</label>
+        <textarea value={mangaReview} onChange={(e) => setMangaReview(e.target.value)} rows={3} placeholder={t('Your review (supports **bold**, *italic*, and "- " lists)')} />
         {mangaReview.trim() && (
           <div className="yesno">
-            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>Contains spoilers</button>
-            <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>No spoilers</button>
+            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>{t('Contains spoilers')}</button>
+            <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>{t('No spoilers')}</button>
           </div>
         )}
       </div>
       <div className="form-section-header" data-belongs-to="history">
-        <span className="form-section-title">Read history</span>
+        <span className="form-section-title">{t('Read history')}</span>
       </div>
       <div className="field-group">
-        <label>Reading history</label>
+        <label>{t('Reading history')}</label>
         <RewatchListEditor
           rewatches={rewatches}
           onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
           onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
           onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
           onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-          labels={{ rewatch: 'Reread', started: 'Started reading', finished: 'Finished reading', dropped: 'Dropped', note: 'Note' }}
+          labels={{ rewatch: t('Reread'), started: t('Started reading'), finished: t('Finished reading'), dropped: t('Dropped'), note: t('Note') }}
         />
       </div>
       <div className="field-group">
-        <label>Franchise</label>
-        <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Naruto saga" />
+        <label>{t('Franchise')}</label>
+        <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder={t('e.g. Naruto saga')} />
       </div>
       <div className="form-section-header" data-belongs-to="related">
-        <span className="form-section-title">Related &amp; recommendations</span>
+        <span className="form-section-title">{t('Related & recommendations')}</span>
       </div>
       <div className="field-group">
-        <label>Related manga</label>
+        <label>{t('Related manga')}</label>
         <RelatedListEditor
           related={relatedItems}
           crossLibrary
@@ -257,24 +258,24 @@ export default function MangaEditorSection(props: MangaEditorSectionProps) {
           onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
           onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
           onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-          pickerPlaceholder="Add related manga…"
+          pickerPlaceholder={t('Add related manga…')}
         />
       </div>
       <div className="field-group">
-        <label>Recommendations</label>
+        <label>{t('Recommendations')}</label>
         <RecommendationsEditor
           ids={recommendedItems}
           options={items.filter((i) => isMangaLike(i.categoryId) && i.id !== editingId)}
           onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
           onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-          pickerPlaceholder="Add recommended manga…"
+          pickerPlaceholder={t('Add recommended manga…')}
         />
       </div>
       <div className="field-group">
-        <label>Chapter list?</label>
+        <label>{t('Chapter list?')}</label>
         <div className="yesno">
-          <button type="button" className={hasChapters ? 'pill active' : 'pill'} onClick={() => setHasChapters(true)}>Yes</button>
-          <button type="button" className={!hasChapters ? 'pill active' : 'pill'} onClick={() => { setHasChapters(false); setChapters([]) }}>No</button>
+          <button type="button" className={hasChapters ? 'pill active' : 'pill'} onClick={() => setHasChapters(true)}>{t('Yes')}</button>
+          <button type="button" className={!hasChapters ? 'pill active' : 'pill'} onClick={() => { setHasChapters(false); setChapters([]) }}>{t('No')}</button>
         </div>
         {hasChapters && (
           <ChapterListEditor
@@ -293,11 +294,11 @@ export default function MangaEditorSection(props: MangaEditorSectionProps) {
         )}
       </div>
       <div className="form-section-header" data-belongs-to="media">
-        <span className="form-section-title">Volume covers</span>
-        <span className="form-section-hint">One cover per volume — gallery</span>
+        <span className="form-section-title">{t('Volume covers')}</span>
+        <span className="form-section-hint">{t('One cover per volume — gallery')}</span>
       </div>
       <div className="field-group">
-        <label>Volume covers</label>
+        <label>{t('Volume covers')}</label>
         <VolumeCoverEditor
           volumes={volumeCovers}
           onAdd={(v) => setVolumeCovers((prev) => [...prev, { ...v, id: crypto.randomUUID() }])}

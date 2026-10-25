@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { t } from '../../i18n'
 
 export type ErogeFilter = 'all' | 'playing' | 'backlog' | 'played' | 'updates'
 export type ErogeSort = 'az' | 'creator' | 'status' | 'engine' | 'releaseDate' | 'updated'
@@ -19,12 +20,12 @@ interface Props {
 
 
 const SORTS: { id: ErogeSort; label: string }[] = [
-  { id: 'az', label: 'Alphabetical' },
-  { id: 'updated', label: 'Most recent' },
-  { id: 'creator', label: 'By creator' },
-  { id: 'status', label: 'Status' },
-  { id: 'engine', label: 'Engine' },
-  { id: 'releaseDate', label: 'Release date' },
+  { id: 'az', label: t('Alphabetical') },
+  { id: 'updated', label: t('Most recent') },
+  { id: 'creator', label: t('By creator') },
+  { id: 'status', label: t('Status') },
+  { id: 'engine', label: t('Engine') },
+  { id: 'releaseDate', label: t('Release date') },
 ]
 
 export default function ErogesControls(p: Props) {
@@ -49,26 +50,26 @@ export default function ErogesControls(p: Props) {
     <div className="ctl">
       <label className="search-box">
         <span aria-hidden>⌕</span>
-        <input value={p.search} onChange={(e) => p.onSearch(e.target.value)} placeholder="Search" aria-label="Search by title or creator" />
-        {p.search && <button type="button" aria-label="Clear search" onClick={() => p.onSearch('')}>×</button>}
+        <input value={p.search} onChange={(e) => p.onSearch(e.target.value)} placeholder={t('Search')} aria-label={t('Search by title or creator')} />
+        {p.search && <button type="button" aria-label={t('Clear search')} onClick={() => p.onSearch('')}>×</button>}
       </label>
 
       <div className="pop-wrap" ref={optionsRef}>
-        <button type="button" className="icon-btn" aria-label="View options" aria-expanded={optionsOpen} title="Sort, view and settings" onClick={() => setOptionsOpen((v) => !v)}>⚙</button>
+        <button type="button" className="icon-btn" aria-label={t('View options')} aria-expanded={optionsOpen} title={t('Sort, view and settings')} onClick={() => setOptionsOpen((v) => !v)}>⚙</button>
         {optionsOpen && (
-          <div className="pop" role="dialog" aria-label="View options">
-            <div className="pop-label">Sort by</div>
+          <div className="pop" role="dialog" aria-label={t('View options')}>
+            <div className="pop-label">{t('Sort by')}</div>
             <div className="pop-list">
               {SORTS.map((s) => (
                 <button key={s.id} className={p.sort === s.id ? 'on' : ''} onClick={() => p.onSort(s.id)}>{s.label}</button>
               ))}
             </div>
-            <div className="pop-label">View</div>
+            <div className="pop-label">{t('View')}</div>
             <div className="seg small">
-              <button className={p.layout === 'grid' ? 'on' : ''} onClick={() => p.onLayout('grid')}>▦ Grid</button>
-              <button className={p.layout === 'list' ? 'on' : ''} onClick={() => p.onLayout('list')}>☰ List</button>
+              <button className={p.layout === 'grid' ? 'on' : ''} onClick={() => p.onLayout('grid')}>{t('▦ Grid')}</button>
+              <button className={p.layout === 'list' ? 'on' : ''} onClick={() => p.onLayout('list')}>{t('☰ List')}</button>
             </div>
-            <button className="pop-foot" onClick={() => { setOptionsOpen(false); p.onOpenSettings() }}><span className="pop-icon" aria-hidden>⚙</span>Eroges settings…</button>
+            <button className="pop-foot" onClick={() => { setOptionsOpen(false); p.onOpenSettings() }}><span className="pop-icon" aria-hidden>⚙</span>{t('Eroges settings…')}</button>
           </div>
         )}
       </div>
@@ -78,12 +79,12 @@ export default function ErogesControls(p: Props) {
         className="icon-btn"
         onClick={p.onCheckUpdates}
         disabled={!!p.checking}
-        title="Check for updates in this view"
-        aria-label="Check for updates"
+        title={t('Check for updates in this view')}
+        aria-label={t('Check for updates')}
       >
         {p.checking ? <span className="ctl-checking">{p.checking.done}/{p.checking.total}</span> : '↻'}
       </button>
-      <button type="button" className="add-btn" onClick={p.onAdd}>+ Add</button>
+      <button type="button" className="add-btn" onClick={p.onAdd}>{t('+ Add')}</button>
     </div>
   )
 }

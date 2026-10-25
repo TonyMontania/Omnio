@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import type { Platform } from '../../types'
 import { PLATFORM_SUGGESTIONS } from '../../types'
+import { t } from '../../i18n'
 
 export default function PlatformEditor({ value, onChange, existing }: { value: Platform[]; onChange: (v: Platform[]) => void; existing: Platform[] }) {
   const [input, setInput] = useState('')
@@ -15,12 +16,12 @@ export default function PlatformEditor({ value, onChange, existing }: { value: P
     <div className="platform-editor">
       <div className="tag-list-input">
         <input
-          placeholder="Add platform (or pick a suggestion)"
+          placeholder={t('Add platform (or pick a suggestion)')}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(input) } }}
         />
-        <button type="button" onClick={() => add(input)}>Add</button>
+        <button type="button" onClick={() => add(input)}>{t('Add')}</button>
       </div>
       {input.trim() && suggestions.length > 0 && (
         <div className="platform-suggestions">

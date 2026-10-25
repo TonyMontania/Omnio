@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import type { ArcadeGame, ArcadeGameType } from '../types/arcade'
 import { pickImageToDataUrl, imageDropHandlers } from '../utils/files'
+import { t } from '../i18n'
 
 interface Props {
   onCreate: (game: ArcadeGame) => void
@@ -47,55 +48,54 @@ export default function NewGameModal({ onCreate, onClose }: Props) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560, width: '92vw' }}>
         <div className="modal-header">
-          <h2>New arcade game</h2>
+          <h2>{t('New arcade game')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body arcade-new-form">
 
           <div className="field-group">
-            <label>Title</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Perfect Cherry Blossom" autoFocus />
+            <label>{t('Title')}</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('e.g. Perfect Cherry Blossom')} autoFocus />
           </div>
 
           <div className="field-row">
             <div className="field-group">
-              <label>Abbreviation (optional)</label>
-              <input value={abbreviation} onChange={(e) => setAbbreviation(e.target.value)} placeholder="e.g. PCB" maxLength={8} />
+              <label>{t('Abbreviation (optional)')}</label>
+              <input value={abbreviation} onChange={(e) => setAbbreviation(e.target.value)} placeholder={t('e.g. PCB')} maxLength={8} />
             </div>
             <div className="field-group">
-              <label>Franchise (optional)</label>
-              <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder="e.g. Touhou Project" />
+              <label>{t('Franchise (optional)')}</label>
+              <input value={franchise} onChange={(e) => setFranchise(e.target.value)} placeholder={t('e.g. Touhou Project')} />
             </div>
           </div>
 
           <div className="field-group">
-            <label>Logo (optional)</label>
+            <label>{t('Logo (optional)')}</label>
             <div
               className="arcade-cover-drop"
               {...imageDropHandlers((d) => setLogo(d))}
             >
               {logo
                 ? <img src={logo} alt="" />
-                : <span className="hint">Drop a logo image here, or click to pick a file.</span>}
+                : <span className="hint">{t('Drop a logo image here, or click to pick a file.')}</span>}
               <input type="file" accept="image/*" onChange={pickImageToDataUrl((d) => setLogo(d))} />
             </div>
             {logo && (
-              <button type="button" className="ghost-btn" onClick={() => setLogo(undefined)}>Remove logo</button>
+              <button type="button" className="ghost-btn" onClick={() => setLogo(undefined)}>{t('Remove logo')}</button>
             )}
           </div>
 
           <div className="field-group">
-            <label>Tracking type</label>
+            <label>{t('Tracking type')}</label>
             <div className="arcade-type-picker">
               <button
                 type="button"
                 className={type === 'grid' ? 'arcade-type-tile active' : 'arcade-type-tile'}
                 onClick={() => setType('grid')}
               >
-                <span className="arcade-type-title">◆ Grid tracker</span>
+                <span className="arcade-type-title">{t('◆ Grid tracker')}</span>
                 <span className="arcade-type-desc">
-                  Character × difficulty chart with per-cell flag markers (1cc, no-miss, no-bomb…).
-                  You define the axes and legend inside the game.
+                  {t('Character × difficulty chart with per-cell flag markers (1cc, no-miss, no-bomb…). You define the axes and legend inside the game.')}
                 </span>
               </button>
               <button
@@ -103,10 +103,9 @@ export default function NewGameModal({ onCreate, onClose }: Props) {
                 className={type === 'score' ? 'arcade-type-tile active' : 'arcade-type-tile'}
                 onClick={() => setType('score')}
               >
-                <span className="arcade-type-title">▲ Score log</span>
+                <span className="arcade-type-title">{t('▲ Score log')}</span>
                 <span className="arcade-type-desc">
-                  Simple: a run log with score + flags per attempt. No grid, no axes.
-                  Best when you're chasing a single high score.
+                  {t('Simple: a run log with score + flags per attempt. No grid, no axes. Best when you\'re chasing a single high score.')}
                 </span>
               </button>
             </div>
@@ -114,8 +113,8 @@ export default function NewGameModal({ onCreate, onClose }: Props) {
 
         </div>
         <div className="modal-footer">
-          <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
-          <button type="button" className="primary-btn" disabled={!title.trim()} onClick={submit}>Create</button>
+          <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
+          <button type="button" className="primary-btn" disabled={!title.trim()} onClick={submit}>{t('Create')}</button>
         </div>
       </div>
     </div>

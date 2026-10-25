@@ -1,4 +1,5 @@
-// Keyboard actions catalog + combo helpers.
+
+import { t } from '../i18n'// Keyboard actions catalog + combo helpers.
 //
 // The App keydown handler used to hardcode every shortcut (Ctrl+F,
 // Ctrl+K, Ctrl+Z, F5, ?, Ctrl+H). This module lifts the mapping into
@@ -19,14 +20,14 @@ export interface KeyboardActionDef {
 }
 
 export const KEYBOARD_ACTIONS: KeyboardActionDef[] = [
-  { id: 'focus-search',      label: 'Focus library search',  description: 'Jump to the search box at the top of the current library.', defaultCombo: 'Ctrl+F' },
-  { id: 'open-global-search',label: 'Open global search',    description: 'Global title lookup across every library.',                 defaultCombo: 'Ctrl+K' },
-  { id: 'undo',              label: 'Undo',                  description: 'Undo the last data change.',                                 defaultCombo: 'Ctrl+Z' },
-  { id: 'redo',              label: 'Redo',                  description: 'Redo an undone change.',                                     defaultCombo: 'Ctrl+Shift+Z' },
-  { id: 'redo-alt',          label: 'Redo (alt)',            description: 'Alternate binding for redo.',                                defaultCombo: 'Ctrl+Y' },
-  { id: 'refresh',           label: 'Refresh from disk',     description: 'Reload the library from disk without applying settings.',    defaultCombo: 'F5' },
-  { id: 'shortcuts',         label: 'Show shortcuts',        description: 'Open the keyboard-shortcuts cheat sheet.',                   defaultCombo: '?' },
-  { id: 'home',              label: 'Go to Home',            description: 'Jump to the Home dashboard.',                                defaultCombo: 'Ctrl+H' },
+  { id: 'focus-search',      label: t('Focus library search'),  description: t('Jump to the search box at the top of the current library.'), defaultCombo: 'Ctrl+F' },
+  { id: 'open-global-search',label: t('Open global search'),    description: t('Global title lookup across every library.'),                 defaultCombo: 'Ctrl+K' },
+  { id: 'undo',              label: t('Undo'),                  description: t('Undo the last data change.'),                                 defaultCombo: 'Ctrl+Z' },
+  { id: 'redo',              label: t('Redo'),                  description: t('Redo an undone change.'),                                     defaultCombo: 'Ctrl+Shift+Z' },
+  { id: 'redo-alt',          label: t('Redo (alt)'),            description: t('Alternate binding for redo.'),                                defaultCombo: 'Ctrl+Y' },
+  { id: 'refresh',           label: t('Refresh from disk'),     description: t('Reload the library from disk without applying settings.'),    defaultCombo: 'F5' },
+  { id: 'shortcuts',         label: t('Show shortcuts'),        description: t('Open the keyboard-shortcuts cheat sheet.'),                   defaultCombo: '?' },
+  { id: 'home',              label: t('Go to Home'),            description: t('Jump to the Home dashboard.'),                                defaultCombo: 'Ctrl+H' },
 ]
 
 // Build the canonical combo string for a keyboard event so we can

@@ -115,7 +115,7 @@ export default function Sidebar(props: Props) {
           <path d="M64 26 L71.5 56.5 L102 64 L71.5 71.5 L64 102 L56.5 71.5 L26 64 L56.5 56.5 Z" fill="currentColor" />
           <circle cx="64" cy="64" r="6" fill="none" stroke="currentColor" strokeWidth="4" />
         </svg>
-        {!collapsed && <span className="sidebar-brand-name">Omnio</span>}
+        {!collapsed && <span className="sidebar-brand-name">{t('Omnio')}</span>}
         <button
           type="button"
           className="sidebar-toggle"
@@ -159,7 +159,7 @@ export default function Sidebar(props: Props) {
                 onDragOver={(e) => onLibraryDragOver(e, c.id)}
                 onDrop={(e) => onLibraryDrop(e, c.id)}
                 onDragLeave={() => onLibraryDragLeave(c.id)}
-                title={`${c.label} — ${plural(n, '{n} item', '{n} items')}`}
+                title={t('{label} — {n2}', { label: c.label, n2: plural(n, '{n} item', '{n} items') })}
               >
                 <span className="sidebar-icon"><CategoryIcon id={c.id} /></span>
                 <span className="sidebar-label">{c.label}</span>
@@ -206,7 +206,7 @@ export default function Sidebar(props: Props) {
                 onDragOver={(e) => onLibraryDragOver(e, c.id)}
                 onDrop={(e) => onLibraryDrop(e, c.id)}
                 onDragLeave={() => onLibraryDragLeave(c.id)}
-                title={`${c.label} — ${plural(n, '{n} item', '{n} items')}`}
+                title={t('{label} — {n2}', { label: c.label, n2: plural(n, '{n} item', '{n} items') })}
               >
                 <span className="sidebar-icon"><CategoryIcon id={c.id} /></span>
                 <span className="sidebar-label">{c.label}</span>
@@ -224,7 +224,7 @@ export default function Sidebar(props: Props) {
                 type="button"
                 className={isActive ? 'sidebar-item active' : 'sidebar-item'}
                 onClick={() => onOpenPlugin?.(p.slug)}
-                title={`${p.label} — ${plural(n, '{n} item', '{n} items')}`}
+                title={t('{label} — {n2}', { label: p.label, n2: plural(n, '{n} item', '{n} items') })}
               >
                 <span className="sidebar-icon"><Icon /></span>
                 <span className="sidebar-label">{p.label}</span>

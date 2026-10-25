@@ -10,6 +10,7 @@ import { useState } from 'react'
 import type { Item } from '../../types'
 import { assetSrc } from '../../types'
 import { CATEGORIES } from '../../categories'
+import { t } from '../../i18n'
 
 const categoryLabelOf = (id: string): string => CATEGORIES.find((c) => c.id === id)?.label ?? id
 
@@ -26,7 +27,7 @@ export default function AnimeItemPicker({ options, excludeIds, onPick, placehold
     : []
   return (
     <div className="anime-picker">
-      <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={placeholder ?? 'Search…'} />
+      <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={placeholder ?? t('Search…')} />
       {filtered.length > 0 && (
         <div className="anime-picker-results">
           {filtered.map((o) => (

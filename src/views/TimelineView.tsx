@@ -9,6 +9,7 @@
 
 import type { AnyItem } from '../types/entities'
 import { assetSrc } from '../types'
+import { plural, t } from '../i18n'
 
 interface Props {
   items: AnyItem[]
@@ -44,7 +45,7 @@ export default function TimelineView({ items, onOpen }: Props) {
   const years = Array.from(buckets.keys()).sort((a, b) => a - b)
 
   if (years.length === 0) {
-    return <p className="hint">No items have a release year yet. Fill in the "Year" or "Release date" field to see them here.</p>
+    return <p className="hint">{t('No items have a release year yet. Fill in the "Year" or "Release date" field to see them here.')}</p>
   }
 
   return (
@@ -63,7 +64,7 @@ export default function TimelineView({ items, onOpen }: Props) {
                     type="button"
                     className="timeline-cover"
                     onClick={() => onOpen(it)}
-                    title={`${it.title} (${year})`}
+                    title={t('{title} ({year})', { title: it.title, year: year })}
                   >
                     {it.cover
                       ? <img src={assetSrc(it.cover)} alt="" loading="lazy" />
@@ -77,7 +78,7 @@ export default function TimelineView({ items, onOpen }: Props) {
       </div>
       {missing > 0 && (
         <p className="hint" style={{ marginTop: 12 }}>
-          {missing} item{missing === 1 ? '' : 's'} not shown — missing a release year.
+          {plural(missing, '{n} item not shown — missing a release year.', '{n} items not shown — missing a release year.')}
         </p>
       )}
     </div>

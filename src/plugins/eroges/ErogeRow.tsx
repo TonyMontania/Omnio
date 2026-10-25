@@ -6,6 +6,7 @@ import type { ErogeItem } from './types'
 import { assetUrl } from './ipc'
 import { BACKLOG_LABELS, type TagPrefs } from './constants'
 import TagSignals from './TagSignals'
+import { t } from '../../i18n'
 
 interface Props {
   game: ErogeItem
@@ -41,12 +42,12 @@ function ErogeRowImpl({ game, onOpen, onToggleFav, cardFields, tagPrefs }: Props
       </div>
       <div className="er-row-side">
         <TagSignals game={game} prefs={tagPrefs} />
-        {hasUpdate && <span className="gc-update inline">{game.latestVersion ? `${game.latestVersion} new` : 'Update'}</span>}
+        {hasUpdate && <span className="gc-update inline">{game.latestVersion ? t('{latestVersion} new', { latestVersion: game.latestVersion }) : t('Update')}</span>}
         {game.backlogStatus && <span className="er-row-progress">{BACKLOG_LABELS[game.backlogStatus] ?? game.backlogStatus}</span>}
         <button
           type="button"
           className={`er-row-fav${game.favorite ? ' on' : ''}`}
-          title={game.favorite ? 'Remove from favorites' : 'Add to favorites'}
+          title={game.favorite ? t('Remove from favorites') : t('Add to favorites')}
           aria-pressed={!!game.favorite}
           onClick={(e) => { e.stopPropagation(); onToggleFav(game.id) }}
         >★</button>

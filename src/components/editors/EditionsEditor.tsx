@@ -8,6 +8,7 @@ import { assetSrc } from '../../types'
 import TrackListEditor from './TrackListEditor'
 import { pickImageToDataUrl } from '../../utils/files'
 import CoverPlaceholder from '../CoverPlaceholder'
+import { t } from '../../i18n'
 
 export default function EditionsEditor({ editions, mainArtist, onChange }: {
   editions: AlbumEdition[]
@@ -41,12 +42,12 @@ export default function EditionsEditor({ editions, mainArtist, onChange }: {
     <div className="editions-editor">
       <div className="tag-list-input">
         <input
-          placeholder="Edition name (Deluxe, Japan, 10th Anniversary…)"
+          placeholder={t('Edition name (Deluxe, Japan, 10th Anniversary…)')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addEdition() } }}
         />
-        <button type="button" onClick={addEdition}>Add edition</button>
+        <button type="button" onClick={addEdition}>{t('Add edition')}</button>
       </div>
 
       {editions.map((ed) => {
@@ -59,9 +60,9 @@ export default function EditionsEditor({ editions, mainArtist, onChange }: {
                 className="band-member-name"
                 value={ed.name}
                 onChange={(e) => patchEdition(ed.id, { name: e.target.value })}
-                placeholder="Edition name"
+                placeholder={t('Edition name')}
               />
-              <span className="edition-track-count">{(ed.tracks ?? []).length} tracks</span>
+              <span className="edition-track-count">{t('{tracks} tracks', { tracks: (ed.tracks ?? []).length })}</span>
               <button type="button" className="track-remove" onClick={() => removeEdition(ed.id)}>✕</button>
             </div>
             {isOpen && (
@@ -71,13 +72,13 @@ export default function EditionsEditor({ editions, mainArtist, onChange }: {
                     ? <img className="edition-cover" src={assetSrc(ed.cover)} alt="" />
                     : <div className="edition-cover placeholder"><CoverPlaceholder categoryId="musica" /></div>}
                   <div className="upload-row">
-                    <button type="button" className="upload-btn" onClick={() => fileRefs.current[ed.id]?.click()}>Upload cover</button>
-                    {ed.cover && <button type="button" className="upload-btn clear" onClick={() => patchEdition(ed.id, { cover: undefined })}>Clear</button>}
+                    <button type="button" className="upload-btn" onClick={() => fileRefs.current[ed.id]?.click()}>{t('Upload cover')}</button>
+                    {ed.cover && <button type="button" className="upload-btn clear" onClick={() => patchEdition(ed.id, { cover: undefined })}>{t('Clear')}</button>}
                     <input type="file" accept="image/*" ref={(el) => { fileRefs.current[ed.id] = el }} style={{ display: 'none' }} onChange={handleCoverFile(ed.id)} />
                   </div>
                 </div>
                 <div className="field-group">
-                  <label>Release date</label>
+                  <label>{t('Release date')}</label>
                   <input
                     type="date"
                     value={ed.releaseDate ?? ''}

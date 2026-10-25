@@ -10,6 +10,7 @@ import { ArcadeIcon } from '../icons'
 import ArcadeGameDetail from './ArcadeGameDetail'
 import ArcadeMiniGrid from './ArcadeMiniGrid'
 import NewGameModal from './NewGameModal'
+import { locale, plural, t } from '../i18n'
 
 type Filter = 'all' | 'grid' | 'score'
 
@@ -62,26 +63,26 @@ export default function ArcadeView(props: Props) {
 
   useEffect(() => {
     if (selected) {
-      setPageMeta({ icon: <ArcadeIcon />, title: 'Arcade', onBack: () => setSelectedId(null) })
+      setPageMeta({ icon: <ArcadeIcon />, title: t('Arcade'), onBack: () => setSelectedId(null) })
       return
     }
     setPageMeta({
       icon: <ArcadeIcon />,
-      title: 'Arcade',
+      title: t('Arcade'),
       count: { n: games.length, unit: games.length === 1 ? 'game' : 'games' },
       chips: [
-        { key: 'all', label: 'All', count: games.length, active: filter === 'all', onClick: () => setFilter('all') },
-        { key: 'grid', label: 'Grids', count: gridCount, active: filter === 'grid', onClick: () => setFilter('grid') },
-        { key: 'score', label: 'Score logs', count: scoreCount, active: filter === 'score', onClick: () => setFilter('score') },
+        { key: 'all', label: t('All'), count: games.length, active: filter === 'all', onClick: () => setFilter('all') },
+        { key: 'grid', label: t('Grids'), count: gridCount, active: filter === 'grid', onClick: () => setFilter('grid') },
+        { key: 'score', label: t('Score logs'), count: scoreCount, active: filter === 'score', onClick: () => setFilter('score') },
       ],
       actions: (
         <div className="ctl">
           <label className="search-box">
             <span aria-hidden>⌕</span>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search games" aria-label="Search games" />
-            {search && <button type="button" aria-label="Clear search" onClick={() => setSearch('')}>×</button>}
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search games')} aria-label={t('Search games')} />
+            {search && <button type="button" aria-label={t('Clear search')} onClick={() => setSearch('')}>×</button>}
           </label>
-          <button type="button" className="add-btn" onClick={() => setNewOpen(true)}>+ Add game</button>
+          <button type="button" className="add-btn" onClick={() => setNewOpen(true)}>{t('+ Add game')}</button>
         </div>
       ),
     })
@@ -96,7 +97,7 @@ export default function ArcadeView(props: Props) {
         onRemoveRun={(rid) => onRemoveRun(selected.id, rid)}
         onUpdateRun={(rid, patch) => onUpdateRun(selected.id, rid, patch)}
         onDelete={() => {
-          if (!window.confirm(`Delete "${selected.title}" and its ${selected.runs.length} runs?`)) return
+          if (!window.confirm(t('Delete "{title}" and its {runs} runs?', { title: selected.title, runs: selected.runs.length }))) return
           onDelete(selected.id)
           setSelectedId(null)
         }}
@@ -110,16 +111,16 @@ export default function ArcadeView(props: Props) {
     <div className="content-scroll arcade-view">
       {games.length === 0 ? (
         <div className="arcade-empty">
-          <p>No arcade games yet.</p>
-          <p className="hint">Click <b>+ Add game</b> to create one. Choose <b>Grid</b> for a character × difficulty clear tracker, or <b>Score log</b> for a simple high-score list.</p>
+          <p>{t('No arcade games yet.')}</p>
+          <p className="hint">{t('Click')}{' '}<b>{t('+ Add game')}</b>{' '}{t('to create one. Choose')}{' '}<b>{t('Grid')}</b>{' '}{t('for a character × difficulty clear tracker, or')}{' '}<b>{t('Score log')}</b>{' '}{t('for a simple high-score list.')}</p>
         </div>
       ) : nothingShown && (
-        <div className="arcade-empty"><p>No games match this view.</p></div>
+        <div className="arcade-empty"><p>{t('No games match this view.')}</p></div>
       )}
 
       {chartGames.length > 0 && (
         <section className="arcade-block">
-          <h2 className="arcade-block-title">Chart</h2>
+          <h2 className="arcade-block-title">{t('Chart')}</h2>
           <div className="arcade-chart-flow">
             {chartGames.map((g) => (
               <ArcadeMiniGrid key={g.id} game={g} onOpen={() => setSelectedId(g.id)} onCellClick={() => setSelectedId(g.id)} />
@@ -130,7 +131,7 @@ export default function ArcadeView(props: Props) {
 
       {extraGames.length > 0 && (
         <section className="arcade-block">
-          <h2 className="arcade-block-title">Extra</h2>
+          <h2 className="arcade-block-title">{t('Extra')}</h2>
           <div className="arcade-chart-flow">
             {extraGames.map((g) => (
               <ArcadeMiniGrid key={g.id} game={g} onOpen={() => setSelectedId(g.id)} onCellClick={() => setSelectedId(g.id)} />
@@ -141,7 +142,7 @@ export default function ArcadeView(props: Props) {
 
       {scoreGames.length > 0 && (
         <section className="arcade-block">
-          <h2 className="arcade-block-title">Score logs</h2>
+          <h2 className="arcade-block-title">{t('Score logs')}</h2>
           <div className="arcade-score-flow">
             {scoreGames.map((g) => {
               const pb = bestScore(g.runs)
@@ -152,9 +153,9 @@ export default function ArcadeView(props: Props) {
                     {g.logo ? <img src={g.logo} alt="" /> : <span>{(g.abbreviation || g.title).slice(0, 3)}</span>}
                     {has1cc && <span className="arcade-badge">1cc</span>}
                   </div>
-                  <div className="arcade-score-title">{g.title || '(untitled)'}</div>
+                  <div className="arcade-score-title">{g.title || t('(untitled)')}</div>
                   <div className="arcade-score-pb">
-                    PB {pb !== undefined ? pb.toLocaleString() : '—'} · {g.runs.length} run{g.runs.length === 1 ? '' : 's'}
+                    {plural(g.runs.length, 'PB {pb} · {n} run', 'PB {pb} · {n} runs', { pb: pb !== undefined ? pb.toLocaleString(locale()) : '—' })}
                   </div>
                 </button>
               )
@@ -165,17 +166,17 @@ export default function ArcadeView(props: Props) {
 
       {gridCount > 0 && filter !== 'score' && (
         <div className="arcade-legend">
-          <span className="arcade-legend-row"><span className="arcade-mini-cell cleared" /> Cleared</span>
+          <span className="arcade-legend-row"><span className="arcade-mini-cell cleared" />{' '}{t('Cleared')}</span>
           <span className="arcade-legend-row"><span className="arcade-mini-cell cleared is-1cc" /> 1cc</span>
-          <span className="arcade-legend-row"><span className="arcade-mini-cell cleared is-nm" /> No-miss</span>
-          <span className="arcade-legend-row"><span className="arcade-mini-cell cleared is-nb" /> No-bomb</span>
-          <span className="arcade-legend-row"><span className="arcade-mini-cell cleared is-ex" /> Extra clear</span>
+          <span className="arcade-legend-row"><span className="arcade-mini-cell cleared is-nm" />{' '}{t('No-miss')}</span>
+          <span className="arcade-legend-row"><span className="arcade-mini-cell cleared is-nb" />{' '}{t('No-bomb')}</span>
+          <span className="arcade-legend-row"><span className="arcade-mini-cell cleared is-ex" />{' '}{t('Extra clear')}</span>
           <span className="arcade-credit">
-            Grid layout adapted from{' '}
+            {t('Grid layout adapted from')}{' '}
             <a
               href="https://github.com/doopu/1ccTracker"
               onClick={(e) => { e.preventDefault(); window.ipcRenderer.invoke('updates:open-url', 'https://github.com/doopu/1ccTracker') }}
-            >doopu/1ccTracker</a>
+            >{t('doopu/1ccTracker')}</a>
           </span>
         </div>
       )}

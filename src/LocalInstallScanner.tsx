@@ -11,6 +11,7 @@
 
 import { useMemo, useState } from 'react'
 import type { AnyItem, Platform } from './types'
+import { plural, t } from './i18n'
 
 interface DetectedGame {
   name: string
@@ -124,33 +125,31 @@ export default function LocalInstallScanner({ existingItems, onImport, onClose }
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 860, width: '96vw', maxHeight: '90vh' }}>
         <div className="modal-header">
-          <h2>Detect installed games</h2>
+          <h2>{t('Detect installed games')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Walks the default Steam / GOG / Epic install folders on this machine and lists every game folder it finds.
-            Add extra roots below if your games live elsewhere (e.g. a secondary drive Steam library folder).
-            Everything runs locally — no cloud calls, no exes launched.
+            {t('Walks the default Steam / GOG / Epic install folders on this machine and lists every game folder it finds. Add extra roots below if your games live elsewhere (e.g. a secondary drive Steam library folder). Everything runs locally — no cloud calls, no exes launched.')}
           </p>
 
           <div className="field-group">
-            <label>Extra scan roots (optional)</label>
+            <label>{t('Extra scan roots (optional)')}</label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 type="text"
-                placeholder={"e.g. D:\\SteamLibrary\\steamapps\\common"}
+                placeholder={t('e.g. D:\\SteamLibrary\\steamapps\\common')}
                 value={rootInput}
                 onChange={(e) => setRootInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') addCustomRoot() }}
                 style={{ flex: 1 }}
               />
-              <button type="button" className="secondary-btn" onClick={addCustomRoot}>+ Add root</button>
+              <button type="button" className="secondary-btn" onClick={addCustomRoot}>{t('+ Add root')}</button>
             </div>
             {customRoots.length > 0 && (
               <div className="pills" style={{ marginTop: 6 }}>
                 {customRoots.map((r) => (
-                  <button key={r} type="button" className="pill" onClick={() => setCustomRoots((rs) => rs.filter((x) => x !== r))} title="Remove">{r} ✕</button>
+                  <button key={r} type="button" className="pill" onClick={() => setCustomRoots((rs) => rs.filter((x) => x !== r))} title={t('Remove')}>{r} ✕</button>
                 ))}
               </div>
             )}
@@ -158,7 +157,7 @@ export default function LocalInstallScanner({ existingItems, onImport, onClose }
 
           <div className="modal-actions" style={{ margin: '8px 0' }}>
             <button type="button" className="secondary-btn" onClick={runScan} disabled={scanning}>
-              {scanning ? 'Scanning…' : detected.length > 0 ? 'Re-scan' : 'Scan now'}
+              {scanning ? t('Scanning…') : detected.length > 0 ? t('Re-scan') : t('Scan now')}
             </button>
           </div>
 
@@ -167,18 +166,18 @@ export default function LocalInstallScanner({ existingItems, onImport, onClose }
           {detected.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{detected.length} game folders found</span>
-                <span className="importer-new">{newCount} new</span>
-                <span className="importer-dupe">{dupeCount} already in library</span>
+                <span>{t('{detected} game folders found', { detected: detected.length })}</span>
+                <span className="importer-new">{t('{newCount} new', { newCount: newCount })}</span>
+                <span className="importer-dupe">{t('{dupeCount} already in library', { dupeCount: dupeCount })}</span>
                 <div className="importer-select-actions">
-                  <button type="button" onClick={() => setSelected(new Set(detected.filter((g) => !matches.get(g.installPath)).map((g) => g.installPath)))}>Select new only</button>
-                  <button type="button" onClick={() => setSelected(new Set(detected.map((g) => g.installPath)))}>Select all</button>
-                  <button type="button" onClick={() => setSelected(new Set())}>Select none</button>
+                  <button type="button" onClick={() => setSelected(new Set(detected.filter((g) => !matches.get(g.installPath)).map((g) => g.installPath)))}>{t('Select new only')}</button>
+                  <button type="button" onClick={() => setSelected(new Set(detected.map((g) => g.installPath)))}>{t('Select all')}</button>
+                  <button type="button" onClick={() => setSelected(new Set())}>{t('Select none')}</button>
                 </div>
               </div>
               <div className="importer-table-wrap">
                 <table className="importer-table">
-                  <thead><tr><th style={{ width: 32 }}></th><th>Name</th><th style={{ width: 70 }}>Store</th><th style={{ width: 90 }}>Size</th><th style={{ width: 100 }}>Match</th></tr></thead>
+                  <thead><tr><th style={{ width: 32 }}></th><th>{t('Name')}</th><th style={{ width: 70 }}>{t('Store')}</th><th style={{ width: 90 }}>{t('Size')}</th><th style={{ width: 100 }}>{t('Match')}</th></tr></thead>
                   <tbody>
                     {detected.map((g) => {
                       const ex = matches.get(g.installPath)
@@ -188,7 +187,7 @@ export default function LocalInstallScanner({ existingItems, onImport, onClose }
                           <td>{g.name}</td>
                           <td>{g.platform}</td>
                           <td>{humanBytes(g.sizeBytes)}</td>
-                          <td>{ex ? <span className="importer-badge dupe">In library</span> : <span className="importer-badge new">New</span>}</td>
+                          <td>{ex ? <span className="importer-badge dupe">{t('In library')}</span> : <span className="importer-badge new">{t('New')}</span>}</td>
                         </tr>
                       )
                     })}
@@ -200,9 +199,9 @@ export default function LocalInstallScanner({ existingItems, onImport, onClose }
         </div>
         {newCount > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button type="button" className="primary-btn" disabled={selected.size === 0} onClick={handleAdd}>
-              Add {selected.size} game{selected.size === 1 ? '' : 's'}
+              {plural(selected.size, 'Add {n} game', 'Add {n} games')}
             </button>
           </div>
         )}

@@ -7,6 +7,7 @@ import { useState } from 'react'
 import type { Item, MusicType, MusicSource, Track } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { t } from './i18n'
 
 interface Props {
   initialQuery: string
@@ -182,7 +183,7 @@ export default function MusicBrainzFetcher({ initialQuery, onApply, onClose }: P
 
   const search = async (q: string): Promise<FetcherResult<ReleaseGroupHit>> => {
     const r = await window.ipcRenderer.invoke('mb:search', q)
-    if (!r?.ok) return { ok: false, error: r?.error ?? 'Search failed' }
+    if (!r?.ok) return { ok: false, error: r?.error ?? t('Search failed') }
     // MB doesn't always return hits pre-sorted by score, and low-score
     // matches often surface accidental keyword overlaps.
     const hits = (r.data as ReleaseGroupHit[])
@@ -270,16 +271,11 @@ export default function MusicBrainzFetcher({ initialQuery, onApply, onClose }: P
   return (
     <>
       <FetcherModal<ReleaseGroupHit>
-        title="MusicBrainz · Music"
+        title={t('MusicBrainz · Music')}
         hint={
-          <>Open, community-run music database — no API key needed. Applying overwrites
-          title, artist, alternative titles, release date, type, source, label, genres,
-          producers and tracklist. Cover comes from Cover Art Archive (same project).
-          Rating, notes and listen history are left alone. Include the artist in your
-          search for sharper results (e.g. <code>in rainbows radiohead</code>). Rate
-          limit is one request per second; expect a small wait.</>
+          <>{t('Open, community-run music database — no API key needed. Applying overwrites title, artist, alternative titles, release date, type, source, label, genres, producers and tracklist. Cover comes from Cover Art Archive (same project). Rating, notes and listen history are left alone. Include the artist in your search for sharper results (e.g.')}{' '}<code>{t('in rainbows radiohead')}</code>{t('). Rate limit is one request per second; expect a small wait.')}</>
         }
-        placeholder="Search release, e.g. 'in rainbows radiohead'…"
+        placeholder={t('Search release, e.g. \'in rainbows radiohead\'…')}
         initialQuery={initialQuery}
         onSearch={search}
         onApply={chooseReleaseGroup}
@@ -303,15 +299,12 @@ export default function MusicBrainzFetcher({ initialQuery, onApply, onClose }: P
         <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={closeEditionPicker}>
           <div className="modal-panel fetch-modal mb-editions-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Choose an edition — {pendingRg.title}</h2>
+              <h2>{t('Choose an edition — {title}', { title: pendingRg.title })}</h2>
               <button type="button" className="panel-close" onClick={closeEditionPicker}>✕</button>
             </div>
             <div className="modal-body">
               <p className="hint" style={{ marginTop: 0 }}>
-                MusicBrainz has {editions.length} different releases of this album — different
-                countries, formats (CD / vinyl / digital) and named editions (Deluxe, Limited,
-                Reissue, Anniversary…), each with its own tracklist and cover. Pick the one that
-                matches what you're tracking.
+                {t('MusicBrainz has {editions} different releases of this album — different countries, formats (CD / vinyl / digital) and named editions (Deluxe, Limited, Reissue, Anniversary…), each with its own tracklist and cover. Pick the one that matches what you\'re tracking.', { editions: editions.length })}
               </p>
               <div className="mb-editions-grid">
                 {editions.map((ed) => {
@@ -341,7 +334,7 @@ export default function MusicBrainzFetcher({ initialQuery, onApply, onClose }: P
                         {[formats, trackCount ? `${trackCount} tracks` : null, ed.country, ed.date].filter(Boolean).join(' · ')}
                       </div>
                       {label && <div className="mb-edition-label">{label}</div>}
-                      {applyingEdition === ed.id && <span className="anilist-applying">Applying…</span>}
+                      {applyingEdition === ed.id && <span className="anilist-applying">{t('Applying…')}</span>}
                     </button>
                   )
                 })}

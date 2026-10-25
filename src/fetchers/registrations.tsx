@@ -7,6 +7,7 @@
 
 import { lazy, Suspense, createElement } from 'react'
 import { registerFetcher, type FetcherContext, type FetcherRegistration } from './registry'
+import { t } from '../i18n'
 
 const AniDBFetcher       = lazy(() => import('../AniDBFetcher'))
 const AniListFetcher     = lazy(() => import('../AniListFetcher'))
@@ -44,14 +45,14 @@ const suspense = (child: React.ReactElement) =>
 const registrations: FetcherRegistration[] = [
   {
     id: 'anilist',
-    label: 'AniList',
+    label: t('AniList'),
     // comics_west is included for parity with the previous panel wiring
     // (the button was drawn unconditionally under `isMangaLike`); AniList
     // doesn't actually index western comics, so the fetch will typically
     // return no results there.
     categories: ['anime', 'donghua', 'manga', 'manhwa', 'manhua', 'comics_west'],
     auth: 'none',
-    hint: (cat) => (cat === 'anime' || cat === 'donghua') ? 'Metadata + cover + banner' : 'Metadata + cover',
+    hint: (cat) => (cat === 'anime' || cat === 'donghua') ? t('Metadata + cover + banner') : t('Metadata + cover'),
     render: (ctx: FetcherContext) => suspense(
       createElement(AniListFetcher, {
         initialQuery: ctx.initialQuery,
@@ -70,11 +71,11 @@ const registrations: FetcherRegistration[] = [
   // later is a two-line change.
   {
     id: 'kitsu',
-    label: 'Kitsu',
+    label: t('Kitsu'),
     // Kitsu tackles anime + manga proper. Western comics use ComicVine.
     categories: ['anime', 'donghua', 'manga', 'manhwa', 'manhua'],
     auth: 'none',
-    hint: 'Fallback when other sources miss it',
+    hint: t('Fallback when other sources miss it'),
     render: (ctx: FetcherContext) => suspense(
       createElement(KitsuFetcher, {
         initialQuery: ctx.initialQuery,
@@ -87,10 +88,10 @@ const registrations: FetcherRegistration[] = [
   },
   {
     id: 'anidb',
-    label: 'AniDB',
+    label: t('AniDB'),
     categories: ['anime', 'donghua'],
     auth: 'anidbClient',
-    hint: 'Weighted tags + tighter refs · paste AID',
+    hint: t('Weighted tags + tighter refs · paste AID'),
     render: (ctx: FetcherContext) => suspense(
       createElement(AniDBFetcher, {
         anidbClient: ctx.settings.anidbClient,
@@ -102,10 +103,10 @@ const registrations: FetcherRegistration[] = [
   },
   {
     id: 'mangadex',
-    label: 'MangaDex',
+    label: t('MangaDex'),
     categories: ['manga', 'manhwa', 'manhua'],
     auth: 'none',
-    hint: 'Deep catalog incl. obscure titles',
+    hint: t('Deep catalog incl. obscure titles'),
     render: (ctx: FetcherContext) => suspense(
       createElement(MangaDexFetcher, {
         initialQuery: ctx.initialQuery,
@@ -117,10 +118,10 @@ const registrations: FetcherRegistration[] = [
   },
   {
     id: 'comicvine',
-    label: 'ComicVine',
+    label: t('ComicVine'),
     categories: ['comics_west'],
     auth: 'comicvineApiKey',
-    hint: 'Marvel, DC, Image, indies + creator credits',
+    hint: t('Marvel, DC, Image, indies + creator credits'),
     render: (ctx: FetcherContext) => suspense(
       createElement(ComicVineFetcher, {
         apiKey: ctx.settings.comicvineApiKey,
@@ -132,10 +133,10 @@ const registrations: FetcherRegistration[] = [
   },
   {
     id: 'tmdb',
-    label: 'TMDb',
+    label: t('TMDb'),
     categories: ['peliculas', 'series'],
     auth: 'tmdbApiKey',
-    hint: (cat) => cat === 'series' ? 'Cast, seasons, network, dates, genres' : 'Cast, crew, backdrop, dates, genres',
+    hint: (cat) => cat === 'series' ? t('Cast, seasons, network, dates, genres') : t('Cast, crew, backdrop, dates, genres'),
     render: (ctx: FetcherContext) => suspense(
       createElement(TmdbFetcher, {
         apiKey: ctx.settings.tmdbApiKey,
@@ -149,10 +150,10 @@ const registrations: FetcherRegistration[] = [
   },
   {
     id: 'igdb',
-    label: 'IGDB',
+    label: t('IGDB'),
     categories: ['videojuegos'],
     auth: 'igdb',
-    hint: 'Full metadata — devs, publishers, platforms, genres',
+    hint: t('Full metadata — devs, publishers, platforms, genres'),
     render: (ctx: FetcherContext) => suspense(
       createElement(IgdbFetcher, {
         clientId: ctx.settings.igdbClientId,
@@ -167,10 +168,10 @@ const registrations: FetcherRegistration[] = [
   },
   {
     id: 'musicbrainz',
-    label: 'MusicBrainz',
+    label: t('MusicBrainz'),
     categories: ['musica'],
     auth: 'none',
-    hint: 'Releases, tracklist, artists + Cover Art',
+    hint: t('Releases, tracklist, artists + Cover Art'),
     render: (ctx: FetcherContext) => suspense(
       createElement(MusicBrainzFetcher, {
         initialQuery: ctx.initialQuery,
@@ -186,10 +187,10 @@ const registrations: FetcherRegistration[] = [
   // the proxy comes back.
   {
     id: 'vndb',
-    label: 'VNDB',
+    label: t('VNDB'),
     categories: ['visual_novels'],
     auth: 'none',
-    hint: 'Metadata + tags + staff + characters + cover',
+    hint: t('Metadata + tags + staff + characters + cover'),
     render: (ctx: FetcherContext) => suspense(
       createElement(VndbFetcher, {
         initialQuery: ctx.initialQuery,
@@ -200,10 +201,10 @@ const registrations: FetcherRegistration[] = [
   },
   {
     id: 'openlibrary',
-    label: 'OpenLibrary',
+    label: t('OpenLibrary'),
     categories: ['libros'],
     auth: 'none',
-    hint: 'Authors, publisher, page count, ISBN + cover',
+    hint: t('Authors, publisher, page count, ISBN + cover'),
     render: (ctx: FetcherContext) => suspense(
       createElement(OpenLibraryFetcher, {
         initialQuery: ctx.initialQuery,

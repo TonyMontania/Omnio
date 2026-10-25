@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Run } from '../types/arcade'
+import { locale, t } from '../i18n'
 
 interface Props {
   runs: Run[]
@@ -31,7 +32,7 @@ export default function ScoreChart({ runs }: Props) {
     .sort((a, b) => a.date.localeCompare(b.date)), [runs, combo])
 
   if (points.length < 2) {
-    return <p className="hint">Log at least two runs with a score to see how it evolves.</p>
+    return <p className="hint">{t('Log at least two runs with a score to see how it evolves.')}</p>
   }
 
   const scores = points.map((r) => r.score!)
@@ -61,17 +62,17 @@ export default function ScoreChart({ runs }: Props) {
       <div className="arcade-chart-bar">
         {combos.length > 1 && (
           <select className="sort-select" value={combo} onChange={(e) => { setCombo(e.target.value); setHover(null) }}>
-            <option value="">All characters & difficulties</option>
+            <option value="">{t('All characters & difficulties')}</option>
             {combos.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         )}
         <span className="arcade-chart-legend">
-          <span className="legend-dot" aria-hidden /> Run score
-          <span className="legend-line" aria-hidden /> Personal best
+          <span className="legend-dot" aria-hidden />{' '}{t('Run score')}
+          <span className="legend-line" aria-hidden />{' '}{t('Personal best')}
         </span>
       </div>
       <div className="arcade-chart-plot">
-        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Score per run, ${points.length} runs, personal best ${max.toLocaleString()}`}>
+        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('Score per run, {points} runs, personal best {max}', { points: points.length, max: max.toLocaleString(locale()) })}>
           {ticks.map((t) => (
             <g key={t}>
               <line className="arcade-chart-grid" x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} />
@@ -90,7 +91,7 @@ export default function ScoreChart({ runs }: Props) {
         </svg>
         {hovered && hover !== null && (
           <div className="arcade-chart-tip" style={{ left: `${(x(hover) / W) * 100}%`, top: `${(y(hovered.score!) / H) * 100}%` }}>
-            <b>{hovered.score!.toLocaleString()}</b>
+            <b>{hovered.score!.toLocaleString(locale())}</b>
             <span>{hovered.date}</span>
             {comboKey(hovered) && <span>{comboKey(hovered)}</span>}
             {hovered.flags.length > 0 && <span>{hovered.flags.join(' · ')}</span>}

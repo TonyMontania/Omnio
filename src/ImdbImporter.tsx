@@ -17,6 +17,7 @@
 import { useMemo, useState } from 'react'
 import type { Item } from './types'
 import { parseCsv, colIndex } from './utils/csv'
+import { plural, t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -115,7 +116,7 @@ export default function ImdbImporter({ existingItems, onImport, onClose }: Props
         if (!f.name.toLowerCase().endsWith('.csv')) continue
         names.push(f.name); parsed.push(...(await parseFile(f)))
       }
-      if (parsed.length === 0) { setError('No rows found. Expected an IMDb list export.'); setBusy(false); return }
+      if (parsed.length === 0) { setError(t('No rows found. Expected an IMDb list export.')); setBusy(false); return }
       const map = new Map<string, Row>()
       for (const r of parsed) if (!map.has(r.key)) map.set(r.key, r)
       const merged = Array.from(map.values()).sort((a, b) => a.title.localeCompare(b.title))
@@ -172,36 +173,35 @@ export default function ImdbImporter({ existingItems, onImport, onClose }: Props
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 820, width: '94vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Import from IMDb</h2>
+          <h2>{t('Import from IMDb')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Grab the CSV from any IMDb list (watchlist or user list) via the “Export” button.
-            Movies/specials → Movies library, TV series → Series library, games → Games. Your ratings scale 1-10 down to Omnio's 0-5.
+            {t('Grab the CSV from any IMDb list (watchlist or user list) via the “Export” button. Movies/specials → Movies library, TV series → Series library, games → Games. Your ratings scale 1-10 down to Omnio\'s 0-5.')}
           </p>
           <div className="importer-dropzone">
             <input type="file" accept=".csv" style={{ display: 'none' }} id="imdb-file-input"
               onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = '' }} />
-            <label htmlFor="imdb-file-input" className="importer-file-btn">{busy ? 'Reading…' : rows.length > 0 ? 'Pick different file' : '+ Pick CSV'}</label>
+            <label htmlFor="imdb-file-input" className="importer-file-btn">{busy ? t('Reading…') : rows.length > 0 ? t('Pick different file') : t('+ Pick CSV')}</label>
             {fileName && <span className="importer-file-list">{fileName}</span>}
           </div>
           {error && <p className="save-files-error">{error}</p>}
           {rows.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{rows.length} entries</span>
-                <span className="importer-new">{rows.length - dupe} new</span>
-                <span className="importer-dupe">{dupe} already in library</span>
+                <span>{t('{rows} entries', { rows: rows.length })}</span>
+                <span className="importer-new">{t('{rows} new', { rows: rows.length - dupe })}</span>
+                <span className="importer-dupe">{t('{dupe} already in library', { dupe: dupe })}</span>
                 <div className="importer-select-actions">
-                  <button type="button" onClick={() => setSelected(new Set(rows.filter((r) => !matches.get(r.key)).map((r) => r.key)))}>Select new only</button>
-                  <button type="button" onClick={() => setSelected(new Set(rows.map((r) => r.key)))}>Select all</button>
-                  <button type="button" onClick={() => setSelected(new Set())}>Select none</button>
+                  <button type="button" onClick={() => setSelected(new Set(rows.filter((r) => !matches.get(r.key)).map((r) => r.key)))}>{t('Select new only')}</button>
+                  <button type="button" onClick={() => setSelected(new Set(rows.map((r) => r.key)))}>{t('Select all')}</button>
+                  <button type="button" onClick={() => setSelected(new Set())}>{t('Select none')}</button>
                 </div>
               </div>
               <div className="importer-table-wrap">
                 <table className="importer-table">
-                  <thead><tr><th style={{ width: 32 }}></th><th>Title</th><th style={{ width: 60 }}>Year</th><th style={{ width: 80 }}>Kind</th><th style={{ width: 60 }}>Rating</th><th style={{ width: 90 }}>Match</th></tr></thead>
+                  <thead><tr><th style={{ width: 32 }}></th><th>{t('Title')}</th><th style={{ width: 60 }}>{t('Year')}</th><th style={{ width: 80 }}>{t('Kind')}</th><th style={{ width: 60 }}>{t('Rating')}</th><th style={{ width: 90 }}>{t('Match')}</th></tr></thead>
                   <tbody>
                     {rows.map((r) => {
                       const ex = matches.get(r.key)
@@ -210,9 +210,9 @@ export default function ImdbImporter({ existingItems, onImport, onClose }: Props
                           <td><input type="checkbox" checked={selected.has(r.key)} onChange={() => toggle(r.key)} /></td>
                           <td>{r.title}</td>
                           <td>{r.year ?? '—'}</td>
-                          <td>{r.target === 'peliculas' ? 'Movie' : r.target === 'series' ? 'Series' : 'Game'}</td>
+                          <td>{r.target === 'peliculas' ? t('Movie') : r.target === 'series' ? t('Series') : t('Game')}</td>
                           <td>{r.rating ? r.rating.toFixed(1) : '—'}</td>
-                          <td>{ex ? <span className="importer-badge dupe">In library</span> : <span className="importer-badge new">New</span>}</td>
+                          <td>{ex ? <span className="importer-badge dupe">{t('In library')}</span> : <span className="importer-badge new">{t('New')}</span>}</td>
                         </tr>
                       )
                     })}
@@ -224,9 +224,9 @@ export default function ImdbImporter({ existingItems, onImport, onClose }: Props
         </div>
         {rows.length > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button type="button" className="primary-btn" disabled={selected.size === 0} onClick={handleImport}>
-              Import {selected.size} entr{selected.size === 1 ? 'y' : 'ies'}
+              {plural(selected.size, 'Import {n} entry', 'Import {n} entries')}
             </button>
           </div>
         )}

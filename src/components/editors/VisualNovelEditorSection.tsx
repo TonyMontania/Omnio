@@ -23,6 +23,7 @@ import RatingPicker from './RatingPicker'
 import RewatchListEditor from './RewatchListEditor'
 import RelatedListEditor from './RelatedListEditor'
 import RecommendationsEditor from './RecommendationsEditor'
+import { t } from '../../i18n'
 
 type Setter<T> = (updater: T | ((prev: T) => T)) => void
 
@@ -101,17 +102,17 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
   return (
     <>
       <div className="form-section-header" data-belongs-to="overview">
-        <span className="form-section-title">Reading status</span>
+        <span className="form-section-title">{t('Reading status')}</span>
       </div>
       <div className="field-grid two">
         <div className="field-group">
-          <label>Status</label>
+          <label>{t('Status')}</label>
           <select value={visualNovelStatus} onChange={(e) => setVisualNovelStatus(e.target.value as VisualNovelStatus)}>
             {VN_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>Development status</label>
+          <label>{t('Development status')}</label>
           <select value={vnDevStatus} onChange={(e) => setVnDevStatus(e.target.value as VnDevStatus | '')}>
             <option value="">—</option>
             {VN_DEV_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -120,36 +121,36 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
       </div>
 
       <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Visual novel details</span>
-        <span className="form-section-hint">Developers, publishers, engine, aliases, languages, platforms</span>
+        <span className="form-section-title">{t('Visual novel details')}</span>
+        <span className="form-section-hint">{t('Developers, publishers, engine, aliases, languages, platforms')}</span>
       </div>
       <TagEditor
-        label="Aliases (romaji / English / other)"
+        label={t('Aliases (romaji / English / other)')}
         tags={vnAliases}
         onAdd={(v) => setVnAliases((prev) => prev.includes(v) ? prev : [...prev, v])}
         onRemove={(i) => setVnAliases((prev) => prev.filter((_, idx) => idx !== i))}
-        placeholder="Add alternate title"
+        placeholder={t('Add alternate title')}
       />
       <div className="field-grid two">
         <TagEditor
-          label="Developers"
+          label={t('Developers')}
           tags={devs}
           onAdd={(v) => setDevs((prev) => prev.includes(v) ? prev : [...prev, v])}
           onRemove={(i) => setDevs((prev) => prev.filter((_, idx) => idx !== i))}
-          placeholder="Add developer"
+          placeholder={t('Add developer')}
         />
         <TagEditor
-          label="Publishers (fallback / manual)"
+          label={t('Publishers (fallback / manual)')}
           tags={publishers}
           onAdd={(v) => setPublishers((prev) => prev.includes(v) ? prev : [...prev, v])}
           onRemove={(i) => setPublishers((prev) => prev.filter((_, idx) => idx !== i))}
-          placeholder="Add publisher"
+          placeholder={t('Add publisher')}
         />
       </div>
       {vnPublishers.length > 0 && (
         <div className="field-group">
-          <label>Publishers by region</label>
-          <p className="hint">One row per (publisher × language) — pulled from every VNDB release. Flag matches the release language.</p>
+          <label>{t('Publishers by region')}</label>
+          <p className="hint">{t('One row per (publisher × language) — pulled from every VNDB release. Flag matches the release language.')}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {vnPublishers.map((p, i) => (
               <div key={p.id} style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '4px 8px', background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)' }}>
@@ -158,10 +159,10 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
                   <b>{p.name}</b>
                   {p.original && p.original !== p.name && <span style={{ color: 'var(--text-dim)', marginLeft: 6 }}>· {p.original}</span>}
                   <span style={{ color: 'var(--text-faint)', marginLeft: 6, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                    {vnLangLabel(p.lang)} {p.role && p.role !== 'publisher' ? `· ${p.role}` : ''}
+                    {vnLangLabel(p.lang)} {p.role && p.role !== 'publisher' ? t('· {role}', { role: p.role }) : ''}
                   </span>
                 </span>
-                <button type="button" className="secondary-btn" onClick={() => setVnPublishers((prev) => prev.filter((_, j) => j !== i))} title="Remove">×</button>
+                <button type="button" className="secondary-btn" onClick={() => setVnPublishers((prev) => prev.filter((_, j) => j !== i))} title={t('Remove')}>×</button>
               </div>
             ))}
           </div>
@@ -169,48 +170,48 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
       )}
       <div className="field-grid two">
         <div className="field-group">
-          <label>Engine</label>
+          <label>{t('Engine')}</label>
           <input
             list="vn-engine-suggestions"
             value={vnEngine}
             onChange={(e) => setVnEngine(e.target.value)}
-            placeholder="e.g. Ren'Py"
+            placeholder={t('e.g. Ren\'Py')}
           />
           <datalist id="vn-engine-suggestions">
             {VN_ENGINE_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
           </datalist>
         </div>
         <div className="field-group">
-          <label>Original language</label>
+          <label>{t('Original language')}</label>
           <input
             value={vnOriginalLanguage}
             onChange={(e) => setVnOriginalLanguage(e.target.value)}
-            placeholder="e.g. ja"
+            placeholder={t('e.g. ja')}
           />
         </div>
       </div>
       <TagEditor
-        label="Languages available"
+        label={t('Languages available')}
         tags={vnLanguages}
         onAdd={(v) => setVnLanguages((prev) => prev.includes(v) ? prev : [...prev, v])}
         onRemove={(i) => setVnLanguages((prev) => prev.filter((_, idx) => idx !== i))}
-        placeholder="Add language code (e.g. en)"
+        placeholder={t('Add language code (e.g. en)')}
       />
       <div className="field-group">
-        <label>Platforms</label>
+        <label>{t('Platforms')}</label>
         <PlatformEditor value={platforms} onChange={setPlatforms} existing={existingPlatforms} />
       </div>
       <div className="field-group">
-        <label>Description</label>
-        <textarea value={vnDescription} onChange={(e) => setVnDescription(e.target.value)} rows={4} placeholder="Synopsis" />
+        <label>{t('Description')}</label>
+        <textarea value={vnDescription} onChange={(e) => setVnDescription(e.target.value)} rows={4} placeholder={t('Synopsis')} />
       </div>
 
       <div className="form-section-header" data-belongs-to="media">
-        <span className="form-section-title">Covers gallery</span>
-        <span className="form-section-hint">One cover per release. Star the one you want as the main card cover; toggle Exhibited to control which show up in the detail view's "Covers" section.</span>
+        <span className="form-section-title">{t('Covers gallery')}</span>
+        <span className="form-section-hint">{t('One cover per release. Star the one you want as the main card cover; toggle Exhibited to control which show up in the detail view\'s "Covers" section.')}</span>
       </div>
       {vnCovers.length === 0 && (
-        <p className="hint">No extra covers yet. Fetching from VNDB downloads every release cover — usually 3–8 per VN.</p>
+        <p className="hint">{t('No extra covers yet. Fetching from VNDB downloads every release cover — usually 3–8 per VN.')}</p>
       )}
       {vnCovers.length > 0 && (
         <div className="field-group">
@@ -233,34 +234,34 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
                       setCover(c.path)
                     }}
                     style={{ fontSize: 11, padding: '2px 8px' }}
-                    title="Use as the main cover"
-                  >★ Main</button>
+                    title={t('Use as the main cover')}
+                  >{t('★ Main')}</button>
                   <button
                     type="button"
                     className={c.exhibited ? 'pill active' : 'pill'}
                     onClick={() => setVnCovers((prev) => prev.map((x, j) => j === i ? { ...x, exhibited: !x.exhibited } : x))}
                     style={{ fontSize: 11, padding: '2px 8px' }}
-                  >Exhibited</button>
+                  >{t('Exhibited')}</button>
                   <button
                     type="button"
                     className="pill"
                     onClick={() => setVnCovers((prev) => prev.filter((_, j) => j !== i))}
                     style={{ fontSize: 11, padding: '2px 8px', marginLeft: 'auto' }}
-                    title="Remove this cover"
+                    title={t('Remove this cover')}
                   >×</button>
                 </div>
               </div>
             ))}
           </div>
-          <p className="hint" style={{ marginTop: 6 }}>Main cover is also stored in the top-level <code>cover</code> field so cards and lists render correctly.</p>
+          <p className="hint" style={{ marginTop: 6 }}>{t('Main cover is also stored in the top-level')}{' '}<code>cover</code>{' '}{t('field so cards and lists render correctly.')}</p>
         </div>
       )}
 
       {vnEditions.length > 0 && (
         <>
           <div className="form-section-header" data-belongs-to="identity">
-            <span className="form-section-title">Editions</span>
-            <span className="form-section-hint">Release editions per language (Original / Steam / fan translation)</span>
+            <span className="form-section-title">{t('Editions')}</span>
+            <span className="form-section-hint">{t('Release editions per language (Original / Steam / fan translation)')}</span>
           </div>
           <div className="field-group">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -270,10 +271,10 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
                   <span style={{ flex: 1 }}>
                     <b>{e.name}</b>
                     <span style={{ color: 'var(--text-faint)', marginLeft: 6, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                      {e.lang ? vnLangLabel(e.lang) : ''}{e.official ? ' · official' : ' · unofficial'}
+                      {e.lang ? vnLangLabel(e.lang) : ''}{e.official ? t(' · official') : t(' · unofficial')}
                     </span>
                   </span>
-                  <button type="button" className="secondary-btn" onClick={() => setVnEditions((prev) => prev.filter((_, j) => j !== i))} title="Remove">×</button>
+                  <button type="button" className="secondary-btn" onClick={() => setVnEditions((prev) => prev.filter((_, j) => j !== i))} title={t('Remove')}>×</button>
                 </div>
               ))}
             </div>
@@ -282,79 +283,79 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
       )}
 
       <div className="form-section-header" data-belongs-to="progress">
-        <span className="form-section-title">Release &amp; length</span>
+        <span className="form-section-title">{t('Release & length')}</span>
       </div>
       <div className="field-grid two">
         <div className="field-group">
-          <label>Release date</label>
+          <label>{t('Release date')}</label>
           <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
         </div>
         <div className="field-group">
-          <label>Release year (fallback)</label>
-          <input value={releaseYear} onChange={(e) => setReleaseYear(e.target.value.replace(/[^\d]/g, '').slice(0, 4))} placeholder="e.g. 2004" />
+          <label>{t('Release year (fallback)')}</label>
+          <input value={releaseYear} onChange={(e) => setReleaseYear(e.target.value.replace(/[^\d]/g, '').slice(0, 4))} placeholder={t('e.g. 2004')} />
         </div>
       </div>
       <div className="field-grid two">
         <div className="field-group">
-          <label>Length</label>
+          <label>{t('Length')}</label>
           <select value={vnLength} onChange={(e) => setVnLength(e.target.value as VnLength | '')}>
             <option value="">—</option>
             {VN_LENGTH_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>Hours (community average)</label>
-          <input value={vnLengthHours} onChange={(e) => setVnLengthHours(e.target.value)} placeholder="e.g. 28.5" />
+          <label>{t('Hours (community average)')}</label>
+          <input value={vnLengthHours} onChange={(e) => setVnLengthHours(e.target.value)} placeholder={t('e.g. 28.5')} />
         </div>
       </div>
       <div className="field-grid two">
         <div className="field-group">
-          <label>Your play time</label>
-          <input value={playTime} onChange={(e) => setPlayTime(e.target.value)} placeholder="e.g. 42h" />
+          <label>{t('Your play time')}</label>
+          <input value={playTime} onChange={(e) => setPlayTime(e.target.value)} placeholder={t('e.g. 42h')} />
         </div>
         <div className="field-group">
-          <label>Started</label>
+          <label>{t('Started')}</label>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </div>
       </div>
 
       <div className="form-section-header" data-belongs-to="overview">
-        <span className="form-section-title">Ratings &amp; completion</span>
+        <span className="form-section-title">{t('Ratings & completion')}</span>
       </div>
       <div className="field-grid two">
         <div className="field-group">
-          <label>Your rating</label>
+          <label>{t('Your rating')}</label>
           <RatingPicker value={rating} onChange={setRating} />
         </div>
         <div className="field-group">
-          <label>VNDB community rating (/10)</label>
-          <input value={vnCommunityRating} onChange={(e) => setVnCommunityRating(e.target.value)} placeholder="e.g. 8.45" />
+          <label>{t('VNDB community rating (/10)')}</label>
+          <input value={vnCommunityRating} onChange={(e) => setVnCommunityRating(e.target.value)} placeholder={t('e.g. 8.45')} />
         </div>
       </div>
       <div className="field-group">
-        <label>Completion date</label>
+        <label>{t('Completion date')}</label>
         <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
       </div>
       <div className="field-group">
-        <label>Content flags</label>
+        <label>{t('Content flags')}</label>
         <div className="pills">
-          <button type="button" className={nsfw ? 'pill active' : 'pill'} onClick={() => setNsfw(!nsfw)}>18+ / NSFW content</button>
+          <button type="button" className={nsfw ? 'pill active' : 'pill'} onClick={() => setNsfw(!nsfw)}>{t('18+ / NSFW content')}</button>
         </div>
       </div>
 
       <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Staff</span>
-        <span className="form-section-hint">Writer / artist / composer / director / translator</span>
+        <span className="form-section-title">{t('Staff')}</span>
+        <span className="form-section-hint">{t('Writer / artist / composer / director / translator')}</span>
       </div>
       <div className="field-group">
-        <label>Credits</label>
+        <label>{t('Credits')}</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {vnStaff.map((s, i) => (
             <div key={s.id} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <input
                 value={s.name}
                 onChange={(e) => setVnStaff((prev) => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
-                placeholder="Name"
+                placeholder={t('Name')}
                 style={{ flex: '1 1 200px' }}
               />
               <select
@@ -367,10 +368,10 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
               <input
                 value={s.note ?? ''}
                 onChange={(e) => setVnStaff((prev) => prev.map((x, j) => j === i ? { ...x, note: e.target.value } : x))}
-                placeholder="Route / notes"
+                placeholder={t('Route / notes')}
                 style={{ flex: '1 1 30%' }}
               />
-              <button type="button" className="secondary-btn" onClick={() => setVnStaff((prev) => prev.filter((_, j) => j !== i))} title="Remove">×</button>
+              <button type="button" className="secondary-btn" onClick={() => setVnStaff((prev) => prev.filter((_, j) => j !== i))} title={t('Remove')}>×</button>
             </div>
           ))}
           <button
@@ -379,18 +380,18 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
             onClick={() => setVnStaff((prev) => [...prev, { id: crypto.randomUUID(), name: '', role: 'writer' as VnStaffRole }])}
             style={{ alignSelf: 'flex-start' }}
           >
-            + Add staff member
+            {t('+ Add staff member')}
           </button>
         </div>
       </div>
 
       <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Characters</span>
-        <span className="form-section-hint">Protagonist, main, side, cameos · with voice actor when voiced</span>
+        <span className="form-section-title">{t('Characters')}</span>
+        <span className="form-section-hint">{t('Protagonist, main, side, cameos · with voice actor when voiced')}</span>
       </div>
       <input ref={characterFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCharImagePick} />
       <div className="field-group">
-        <label>Cast</label>
+        <label>{t('Cast')}</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {vnCharacters.map((c, i) => (
             <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: 8, background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)' }}>
@@ -399,7 +400,7 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
                   {c.image ? (
                     <img src={assetSrc(c.image)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <span style={{ color: 'var(--text-faint)', fontSize: 10 }}>No image</span>
+                    <span style={{ color: 'var(--text-faint)', fontSize: 10 }}>{t('No image')}</span>
                   )}
                 </div>
                 <button
@@ -407,14 +408,14 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
                   className="secondary-btn"
                   onClick={() => { characterEditIdxRef.current = i; characterFileInputRef.current?.click() }}
                   style={{ fontSize: 11, padding: '2px 6px' }}
-                >Upload</button>
+                >{t('Upload')}</button>
               </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <input
                     value={c.name}
                     onChange={(e) => setVnCharacters((prev) => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
-                    placeholder="Character name"
+                    placeholder={t('Character name')}
                     style={{ flex: '1 1 200px' }}
                   />
                   <select
@@ -427,19 +428,19 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
                   <input
                     value={c.seiyuu ?? ''}
                     onChange={(e) => setVnCharacters((prev) => prev.map((x, j) => j === i ? { ...x, seiyuu: e.target.value } : x))}
-                    placeholder="Voice actor"
+                    placeholder={t('Voice actor')}
                     style={{ flex: '1 1 180px' }}
                   />
                 </div>
                 <textarea
                   value={c.description ?? ''}
                   onChange={(e) => setVnCharacters((prev) => prev.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
-                  placeholder="Character description"
+                  placeholder={t('Character description')}
                   rows={2}
                   style={{ resize: 'vertical' }}
                 />
               </div>
-              <button type="button" className="secondary-btn" onClick={() => setVnCharacters((prev) => prev.filter((_, j) => j !== i))} title="Remove">×</button>
+              <button type="button" className="secondary-btn" onClick={() => setVnCharacters((prev) => prev.filter((_, j) => j !== i))} title={t('Remove')}>×</button>
             </div>
           ))}
           <button
@@ -448,7 +449,7 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
             onClick={() => setVnCharacters((prev) => [...prev, { id: crypto.randomUUID(), name: '', role: 'main' as VnCharacterRole }])}
             style={{ alignSelf: 'flex-start' }}
           >
-            + Add character
+            {t('+ Add character')}
           </button>
         </div>
       </div>
@@ -456,8 +457,8 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
       {vnScreenshots.length > 0 && (
         <>
           <div className="form-section-header" data-belongs-to="media">
-            <span className="form-section-title">Screenshots</span>
-            <span className="form-section-hint">In-game shots · toggle the NSFW flag to blur individual images in the detail view</span>
+            <span className="form-section-title">{t('Screenshots')}</span>
+            <span className="form-section-hint">{t('In-game shots · toggle the NSFW flag to blur individual images in the detail view')}</span>
           </div>
           <div className="field-group">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
@@ -470,7 +471,7 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
                       className={s.nsfw ? 'pill active' : 'pill'}
                       onClick={() => setVnScreenshots((prev) => prev.map((x, j) => j === i ? { ...x, nsfw: !x.nsfw } : x))}
                       style={{ fontSize: 11, padding: '2px 8px' }}
-                    >NSFW</button>
+                    >{t('NSFW')}</button>
                     <button type="button" className="pill" onClick={() => setVnScreenshots((prev) => prev.filter((_, j) => j !== i))} style={{ fontSize: 11, padding: '2px 8px', marginLeft: 'auto' }}>×</button>
                   </div>
                 </div>
@@ -481,44 +482,44 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
       )}
 
       <div className="form-section-header" data-belongs-to="notes">
-        <span className="form-section-title">Review</span>
-        <span className="form-section-hint">Your take · with optional spoiler toggle</span>
+        <span className="form-section-title">{t('Review')}</span>
+        <span className="form-section-hint">{t('Your take · with optional spoiler toggle')}</span>
       </div>
       <div className="field-group">
-        <label>Review</label>
-        <textarea value={vnReview} onChange={(e) => setVnReview(e.target.value)} rows={4} placeholder="Your review" />
+        <label>{t('Review')}</label>
+        <textarea value={vnReview} onChange={(e) => setVnReview(e.target.value)} rows={4} placeholder={t('Your review')} />
         {vnReview.trim() && (
           <div className="field-inline">
-            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(!hasSpoilers)}>Contains spoilers</button>
+            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(!hasSpoilers)}>{t('Contains spoilers')}</button>
           </div>
         )}
       </div>
 
       <div className="form-section-header" data-belongs-to="history">
-        <span className="form-section-title">Replay history</span>
-        <span className="form-section-hint">Log each replay (different route, true ending, etc.)</span>
+        <span className="form-section-title">{t('Replay history')}</span>
+        <span className="form-section-hint">{t('Log each replay (different route, true ending, etc.)')}</span>
       </div>
       <div className="field-group">
-        <label>Play history</label>
+        <label>{t('Play history')}</label>
         <RewatchListEditor
           rewatches={rewatches}
           onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
           onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
           onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
           onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-          labels={{ rewatch: 'Replayed', started: 'Started playing', finished: 'Finished playing', dropped: 'Dropped', note: 'Note' }}
+          labels={{ rewatch: t('Replayed'), started: t('Started playing'), finished: t('Finished playing'), dropped: t('Dropped'), note: t('Note') }}
         />
       </div>
 
       <div className="form-section-header" data-belongs-to="related">
-        <span className="form-section-title">Related &amp; recommendations</span>
+        <span className="form-section-title">{t('Related & recommendations')}</span>
       </div>
       <div className="field-group">
-        <label>VNDB id</label>
-        <input value={vndbId} onChange={(e) => setVndbId(e.target.value)} placeholder="e.g. v17" />
+        <label>{t('VNDB id')}</label>
+        <input value={vndbId} onChange={(e) => setVndbId(e.target.value)} placeholder={t('e.g. v17')} />
       </div>
       <div className="field-group">
-        <label>Related visual novels</label>
+        <label>{t('Related visual novels')}</label>
         <RelatedListEditor
           related={relatedItems}
           options={items.filter((i) => i.categoryId === 'visual_novels' && i.id !== editingId)}
@@ -527,17 +528,17 @@ export default function VisualNovelEditorSection(props: VisualNovelEditorSection
           onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
           onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
           onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-          pickerPlaceholder="Add related item… (any library)"
+          pickerPlaceholder={t('Add related item… (any library)')}
         />
       </div>
       <div className="field-group">
-        <label>Recommendations</label>
+        <label>{t('Recommendations')}</label>
         <RecommendationsEditor
           ids={recommendedItems}
           options={items.filter((i) => i.categoryId === 'visual_novels' && i.id !== editingId)}
           onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
           onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-          pickerPlaceholder="Add recommended VN…"
+          pickerPlaceholder={t('Add recommended VN…')}
         />
       </div>
       {cover && <input type="hidden" value={cover} />}

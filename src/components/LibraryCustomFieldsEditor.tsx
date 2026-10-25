@@ -14,6 +14,7 @@
 import { useState } from 'react'
 import type { LibraryCustomFieldDef, LibraryCustomFieldKind } from '../types/customFields'
 import { CATEGORIES } from '../categories'
+import { plural, t } from '../i18n'
 
 interface Props {
   fields: Record<string, LibraryCustomFieldDef[]>
@@ -21,11 +22,11 @@ interface Props {
 }
 
 const KIND_LABELS: Record<LibraryCustomFieldKind, string> = {
-  text: 'Text',
-  number: 'Number',
-  date: 'Date',
-  boolean: 'Yes / No',
-  select: 'Select from list',
+  text: t('Text'),
+  number: t('Number'),
+  date: t('Date'),
+  boolean: t('Yes / No'),
+  select: t('Select from list'),
 }
 const KIND_ORDER: LibraryCustomFieldKind[] = ['text', 'number', 'date', 'boolean', 'select']
 
@@ -65,11 +66,11 @@ export default function LibraryCustomFieldsEditor({ fields, onChange }: Props) {
   return (
     <div className="library-custom-fields">
       <div className="field-group">
-        <label>Library</label>
+        <label>{t('Library')}</label>
         <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
           {CATEGORIES.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.label} {(fields[c.id]?.length ?? 0) > 0 ? ` · ${fields[c.id]!.length} field${fields[c.id]!.length === 1 ? '' : 's'}` : ''}
+              {c.label} {(fields[c.id]?.length ?? 0) > 0 ? ` ${plural(fields[c.id]!.length, '· {n} field', '· {n} fields')}` : ''}
             </option>
           ))}
         </select>
@@ -77,7 +78,7 @@ export default function LibraryCustomFieldsEditor({ fields, onChange }: Props) {
 
       <div className="library-custom-fields-add">
         <input
-          placeholder="New field name (e.g. Kojima meta, PC ports available)"
+          placeholder={t('New field name (e.g. Kojima meta, PC ports available)')}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') addField() }}
@@ -85,11 +86,11 @@ export default function LibraryCustomFieldsEditor({ fields, onChange }: Props) {
         <select value={newKind} onChange={(e) => setNewKind(e.target.value as LibraryCustomFieldKind)}>
           {KIND_ORDER.map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
         </select>
-        <button type="button" className="primary-btn" onClick={addField} disabled={!newName.trim()}>+ Add field</button>
+        <button type="button" className="primary-btn" onClick={addField} disabled={!newName.trim()}>{t('+ Add field')}</button>
       </div>
 
       {list.length === 0 ? (
-        <p className="hint">No custom fields for this library yet. Add one above — it'll appear in every item editor for this library.</p>
+        <p className="hint">{t('No custom fields for this library yet. Add one above — it\'ll appear in every item editor for this library.')}</p>
       ) : (
         <ul className="library-custom-fields-list">
           {list.map((def) => (
@@ -106,11 +107,11 @@ export default function LibraryCustomFieldsEditor({ fields, onChange }: Props) {
                 >
                   {KIND_ORDER.map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
                 </select>
-                <button type="button" className="pill" onClick={() => remove(def.id)}>Remove</button>
+                <button type="button" className="pill" onClick={() => remove(def.id)}>{t('Remove')}</button>
               </div>
               <input
                 className="library-custom-field-desc"
-                placeholder="Optional description (shown under the input in the editor)"
+                placeholder={t('Optional description (shown under the input in the editor)')}
                 value={def.description ?? ''}
                 onChange={(e) => patch(def.id, (d) => ({ ...d, description: e.target.value || undefined }))}
               />
@@ -120,11 +121,11 @@ export default function LibraryCustomFieldsEditor({ fields, onChange }: Props) {
                   checked={!!def.showOnCard}
                   onChange={(e) => patch(def.id, (d) => ({ ...d, showOnCard: e.target.checked || undefined }))}
                 />
-                <span>Show as a chip on the item card</span>
+                <span>{t('Show as a chip on the item card')}</span>
               </label>
               {def.kind === 'select' && (
                 <div className="library-custom-field-options">
-                  <label>Options (one per line)</label>
+                  <label>{t('Options (one per line)')}</label>
                   <textarea
                     value={(def.options ?? []).join('\n')}
                     onChange={(e) => patch(def.id, (d) => ({ ...d, options: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) }))}

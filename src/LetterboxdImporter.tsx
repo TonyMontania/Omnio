@@ -18,6 +18,7 @@
 import { useMemo, useState } from 'react'
 import type { Item, MovieSource } from './types'
 import { parseCsv, colIndex } from './utils/csv'
+import { plural, t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -135,7 +136,7 @@ export default function LetterboxdImporter({ existingItems, onImport, onClose }:
         parsed.push(...got)
       }
       if (parsed.length === 0) {
-        setError('No rows found. Letterboxd expects watched.csv / ratings.csv / diary.csv.')
+        setError(t('No rows found. Letterboxd expects watched.csv / ratings.csv / diary.csv.'))
         setBusy(false)
         return
       }
@@ -215,14 +216,12 @@ export default function LetterboxdImporter({ existingItems, onImport, onClose }:
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel letterboxd-importer" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 780, width: '94vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Import from Letterboxd</h2>
+          <h2>{t('Import from Letterboxd')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Drop one or more of <code>watched.csv</code>, <code>ratings.csv</code>, <code>diary.csv</code> from
-            your Letterboxd account export (Settings → Data → Export). If you have all three, upload them
-            together — rows merge automatically so ratings and watch dates line up per movie.
+            {t('Drop one or more of')}{' '}<code>watched.csv</code>, <code>ratings.csv</code>, <code>diary.csv</code>{' '}{t('from your Letterboxd account export (Settings → Data → Export). If you have all three, upload them together — rows merge automatically so ratings and watch dates line up per movie.')}
           </p>
 
           <div className="importer-dropzone">
@@ -238,7 +237,7 @@ export default function LetterboxdImporter({ existingItems, onImport, onClose }:
               }}
             />
             <label htmlFor="letterboxd-file-input" className="importer-file-btn">
-              {busy ? 'Reading…' : rows.length > 0 ? 'Pick different files' : '+ Pick CSV files'}
+              {busy ? t('Reading…') : rows.length > 0 ? t('Pick different files') : t('+ Pick CSV files')}
             </label>
             {fileNames.length > 0 && (
               <span className="importer-file-list">{fileNames.join(' · ')}</span>
@@ -250,13 +249,13 @@ export default function LetterboxdImporter({ existingItems, onImport, onClose }:
           {rows.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{rows.length} movies found</span>
-                <span className="importer-new">{newCount} new</span>
-                <span className="importer-dupe">{dupeCount} already in library</span>
+                <span>{t('{rows} movies found', { rows: rows.length })}</span>
+                <span className="importer-new">{t('{newCount} new', { newCount: newCount })}</span>
+                <span className="importer-dupe">{t('{dupeCount} already in library', { dupeCount: dupeCount })}</span>
                 <div className="importer-select-actions">
-                  <button type="button" onClick={selectNewOnly}>Select new only</button>
-                  <button type="button" onClick={selectAll}>Select all</button>
-                  <button type="button" onClick={selectNone}>Select none</button>
+                  <button type="button" onClick={selectNewOnly}>{t('Select new only')}</button>
+                  <button type="button" onClick={selectAll}>{t('Select all')}</button>
+                  <button type="button" onClick={selectNone}>{t('Select none')}</button>
                 </div>
               </div>
 
@@ -265,11 +264,11 @@ export default function LetterboxdImporter({ existingItems, onImport, onClose }:
                   <thead>
                     <tr>
                       <th style={{ width: 32 }}></th>
-                      <th>Title</th>
-                      <th style={{ width: 60 }}>Year</th>
-                      <th style={{ width: 70 }}>Rating</th>
-                      <th style={{ width: 110 }}>Watched</th>
-                      <th style={{ width: 90 }}>Status</th>
+                      <th>{t('Title')}</th>
+                      <th style={{ width: 60 }}>{t('Year')}</th>
+                      <th style={{ width: 70 }}>{t('Rating')}</th>
+                      <th style={{ width: 110 }}>{t('Watched')}</th>
+                      <th style={{ width: 90 }}>{t('Status')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -284,7 +283,7 @@ export default function LetterboxdImporter({ existingItems, onImport, onClose }:
                           <td>{r.year ?? '—'}</td>
                           <td>{r.rating ? r.rating.toFixed(1) : '—'}</td>
                           <td>{r.finishedAt ?? '—'}</td>
-                          <td>{existing ? <span className="importer-badge dupe">In library</span> : <span className="importer-badge new">New</span>}</td>
+                          <td>{existing ? <span className="importer-badge dupe">{t('In library')}</span> : <span className="importer-badge new">{t('New')}</span>}</td>
                         </tr>
                       )
                     })}
@@ -296,9 +295,9 @@ export default function LetterboxdImporter({ existingItems, onImport, onClose }:
         </div>
         {rows.length > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button type="button" className="primary-btn" disabled={selected.size === 0} onClick={handleImport}>
-              Import {selected.size} movie{selected.size === 1 ? '' : 's'}
+              {plural(selected.size, 'Import {n} movie', 'Import {n} movies')}
             </button>
           </div>
         )}

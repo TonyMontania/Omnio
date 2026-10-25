@@ -5,6 +5,7 @@ import { useState, useRef } from 'react'
 import type { SingleCover } from '../../types'
 import { assetSrc } from '../../types'
 import { pickImageToDataUrl } from '../../utils/files'
+import { t } from '../../i18n'
 
 export default function SingleCoverEditor({ singles, onAdd, onRemove }: {
   singles: SingleCover[]
@@ -27,19 +28,19 @@ export default function SingleCoverEditor({ singles, onAdd, onRemove }: {
   return (
     <div className="volume-editor">
       <div className="volume-add-row">
-        <input className="track-num" placeholder="Year" value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" />
-        <input placeholder="Single title" value={name} onChange={(e) => setName(e.target.value)} />
-        <button type="button" className="upload-btn" onClick={() => fileRef.current?.click()}>Upload</button>
+        <input className="track-num" placeholder={t('Year')} value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" />
+        <input placeholder={t('Single title')} value={name} onChange={(e) => setName(e.target.value)} />
+        <button type="button" className="upload-btn" onClick={() => fileRef.current?.click()}>{t('Upload')}</button>
         <input type="file" accept="image/*" ref={fileRef} style={{ display: 'none' }} onChange={handleFile} />
-        <button type="button" onClick={handleAdd}>Add</button>
+        <button type="button" onClick={handleAdd}>{t('Add')}</button>
       </div>
-      {cover && <p className="hint">Cover ready — add a title to save this single.</p>}
+      {cover && <p className="hint">{t('Cover ready — add a title to save this single.')}</p>}
       {singles.length > 0 && (
         <div className="volume-grid-preview">
           {singles.map((s) => (
             <div key={s.id} className="volume-preview-card">
               <img src={assetSrc(s.cover)} alt={s.name} />
-              <span>{s.name}{s.year ? ` (${s.year})` : ''}</span>
+              <span>{s.name}{s.year ? ` ${t('({year})', { year: s.year })}` : ''}</span>
               <button type="button" onClick={() => onRemove(s.id)}>✕</button>
             </div>
           ))}

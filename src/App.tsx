@@ -178,7 +178,7 @@ import { resetForm as resetFormImpl, loadItemIntoForm as loadItemIntoFormImpl, t
 import { applyPatchFieldsToForm } from './editor/applyPatch'
 
 import './App.css'
-import { LANGUAGES, setLanguage as applyUiLanguage, t, tk, type Language } from './i18n'
+import { getLanguage, LANGUAGES, locale, plural, setLanguage as applyUiLanguage, t, tk, type Language } from './i18n'
 
 type Layout = 'list' | 'grid' | 'compact' | 'kanban' | 'timeline' | 'diary'
 type GroupBy = 'none' | 'year' | 'decade' | 'status' | 'rating'
@@ -194,28 +194,28 @@ type ThemeName = 'dark' | 'light' | 'dark-amoled' | 'nord' | 'gruvbox-dark' | 's
 type AccentName = 'default' | 'amber' | 'red' | 'blue' | 'green' | 'purple' | 'teal' | 'pink'
 
 const THEME_OPTIONS: { value: ThemeName; label: string; family: string; swatch: string[] }[] = [
-  { value: 'dark', label: 'Dark', family: 'Original', swatch: ['#14151a', '#1b1c23', '#c9a227'] },
-  { value: 'light', label: 'Light', family: 'Original', swatch: ['#f5f3ee', '#ffffff', '#a8791b'] },
-  { value: 'dark-amoled', label: 'AMOLED', family: 'Original', swatch: ['#000000', '#0a0a0a', '#c9a227'] },
-  { value: 'nord', label: 'Nord', family: 'Cool', swatch: ['#2e3440', '#3b4252', '#88c0d0'] },
-  { value: 'tokyo-night', label: 'Tokyo Night', family: 'Cool', swatch: ['#1a1b26', '#24283b', '#7aa2f7'] },
-  { value: 'solarized-dark', label: 'Solarized', family: 'Cool', swatch: ['#002b36', '#073642', '#b58900'] },
-  { value: 'dracula', label: 'Dracula', family: 'Vibrant', swatch: ['#282a36', '#44475a', '#bd93f9'] },
-  { value: 'catppuccin', label: 'Catppuccin', family: 'Vibrant', swatch: ['#1e1e2e', '#313244', '#cba6f7'] },
-  { value: 'rose-pine', label: 'Rosé Pine', family: 'Vibrant', swatch: ['#191724', '#26233a', '#ebbcba'] },
-  { value: 'gruvbox-dark', label: 'Gruvbox', family: 'Warm', swatch: ['#282828', '#3c3836', '#d79921'] },
-  { value: 'everforest', label: 'Everforest', family: 'Warm', swatch: ['#2d353b', '#3d484d', '#a7c080'] },
+  { value: 'dark', label: t('Dark'), family: t('Original'), swatch: ['#14151a', '#1b1c23', '#c9a227'] },
+  { value: 'light', label: t('Light'), family: t('Original'), swatch: ['#f5f3ee', '#ffffff', '#a8791b'] },
+  { value: 'dark-amoled', label: 'AMOLED', family: t('Original'), swatch: ['#000000', '#0a0a0a', '#c9a227'] },
+  { value: 'nord', label: t('Nord'), family: t('Cool'), swatch: ['#2e3440', '#3b4252', '#88c0d0'] },
+  { value: 'tokyo-night', label: 'Tokyo Night', family: t('Cool'), swatch: ['#1a1b26', '#24283b', '#7aa2f7'] },
+  { value: 'solarized-dark', label: t('Solarized'), family: t('Cool'), swatch: ['#002b36', '#073642', '#b58900'] },
+  { value: 'dracula', label: t('Dracula'), family: t('Vibrant'), swatch: ['#282a36', '#44475a', '#bd93f9'] },
+  { value: 'catppuccin', label: t('Catppuccin'), family: t('Vibrant'), swatch: ['#1e1e2e', '#313244', '#cba6f7'] },
+  { value: 'rose-pine', label: 'Rosé Pine', family: t('Vibrant'), swatch: ['#191724', '#26233a', '#ebbcba'] },
+  { value: 'gruvbox-dark', label: t('Gruvbox'), family: t('Warm'), swatch: ['#282828', '#3c3836', '#d79921'] },
+  { value: 'everforest', label: t('Everforest'), family: t('Warm'), swatch: ['#2d353b', '#3d484d', '#a7c080'] },
 ]
 
 const ACCENT_OPTIONS: { value: AccentName; label: string; swatch: string }[] = [
-  { value: 'default', label: 'Theme default', swatch: 'transparent' },
-  { value: 'amber', label: 'Amber', swatch: '#c9a227' },
-  { value: 'red', label: 'Red', swatch: '#d9695f' },
-  { value: 'blue', label: 'Blue', swatch: '#5b9bd5' },
-  { value: 'green', label: 'Green', swatch: '#7fb77e' },
-  { value: 'purple', label: 'Purple', swatch: '#a284d9' },
-  { value: 'teal', label: 'Teal', swatch: '#4fb4a5' },
-  { value: 'pink', label: 'Pink', swatch: '#d97ea0' },
+  { value: 'default', label: t('Theme default'), swatch: 'transparent' },
+  { value: 'amber', label: t('Amber'), swatch: '#c9a227' },
+  { value: 'red', label: t('Red'), swatch: '#d9695f' },
+  { value: 'blue', label: t('Blue'), swatch: '#5b9bd5' },
+  { value: 'green', label: t('Green'), swatch: '#7fb77e' },
+  { value: 'purple', label: t('Purple'), swatch: '#a284d9' },
+  { value: 'teal', label: t('Teal'), swatch: '#4fb4a5' },
+  { value: 'pink', label: t('Pink'), swatch: '#d97ea0' },
 ]
 
 type DensityName = 'comfortable' | 'compact'
@@ -368,23 +368,23 @@ function groupItems(list: AnyItem[], by: 'year' | 'decade' | 'status' | 'rating'
     if (by === 'year') {
       const y = yearOf(it)
       if (!isNaN(y) && y >= 1000 && y <= 3000) putIn(String(y), String(y), it)
-      else putIn('_unknown', 'Unknown year', it)
+      else putIn('_unknown', t('Unknown year'), it)
     } else if (by === 'decade') {
       const y = yearOf(it)
       if (!isNaN(y) && y >= 1000 && y <= 3000) {
         const d = Math.floor(y / 10) * 10
         putIn(String(d), `${d}s`, it)
-      } else putIn('_unknown', 'Unknown decade', it)
+      } else putIn('_unknown', t('Unknown decade'), it)
     } else if (by === 'status') {
       const v = it.gameStatus ?? it.watchStatus ?? it.seriesStatus ?? it.mangaStatus ?? it.bookStatus ?? it.visualNovelStatus
         ?? (categoryId === 'peliculas' ? (it.consumed ? 'watched' : 'unwatched')
           : categoryId === 'musica' ? (it.consumed ? 'listened' : 'unlistened') : '')
       const key = String(v || '_unknown')
-      const label = key === '_unknown' ? 'No status' : key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      const label = key === '_unknown' ? t('No status') : key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
       putIn(key, label, it)
     } else if (by === 'rating') {
       const r = it.rating ?? 0
-      if (!r) putIn('_unknown', 'Unrated', it)
+      if (!r) putIn('_unknown', t('Unrated'), it)
       else {
         const key = String(Math.floor(r))
         putIn(key, `★ ${key}${r % 1 === 0.5 ? '.5' : ''}+`, it)
@@ -433,6 +433,17 @@ function statusRank<T extends string>(value: T | undefined, fallback: T, options
 // Views that publish their own top-bar meta (like plugins do).
 // Date#getDay() index → the weekday values used by `airingDay`.
 const TODAY_WEEKDAY = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+// Tab names of the item editor, translated when shown.
+const EDITOR_TAB_LABELS = {
+  overview: tk('Overview'),
+  identity: tk('Identity'),
+  progress: tk('Progress'),
+  media: tk('Media'),
+  history: tk('History'),
+  related: tk('Related'),
+  notes: tk('Notes'),
+} as const
 
 const SELF_META_VIEWS = new Set<string>(['home', 'arcade', 'calendar', 'playlists'])
 
@@ -569,7 +580,7 @@ function App() {
     filterLabel: string,
   ) => {
     const chosen = await pickSaveFile(
-      `Save ${filterLabel}`,
+      t('Save {filterLabel}', { filterLabel: filterLabel }),
       suggestedName,
       extension,
       settings.lastExportFolder,
@@ -579,7 +590,7 @@ function App() {
     if (!r.ok && (r as { ok: false; error: string }).error === 'exists') {
       const overwrite = await new Promise<boolean>((resolve) => {
         askConfirm(
-          `A file with that name already exists at:\n${chosen}\n\nOverwrite it?`,
+          t('A file with that name already exists at: {chosen} Overwrite it?', { chosen: chosen }),
           () => resolve(true),
           false,
           () => resolve(false),
@@ -589,11 +600,11 @@ function App() {
       r = await invoke('library:save-text-to', chosen, body, true)
     }
     if (r.ok) {
-      setToast(`Saved to ${r.path}`)
+      setToast(t('Saved to {path}', { path: r.path }))
       const parent = parentOf(r.path)
       if (parent) setSettings((s) => ({ ...s, lastExportFolder: parent }))
     } else {
-      setToast(`Export failed — ${(r as { ok: false; error: string }).error}`)
+      setToast(t('Export failed — {error}', { error: (r as { ok: false; error: string }).error }))
     }
   }
   const [playlists, setPlaylists] = useState<Playlist[]>([])
@@ -633,10 +644,10 @@ function App() {
           const unlocked = new Set(prev.unlockedPlugins ?? [])
           if (unlocked.has(plug.slug)) {
             unlocked.delete(plug.slug)
-            setToast(`${plug.label} library deactivated`)
+            setToast(t('{label} library deactivated', { label: plug.label }))
           } else {
             unlocked.add(plug.slug)
-            setToast(`Activated ${plug.label} library`)
+            setToast(t('Activated {label} library', { label: plug.label }))
           }
           return { ...prev, unlockedPlugins: Array.from(unlocked) }
         })
@@ -1311,7 +1322,7 @@ function App() {
         case 'redo-alt':
           e.preventDefault(); redo(); return
         case 'refresh':
-          e.preventDefault(); loadFromDisk({ applySettings: false }).then(() => setToast('Library refreshed')); return
+          e.preventDefault(); loadFromDisk({ applySettings: false }).then(() => setToast(t('Library refreshed'))); return
         case 'shortcuts':
           e.preventDefault(); setShortcutsOpen(true); return
         case 'home':
@@ -1388,23 +1399,23 @@ function App() {
 
   const undo = () => {
     const prev = historyRef.current.pop()
-    if (!prev) { setToast('Nothing to undo'); return }
+    if (!prev) { setToast(t('Nothing to undo')); return }
     if (prevSnapRef.current) redoRef.current.push(prevSnapRef.current)
     skipHistoryRef.current = true
     setItems(prev.items)
     setCollections(prev.collections)
     setMusicArtists(prev.artists)
-    setToast('Undone')
+    setToast(t('Undone'))
   }
   const redo = () => {
     const next = redoRef.current.pop()
-    if (!next) { setToast('Nothing to redo'); return }
+    if (!next) { setToast(t('Nothing to redo')); return }
     if (prevSnapRef.current) historyRef.current.push(prevSnapRef.current)
     skipHistoryRef.current = true
     setItems(next.items)
     setCollections(next.collections)
     setMusicArtists(next.artists)
-    setToast('Redone')
+    setToast(t('Redone'))
   }
 
   useEffect(() => {
@@ -1470,7 +1481,7 @@ function App() {
   useEffect(() => {
     const h = (e: Event) => {
       const detail = (e as CustomEvent<{ kind: string; error: string }>).detail
-      setToast(`Cover download failed — ${detail?.error ?? 'unknown'}. Try another asset.`)
+      setToast(t('Cover download failed — {error}. Try another asset.', { error: detail?.error ?? 'unknown' }))
     }
     window.addEventListener('omnio-image-download-error', h)
     return () => window.removeEventListener('omnio-image-download-error', h)
@@ -1488,7 +1499,7 @@ function App() {
       if (Date.now() - last < gapMs) return
       const r = await window.ipcRenderer.invoke('storage:copy-data-to', target) as { ok: boolean; error?: string; files?: number; path?: string }
       if (r?.ok) setSettings((s) => ({ ...s, autoBackupLastAt: Date.now() }))
-      else setToast(`Auto-backup failed: ${r?.error ?? 'unknown'}`)
+      else setToast(t('Auto-backup failed: {error}', { error: r?.error ?? 'unknown' }))
     }
     // Fire once on mount (short delay to let the initial data:load finish)
     // and then hourly.
@@ -1646,7 +1657,7 @@ function App() {
   }
 
   const handleDeleteArtist = (id: string) => {
-    askConfirm('Delete this artist? Your songs/albums stay, only the artist entry is removed.', () => {
+    askConfirm(t('Delete this artist? Your songs/albums stay, only the artist entry is removed.'), () => {
       const artist = musicArtists.find((a) => a.id === id)
       if (artist) {
         deleteAssetFile(artist.photo)
@@ -1877,7 +1888,7 @@ function App() {
       const arr = Array.from(cur)
       return { ...it, tags: arr.length ? arr : undefined }
     }))
-    setToast(op === 'add' ? `Tag "${tag}" added to ${selectedIds.size} items` : `Tag "${tag}" removed from ${selectedIds.size} items`)
+    setToast(op === 'add' ? t('Tag "{tag}" added to {selectedIds} items', { tag: tag, selectedIds: selectedIds.size }) : t('Tag "{tag}" removed from {selectedIds} items', { tag: tag, selectedIds: selectedIds.size }))
   }
   const bulkAddToGroup = (collectionId: string) => {
     setCollections((all) => all.map((c) => {
@@ -1885,32 +1896,32 @@ function App() {
       const merged = Array.from(new Set([...c.itemIds, ...Array.from(selectedIds)]))
       return { ...c, itemIds: merged }
     }))
-    setToast(`Added ${selectedIds.size} items to group`)
+    setToast(t('Added {selectedIds} items to group', { selectedIds: selectedIds.size }))
   }
   const bulkMoveToLibrary = (targetCategoryId: CategoryId) => {
     const targetLabel = CATEGORIES.find((c) => c.id === targetCategoryId)?.label ?? targetCategoryId
     const count = selectedIds.size
     askConfirm(
-      `Move ${count} item${count === 1 ? '' : 's'} to ${targetLabel}? Category-specific fields (like game platforms or manga chapters) stay on the item so nothing is lost if you move it back later — they just stop showing until then.`,
+      plural(count, 'Move {n} item to {targetLabel}? Category-specific fields (like game platforms or manga chapters) stay on the item so nothing is lost if you move it back later — they just stop showing until then.', 'Move {n} items to {targetLabel}? Category-specific fields (like game platforms or manga chapters) stay on the item so nothing is lost if you move it back later — they just stop showing until then.', { targetLabel: targetLabel }),
       () => {
         const ids = new Set(selectedIds)
         setItems((all) => all.map((it) => ids.has(it.id) ? { ...it, categoryId: targetCategoryId } : it))
         // Groups are per-category; drop moved items from mismatched groups.
         setCollections((all) => all.map((c) => c.categoryId === targetCategoryId ? c : { ...c, itemIds: c.itemIds.filter((id) => !ids.has(id)) }))
         clearSelection()
-        setToast(`Moved ${count} item${count === 1 ? '' : 's'} to ${targetLabel}`)
+        setToast(plural(count, 'Moved {n} item to {targetLabel}', 'Moved {n} items to {targetLabel}', { targetLabel: targetLabel }))
       },
     )
   }
   const bulkDelete = () => {
     askConfirm(
-      `Delete ${selectedIds.size} items? This cannot be undone. Group memberships and related-item links will be cleaned up automatically.`,
+      t('Delete {selectedIds} items? This cannot be undone. Group memberships and related-item links will be cleaned up automatically.', { selectedIds: selectedIds.size }),
       () => {
         const ids = new Set(selectedIds)
         setItems((all) => all.filter((it) => !ids.has(it.id)))
         setCollections((all) => all.map((c) => ({ ...c, itemIds: c.itemIds.filter((id) => !ids.has(id)) })))
         clearSelection()
-        setToast(`Deleted ${ids.size} items`)
+        setToast(t('Deleted {ids} items', { ids: ids.size }))
       },
     )
   }
@@ -1919,7 +1930,7 @@ function App() {
     patch: Partial<AnyItem>,
     coverPath?: string,
     bannerPath?: string,
-    sourceLabel = 'Metadata',
+    sourceLabel = t('Metadata'),
     hints?: { parentGameTitle?: string; vnRelations?: { vndbId: string; relation: string; title: string }[]; suggestedTags?: string[] },
   ) => {
     // Buffered as chips so nothing overwrites the user's own tag list.
@@ -1990,9 +2001,9 @@ function App() {
       setBannerImage(bannerPath)
     }
     const franchiseNote = franchiseSiblingCount > 0
-      ? ` · joins ${franchiseSiblingCount} other ${franchiseSiblingCount === 1 ? 'game' : 'games'} in "${patch.franchise}"`
+      ? ` ${plural(franchiseSiblingCount, '· joins {n} other game in "{franchise}"', '· joins {n} other games in "{franchise}"', { franchise: patch.franchise })}`
       : ''
-    setToast(`${sourceLabel} data applied${franchiseNote}`)
+    setToast(t('{sourceLabel} data applied{franchiseNote}', { sourceLabel: sourceLabel, franchiseNote: franchiseNote }))
   }
 
   // Book ISBN quick-lookup: OpenLibrary → cover → applyFetchedPatch.
@@ -2002,17 +2013,17 @@ function App() {
       if (!raw || activeCategory !== 'libros') return
       const cleaned = raw.replace(/[^0-9Xx]/g, '')
       if (cleaned.length !== 10 && cleaned.length !== 13) {
-        setToast('ISBN needs 10 or 13 digits')
+        setToast(t('ISBN needs 10 or 13 digits'))
         return
       }
-      setToast('Looking up ISBN…')
+      setToast(t('Looking up ISBN…'))
       try {
         const r = await window.ipcRenderer.invoke('openlibrary:search', `isbn:${cleaned}`) as
           | { ok: true; data: Array<Record<string, unknown>> }
           | { ok: false; error: string }
-        if (!r?.ok) { setToast(`ISBN lookup failed: ${r?.error ?? 'unknown'}`); return }
+        if (!r?.ok) { setToast(t('ISBN lookup failed: {error}', { error: r?.error ?? 'unknown' })); return }
         const hit = r.data?.[0]
-        if (!hit) { setToast('No book found for that ISBN'); return }
+        if (!hit) { setToast(t('No book found for that ISBN')); return }
         const workKey = hit.key as string | undefined
         const wr = workKey
           ? await window.ipcRenderer.invoke('openlibrary:work', workKey) as { ok: boolean; data?: { description?: string | { value?: string }; subjects?: string[] } }
@@ -2043,7 +2054,7 @@ function App() {
           'ISBN lookup',
         )
       } catch (err) {
-        setToast(`ISBN lookup failed: ${(err as Error).message}`)
+        setToast(t('ISBN lookup failed: {message}', { message: (err as Error).message }))
       }
     }
     window.addEventListener('omnio-book-isbn-lookup', handler as EventListener)
@@ -2090,7 +2101,7 @@ function App() {
   const previewItem = useMemo<Item>(() => ({
     id: editingId || 'preview',
     categoryId: activeCategory,
-    title: title || 'Untitled',
+    title: title || t('Untitled'),
     cover,
     notes: description,
     tags,
@@ -2351,7 +2362,7 @@ function App() {
       const created = await persistItemImages(withAuto)
       setItems((prev) => [...prev, created])
     }
-    setToast('Saved')
+    setToast(t('Saved'))
     closePanel({ afterSave: true })
   }
 
@@ -2386,7 +2397,7 @@ function App() {
   }
 
   const handleDelete = (item: AnyItem) => {
-    if (settings.confirmDelete) askConfirm(`Delete "${item.title}"? This can't be undone.`, () => performDelete(item), true)
+    if (settings.confirmDelete) askConfirm(t('Delete "{title}"? This can\'t be undone.', { title: item.title }), () => performDelete(item), true)
     else performDelete(item)
   }
 
@@ -2415,51 +2426,51 @@ function App() {
       airingDay: next ? weekdayOfTimestamp(next.airingAt) : undefined,
     } as AnyItem
     setItems((prev) => [...prev, item])
-    setToast(`Added "${title}" to ${categoryId === 'donghua' ? 'Donghua' : 'Anime'}`)
+    setToast(t('Added "{title}" to {value}', { title: title, value: categoryId === 'donghua' ? t('Donghua') : t('Anime') }))
   }
 
   const togglePinned = (item: AnyItem) => {
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, pinnedAt: i.pinnedAt ? undefined : Date.now() } as AnyItem : i)))
-    setToast(item.pinnedAt ? `Unpinned "${item.title}"` : `Pinned "${item.title}" to Home`)
+    setToast(item.pinnedAt ? t('Unpinned "{title}"', { title: item.title }) : t('Pinned "{title}" to Home', { title: item.title }))
   }
 
   const buildCardMenu = (item: AnyItem): CardMenuAction[] => {
     const dup = () => {
-      const copy: AnyItem = { ...item, id: crypto.randomUUID(), title: `${item.title} (Copy)`, createdAt: Date.now() }
+      const copy: AnyItem = { ...item, id: crypto.randomUUID(), title: t('{title} (Copy)', { title: item.title }), createdAt: Date.now() }
       setItems((prev) => [...prev, copy])
-      setToast(`Duplicated as "${copy.title}"`)
+      setToast(t('Duplicated as "{title}"', { title: copy.title }))
     }
     return [
-      { label: 'Open', onClick: () => openEditPanel(item) },
-      { label: 'Edit', onClick: () => { openEditPanel(item); setTimeout(() => loadItemIntoForm(item), 0); setPanelOpen(true) } },
-      { label: 'Duplicate', onClick: dup },
-      { label: 'Export as JSON…', onClick: () => void saveExportInApp(
+      { label: t('Open'), onClick: () => openEditPanel(item) },
+      { label: t('Edit'), onClick: () => { openEditPanel(item); setTimeout(() => loadItemIntoForm(item), 0); setPanelOpen(true) } },
+      { label: t('Duplicate'), onClick: dup },
+      { label: t('Export as JSON…'), onClick: () => void saveExportInApp(
         JSON.stringify(item, null, 2),
         item.title.replace(/[/\\:*?"<>|\r\n]+/g, '_').replace(/\s+/g, ' ').trim() || 'item',
         'json',
         'JSON',
       ) },
-      { label: 'Export as HTML…', onClick: async () => {
-        const dir = await pickFolder('Choose where to export the item', settings.lastExportFolder)
+      { label: t('Export as HTML…'), onClick: async () => {
+        const dir = await pickFolder(t('Choose where to export the item'), settings.lastExportFolder)
         if (!dir) return
         const artistsForItem = item.categoryId === 'musica' ? musicArtists : []
         const html = buildStaticSiteHtml([item], artistsForItem, item.title)
         const r = await window.ipcRenderer.invoke('export:site', dir, html)
-        if (r?.ok) { setToast(`Exported to ${r.path}`); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
-        else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
+        if (r?.ok) { setToast(t('Exported to {path}', { path: r.path })); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
+        else setToast(t('Export failed: {error}', { error: r?.error ?? 'unknown' }))
       } },
       { divider: true, label: '', onClick: () => {} },
-      { label: item.pinnedAt ? 'Unpin from Home' : 'Pin to Home', onClick: () => togglePinned(item) },
-      { label: 'Move to library…', onClick: () => setLibraryPickerFor(item) },
-      { label: 'Add to playlist…', onClick: () => setPlaylistPickerFor(item) },
+      { label: item.pinnedAt ? t('Unpin from Home') : t('Pin to Home'), onClick: () => togglePinned(item) },
+      { label: t('Move to library…'), onClick: () => setLibraryPickerFor(item) },
+      { label: t('Add to playlist…'), onClick: () => setPlaylistPickerFor(item) },
       { divider: true, label: '', onClick: () => {} },
-      { label: 'Delete…', danger: true, onClick: () => handleDelete(item) },
+      { label: t('Delete…'), danger: true, onClick: () => handleDelete(item) },
     ]
   }
 
   const handleDuplicate = () => {
     if (!viewing) return
-    const copy: AnyItem = { ...viewing, id: crypto.randomUUID(), title: `${viewing.title} (Copy)`, createdAt: Date.now() }
+    const copy: AnyItem = { ...viewing, id: crypto.randomUUID(), title: t('{title} (Copy)', { title: viewing.title }), createdAt: Date.now() }
     setItems((prev) => [...prev, copy])
     setViewing(null)
     loadItemIntoForm(copy)
@@ -2472,7 +2483,7 @@ function App() {
   }
 
   const handleDeleteCollection = (id: string) => {
-    askConfirm('Delete this group? Items stay, they just stop being grouped.', () => {
+    askConfirm(t('Delete this group? Items stay, they just stop being grouped.'), () => {
       const target = collections.find((c) => c.id === id)
       if (target) deleteAssetFile(target.cover)
       setCollections((prev) => prev.filter((c) => c.id !== id))
@@ -2560,13 +2571,13 @@ function App() {
   }
 
   const handleImportBackup = async () => {
-    const path = await pickOpenFile('Choose an Omnio backup', 'json', settings.lastExportFolder)
+    const path = await pickOpenFile(t('Choose an Omnio backup'), 'json', settings.lastExportFolder)
     if (!path) return
     const r = await invoke('fs:read-text-file', path)
-    if (!r.ok) { setAlertMsg(`Could not read that file — ${r.error}`); return }
+    if (!r.ok) { setAlertMsg(t('Could not read that file — {error}', { error: r.error })); return }
     try {
       const parsed = JSON.parse(r.text)
-      askConfirm('This replaces all current data with the imported file. Continue?', () => {
+      askConfirm(t('This replaces all current data with the imported file. Continue?'), () => {
         if (parsed.items) setItems(parsed.items)
         if (parsed.collections) setCollections(parsed.collections)
         if (parsed.settings) setSettings(parsed.settings)
@@ -2574,7 +2585,7 @@ function App() {
         if (parsed.customOrders) setCustomOrders(parsed.customOrders)
       })
     } catch {
-      setAlertMsg('That file is not a valid Omnio backup.')
+      setAlertMsg(t('That file is not a valid Omnio backup.'))
     }
   }
   const handleImportFile = (e: ChangeEvent<HTMLInputElement>) => {
@@ -2585,7 +2596,7 @@ function App() {
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result as string)
-        askConfirm('This replaces all current data with the imported file. Continue?', () => {
+        askConfirm(t('This replaces all current data with the imported file. Continue?'), () => {
           if (parsed.items) setItems(parsed.items)
           if (parsed.collections) setCollections(parsed.collections)
           if (parsed.settings) setSettings(parsed.settings)
@@ -2593,7 +2604,7 @@ function App() {
           if (parsed.customOrders) setCustomOrders(parsed.customOrders)
         })
       } catch {
-        setAlertMsg('That file is not a valid Omnio backup.')
+        setAlertMsg(t('That file is not a valid Omnio backup.'))
       }
     }
     reader.readAsText(file)
@@ -2601,7 +2612,7 @@ function App() {
   }
 
   const handleWipeAll = () => {
-    askConfirm('This permanently deletes ALL items and groups in every category. This cannot be undone.', () => {
+    askConfirm(t('This permanently deletes ALL items and groups in every category. This cannot be undone.'), () => {
       setItems([])
       setCollections([])
     })
@@ -2659,12 +2670,12 @@ function App() {
         title: tk('Statistics'),
         actions: (
           <div className="ctl">
-            <select className="ctl-select" value={statsCategory} onChange={(e) => setStatsCategory(e.target.value as CategoryId)} aria-label="Library">
+            <select className="ctl-select" value={statsCategory} onChange={(e) => setStatsCategory(e.target.value as CategoryId)} aria-label={t('Library')}>
               {statCats.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
-            <div className="seg" role="tablist" aria-label="Chart type">
-              <button type="button" className={chartMode === 'pie' ? 'on' : ''} onClick={() => setChartMode('pie')}>◔ Pie</button>
-              <button type="button" className={chartMode === 'bar' ? 'on' : ''} onClick={() => setChartMode('bar')}>▤ Bar</button>
+            <div className="seg" role="tablist" aria-label={t('Chart type')}>
+              <button type="button" className={chartMode === 'pie' ? 'on' : ''} onClick={() => setChartMode('pie')}>{t('◔ Pie')}</button>
+              <button type="button" className={chartMode === 'bar' ? 'on' : ''} onClick={() => setChartMode('bar')}>{t('▤ Bar')}</button>
             </div>
           </div>
         ),
@@ -2709,7 +2720,7 @@ function App() {
       const isGroups = subView === 'groups'
       return {
         icon: isGroups ? <FolderIcon /> : <CategoryIcon id={activeCategory} />,
-        title: `${label} · ${isGroups ? t('Groups') : t('Artists')}`,
+        title: t('{label} · {t}', { label: label, t: isGroups ? t('Groups') : t('Artists') }),
         count: isGroups ? count : { n: musicArtists.length, unit: musicArtists.length === 1 ? tk('artist') : tk('artists') },
         onBack: () => { setSubView('items'); resetListControls() },
         actions: (
@@ -2786,7 +2797,7 @@ function App() {
             title={t('Airing anime grouped by weekday')}
           >{t('This season')}</button>
         ) : undefined}
-        addLabel="+ Add"
+        addLabel={t('+ Add')}
         onAdd={openAddPanel}
       />
     )
@@ -2808,9 +2819,17 @@ function App() {
   const navMeta: typeof pageMeta = pageMeta ?? (customTitleBar ? { icon: null, title: '' } : null)
 
   // Applied during render so every t() call below already sees it; the
-  // keyed body remounts the screens when it changes.
-  const uiLanguage: Language = settings.language ?? 'en'
-  applyUiLanguage(uiLanguage)
+  // keyed body remounts the screens when it changes. Until settings load,
+  // the language remembered from the last launch stays in place.
+  const uiLanguage: Language = settings.language ?? getLanguage()
+  if (loaded) applyUiLanguage(uiLanguage)
+  const switchLanguage = (language: Language) => {
+    if (language === uiLanguage) return
+    setSettings((s) => ({ ...s, language }))
+    // Labels built when modules load only change on a fresh start, so the
+    // window reloads once the setting is saved.
+    window.setTimeout(() => window.location.reload(), 600)
+  }
 
   return (
     <Suspense fallback={null}>
@@ -2829,18 +2848,17 @@ function App() {
         <div className="update-banner">
           <span className="update-banner-icon">↗</span>
           <div className="update-banner-body">
-            <span className="update-banner-title">Omnio {updateInfo.latest} is available</span>
+            <span className="update-banner-title">{t('Omnio {latest} is available', { latest: updateInfo.latest })}</span>
             <span className="update-banner-sub">
-              You're on {updateInfo.current}.
-              {updateInfo.matchedAssetName ? ` Update from within the app: ${updateInfo.matchedAssetName}.` : ' Pick the build for your platform on the release page.'}
+              {t('You\'re on {current}.{value}', { current: updateInfo.current, value: updateInfo.matchedAssetName ? ` ${t('Update from within the app: {matchedAssetName}.', { matchedAssetName: updateInfo.matchedAssetName })}` : t(' Pick the build for your platform on the release page.') })}
             </span>
           </div>
           <div className="update-banner-actions">
             {updateInfo.matchedAssetUrl && (
-              <button type="button" className="update-banner-btn primary" onClick={startAssistedDownload}>Update</button>
+              <button type="button" className="update-banner-btn primary" onClick={startAssistedDownload}>{t('Update')}</button>
             )}
-            <button type="button" className={updateInfo.matchedAssetUrl ? 'update-banner-btn ghost' : 'update-banner-btn primary'} onClick={() => { if (updateInfo.htmlUrl) invoke('updates:open-url', updateInfo.htmlUrl) }}>Release page</button>
-            <button type="button" className="update-banner-btn ghost" onClick={() => setUpdateBannerDismissed(true)}>Later</button>
+            <button type="button" className={updateInfo.matchedAssetUrl ? 'update-banner-btn ghost' : 'update-banner-btn primary'} onClick={() => { if (updateInfo.htmlUrl) invoke('updates:open-url', updateInfo.htmlUrl) }}>{t('Release page')}</button>
+            <button type="button" className="update-banner-btn ghost" onClick={() => setUpdateBannerDismissed(true)}>{t('Later')}</button>
           </div>
         </div>
       )}
@@ -2877,7 +2895,7 @@ function App() {
             if (!it || it.categoryId === targetCat || !isCategoryId(targetCat)) return
             setItems((prev) => prev.map((x) => (x.id === itemId ? { ...x, categoryId: targetCat } as AnyItem : x)))
             const label = CATEGORIES.find((c) => c.id === targetCat)?.label ?? targetCat
-            setToast(`Moved "${it.title}" to ${label}`)
+            setToast(t('Moved "{title}" to {label}', { title: it.title, label: label }))
           }}
           pluginCounts={pluginCounts}
           visiblePlugins={visiblePlugins}
@@ -2889,7 +2907,7 @@ function App() {
         <nav className="topnav" data-tauri-drag-region>
           <div className="topnav-page" data-tauri-drag-region>
             {navMeta.onBack && (
-              <button className="topnav-back" onClick={navMeta.onBack} title="Back" aria-label="Back">
+              <button className="topnav-back" onClick={navMeta.onBack} title={t('Back')} aria-label={t('Back')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M15 6l-6 6 6 6" />
                 </svg>
@@ -2904,7 +2922,7 @@ function App() {
               </span>
             )}
             {navMeta.chips && (
-              <div className="seg topnav-seg" role="tablist" aria-label="Filter by status">
+              <div className="seg topnav-seg" role="tablist" aria-label={t('Filter by status')}>
                 {navMeta.chips.map((c) => (
                   <button
                     key={c.key}
@@ -2944,7 +2962,7 @@ function App() {
                 const updated: AnyItem = { ...item, tracks: (item.tracks ?? []).map((t) => t.id === trackId ? { ...t, lyrics: lyrics.trim() || undefined } : t) }
                 setItems((prev) => prev.map((i) => i.id === item.id ? updated : i))
                 setViewing(updated)
-                setToast('Lyrics saved')
+                setToast(t('Lyrics saved'))
               }}
             />
           ) : viewingArtist ? (
@@ -2974,15 +2992,13 @@ function App() {
               <div className="content-scroll">
                 {airing.length === 0 && (
                   <p className="empty">
-                    No airing shows with a weekday set. In the editor, set <b>Airing status</b> to
-                    <em> Airing</em> and pick a weekday under <b>Airs on</b> for anything you're
-                    currently watching this season.
+                    {t('No airing shows with a weekday set. In the editor, set')}{' '}<b>{t('Airing status')}</b> to
+                    <em>{' '}{t('Airing')}</em>{' '}{t('and pick a weekday under')}{' '}<b>{t('Airs on')}</b>{' '}{t('for anything you\'re currently watching this season.')}
                   </p>
                 )}
                 {missingDay > 0 && airing.length > 0 && (
                   <p className="hint" style={{ margin: '0 0 12px' }}>
-                    {missingDay} airing show{missingDay === 1 ? ' has' : 's have'} no weekday set — open the
-                    editor and pick one under <b>Airs on</b> to slot it here.
+                    {plural(missingDay, '{n} airing show has no weekday set — open the editor and pick one under', '{n} airing shows have no weekday set — open the editor and pick one under')}{' '}<b>{t('Airs on')}</b>{' '}{t('to slot it here.')}
                   </p>
                 )}
                 {airing.length > 0 && (
@@ -2993,7 +3009,7 @@ function App() {
                       return (
                         <div key={w.value} className={`simulcast-col${isToday ? ' today' : ''}`}>
                           <div className="simulcast-col-header">
-                            <span className="simulcast-day">{w.short}{isToday && <span className="simulcast-today">Today</span>}</span>
+                            <span className="simulcast-day">{w.short}{isToday && <span className="simulcast-today">{t('Today')}</span>}</span>
                             {list.length > 0 && <span className="simulcast-day-count">{list.length}</span>}
                           </div>
                           <div className="simulcast-col-body list grid">
@@ -3028,8 +3044,8 @@ function App() {
                 return (
                   <section className="time-invested">
                     <header>
-                      <h3 className="insights-subheading">Time invested</h3>
-                      <span className="time-invested-total">{formatHours(totalMinutes)} across your libraries</span>
+                      <h3 className="insights-subheading">{t('Time invested')}</h3>
+                      <span className="time-invested-total">{t('{totalMinutes} across your libraries', { totalMinutes: formatHours(totalMinutes) })}</span>
                     </header>
                     <div className="time-invested-grid">
                       {rows.filter((r) => r.minutes > 0 || (r.units && r.units.count > 0)).map((r) => {
@@ -3038,8 +3054,8 @@ function App() {
                           <button key={r.categoryId} type="button" className={statsCategory === r.categoryId ? 'time-invested-tile active' : 'time-invested-tile'} onClick={() => setStatsCategory(cat.id)}>
                             <span className="time-invested-icon"><CategoryIcon id={cat.id} /></span>
                             <span className="time-invested-label">{cat.label}</span>
-                            <span className="time-invested-value">{r.minutes > 0 ? formatHours(r.minutes) : `${r.units!.count.toLocaleString()} ${r.units!.label}`}</span>
-                            {r.minutes > 0 && r.units && r.units.count > 0 && <span className="time-invested-sub">{r.units.count.toLocaleString()} {r.units.label}</span>}
+                            <span className="time-invested-value">{r.minutes > 0 ? formatHours(r.minutes) : t('{count} {label}', { count: r.units!.count.toLocaleString(locale()), label: r.units!.label })}</span>
+                            {r.minutes > 0 && r.units && r.units.count > 0 && <span className="time-invested-sub">{r.units.count.toLocaleString(locale())} {r.units.label}</span>}
                           </button>
                         )
                       })}
@@ -3063,7 +3079,7 @@ function App() {
 
               <div className="insights-row">
                 <div className="insights-col">
-                  <h3 className="insights-subheading">Completed per month</h3>
+                  <h3 className="insights-subheading">{t('Completed per month')}</h3>
                   <div className="bar-chart month-chart">
                     {getMonthlyActivity(items.filter((i) => i.categoryId === statsCategory)).map((m) => (
                       <div key={m.label} className="bar-row">
@@ -3078,9 +3094,9 @@ function App() {
                 </div>
 
                 <div className="insights-col">
-                  <h3 className="insights-subheading">Top rated</h3>
+                  <h3 className="insights-subheading">{t('Top rated')}</h3>
                   <div className="top-rated-list">
-                    {getTopRated(items.filter((i) => i.categoryId === statsCategory)).length === 0 && <p className="hint">No ratings yet.</p>}
+                    {getTopRated(items.filter((i) => i.categoryId === statsCategory)).length === 0 && <p className="hint">{t('No ratings yet.')}</p>}
                     {getTopRated(items.filter((i) => i.categoryId === statsCategory)).map((i, idx) => (
                       <div key={i.id} className="top-rated-row">
                         <span className="top-rated-rank">#{idx + 1}</span>
@@ -3094,9 +3110,9 @@ function App() {
                 {statsCategory === 'musica' && (
                   <>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top artists</h3>
+                      <h3 className="insights-subheading">{t('Top artists')}</h3>
                       <div className="top-rated-list">
-                        {getTopArtists(musicArtists, musicList).length === 0 && <p className="hint">No artists with items yet.</p>}
+                        {getTopArtists(musicArtists, musicList).length === 0 && <p className="hint">{t('No artists with items yet.')}</p>}
                         {getTopArtists(musicArtists, musicList).map((a, idx) => (
                           <div key={a.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3107,9 +3123,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top genres</h3>
+                      <h3 className="insights-subheading">{t('Top genres')}</h3>
                       <div className="top-rated-list">
-                        {getTopGenres(items.filter((i) => i.categoryId === 'musica')).length === 0 && <p className="hint">No genres yet.</p>}
+                        {getTopGenres(items.filter((i) => i.categoryId === 'musica')).length === 0 && <p className="hint">{t('No genres yet.')}</p>}
                         {getTopGenres(items.filter((i) => i.categoryId === 'musica')).map((g, idx) => (
                           <div key={g.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3120,9 +3136,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top labels</h3>
+                      <h3 className="insights-subheading">{t('Top labels')}</h3>
                       <div className="top-rated-list">
-                        {getTopMusicLabels(items.filter((i) => i.categoryId === 'musica')).length === 0 && <p className="hint">No labels yet.</p>}
+                        {getTopMusicLabels(items.filter((i) => i.categoryId === 'musica')).length === 0 && <p className="hint">{t('No labels yet.')}</p>}
                         {getTopMusicLabels(items.filter((i) => i.categoryId === 'musica')).map((l, idx) => (
                           <div key={l.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3133,7 +3149,7 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Listens per month</h3>
+                      <h3 className="insights-subheading">{t('Listens per month')}</h3>
                       <div className="bar-chart month-chart">
                         {getMusicListensPerMonth(items.filter((i) => i.categoryId === 'musica')).map((m) => (
                           <div key={m.label} className="bar-row">
@@ -3152,7 +3168,7 @@ function App() {
                 {statsCategory === 'anime' && (
                   <>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Episodes watched per month</h3>
+                      <h3 className="insights-subheading">{t('Episodes watched per month')}</h3>
                       <div className="bar-chart month-chart">
                         {getAnimeEpisodesPerMonth(items.filter((i) => isAnimeLikeCategory(i.categoryId))).map((m) => (
                           <div key={m.label} className="bar-row">
@@ -3166,9 +3182,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top studios</h3>
+                      <h3 className="insights-subheading">{t('Top studios')}</h3>
                       <div className="top-rated-list">
-                        {getTopStudios(items.filter((i) => isAnimeLikeCategory(i.categoryId))).length === 0 && <p className="hint">No studios yet.</p>}
+                        {getTopStudios(items.filter((i) => isAnimeLikeCategory(i.categoryId))).length === 0 && <p className="hint">{t('No studios yet.')}</p>}
                         {getTopStudios(items.filter((i) => isAnimeLikeCategory(i.categoryId))).map((s, idx) => (
                           <div key={s.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3184,7 +3200,7 @@ function App() {
                 {statsCategory === 'series' && (
                   <>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Episodes watched per month</h3>
+                      <h3 className="insights-subheading">{t('Episodes watched per month')}</h3>
                       <div className="bar-chart month-chart">
                         {getSeriesEpisodesPerMonth(items.filter((i) => i.categoryId === 'series')).map((m) => (
                           <div key={m.label} className="bar-row">
@@ -3198,9 +3214,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top networks</h3>
+                      <h3 className="insights-subheading">{t('Top networks')}</h3>
                       <div className="top-rated-list">
-                        {getTopNetworks(items.filter((i) => i.categoryId === 'series')).length === 0 && <p className="hint">No networks yet.</p>}
+                        {getTopNetworks(items.filter((i) => i.categoryId === 'series')).length === 0 && <p className="hint">{t('No networks yet.')}</p>}
                         {getTopNetworks(items.filter((i) => i.categoryId === 'series')).map((n, idx) => (
                           <div key={n.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3211,9 +3227,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top actors</h3>
+                      <h3 className="insights-subheading">{t('Top actors')}</h3>
                       <div className="top-rated-list">
-                        {getTopActors(items.filter((i) => i.categoryId === 'series')).length === 0 && <p className="hint">No actors yet.</p>}
+                        {getTopActors(items.filter((i) => i.categoryId === 'series')).length === 0 && <p className="hint">{t('No actors yet.')}</p>}
                         {getTopActors(items.filter((i) => i.categoryId === 'series')).map((a, idx) => (
                           <div key={a.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3229,9 +3245,9 @@ function App() {
                 {statsCategory === 'videojuegos' && (
                   <>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top developers</h3>
+                      <h3 className="insights-subheading">{t('Top developers')}</h3>
                       <div className="top-rated-list">
-                        {getTopDevs(items.filter((i) => i.categoryId === 'videojuegos')).length === 0 && <p className="hint">No developers yet.</p>}
+                        {getTopDevs(items.filter((i) => i.categoryId === 'videojuegos')).length === 0 && <p className="hint">{t('No developers yet.')}</p>}
                         {getTopDevs(items.filter((i) => i.categoryId === 'videojuegos')).map((d, idx) => (
                           <div key={d.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3242,9 +3258,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top publishers</h3>
+                      <h3 className="insights-subheading">{t('Top publishers')}</h3>
                       <div className="top-rated-list">
-                        {getTopPublishers(items.filter((i) => i.categoryId === 'videojuegos')).length === 0 && <p className="hint">No publishers yet.</p>}
+                        {getTopPublishers(items.filter((i) => i.categoryId === 'videojuegos')).length === 0 && <p className="hint">{t('No publishers yet.')}</p>}
                         {getTopPublishers(items.filter((i) => i.categoryId === 'videojuegos')).map((p, idx) => (
                           <div key={p.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3255,9 +3271,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top platforms</h3>
+                      <h3 className="insights-subheading">{t('Top platforms')}</h3>
                       <div className="top-rated-list">
-                        {getTopPlatforms(items.filter((i) => i.categoryId === 'videojuegos')).length === 0 && <p className="hint">No platforms yet.</p>}
+                        {getTopPlatforms(items.filter((i) => i.categoryId === 'videojuegos')).length === 0 && <p className="hint">{t('No platforms yet.')}</p>}
                         {getTopPlatforms(items.filter((i) => i.categoryId === 'videojuegos')).map((p, idx) => (
                           <div key={p.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3268,9 +3284,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top genres</h3>
+                      <h3 className="insights-subheading">{t('Top genres')}</h3>
                       <div className="top-rated-list">
-                        {getTopGenres(items.filter((i) => i.categoryId === 'videojuegos')).length === 0 && <p className="hint">No genres yet.</p>}
+                        {getTopGenres(items.filter((i) => i.categoryId === 'videojuegos')).length === 0 && <p className="hint">{t('No genres yet.')}</p>}
                         {getTopGenres(items.filter((i) => i.categoryId === 'videojuegos')).map((g, idx) => (
                           <div key={g.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3286,7 +3302,7 @@ function App() {
                 {statsCategory === 'peliculas' && (
                   <>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Movies watched per month</h3>
+                      <h3 className="insights-subheading">{t('Movies watched per month')}</h3>
                       <div className="bar-chart month-chart">
                         {getMoviesWatchedPerMonth(items.filter((i) => i.categoryId === 'peliculas')).map((m) => (
                           <div key={m.label} className="bar-row">
@@ -3300,9 +3316,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top directors</h3>
+                      <h3 className="insights-subheading">{t('Top directors')}</h3>
                       <div className="top-rated-list">
-                        {getTopDirectors(items.filter((i) => i.categoryId === 'peliculas')).length === 0 && <p className="hint">No directors yet.</p>}
+                        {getTopDirectors(items.filter((i) => i.categoryId === 'peliculas')).length === 0 && <p className="hint">{t('No directors yet.')}</p>}
                         {getTopDirectors(items.filter((i) => i.categoryId === 'peliculas')).map((d, idx) => (
                           <div key={d.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3313,9 +3329,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top actors</h3>
+                      <h3 className="insights-subheading">{t('Top actors')}</h3>
                       <div className="top-rated-list">
-                        {getTopActors(items.filter((i) => i.categoryId === 'peliculas')).length === 0 && <p className="hint">No actors yet.</p>}
+                        {getTopActors(items.filter((i) => i.categoryId === 'peliculas')).length === 0 && <p className="hint">{t('No actors yet.')}</p>}
                         {getTopActors(items.filter((i) => i.categoryId === 'peliculas')).map((a, idx) => (
                           <div key={a.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3326,9 +3342,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top genres</h3>
+                      <h3 className="insights-subheading">{t('Top genres')}</h3>
                       <div className="top-rated-list">
-                        {getTopGenres(items.filter((i) => i.categoryId === 'peliculas')).length === 0 && <p className="hint">No genres yet.</p>}
+                        {getTopGenres(items.filter((i) => i.categoryId === 'peliculas')).length === 0 && <p className="hint">{t('No genres yet.')}</p>}
                         {getTopGenres(items.filter((i) => i.categoryId === 'peliculas')).map((g, idx) => (
                           <div key={g.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3344,7 +3360,7 @@ function App() {
                 {isMangaLike(statsCategory) && (
                   <>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Chapters read per month</h3>
+                      <h3 className="insights-subheading">{t('Chapters read per month')}</h3>
                       <div className="bar-chart month-chart">
                         {getMangaChaptersPerMonth(items.filter((i) => i.categoryId === statsCategory)).map((m) => (
                           <div key={m.label} className="bar-row">
@@ -3358,9 +3374,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top authors</h3>
+                      <h3 className="insights-subheading">{t('Top authors')}</h3>
                       <div className="top-rated-list">
-                        {getTopMangaAuthors(items.filter((i) => i.categoryId === statsCategory)).length === 0 && <p className="hint">No authors yet.</p>}
+                        {getTopMangaAuthors(items.filter((i) => i.categoryId === statsCategory)).length === 0 && <p className="hint">{t('No authors yet.')}</p>}
                         {getTopMangaAuthors(items.filter((i) => i.categoryId === statsCategory)).map((a, idx) => (
                           <div key={a.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3371,9 +3387,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top artists</h3>
+                      <h3 className="insights-subheading">{t('Top artists')}</h3>
                       <div className="top-rated-list">
-                        {getTopMangaArtists(items.filter((i) => i.categoryId === statsCategory)).length === 0 && <p className="hint">No artists yet.</p>}
+                        {getTopMangaArtists(items.filter((i) => i.categoryId === statsCategory)).length === 0 && <p className="hint">{t('No artists yet.')}</p>}
                         {getTopMangaArtists(items.filter((i) => i.categoryId === statsCategory)).map((a, idx) => (
                           <div key={a.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3384,9 +3400,9 @@ function App() {
                       </div>
                     </div>
                     <div className="insights-col">
-                      <h3 className="insights-subheading">Top magazines</h3>
+                      <h3 className="insights-subheading">{t('Top magazines')}</h3>
                       <div className="top-rated-list">
-                        {getTopMagazines(items.filter((i) => i.categoryId === statsCategory)).length === 0 && <p className="hint">No magazines yet.</p>}
+                        {getTopMagazines(items.filter((i) => i.categoryId === statsCategory)).length === 0 && <p className="hint">{t('No magazines yet.')}</p>}
                         {getTopMagazines(items.filter((i) => i.categoryId === statsCategory)).map((mg, idx) => (
                           <div key={mg.name} className="top-rated-row">
                             <span className="top-rated-rank">#{idx + 1}</span>
@@ -3425,7 +3441,7 @@ function App() {
                   return (
                     <>
                       <div className="insights-col">
-                        <h3 className="insights-subheading">Pages read per month</h3>
+                        <h3 className="insights-subheading">{t('Pages read per month')}</h3>
                         <div className="bar-chart month-chart">
                           {pagesPerMonth.map((m) => (
                             <div key={m.label} className="bar-row">
@@ -3439,9 +3455,9 @@ function App() {
                         </div>
                       </div>
                       <div className="insights-col">
-                        <h3 className="insights-subheading">Top authors</h3>
+                        <h3 className="insights-subheading">{t('Top authors')}</h3>
                         <div className="top-rated-list">
-                          {topAuthors.length === 0 && <p className="hint">No authors yet.</p>}
+                          {topAuthors.length === 0 && <p className="hint">{t('No authors yet.')}</p>}
                           {topAuthors.map(([name, count], idx) => (
                             <div key={name} className="top-rated-row">
                               <span className="top-rated-rank">#{idx + 1}</span>
@@ -3452,9 +3468,9 @@ function App() {
                         </div>
                       </div>
                       <div className="insights-col">
-                        <h3 className="insights-subheading">Top publishers</h3>
+                        <h3 className="insights-subheading">{t('Top publishers')}</h3>
                         <div className="top-rated-list">
-                          {topPublishers.length === 0 && <p className="hint">No publishers yet.</p>}
+                          {topPublishers.length === 0 && <p className="hint">{t('No publishers yet.')}</p>}
                           {topPublishers.map(([name, count], idx) => (
                             <div key={name} className="top-rated-row">
                               <span className="top-rated-rank">#{idx + 1}</span>
@@ -3476,7 +3492,7 @@ function App() {
           )}
 
           {specialView === 'home' && (
-            <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
+            <Suspense fallback={<div style={{ padding: 32 }} className="hint">{t('Loading…')}</div>}>
               <Home
                 setPageMeta={setPluginPageMeta}
                 items={items}
@@ -3502,20 +3518,20 @@ function App() {
                     createdAt: Date.now(),
                   }
                   setItems((prev) => [...prev, stub])
-                  setToast(`Added "${title}"`)
+                  setToast(t('Added "{title}"', { title: title }))
                 }}
               />
             </Suspense>
           )}
 
           {specialView === 'calendar' && (
-            <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
+            <Suspense fallback={<div style={{ padding: 32 }} className="hint">{t('Loading…')}</div>}>
               <ReleaseCalendar items={items} onNavigate={navigateToItem} setPageMeta={setPluginPageMeta} />
             </Suspense>
           )}
 
           {specialView === 'playlists' && (
-            <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
+            <Suspense fallback={<div style={{ padding: 32 }} className="hint">{t('Loading…')}</div>}>
               <PlaylistsView
                 playlists={playlists}
                 items={items}
@@ -3536,14 +3552,14 @@ function App() {
               cardFields[f.value] = overrides[f.value] ?? f.default ?? true
             }
             return (
-              <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
+              <Suspense fallback={<div style={{ padding: 32 }} className="hint">{t('Loading…')}</div>}>
                 <View setPageMeta={setPluginPageMeta} cardFields={cardFields} />
               </Suspense>
             )
           })()}
 
           {specialView === 'arcade' && (
-            <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
+            <Suspense fallback={<div style={{ padding: 32 }} className="hint">{t('Loading…')}</div>}>
               <ArcadeView
                 games={arcadeGames}
                 setPageMeta={setPluginPageMeta}
@@ -3561,18 +3577,18 @@ function App() {
             <>
               <div className="settings-layout">
               <aside className="settings-sidebar">
-                <div className="settings-nav-group-label">Look &amp; feel</div>
-                <button className={settingsTab === 'appearance' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('appearance')}><span className="settings-nav-icon">◐</span>Appearance</button>
-                <button className={settingsTab === 'behavior' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('behavior')}><span className="settings-nav-icon">⚙</span>Behavior</button>
-                <div className="settings-nav-group-label">Libraries</div>
-                <button className={settingsTab === 'libraries' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('libraries')}><span className="settings-nav-icon">☰</span>Enabled libraries</button>
-                <button className={settingsTab === 'cards' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('cards')}><span className="settings-nav-icon">▦</span>Card fields</button>
-                <button className={settingsTab === 'customFields' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('customFields')}><span className="settings-nav-icon">✎</span>Custom fields</button>
-                <button className={settingsTab === 'shortcuts' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('shortcuts')}><span className="settings-nav-icon">⌨</span>Keyboard shortcuts</button>
-                <div className="settings-nav-group-label">Data</div>
-                <button className={settingsTab === 'data' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('data')}><span className="settings-nav-icon">⌘</span>Backup, import &amp; export</button>
-                <button className={settingsTab === 'integrations' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('integrations')}><span className="settings-nav-icon">↗</span>Integrations &amp; network</button>
-                <button className={settingsTab === 'maintenance' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('maintenance')}><span className="settings-nav-icon">⛭</span>Maintenance &amp; about</button>
+                <div className="settings-nav-group-label">{t('Look & feel')}</div>
+                <button className={settingsTab === 'appearance' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('appearance')}><span className="settings-nav-icon">◐</span>{t('Appearance')}</button>
+                <button className={settingsTab === 'behavior' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('behavior')}><span className="settings-nav-icon">⚙</span>{t('Behavior')}</button>
+                <div className="settings-nav-group-label">{t('Libraries')}</div>
+                <button className={settingsTab === 'libraries' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('libraries')}><span className="settings-nav-icon">☰</span>{t('Enabled libraries')}</button>
+                <button className={settingsTab === 'cards' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('cards')}><span className="settings-nav-icon">▦</span>{t('Card fields')}</button>
+                <button className={settingsTab === 'customFields' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('customFields')}><span className="settings-nav-icon">✎</span>{t('Custom fields')}</button>
+                <button className={settingsTab === 'shortcuts' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('shortcuts')}><span className="settings-nav-icon">⌨</span>{t('Keyboard shortcuts')}</button>
+                <div className="settings-nav-group-label">{t('Data')}</div>
+                <button className={settingsTab === 'data' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('data')}><span className="settings-nav-icon">⌘</span>{t('Backup, import & export')}</button>
+                <button className={settingsTab === 'integrations' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('integrations')}><span className="settings-nav-icon">↗</span>{t('Integrations & network')}</button>
+                <button className={settingsTab === 'maintenance' ? 'settings-nav-btn active' : 'settings-nav-btn'} onClick={() => setSettingsTab('maintenance')}><span className="settings-nav-icon">⛭</span>{t('Maintenance & about')}</button>
               </aside>
               <div className="settings-main">
               <div className="settings-form">
@@ -3582,13 +3598,13 @@ function App() {
                       <label>{t('Language')}</label>
                       <div className="yesno">
                         {LANGUAGES.map((l) => (
-                          <button key={l.value} type="button" className={(settings.language ?? 'en') === l.value ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, language: l.value }))}>{l.label}</button>
+                          <button key={l.value} type="button" className={(settings.language ?? 'en') === l.value ? 'pill active' : 'pill'} onClick={() => switchLanguage(l.value)}>{l.label}</button>
                         ))}
                       </div>
                     </div>
                     <div className="field-group">
-                      <label>Theme</label>
-                      {['Original', 'Cool', 'Vibrant', 'Warm'].map((family) => {
+                      <label>{t('Theme')}</label>
+                      {[t('Original'), t('Cool'), t('Vibrant'), t('Warm')].map((family) => {
                         const themes = THEME_OPTIONS.filter((th) => th.family === family)
                         if (themes.length === 0) return null
                         return (
@@ -3609,12 +3625,12 @@ function App() {
                       })}
                     </div>
                     <div className="field-group">
-                      <label>Accent color</label>
+                      <label>{t('Accent color')}</label>
                       <div className="accent-grid">
                         {ACCENT_OPTIONS.map((a) => (
                           <button key={a.value} type="button" title={a.label} className={settings.accent === a.value ? 'accent-swatch active' : 'accent-swatch'} onClick={() => setSettings((s) => ({ ...s, accent: a.value }))}>
                             {a.value === 'default'
-                              ? <span className="accent-dot default-accent">A</span>
+                              ? <span className="accent-dot default-accent">{t('A')}</span>
                               : <span className="accent-dot" style={{ background: a.swatch }} />}
                             <span className="accent-label">{a.label}</span>
                           </button>
@@ -3622,37 +3638,37 @@ function App() {
                       </div>
                     </div>
                     <div className="field-group">
-                      <label>Density</label>
+                      <label>{t('Density')}</label>
                       <div className="yesno">
-                        <button type="button" className={settings.density === 'comfortable' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, density: 'comfortable' }))}>Comfortable</button>
-                        <button type="button" className={settings.density === 'compact' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, density: 'compact' }))}>Compact</button>
+                        <button type="button" className={settings.density === 'comfortable' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, density: 'comfortable' }))}>{t('Comfortable')}</button>
+                        <button type="button" className={settings.density === 'compact' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, density: 'compact' }))}>{t('Compact')}</button>
                       </div>
                     </div>
                     <div className="field-group">
-                      <label>Card zoom</label>
+                      <label>{t('Card zoom')}</label>
                       <div className="yesno">
                         {(['sm','md','lg','xl'] as const).map((z) => (
-                          <button key={z} type="button" className={(settings.cardZoom ?? 'md') === z ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, cardZoom: z }))}>{z === 'sm' ? 'Small' : z === 'md' ? 'Medium' : z === 'lg' ? 'Large' : 'Extra large'}</button>
+                          <button key={z} type="button" className={(settings.cardZoom ?? 'md') === z ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, cardZoom: z }))}>{z === 'sm' ? t('Small') : z === 'md' ? t('Medium') : z === 'lg' ? t('Large') : t('Extra large')}</button>
                         ))}
                       </div>
-                      <p className="hint">Controls how big the covers show in Grid layout. Smaller fits more per row; larger makes each cover more prominent.</p>
+                      <p className="hint">{t('Controls how big the covers show in Grid layout. Smaller fits more per row; larger makes each cover more prominent.')}</p>
                     </div>
                     <div className="field-group">
-                      <label>Default view</label>
+                      <label>{t('Default view')}</label>
                       <select
                         value={settings.defaultLayout}
                         onChange={(e) => { const v = e.target.value as Layout; setSettings((s) => ({ ...s, defaultLayout: v })); setLayout(v) }}
                       >
-                        <option value="grid">Grid</option>
-                        <option value="list">List</option>
-                        <option value="compact">Compact</option>
+                        <option value="grid">{t('Grid')}</option>
+                        <option value="list">{t('List')}</option>
+                        <option value="compact">{t('Compact')}</option>
                       </select>
                     </div>
                     <div className="field-group">
-                      <label>Animations</label>
+                      <label>{t('Animations')}</label>
                       <div className="yesno">
-                        <button type="button" className={settings.motion === 'auto' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, motion: 'auto' }))}>On</button>
-                        <button type="button" className={settings.motion === 'reduced' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, motion: 'reduced' }))}>Reduced</button>
+                        <button type="button" className={settings.motion === 'auto' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, motion: 'auto' }))}>{t('On')}</button>
+                        <button type="button" className={settings.motion === 'reduced' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, motion: 'reduced' }))}>{t('Reduced')}</button>
                       </div>
                     </div>
                   </>
@@ -3661,82 +3677,82 @@ function App() {
                 {settingsTab === 'behavior' && (
                   <>
                     <div className="field-group">
-                      <label>Confirm before deleting</label>
+                      <label>{t('Confirm before deleting')}</label>
                       <div className="yesno">
-                        <button type="button" className={settings.confirmDelete ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, confirmDelete: true }))}>Yes</button>
-                        <button type="button" className={!settings.confirmDelete ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, confirmDelete: false }))}>No</button>
+                        <button type="button" className={settings.confirmDelete ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, confirmDelete: true }))}>{t('Yes')}</button>
+                        <button type="button" className={!settings.confirmDelete ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, confirmDelete: false }))}>{t('No')}</button>
                       </div>
                     </div>
                     <div className="field-group">
-                      <label>Auto-mark as finished when you rate</label>
+                      <label>{t('Auto-mark as finished when you rate')}</label>
                       <div className="yesno">
-                        <button type="button" className={(settings.autoStatusOnRate !== false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoStatusOnRate: true }))}>Yes</button>
-                        <button type="button" className={(settings.autoStatusOnRate === false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoStatusOnRate: false }))}>No</button>
+                        <button type="button" className={(settings.autoStatusOnRate !== false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoStatusOnRate: true }))}>{t('Yes')}</button>
+                        <button type="button" className={(settings.autoStatusOnRate === false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoStatusOnRate: false }))}>{t('No')}</button>
                       </div>
-                      <p className="hint">Giving an item a rating (or setting a finished date) bumps its status to the "finished" bucket if it was still in backlog / in-progress. Games specifically go to <b>Played</b> — <b>Completed</b> stays reserved for your "I 100%'d it / got every achievement" flag. Every other library goes to Completed / Watched / Read / Listened. Off = every status change is manual.</p>
+                      <p className="hint">{t('Giving an item a rating (or setting a finished date) bumps its status to the "finished" bucket if it was still in backlog / in-progress. Games specifically go to')}{' '}<b>{t('Played')}</b> — <b>{t('Completed')}</b>{' '}{t('stays reserved for your "I 100%\'d it / got every achievement" flag. Every other library goes to Completed / Watched / Read / Listened. Off = every status change is manual.')}</p>
                     </div>
                     <div className="field-group">
-                      <label>Stamp today's date when auto-completing</label>
+                      <label>{t('Stamp today\'s date when auto-completing')}</label>
                       <div className="yesno">
-                        <button type="button" className={(settings.autoFinishedAtOnComplete !== false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoFinishedAtOnComplete: true }))}>Yes</button>
-                        <button type="button" className={(settings.autoFinishedAtOnComplete === false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoFinishedAtOnComplete: false }))}>No</button>
+                        <button type="button" className={(settings.autoFinishedAtOnComplete !== false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoFinishedAtOnComplete: true }))}>{t('Yes')}</button>
+                        <button type="button" className={(settings.autoFinishedAtOnComplete === false) ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, autoFinishedAtOnComplete: false }))}>{t('No')}</button>
                       </div>
-                      <p className="hint">Only affects items that had no finished date when the auto-completion fires — an existing date is never overwritten.</p>
+                      <p className="hint">{t('Only affects items that had no finished date when the auto-completion fires — an existing date is never overwritten.')}</p>
                     </div>
                     <div className="field-group">
-                      <label>Desktop notifications for new episodes</label>
+                      <label>{t('Desktop notifications for new episodes')}</label>
                       <div className="yesno">
-                        <button type="button" className={settings.notifyNewEpisodes ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, notifyNewEpisodes: true }))}>Yes</button>
-                        <button type="button" className={!settings.notifyNewEpisodes ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, notifyNewEpisodes: false }))}>No</button>
+                        <button type="button" className={settings.notifyNewEpisodes ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, notifyNewEpisodes: true }))}>{t('Yes')}</button>
+                        <button type="button" className={!settings.notifyNewEpisodes ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, notifyNewEpisodes: false }))}>{t('No')}</button>
                       </div>
                       <button type="button" className="secondary-btn compact" style={{ alignSelf: 'flex-start' }} onClick={async () => {
                         const shown = await window.ipcRenderer.invoke('notify:desktop', 'Omnio', 'Notifications are working.')
-                        if (!shown) setToast('Your system blocked the notification. Check its notification settings for Omnio.')
-                      }}>Send a test notification</button>
-                      <p className="hint">While Omnio is open, it lets you know when a new episode of an anime, donghua or series you're <b>watching</b> comes out. Air times come from AniList, and from TMDb for series (needs your TMDb key in Integrations).</p>
+                        if (!shown) setToast(t('Your system blocked the notification. Check its notification settings for Omnio.'))
+                      }}>{t('Send a test notification')}</button>
+                      <p className="hint">{t('While Omnio is open, it lets you know when a new episode of an anime, donghua or series you\'re')}{' '}<b>watching</b>{' '}{t('comes out. Air times come from AniList, and from TMDb for series (needs your TMDb key in Integrations).')}</p>
                     </div>
                     <div className="field-group">
-                      <label>Remember sort per library</label>
+                      <label>{t('Remember sort per library')}</label>
                       <div className="yesno">
-                        <button type="button" className={settings.rememberCategorySort ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, rememberCategorySort: true }))}>Yes</button>
-                        <button type="button" className={!settings.rememberCategorySort ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, rememberCategorySort: false, categorySortModes: {} }))}>No</button>
+                        <button type="button" className={settings.rememberCategorySort ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, rememberCategorySort: true }))}>{t('Yes')}</button>
+                        <button type="button" className={!settings.rememberCategorySort ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, rememberCategorySort: false, categorySortModes: {} }))}>{t('No')}</button>
                       </div>
-                      <p className="hint">When on, each library keeps whichever sort you left it in ("Rating" in Games, "Alphabetical" in Music…). When off, every library opens sorted by "Most recent".</p>
+                      <p className="hint">{t('When on, each library keeps whichever sort you left it in ("Rating" in Games, "Alphabetical" in Music…). When off, every library opens sorted by "Most recent".')}</p>
                     </div>
                     <div className="field-group">
-                      <label>On startup, open</label>
+                      <label>{t('On startup, open')}</label>
                       <div className="yesno">
-                        <button type="button" className={settings.startupCategory === 'home' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'home' }))}>Home dashboard</button>
-                        <button type="button" className={settings.startupCategory === 'last' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'last' }))}>Last used category</button>
-                        <button type="button" className={settings.startupCategory === 'first' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'first' }))}>First category</button>
+                        <button type="button" className={settings.startupCategory === 'home' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'home' }))}>{t('Home dashboard')}</button>
+                        <button type="button" className={settings.startupCategory === 'last' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'last' }))}>{t('Last used category')}</button>
+                        <button type="button" className={settings.startupCategory === 'first' ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, startupCategory: 'first' }))}>{t('First category')}</button>
                       </div>
                     </div>
                     <div className="field-group">
-                      <label>Item templates</label>
-                      <p className="hint">When you save a template from the Add panel ("Save as template"), new items in that category prefill status / tags / (games: platforms · ownership · source). Clear one below.</p>
+                      <label>{t('Item templates')}</label>
+                      <p className="hint">{t('When you save a template from the Add panel ("Save as template"), new items in that category prefill status / tags / (games: platforms · ownership · source). Clear one below.')}</p>
                       {(() => {
                         const entries = Object.entries(settings.itemTemplates ?? {})
                           .filter(([id]) => CATEGORIES.some((c) => c.id === id))
                         if (entries.length === 0) {
-                          return <p className="hint" style={{ marginTop: 6, opacity: 0.7 }}>No templates saved yet.</p>
+                          return <p className="hint" style={{ marginTop: 6, opacity: 0.7 }}>{t('No templates saved yet.')}</p>
                         }
                         return (
                           <div className="library-toggle-list stacked" style={{ marginTop: 6 }}>
-                            {entries.map(([id, t]) => {
+                            {entries.map(([id, tpl]) => {
                               const cat = CATEGORIES.find((c) => c.id === id)
-                              if (!cat || !t) return null
+                              if (!cat || !tpl) return null
                               const parts: string[] = []
-                              if (t.gameStatus) parts.push(t.gameStatus.replace(/_/g, ' '))
-                              if (t.watchStatus) parts.push(t.watchStatus.replace(/_/g, ' '))
-                              if (t.seriesStatus) parts.push(t.seriesStatus.replace(/_/g, ' '))
-                              if (t.mangaStatus) parts.push(t.mangaStatus.replace(/_/g, ' '))
-                              if (t.bookStatus) parts.push(t.bookStatus.replace(/_/g, ' '))
-                              if (t.visualNovelStatus) parts.push(t.visualNovelStatus.replace(/_/g, ' '))
-                              if (t.consumed !== undefined) parts.push(t.consumed ? 'consumed' : 'unconsumed')
-                              if (t.ownership) parts.push(t.ownership)
-                              if (t.gameSource) parts.push(t.gameSource)
-                              if (t.platforms && t.platforms.length > 0) parts.push(`platforms: ${t.platforms.join(', ')}`)
-                              if (t.tags && t.tags.length > 0) parts.push(`tags: ${t.tags.join(', ')}`)
+                              if (tpl.gameStatus) parts.push(tpl.gameStatus.replace(/_/g, ' '))
+                              if (tpl.watchStatus) parts.push(tpl.watchStatus.replace(/_/g, ' '))
+                              if (tpl.seriesStatus) parts.push(tpl.seriesStatus.replace(/_/g, ' '))
+                              if (tpl.mangaStatus) parts.push(tpl.mangaStatus.replace(/_/g, ' '))
+                              if (tpl.bookStatus) parts.push(tpl.bookStatus.replace(/_/g, ' '))
+                              if (tpl.visualNovelStatus) parts.push(tpl.visualNovelStatus.replace(/_/g, ' '))
+                              if (tpl.consumed !== undefined) parts.push(tpl.consumed ? 'consumed' : 'unconsumed')
+                              if (tpl.ownership) parts.push(tpl.ownership)
+                              if (tpl.gameSource) parts.push(tpl.gameSource)
+                              if (tpl.platforms && tpl.platforms.length > 0) parts.push(`platforms: ${tpl.platforms.join(', ')}`)
+                              if (tpl.tags && tpl.tags.length > 0) parts.push(`tags: ${tpl.tags.join(', ')}`)
                               return (
                                 <div key={id} className="library-toggle-row" style={{ justifyContent: 'space-between' }}>
                                   <span className="library-toggle-icon"><CategoryIcon id={id} /></span>
@@ -3752,7 +3768,7 @@ function App() {
                                       delete rest[id]
                                       return { ...s, itemTemplates: rest }
                                     })}
-                                  >Clear</button>
+                                  >{t('Clear')}</button>
                                 </div>
                               )
                             })}
@@ -3766,8 +3782,8 @@ function App() {
                 {settingsTab === 'libraries' && (
                   <>
                     <div className="field-group">
-                      <label>Enabled libraries</label>
-                      <p className="hint">Uncheck a library to hide it from Home and insights. Your data is preserved even if you disable one.</p>
+                      <label>{t('Enabled libraries')}</label>
+                      <p className="hint">{t('Uncheck a library to hide it from Home and insights. Your data is preserved even if you disable one.')}</p>
                       <div className="library-toggle-list">
                         {CATEGORIES.map((cat) => {
                           const enabled = !settings.enabledCategories || settings.enabledCategories.includes(cat.id)
@@ -3790,8 +3806,8 @@ function App() {
                       </div>
                     </div>
                     <div className="field-group">
-                      <label>Extras</label>
-                      <p className="hint">Optional sections that live outside the standard libraries. Disabling one only hides its sidebar entry — the data stays intact.</p>
+                      <label>{t('Extras')}</label>
+                      <p className="hint">{t('Optional sections that live outside the standard libraries. Disabling one only hides its sidebar entry — the data stays intact.')}</p>
                       <div className="library-toggle-list">
                         <label className="library-toggle-row">
                           <input
@@ -3807,14 +3823,14 @@ function App() {
                               <circle cx="17.5" cy="13.5" r="1" fill="currentColor" />
                             </svg>
                           </span>
-                          <span>Arcade</span>
+                          <span>{t('Arcade')}</span>
                         </label>
                       </div>
                     </div>
                     {unlockedPluginDefs.length > 0 && (
                       <div className="field-group">
-                        <label>Plugins</label>
-                        <p className="hint">Optional libraries you've unlocked. Uncheck to hide from the sidebar — your data stays intact and the toggle stays here so you can bring it back anytime.</p>
+                        <label>{t('Plugins')}</label>
+                        <p className="hint">{t('Optional libraries you\'ve unlocked. Uncheck to hide from the sidebar — your data stays intact and the toggle stays here so you can bring it back anytime.')}</p>
                         <div className="library-toggle-list">
                           {unlockedPluginDefs.map((plug) => {
                             const Icon = plug.icon
@@ -3830,7 +3846,7 @@ function App() {
                                     else set.add(plug.slug)
                                     return { ...s, hiddenPlugins: Array.from(set) }
                                   })}
-                                  title={hidden ? `Show ${plug.label} in the sidebar again` : `Hide ${plug.label} from the sidebar`}
+                                  title={hidden ? t('Show {label} in the sidebar again', { label: plug.label }) : t('Hide {label} from the sidebar', { label: plug.label })}
                                 />
                                 <span className="library-toggle-icon"><Icon /></span>
                                 <span>{plug.label}</span>
@@ -3847,7 +3863,7 @@ function App() {
                   <div className="settings-grid-card">
                     <div className="settings-grid-2">
                       <div className="settings-grid-item">
-                        <div className="settings-grid-item-title">Games</div>
+                        <div className="settings-grid-item-title">{t('Games')}</div>
                         <div className="pills">
                           {GAME_FIELD_OPTIONS.map((f) => (
                             <button key={f.value} type="button" className={settings.gameFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, gameFields: { ...s.gameFields, [f.value]: !s.gameFields[f.value] } }))}>{f.label}</button>
@@ -3855,7 +3871,7 @@ function App() {
                         </div>
                       </div>
                       <div className="settings-grid-item">
-                        <div className="settings-grid-item-title">Music</div>
+                        <div className="settings-grid-item-title">{t('Music')}</div>
                         <div className="pills">
                           {MUSIC_FIELD_OPTIONS.map((f) => (
                             <button key={f.value} type="button" className={settings.musicFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, musicFields: { ...s.musicFields, [f.value]: !s.musicFields[f.value] } }))}>{f.label}</button>
@@ -3863,7 +3879,7 @@ function App() {
                         </div>
                       </div>
                       <div className="settings-grid-item">
-                        <div className="settings-grid-item-title">Manga, Manhwa, Manhua &amp; Western Comics</div>
+                        <div className="settings-grid-item-title">{t('Manga, Manhwa, Manhua & Western Comics')}</div>
                         <div className="pills">
                           {MANGA_FIELD_OPTIONS.map((f) => (
                             <button key={f.value} type="button" className={settings.mangaFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, mangaFields: { ...s.mangaFields, [f.value]: !s.mangaFields[f.value] } }))}>{f.label}</button>
@@ -3871,7 +3887,7 @@ function App() {
                         </div>
                       </div>
                       <div className="settings-grid-item">
-                        <div className="settings-grid-item-title">Movies</div>
+                        <div className="settings-grid-item-title">{t('Movies')}</div>
                         <div className="pills">
                           {MOVIE_FIELD_OPTIONS.map((f) => (
                             <button key={f.value} type="button" className={settings.movieFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, movieFields: { ...s.movieFields, [f.value]: !s.movieFields[f.value] } }))}>{f.label}</button>
@@ -3879,7 +3895,7 @@ function App() {
                         </div>
                       </div>
                       <div className="settings-grid-item">
-                        <div className="settings-grid-item-title">Anime</div>
+                        <div className="settings-grid-item-title">{t('Anime')}</div>
                         <div className="pills">
                           {ANIME_FIELD_OPTIONS.map((f) => (
                             <button key={f.value} type="button" className={settings.animeFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, animeFields: { ...s.animeFields, [f.value]: !s.animeFields[f.value] } }))}>{f.label}</button>
@@ -3887,7 +3903,7 @@ function App() {
                         </div>
                       </div>
                       <div className="settings-grid-item">
-                        <div className="settings-grid-item-title">Series</div>
+                        <div className="settings-grid-item-title">{t('Series')}</div>
                         <div className="pills">
                           {SERIES_FIELD_OPTIONS.map((f) => (
                             <button key={f.value} type="button" className={settings.seriesFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, seriesFields: { ...s.seriesFields, [f.value]: !s.seriesFields[f.value] } }))}>{f.label}</button>
@@ -3895,7 +3911,7 @@ function App() {
                         </div>
                       </div>
                       <div className="settings-grid-item">
-                        <div className="settings-grid-item-title">Books</div>
+                        <div className="settings-grid-item-title">{t('Books')}</div>
                         <div className="pills">
                           {BOOK_FIELD_OPTIONS.map((f) => (
                             <button key={f.value} type="button" className={settings.bookFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, bookFields: { ...s.bookFields, [f.value]: !s.bookFields[f.value] } }))}>{f.label}</button>
@@ -3903,7 +3919,7 @@ function App() {
                         </div>
                       </div>
                       <div className="settings-grid-item">
-                        <div className="settings-grid-item-title">Visual Novels</div>
+                        <div className="settings-grid-item-title">{t('Visual Novels')}</div>
                         <div className="pills">
                           {VN_FIELD_OPTIONS.map((f) => (
                             <button key={f.value} type="button" className={settings.vnFields[f.value] ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, vnFields: { ...s.vnFields, [f.value]: !s.vnFields[f.value] } }))}>{f.label}</button>
@@ -3943,9 +3959,9 @@ function App() {
 
                 {settingsTab === 'customFields' && (
                   <>
-                    <div className="settings-section-title">Custom fields per library</div>
+                    <div className="settings-section-title">{t('Custom fields per library')}</div>
                     <p className="hint" style={{ marginTop: 0 }}>
-                      Add fields Omnio doesn't ship with — every item in the picked library grows the same extra inputs at the bottom of its editor. Renaming a field keeps existing values; removing a field just hides them (values reappear if you add the field back).
+                      {t('Add fields Omnio doesn\'t ship with — every item in the picked library grows the same extra inputs at the bottom of its editor. Renaming a field keeps existing values; removing a field just hides them (values reappear if you add the field back).')}
                     </p>
                     <LibraryCustomFieldsEditor
                       fields={settings.libraryCustomFields ?? {}}
@@ -3956,7 +3972,7 @@ function App() {
 
                 {settingsTab === 'shortcuts' && (
                   <>
-                    <div className="settings-section-title">Keyboard shortcuts</div>
+                    <div className="settings-section-title">{t('Keyboard shortcuts')}</div>
                     <ShortcutsEditor
                       overrides={settings.shortcutOverrides ?? {}}
                       onChange={(next) => setSettings((s) => ({ ...s, shortcutOverrides: next }))}
@@ -3966,135 +3982,135 @@ function App() {
 
                 {settingsTab === 'data' && (
                   <>
-                    <div className="settings-section-title">Backup &amp; restore</div>
+                    <div className="settings-section-title">{t('Backup & restore')}</div>
                     <div className="field-group">
-                      <label>Manual backup</label>
+                      <label>{t('Manual backup')}</label>
                       <div className="settings-actions">
-                        <button type="button" className="secondary-btn" onClick={handleExport}>⬇ Export backup</button>
-                        <button type="button" className="secondary-btn" onClick={handleImportBackup}>⬆ Import backup</button>
+                        <button type="button" className="secondary-btn" onClick={handleExport}>{t('⬇ Export backup')}</button>
+                        <button type="button" className="secondary-btn" onClick={handleImportBackup}>{t('⬆ Import backup')}</button>
                         <button type="button" className="secondary-btn" onClick={async () => {
-                          const dir = await pickFolder('Pick the assets folder from your other Omnio install')
+                          const dir = await pickFolder(t('Pick the assets folder from your other Omnio install'))
                           if (!dir) return
                           const r = await window.ipcRenderer.invoke('storage:import-assets-from', dir) as { ok: boolean; copied?: number; error?: string }
-                          if (r?.ok) setToast(`Copied ${r.copied ?? 0} asset files into this install`)
-                          else setToast(`Assets import failed: ${r?.error ?? 'unknown'}`)
-                        }}>⬆ Import assets folder…</button>
+                          if (r?.ok) setToast(t('Copied {copied} asset files into this install', { copied: r.copied ?? 0 }))
+                          else setToast(t('Assets import failed: {error}', { error: r?.error ?? 'unknown' }))
+                        }}>{t('⬆ Import assets folder…')}</button>
                         <input type="file" accept="application/json" ref={importInputRef} style={{ display: 'none' }} onChange={handleImportFile} />
                       </div>
-                      <p className="hint">Save your library as a single JSON file, or restore one you exported earlier. When migrating between installs (portable ↔ NSIS, dev ↔ portable) also use <strong>Import assets folder</strong> to copy the images so covers keep resolving.</p>
+                      <p className="hint">{t('Save your library as a single JSON file, or restore one you exported earlier. When migrating between installs (portable ↔ NSIS, dev ↔ portable) also use')}{' '}<strong>{t('Import assets folder')}</strong>{' '}{t('to copy the images so covers keep resolving.')}</p>
                     </div>
                     <div className="field-group">
-                      <label>Scheduled auto-backup</label>
+                      <label>{t('Scheduled auto-backup')}</label>
                       <div className="field-row">
                         <div className="field-group compact">
-                          <label>Interval</label>
+                          <label>{t('Interval')}</label>
                           <select
                             value={settings.autoBackupInterval ?? 'off'}
                             onChange={(e) => setSettings((s) => ({ ...s, autoBackupInterval: e.target.value as 'off' | 'daily' | 'weekly' }))}
                           >
-                            <option value="off">Off</option>
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
+                            <option value="off">{t('Off')}</option>
+                            <option value="daily">{t('Daily')}</option>
+                            <option value="weekly">{t('Weekly')}</option>
                           </select>
                         </div>
                         <div className="field-group compact" style={{ flex: 1 }}>
-                          <label>Destination folder</label>
+                          <label>{t('Destination folder')}</label>
                           <div className="settings-actions">
                             <button type="button" className="secondary-btn" onClick={async () => {
-                              const dir = await pickFolder('Pick a folder for automatic backups', settings.autoBackupTarget)
+                              const dir = await pickFolder(t('Pick a folder for automatic backups'), settings.autoBackupTarget)
                               if (dir) setSettings((s) => ({ ...s, autoBackupTarget: dir }))
-                            }}>{settings.autoBackupTarget ? 'Change folder…' : 'Pick folder…'}</button>
+                            }}>{settings.autoBackupTarget ? t('Change folder…') : t('Pick folder…')}</button>
                             {settings.autoBackupTarget && (
-                              <button type="button" className="secondary-btn" onClick={() => setSettings((s) => ({ ...s, autoBackupTarget: undefined }))}>Clear</button>
+                              <button type="button" className="secondary-btn" onClick={() => setSettings((s) => ({ ...s, autoBackupTarget: undefined }))}>{t('Clear')}</button>
                             )}
                           </div>
                           {settings.autoBackupTarget && <p className="hint" style={{ marginTop: 4 }}><code>{settings.autoBackupTarget}</code></p>}
                         </div>
                       </div>
                       <p className="hint">
-                        Copies the whole <code>data/</code> + <code>assets/</code> tree to the destination on the chosen cadence — same routine as the Remote backup button, but automatic. The app checks hourly while running and fires the copy when enough time has passed since the last one. Great for pointing at a Dropbox / OneDrive / Syncthing folder that already syncs to another machine. Last auto-backup: {settings.autoBackupLastAt ? new Date(settings.autoBackupLastAt).toLocaleString() : 'never'}.
+                        {t('Copies the whole')}{' '}<code>data/</code> + <code>assets/</code>{' '}{t('tree to the destination on the chosen cadence — same routine as the Remote backup button, but automatic. The app checks hourly while running and fires the copy when enough time has passed since the last one. Great for pointing at a Dropbox / OneDrive / Syncthing folder that already syncs to another machine. Last auto-backup: {date}.', { date: settings.autoBackupLastAt ? new Date(settings.autoBackupLastAt).toLocaleString(locale()) : 'never' })}
                       </p>
                     </div>
                     <div className="field-group">
-                      <label>Automatic snapshots</label>
+                      <label>{t('Automatic snapshots')}</label>
                       <BackupList
                         onRestore={(file) => askConfirm(
-                          `Restore ${file}? Your current library will be copied to data.pre-restore/ before it's replaced. You'll need to restart Omnio to see the restored data.`,
+                          t('Restore {file}? Your current library will be copied to data.pre-restore/ before it\'s replaced. You\'ll need to restart Omnio to see the restored data.', { file: file }),
                           async () => {
                             const ok = await window.ipcRenderer.invoke('data:restore-backup', file)
-                            if (ok) setToast('Restored — restart Omnio to load the snapshot')
-                            else setToast('Restore failed')
+                            if (ok) setToast(t('Restored — restart Omnio to load the snapshot'))
+                            else setToast(t('Restore failed'))
                           },
                         )}
                       />
                     </div>
                     <div className="field-group">
-                      <label>Remote backup</label>
+                      <label>{t('Remote backup')}</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={async () => {
-                          const dir = await pickFolder('Choose a folder inside Dropbox / OneDrive / Drive')
+                          const dir = await pickFolder(t('Choose a folder inside Dropbox / OneDrive / Drive'))
                           if (!dir) return
                           const r = await window.ipcRenderer.invoke('storage:copy-data-to', dir)
-                          if (r?.ok) setToast(`Copied ${r.files} files to ${r.path}`)
-                          else setToast(`Backup failed: ${r?.error ?? 'unknown'}`)
-                        }}>Copy library to folder…</button>
+                          if (r?.ok) setToast(t('Copied {files} files to {path}', { files: r.files, path: r.path }))
+                          else setToast(t('Backup failed: {error}', { error: r?.error ?? 'unknown' }))
+                        }}>{t('Copy library to folder…')}</button>
                       </div>
-                      <p className="hint">Pick a folder inside your cloud storage (Dropbox, OneDrive, Google Drive) — Omnio writes a timestamped copy of <code>data/</code> and <code>assets/</code> there and the cloud service handles the upload.</p>
+                      <p className="hint">{t('Pick a folder inside your cloud storage (Dropbox, OneDrive, Google Drive) — Omnio writes a timestamped copy of')}{' '}<code>data/</code> {t('and')} <code>assets/</code>{' '}{t('there and the cloud service handles the upload.')}</p>
                     </div>
 
-                    <div className="settings-section-title">Import &amp; share</div>
+                    <div className="settings-section-title">{t('Import & share')}</div>
                     <div className="field-group">
-                      <label>Import from other trackers</label>
+                      <label>{t('Import from other trackers')}</label>
                       <div className="settings-actions">
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setMalOpen(true)}><ServiceLogo service="mal" /><span>MAL / AniList XML</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setGenericImportOpen(true)}><ServiceLogo service="csv" /><span>Excel / CSV / Notion / TXT</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setSteamOpen(true)}><ServiceLogo service="steam" /><span>Steam profile</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setLetterboxdOpen(true)}><ServiceLogo service="letterboxd" /><span>Letterboxd</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setBackloggdOpen(true)}><ServiceLogo service="backloggd" /><span>Backloggd</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setSerializdOpen(true)}><ServiceLogo service="serializd" /><span>Serializd</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setSpotifyOpen(true)}><ServiceLogo service="spotify" /><span>Spotify library</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setHighlightsImportOpen(true)}><ServiceLogo service="kindle" /><span>Kindle highlights</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setLastfmImportOpen(true)}><ServiceLogo service="lastfm" /><span>Last.fm scrobbles (CSV)</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setLastFmOpen(true)}><ServiceLogo service="lastfm" /><span>Last.fm sync (API)</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setMusicScanOpen(true)}><ServiceLogo service="musicbrainz" /><span>Local music folder</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setTraktImportOpen(true)}><ServiceLogo service="trakt" /><span>Trakt.tv</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setVndbImportOpen(true)}><ServiceLogo service="vndb" /><span>VNDB list</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setDiscogsImportOpen(true)}><ServiceLogo service="discogs" /><span>Discogs collection</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setStoryGraphOpen(true)}><ServiceLogo service="storygraph" /><span>StoryGraph</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setImdbOpen(true)}><ServiceLogo service="imdb" /><span>IMDb</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setRymOpen(true)}><ServiceLogo service="rym" /><span>RateYourMusic</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setDiscographyCheckerOpen(true)}><ServiceLogo service="musicbrainz" /><span>Music discography check</span></button>
-                        <button type="button" className="secondary-btn importer-btn" onClick={() => setInstallScanOpen(true)}><ServiceLogo service="steam" /><span>Installed games (Steam / GOG / Epic)</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setMalOpen(true)}><ServiceLogo service="mal" /><span>{t('MAL / AniList XML')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setGenericImportOpen(true)}><ServiceLogo service="csv" /><span>{t('Excel / CSV / Notion / TXT')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setSteamOpen(true)}><ServiceLogo service="steam" /><span>{t('Steam profile')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setLetterboxdOpen(true)}><ServiceLogo service="letterboxd" /><span>{t('Letterboxd')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setBackloggdOpen(true)}><ServiceLogo service="backloggd" /><span>{t('Backloggd')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setSerializdOpen(true)}><ServiceLogo service="serializd" /><span>{t('Serializd')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setSpotifyOpen(true)}><ServiceLogo service="spotify" /><span>{t('Spotify library')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setHighlightsImportOpen(true)}><ServiceLogo service="kindle" /><span>{t('Kindle highlights')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setLastfmImportOpen(true)}><ServiceLogo service="lastfm" /><span>{t('Last.fm scrobbles (CSV)')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setLastFmOpen(true)}><ServiceLogo service="lastfm" /><span>{t('Last.fm sync (API)')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setMusicScanOpen(true)}><ServiceLogo service="musicbrainz" /><span>{t('Local music folder')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setTraktImportOpen(true)}><ServiceLogo service="trakt" /><span>{t('Trakt.tv')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setVndbImportOpen(true)}><ServiceLogo service="vndb" /><span>{t('VNDB list')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setDiscogsImportOpen(true)}><ServiceLogo service="discogs" /><span>{t('Discogs collection')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setStoryGraphOpen(true)}><ServiceLogo service="storygraph" /><span>{t('StoryGraph')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setImdbOpen(true)}><ServiceLogo service="imdb" /><span>{t('IMDb')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setRymOpen(true)}><ServiceLogo service="rym" /><span>{t('RateYourMusic')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setDiscographyCheckerOpen(true)}><ServiceLogo service="musicbrainz" /><span>{t('Music discography check')}</span></button>
+                        <button type="button" className="secondary-btn importer-btn" onClick={() => setInstallScanOpen(true)}><ServiceLogo service="steam" /><span>{t('Installed games (Steam / GOG / Epic)')}</span></button>
                       </div>
-                      <p className="hint">Steam import reads a public profile via the community XML endpoint — no API key. Letterboxd accepts the CSVs from your account export (Settings → Data → Export on letterboxd.com). Kindle highlights import parses <code>My Clippings.txt</code> from your Kindle's <code>documents/</code> folder and attaches each highlight to a matching book (or creates one). Playtime and status pre-fill; open each item afterwards to fetch cover + metadata via IGDB or SteamGridDB / TMDb.</p>
+                      <p className="hint">{t('Steam import reads a public profile via the community XML endpoint — no API key. Letterboxd accepts the CSVs from your account export (Settings → Data → Export on letterboxd.com). Kindle highlights import parses')}{' '}<code>{t('My Clippings.txt')}</code>{' '}{t('from your Kindle\'s')}{' '}<code>documents/</code>{' '}{t('folder and attaches each highlight to a matching book (or creates one). Playtime and status pre-fill; open each item afterwards to fetch cover + metadata via IGDB or SteamGridDB / TMDb.')}</p>
                     </div>
                     <div className="field-group">
-                      <label>Export to other trackers</label>
+                      <label>{t('Export to other trackers')}</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn importer-btn" onClick={async () => {
                           const { buildAnimeMalXml, downloadBlob } = await import('./MalExporter')
                           downloadBlob('omnio-anime.xml', 'application/xml', buildAnimeMalXml(items))
-                        }}><ServiceLogo service="mal" /><span>Export Anime (MAL XML)</span></button>
+                        }}><ServiceLogo service="mal" /><span>{t('Export Anime (MAL XML)')}</span></button>
                         <button type="button" className="secondary-btn importer-btn" onClick={async () => {
                           const { buildMangaMalXml, downloadBlob } = await import('./MalExporter')
                           downloadBlob('omnio-manga.xml', 'application/xml', buildMangaMalXml(items))
-                        }}><ServiceLogo service="mal" /><span>Export Manga (MAL XML)</span></button>
+                        }}><ServiceLogo service="mal" /><span>{t('Export Manga (MAL XML)')}</span></button>
                       </div>
-                      <p className="hint">Bulk-load titles from other places. MAL/AniList uses the XML export; the generic importer takes an .xlsx, .csv (including Notion database exports), .tsv or .txt file with one title per line.</p>
+                      <p className="hint">{t('Bulk-load titles from other places. MAL/AniList uses the XML export; the generic importer takes an .xlsx, .csv (including Notion database exports), .tsv or .txt file with one title per line.')}</p>
                     </div>
                     <div className="field-group">
-                      <label>Settings file</label>
-                      <p className="hint">Move your setup to another computer: theme, Home layout, card fields, shortcuts, templates, custom fields, tag tree and smart lists. Your library itself isn't included — use a backup for that.</p>
+                      <label>{t('Settings file')}</label>
+                      <p className="hint">{t('Move your setup to another computer: theme, Home layout, card fields, shortcuts, templates, custom fields, tag tree and smart lists. Your library itself isn\'t included — use a backup for that.')}</p>
                       <div className="upload-row">
                         <label className="settings-check">
                           <input type="checkbox" checked={includeKeysInExport} onChange={(e) => setIncludeKeysInExport(e.target.checked)} />
-                          Include API keys and proxy
+                          {t('Include API keys and proxy')}
                         </label>
                         <button type="button" className="secondary-btn" onClick={() => void saveExportInApp(
                           JSON.stringify(buildSettingsFile(settings, smartLists, includeKeysInExport), null, 2),
                           'omnio-settings', 'json', 'settings',
-                        )}>Export settings…</button>
-                        <button type="button" className="secondary-btn" onClick={() => settingsFileInputRef.current?.click()}>Import settings…</button>
+                        )}>{t('Export settings…')}</button>
+                        <button type="button" className="secondary-btn" onClick={() => settingsFileInputRef.current?.click()}>{t('Import settings…')}</button>
                         <input
                           ref={settingsFileInputRef}
                           type="file"
@@ -4106,10 +4122,10 @@ function App() {
                             if (!file) return
                             try {
                               const parsed = parseSettingsFile(await file.text())
-                              askConfirm('Replace your current settings with the ones in this file? Your library and backups stay as they are.', () => {
+                              askConfirm(t('Replace your current settings with the ones in this file? Your library and backups stay as they are.'), () => {
                                 setSettings((s) => mergeImportedSettings(s, parsed))
                                 setSmartLists((lists) => mergeSmartLists(lists, parsed.smartLists))
-                                setToast('Settings imported')
+                                setToast(t('Settings imported'))
                               })
                             } catch (err) {
                               setToast((err as Error).message)
@@ -4117,193 +4133,192 @@ function App() {
                           }}
                         />
                       </div>
-                      {includeKeysInExport && <p className="hint">Keep that file private: anyone with it can use your API keys.</p>}
+                      {includeKeysInExport && <p className="hint">{t('Keep that file private: anyone with it can use your API keys.')}</p>}
                     </div>
                     <div className="field-group">
-                      <label>Share your library</label>
+                      <label>{t('Share your library')}</label>
                       <div className="settings-actions">
-                        <button type="button" className="secondary-btn" onClick={() => setWrappedOpen(true)}>Yearly wrapped</button>
-                        <button type="button" className="secondary-btn" onClick={() => setCoverWallOpen(true)}>Cover wall export</button>
+                        <button type="button" className="secondary-btn" onClick={() => setWrappedOpen(true)}>{t('Yearly wrapped')}</button>
+                        <button type="button" className="secondary-btn" onClick={() => setCoverWallOpen(true)}>{t('Cover wall export')}</button>
                         <select value={exportScope} onChange={(e) => setExportScope(e.target.value)} style={{ maxWidth: 200 }}>
-                          <option value="all">All libraries</option>
+                          <option value="all">{t('All libraries')}</option>
                           {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((c) => (
-                            <option key={c.id} value={c.id}>{c.label} only</option>
+                            <option key={c.id} value={c.id}>{t('{label} only', { label: c.label })}</option>
                           ))}
                         </select>
                         <button type="button" className="secondary-btn" disabled={exporting} onClick={async () => {
-                          const dir = await pickFolder('Choose where to export your Omnio site', settings.lastExportFolder)
+                          const dir = await pickFolder(t('Choose where to export your Omnio site'), settings.lastExportFolder)
                           if (!dir) return
                           setExporting(true)
                           const scopedItems = exportScope === 'all' ? items : items.filter((i) => i.categoryId === exportScope)
                           const scopedArtists = exportScope === 'musica' || exportScope === 'all' ? musicArtists : []
-                          const scopeLabel = exportScope === 'all' ? 'My Omnio Library' : `My ${CATEGORIES.find((c) => c.id === exportScope)?.label ?? ''} library`
+                          const scopeLabel = exportScope === 'all' ? t('My Omnio Library') : t('My {label} library', { label: CATEGORIES.find((c) => c.id === exportScope)?.label ?? '' })
                           const html = buildStaticSiteHtml(scopedItems, scopedArtists, scopeLabel)
                           const r = await window.ipcRenderer.invoke('export:site', dir, html)
                           setExporting(false)
-                          if (r?.ok) { setToast(`Exported to ${r.path}`); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
-                          else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
-                        }}>{exporting ? 'Exporting…' : 'Export as HTML'}</button>
+                          if (r?.ok) { setToast(t('Exported to {path}', { path: r.path })); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
+                          else setToast(t('Export failed: {error}', { error: r?.error ?? 'unknown' }))
+                        }}>{exporting ? t('Exporting…') : t('Export as HTML')}</button>
                         <button type="button" className="secondary-btn" disabled={exporting} onClick={async () => {
-                          const dir = await pickFolder('Choose where to save the CSV files', settings.lastExportFolder)
+                          const dir = await pickFolder(t('Choose where to save the CSV files'), settings.lastExportFolder)
                           if (!dir) return
                           setExporting(true)
                           const scopedItems = exportScope === 'all' ? items : items.filter((i) => i.categoryId === exportScope)
                           const scopedArtists = exportScope === 'musica' || exportScope === 'all' ? musicArtists : []
                           const files = buildCsvExports(scopedItems, scopedArtists, exportScope)
                           const fileCount = Object.keys(files).length
-                          if (fileCount === 0) { setExporting(false); setToast('Nothing to export'); return }
+                          if (fileCount === 0) { setExporting(false); setToast(t('Nothing to export')); return }
                           const r = await window.ipcRenderer.invoke('export:csv', dir, files)
                           setExporting(false)
-                          if (r?.ok) { setToast(`Wrote ${r.count} CSV file${r.count === 1 ? '' : 's'} to ${r.path}`); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
-                          else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
-                        }}>Export as CSV</button>
+                          if (r?.ok) { setToast(plural(r.count, 'Wrote {n} CSV file to {path}', 'Wrote {n} CSV files to {path}', { path: r.path })); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
+                          else setToast(t('Export failed: {error}', { error: r?.error ?? 'unknown' }))
+                        }}>{t('Export as CSV')}</button>
                       </div>
-                      <p className="hint">Wrapped is a year-in-review view. HTML export builds a standalone <code>index.html</code> and copies your <code>assets/</code> folder — send the folder to a friend and it just opens. CSV export drops one file per category so spreadsheets/BI tools can round-trip your library. Scope defaults to the whole library; pick a single library to share just that one.</p>
+                      <p className="hint">{t('Wrapped is a year-in-review view. HTML export builds a standalone')}{' '}<code>index.html</code>{' '}{t('and copies your')}{' '}<code>assets/</code>{' '}{t('folder — send the folder to a friend and it just opens. CSV export drops one file per category so spreadsheets/BI tools can round-trip your library. Scope defaults to the whole library; pick a single library to share just that one.')}</p>
                     </div>
                   </>
                 )}
 
                 {settingsTab === 'integrations' && (
                   <>
-                    <div className="settings-section-title">Network</div>
+                    <div className="settings-section-title">{t('Network')}</div>
                     <div className="field-group">
-                      <label>HTTP proxy (optional)</label>
+                      <label>{t('HTTP proxy (optional)')}</label>
                       <input
                         type="text"
                         placeholder="http://user:pass@host:port"
                         value={settings.httpProxy ?? ''}
                         onChange={(e) => setSettings((s) => ({ ...s, httpProxy: e.target.value }))}
                         onBlur={() => window.ipcRenderer.invoke('proxy:apply', settings.httpProxy ?? '').then((r) => {
-                          setToast(r?.ok ? (settings.httpProxy ? 'Proxy applied' : 'Proxy cleared') : `Proxy failed: ${r?.error ?? 'unknown'}`)
+                          setToast(r?.ok ? (settings.httpProxy ? t('Proxy applied') : t('Proxy cleared')) : t('Proxy failed: {error}', { error: r?.error ?? 'unknown' }))
                         })}
                       />
                       <p className="hint">
-                        Routes every outbound request from Omnio (metadata fetchers, cover downloads, in-app updater) through the given HTTP(S) proxy. Useful for Docker / NAS deployments behind a corporate firewall or a Pi-hole. Leave empty for a direct connection. Takes effect on blur; also re-applied on every startup.
+                        {t('Routes every outbound request from Omnio (metadata fetchers, cover downloads, in-app updater) through the given HTTP(S) proxy. Useful for Docker / NAS deployments behind a corporate firewall or a Pi-hole. Leave empty for a direct connection. Takes effect on blur; also re-applied on every startup.')}
                       </p>
                     </div>
-                    <div className="settings-section-title">Integrations · API keys</div>
+                    <div className="settings-section-title">{t('Integrations · API keys')}</div>
                     {/* Sorted alphabetically by service name so users can scan the list. */}
                     <div className="field-group">
                       <label className="api-key-label">
-                        <span>AniDB client name (Anime · Donghua)</span>
-                        <button type="button" className="api-key-help" onClick={() => setApiGuide('anidb')} title="How to fill the AniDB form">? How to fill</button>
+                        <span>{t('AniDB client name (Anime · Donghua)')}</span>
+                        <button type="button" className="api-key-help" onClick={() => setApiGuide('anidb')} title={t('How to fill the AniDB form')}>{t('? How to fill')}</button>
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. omnio"
+                        placeholder={t('e.g. omnio')}
                         value={settings.anidbClient ?? ''}
                         onChange={(e) => setSettings((s) => ({ ...s, anidbClient: e.target.value }))}
                       />
                       <p className="hint">
-                        AniDB's HTTP API requires a client name registered at <code>anidb.net/software/add</code>.
-                        Enter the name here to enable the AniDB deep-fetch button in the anime / donghua editors. Deep metadata (creators per episode, weighted tags, cross-refs) — coexists with AniList / MAL / Kitsu. Rate-limited to one request per two seconds per AniDB's terms.
+                        {t('AniDB\'s HTTP API requires a client name registered at')}{' '}<code>anidb.net/software/add</code>{t('. Enter the name here to enable the AniDB deep-fetch button in the anime / donghua editors. Deep metadata (creators per episode, weighted tags, cross-refs) — coexists with AniList / MAL / Kitsu. Rate-limited to one request per two seconds per AniDB\'s terms.')}
                       </p>
                     </div>
                     <div className="field-group">
                       <label className="api-key-label">
-                        <span>ComicVine (Western Comics)</span>
-                        <button type="button" className="api-key-help" onClick={() => setApiGuide('comicvine')} title="Where to get the ComicVine key">? How to fill</button>
+                        <span>{t('ComicVine (Western Comics)')}</span>
+                        <button type="button" className="api-key-help" onClick={() => setApiGuide('comicvine')} title={t('Where to get the ComicVine key')}>{t('? How to fill')}</button>
                       </label>
                       <input
                         type="password"
-                        placeholder="Paste your ComicVine key…"
+                        placeholder={t('Paste your ComicVine key…')}
                         value={settings.comicvineApiKey ?? ''}
                         onChange={(e) => setSettings((s) => ({ ...s, comicvineApiKey: e.target.value }))}
                       />
-                      <p className="hint">Free key at <code>comicvine.gamespot.com/api/</code> — Marvel, DC, Image, indies.</p>
+                      <p className="hint">{t('Free key at')}{' '}<code>comicvine.gamespot.com/api/</code>{' '}{t('— Marvel, DC, Image, indies.')}</p>
                     </div>
                     <div className="field-group">
                       <label className="api-key-label">
-                        <span>IGDB (Games — full metadata) — Twitch Client ID + Secret</span>
-                        <button type="button" className="api-key-help" onClick={() => setApiGuide('igdb')} title="How to register a Twitch app for IGDB">? How to fill</button>
+                        <span>{t('IGDB (Games — full metadata) — Twitch Client ID + Secret')}</span>
+                        <button type="button" className="api-key-help" onClick={() => setApiGuide('igdb')} title={t('How to register a Twitch app for IGDB')}>{t('? How to fill')}</button>
                       </label>
                       <input
                         type="text"
-                        placeholder="Client ID"
+                        placeholder={t('Client ID')}
                         value={settings.igdbClientId ?? ''}
                         onChange={(e) => setSettings((s) => ({ ...s, igdbClientId: e.target.value }))}
                       />
                       <input
                         type="password"
-                        placeholder="Client Secret"
+                        placeholder={t('Client Secret')}
                         value={settings.igdbClientSecret ?? ''}
                         onChange={(e) => setSettings((s) => ({ ...s, igdbClientSecret: e.target.value }))}
                         style={{ marginTop: 6 }}
                       />
-                      <p className="hint">Free Twitch app at <code>dev.twitch.tv/console/apps</code> (Application Integration, any localhost redirect).</p>
+                      <p className="hint">{t('Free Twitch app at')}{' '}<code>dev.twitch.tv/console/apps</code>{' '}{t('(Application Integration, any localhost redirect).')}</p>
                     </div>
                     <div className="field-group">
                       <label className="api-key-label">
-                        <span>SteamGridDB (Games — covers / banners / logos)</span>
-                        <button type="button" className="api-key-help" onClick={() => setApiGuide('sgdb')} title="Where to get the SteamGridDB key">? How to fill</button>
+                        <span>{t('SteamGridDB (Games — covers / banners / logos)')}</span>
+                        <button type="button" className="api-key-help" onClick={() => setApiGuide('sgdb')} title={t('Where to get the SteamGridDB key')}>{t('? How to fill')}</button>
                       </label>
                       <input
                         type="password"
-                        placeholder="Paste your SteamGridDB key…"
+                        placeholder={t('Paste your SteamGridDB key…')}
                         value={settings.sgdbApiKey ?? ''}
                         onChange={(e) => setSettings((s) => ({ ...s, sgdbApiKey: e.target.value }))}
                       />
-                      <p className="hint">Free key at <code>steamgriddb.com/profile/preferences/api</code>.</p>
+                      <p className="hint">{t('Free key at')}{' '}<code>steamgriddb.com/profile/preferences/api</code>.</p>
                     </div>
                     <div className="field-group">
                       <label className="api-key-label">
-                        <span>TMDb (Movies + Series)</span>
-                        <button type="button" className="api-key-help" onClick={() => setApiGuide('tmdb')} title="How to fill the TMDb v3 API form">? How to fill</button>
+                        <span>{t('TMDb (Movies + Series)')}</span>
+                        <button type="button" className="api-key-help" onClick={() => setApiGuide('tmdb')} title={t('How to fill the TMDb v3 API form')}>{t('? How to fill')}</button>
                       </label>
                       <input
                         type="password"
-                        placeholder="Paste your TMDb v3 API key…"
+                        placeholder={t('Paste your TMDb v3 API key…')}
                         value={settings.tmdbApiKey ?? ''}
                         onChange={(e) => setSettings((s) => ({ ...s, tmdbApiKey: e.target.value }))}
                       />
-                      <p className="hint">Free v3 key at <code>themoviedb.org/settings/api</code>.</p>
+                      <p className="hint">{t('Free v3 key at')}{' '}<code>themoviedb.org/settings/api</code>.</p>
                     </div>
                     <div className="field-group">
-                      <label>Last.fm (Music)</label>
+                      <label>{t('Last.fm (Music)')}</label>
                       <input
                         type="password"
-                        placeholder="Free API key from last.fm/api/account/create…"
+                        placeholder={t('Free API key from last.fm/api/account/create…')}
                         value={settings.lastFmApiKey ?? ''}
                         onChange={(e) => setSettings((s) => ({ ...s, lastFmApiKey: e.target.value }))}
                       />
                       <input
                         type="text"
-                        placeholder="Your Last.fm username"
+                        placeholder={t('Your Last.fm username')}
                         value={settings.lastFmUsername ?? ''}
                         onChange={(e) => setSettings((s) => ({ ...s, lastFmUsername: e.target.value }))}
                         style={{ marginTop: 6 }}
                       />
-                      <p className="hint">Feeds the "Sync from Last.fm" importer — maps your top-scrobbled albums onto the Music library and pre-fills playcounts.</p>
+                      <p className="hint">{t('Feeds the "Sync from Last.fm" importer — maps your top-scrobbled albums onto the Music library and pre-fills playcounts.')}</p>
                     </div>
 
-                    <p className="hint" style={{ marginTop: -6 }}>AniList, Kitsu, MangaDex, MusicBrainz and MyAnimeList need no key — they work out of the box.</p>
+                    <p className="hint" style={{ marginTop: -6 }}>{t('AniList, Kitsu, MangaDex, MusicBrainz and MyAnimeList need no key — they work out of the box.')}</p>
 
-                    <div className="settings-section-title">Updates</div>
+                    <div className="settings-section-title">{t('Updates')}</div>
                     <div className="field-group">
-                      <label>Check for updates</label>
+                      <label>{t('Check for updates')}</label>
                       <div className="settings-actions">
                         <button type="button" className="secondary-btn" onClick={() => runUpdateCheck(false)} disabled={updateCheckState === 'checking'}>
-                          {updateCheckState === 'checking' ? 'Checking…' : 'Check for updates'}
+                          {updateCheckState === 'checking' ? t('Checking…') : t('Check for updates')}
                         </button>
                         {updateInfo?.matchedAssetUrl && (
                           <button type="button" className="secondary-btn" onClick={startAssistedDownload}>
-                            ⬇ Update to {updateInfo.latest}
+                            {t('⬇ Update to {latest}', { latest: updateInfo.latest })}
                           </button>
                         )}
                         {updateInfo && (
                           <button type="button" className="secondary-btn" onClick={() => { if (updateInfo.htmlUrl) invoke('updates:open-url', updateInfo.htmlUrl) }}>
-                            ↗ Open release page
+                            {t('↗ Open release page')}
                           </button>
                         )}
                       </div>
                       {updateCheckState === 'up-to-date' && !updateInfo && (
-                        <p className="hint">You're on the latest — v{APP_VERSION}.</p>
+                        <p className="hint">{t('You\'re on the latest — v{APP_VERSION}.', { APP_VERSION: APP_VERSION })}</p>
                       )}
                       {updateCheckState === 'error' && (
-                        <p className="hint" style={{ color: 'var(--danger)' }}>Couldn't reach GitHub: {updateCheckError}</p>
+                        <p className="hint" style={{ color: 'var(--danger)' }}>{t('Couldn\'t reach GitHub: {updateCheckError}', { updateCheckError: updateCheckError })}</p>
                       )}
                       {updateInfo && (
-                        <p className="hint">Omnio {updateInfo.latest} released. You're on {updateInfo.current}. Downloads work for portable, NSIS, DMG, AppImage — pick your build on the release page.</p>
+                        <p className="hint">{t('Omnio {latest} released. You\'re on {current}. Downloads work for portable, NSIS, DMG, AppImage — pick your build on the release page.', { latest: updateInfo.latest, current: updateInfo.current })}</p>
                       )}
                     </div>
                   </>
@@ -4311,80 +4326,80 @@ function App() {
 
                 {settingsTab === 'maintenance' && (
                   <>
-                    <div className="settings-section-title">Maintenance</div>
+                    <div className="settings-section-title">{t('Maintenance')}</div>
                     {/* Grouped as three sub-sections so 9 buttons + hints
                         don't read as a wall. Each row is a compact card:
                         title + one-line description on the left, action
                         on the right, so the whole tab fits without a
                         second scroll for most users. */}
                     <div className="maintenance-group">
-                      <div className="maintenance-group-title">Cleanup &amp; organization</div>
+                      <div className="maintenance-group-title">{t('Cleanup & organization')}</div>
                       <div className="maintenance-row">
                         <div className="maintenance-row-info">
-                          <h4>Find duplicates</h4>
-                          <p>Fuzzy-matches titles across every library and lets you merge or delete duplicates.</p>
+                          <h4>{t('Find duplicates')}</h4>
+                          <p>{t('Fuzzy-matches titles across every library and lets you merge or delete duplicates.')}</p>
                         </div>
-                        <button type="button" className="secondary-btn" onClick={() => setDupOpen(true)}>Find similar titles</button>
+                        <button type="button" className="secondary-btn" onClick={() => setDupOpen(true)}>{t('Find similar titles')}</button>
                       </div>
                       <div className="maintenance-row">
                         <div className="maintenance-row-info">
-                          <h4>Genre normalizer</h4>
-                          <p>Merge variants that spell the same concept differently ("Sci-Fi" / "Science Fiction" / "Ciencia ficción"). Applies only to <code>genres[]</code>; <code>tags[]</code> untouched.</p>
+                          <h4>{t('Genre normalizer')}</h4>
+                          <p>{t('Merge variants that spell the same concept differently ("Sci-Fi" / "Science Fiction" / "Ciencia ficción"). Applies only to')}{' '}<code>{t('genres[]')}</code>; <code>{t('tags[]')}</code> untouched.</p>
                         </div>
-                        <button type="button" className="secondary-btn" onClick={() => setGenreNormalizerOpen(true)}>Merge genres</button>
+                        <button type="button" className="secondary-btn" onClick={() => setGenreNormalizerOpen(true)}>{t('Merge genres')}</button>
                       </div>
                       <div className="maintenance-row">
                         <div className="maintenance-row-info">
-                          <h4>Role normalizer</h4>
-                          <p>Same idea for band-member roles across every Music Artist — keeps the band-timeline color palette consistent.</p>
+                          <h4>{t('Role normalizer')}</h4>
+                          <p>{t('Same idea for band-member roles across every Music Artist — keeps the band-timeline color palette consistent.')}</p>
                         </div>
-                        <button type="button" className="secondary-btn" onClick={() => setRoleNormalizerOpen(true)}>Merge roles</button>
+                        <button type="button" className="secondary-btn" onClick={() => setRoleNormalizerOpen(true)}>{t('Merge roles')}</button>
                       </div>
                       <div className="maintenance-row">
                         <div className="maintenance-row-info">
-                          <h4>Tag hierarchy</h4>
-                          <p>Nest tags under a parent (e.g. <code>jrpg → turn-based</code>). Selecting the parent in Filters matches every descendant; item cards still show the leaf tag.</p>
+                          <h4>{t('Tag hierarchy')}</h4>
+                          <p>{t('Nest tags under a parent (e.g.')}{' '}<code>{t('jrpg → turn-based')}</code>{t('). Selecting the parent in Filters matches every descendant; item cards still show the leaf tag.')}</p>
                         </div>
-                        <button type="button" className="secondary-btn" onClick={() => setTagHierarchyOpen(true)}>Edit hierarchy</button>
+                        <button type="button" className="secondary-btn" onClick={() => setTagHierarchyOpen(true)}>{t('Edit hierarchy')}</button>
                       </div>
                     </div>
 
                     <div className="maintenance-group">
-                      <div className="maintenance-group-title">Data integrity</div>
+                      <div className="maintenance-group-title">{t('Data integrity')}</div>
                       <div className="maintenance-row">
                         <div className="maintenance-row-info">
-                          <h4>Audit incomplete items</h4>
-                          <p>Diagnostic scan — reports which core fields are missing per library (cover, rating, status, authors / developers, release year…). Non-destructive.</p>
+                          <h4>{t('Audit incomplete items')}</h4>
+                          <p>{t('Diagnostic scan — reports which core fields are missing per library (cover, rating, status, authors / developers, release year…). Non-destructive.')}</p>
                         </div>
-                        <button type="button" className="secondary-btn" onClick={() => setAuditOpen(true)}>Scan items</button>
+                        <button type="button" className="secondary-btn" onClick={() => setAuditOpen(true)}>{t('Scan items')}</button>
                       </div>
                       <div className="maintenance-row">
                         <div className="maintenance-row-info">
-                          <h4>Find broken covers</h4>
-                          <p>Lists every <code>cover</code> / <code>banner</code> / <code>logo</code> / <code>volume</code> / <code>photo</code> whose file is missing on disk. Pick and clear the reference to re-fetch cleanly.</p>
+                          <h4>{t('Find broken covers')}</h4>
+                          <p>{t('Lists every')}{' '}<code>cover</code> / <code>banner</code> / <code>logo</code> / <code>volume</code> / <code>photo</code>{' '}{t('whose file is missing on disk. Pick and clear the reference to re-fetch cleanly.')}</p>
                         </div>
                         <button type="button" className="secondary-btn" onClick={async () => {
                           const r = await window.ipcRenderer.invoke('storage:audit-broken-assets') as { ok: boolean; broken?: { itemId: string; itemTitle: string; category: string; field: string; rel: string }[]; error?: string }
-                          if (!r?.ok) { setToast(`Audit failed: ${r?.error ?? 'unknown'}`); return }
+                          if (!r?.ok) { setToast(t('Audit failed: {error}', { error: r?.error ?? 'unknown' })); return }
                           const broken = r.broken ?? []
                           setBrokenAssets(broken)
                           setBrokenAssetsOpen(true)
-                        }}>Scan files</button>
+                        }}>{t('Scan files')}</button>
                       </div>
                     </div>
 
                     <div className="maintenance-group">
-                      <div className="maintenance-group-title">Asset maintenance</div>
+                      <div className="maintenance-group-title">{t('Asset maintenance')}</div>
                       <div className="maintenance-row">
                         <div className="maintenance-row-info">
-                          <h4>Rename all assets to titles</h4>
-                          <p>Sweeps <code>assets/</code> and renames every file to <code>[title] [kind].ext</code>. Handy after upgrading from an old UUID-named build.</p>
+                          <h4>{t('Rename all assets to titles')}</h4>
+                          <p>{t('Sweeps')}{' '}<code>assets/</code>{' '}{t('and renames every file to')}{' '}<code>{t('[title] [kind].ext')}</code>{t('. Handy after upgrading from an old UUID-named build.')}</p>
                         </div>
                         <button type="button" className="secondary-btn" onClick={async () => {
                           const r = await window.ipcRenderer.invoke('storage:rename-all-assets') as { ok: boolean; renamed?: number; rewrites?: { from: string; to: string }[]; error?: string }
-                          if (!r?.ok) { setToast(`Rename failed: ${r?.error ?? 'unknown'}`); return }
+                          if (!r?.ok) { setToast(t('Rename failed: {error}', { error: r?.error ?? 'unknown' })); return }
                           const rewrites = r.rewrites ?? []
-                          if (rewrites.length === 0) { setToast('All assets already use title-based names'); return }
+                          if (rewrites.length === 0) { setToast(t('All assets already use title-based names')); return }
                           const map = new Map(rewrites.map((x) => [x.from, x.to]))
                           const swap = (v: string | undefined) => (v && map.has(v) ? map.get(v)! : v)
                           skipHistoryRef.current = true
@@ -4401,85 +4416,85 @@ function App() {
                           })))
                           setMusicArtists((list) => list.map((a) => ({ ...a, photo: swap(a.photo), bannerImage: swap(a.bannerImage) })))
                           setCollections((list) => list.map((g) => ({ ...g, cover: swap(g.cover) ?? g.cover })))
-                          setToast(`Renamed ${rewrites.length} asset${rewrites.length === 1 ? '' : 's'}`)
-                        }}>Rename now</button>
+                          setToast(plural(rewrites.length, 'Renamed {n} asset', 'Renamed {n} assets'))
+                        }}>{t('Rename now')}</button>
                       </div>
                       <div className="maintenance-row">
                         <div className="maintenance-row-info">
-                          <h4>Clean orphan assets</h4>
-                          <p>Deletes files no item, group cover, or artist photo references anymore. Reclaims disk from fetched-and-discarded covers.</p>
+                          <h4>{t('Clean orphan assets')}</h4>
+                          <p>{t('Deletes files no item, group cover, or artist photo references anymore. Reclaims disk from fetched-and-discarded covers.')}</p>
                         </div>
                         <button type="button" className="secondary-btn" onClick={() => askConfirm(
-                          'Scan the assets/ folder and delete every file no item references anymore? Reclaims disk used by covers you fetched from an API and then discarded before saving.',
+                          t('Scan the assets/ folder and delete every file no item references anymore? Reclaims disk used by covers you fetched from an API and then discarded before saving.'),
                           async () => {
                             const r = await window.ipcRenderer.invoke('storage:clean-orphan-assets')
-                            if (!r?.ok) { setToast(`Scan failed: ${r?.error ?? 'unknown'}`); return }
-                            if (r.removed > 0) setToast(`Removed ${r.removed} orphan${r.removed === 1 ? '' : 's'} · freed ${(r.bytes / 1024 / 1024).toFixed(2)} MB (${r.referenced} references / ${r.scanned} files scanned)`)
-                            else setToast(`Nothing to clean · ${r.referenced} references / ${r.scanned} files on disk`)
+                            if (!r?.ok) { setToast(t('Scan failed: {error}', { error: r?.error ?? 'unknown' })); return }
+                            if (r.removed > 0) setToast(plural(r.removed, 'Removed {n} orphan · freed {bytes} MB ({referenced} references / {scanned} files scanned)', 'Removed {n} orphans · freed {bytes} MB ({referenced} references / {scanned} files scanned)', { bytes: (r.bytes / 1024 / 1024).toFixed(2), referenced: r.referenced, scanned: r.scanned }))
+                            else setToast(t('Nothing to clean · {referenced} references / {scanned} files on disk', { referenced: r.referenced, scanned: r.scanned }))
                           },
-                        )}>Scan &amp; delete</button>
+                        )}>{t('Scan & delete')}</button>
                       </div>
                       <div className="maintenance-row">
                         <div className="maintenance-row-info">
-                          <h4>Clean migration leftovers</h4>
-                          <p>Deletes one-shot safety nets from upgrades / restores (<code>data.pre-split.json</code>, <code>data.pre-restore/</code>). Rotating snapshots stay put.</p>
+                          <h4>{t('Clean migration leftovers')}</h4>
+                          <p>{t('Deletes one-shot safety nets from upgrades / restores (')}<code>data.pre-split.json</code>, <code>data.pre-restore/</code>{t('). Rotating snapshots stay put.')}</p>
                         </div>
                         <button type="button" className="secondary-btn" onClick={async () => {
                           const r = await window.ipcRenderer.invoke('storage:cleanup-migration-artifacts')
-                          if (r?.removed > 0) setToast(`Freed ${(r.bytes / 1024).toFixed(1)} KB`)
-                          else setToast('Nothing to clean')
-                        }}>Delete backups</button>
+                          if (r?.removed > 0) setToast(t('Freed {bytes} KB', { bytes: (r.bytes / 1024).toFixed(1) }))
+                          else setToast(t('Nothing to clean'))
+                        }}>{t('Delete backups')}</button>
                       </div>
                     </div>
 
                     <div className="maintenance-group">
-                      <div className="maintenance-group-title">Reference</div>
+                      <div className="maintenance-group-title">{t('Reference')}</div>
                       <div className="maintenance-row">
                         <div className="maintenance-row-info">
-                          <h4>Image upload guide</h4>
-                          <p>Recommended aspect + dimensions for every image slot in the app. Every slot accepts PNG · JPG · WebP · GIF · AVIF · BMP · SVG.</p>
+                          <h4>{t('Image upload guide')}</h4>
+                          <p>{t('Recommended aspect + dimensions for every image slot in the app. Every slot accepts PNG · JPG · WebP · GIF · AVIF · BMP · SVG.')}</p>
                         </div>
-                        <button type="button" className="secondary-btn" onClick={() => setImageGuideOpen(true)}>Show guide</button>
+                        <button type="button" className="secondary-btn" onClick={() => setImageGuideOpen(true)}>{t('Show guide')}</button>
                       </div>
                     </div>
 
-                    <div className="settings-section-title">Danger zone</div>
+                    <div className="settings-section-title">{t('Danger zone')}</div>
                     <div className="field-group">
-                      <label>Reset settings</label>
-                      <button type="button" className="secondary-btn" onClick={() => askConfirm('Reset all settings to defaults? Your library data won’t be affected.', () => { setSettings(DEFAULT_SETTINGS); setLayout(DEFAULT_SETTINGS.defaultLayout); setToast('Settings reset') })}>Reset to defaults</button>
+                      <label>{t('Reset settings')}</label>
+                      <button type="button" className="secondary-btn" onClick={() => askConfirm(t('Reset all settings to defaults? Your library data won’t be affected.'), () => { setSettings(DEFAULT_SETTINGS); setLayout(DEFAULT_SETTINGS.defaultLayout); setToast('Settings reset') })}>{t('Reset to defaults')}</button>
                     </div>
                     <div className="field-group">
-                      <label>Delete all data</label>
-                      <button type="button" className="danger-btn" onClick={handleWipeAll}>Delete all data</button>
+                      <label>{t('Delete all data')}</label>
+                      <button type="button" className="danger-btn" onClick={handleWipeAll}>{t('Delete all data')}</button>
                     </div>
                     <div className="field-group">
-                      <label>About</label>
+                      <label>{t('About')}</label>
                       <div className="about-box">
-                        <p className="about-title">Omnio <span className="about-version">v{APP_VERSION}</span></p>
-                        <p className="about-tagline">A personal hobby backlog tracker for games, music, movies, series, anime, donghua, manga family, books and visual novels.</p>
-                        <p className="about-line">Local-only. No accounts, no telemetry, no cloud. Your data lives on this machine.</p>
-                        <p className="about-section-title">New in this release</p>
+                        <p className="about-title">{t('Omnio')}{' '}<span className="about-version">{t('v{APP_VERSION}', { APP_VERSION: APP_VERSION })}</span></p>
+                        <p className="about-tagline">{t('A personal hobby backlog tracker for games, music, movies, series, anime, donghua, manga family, books and visual novels.')}</p>
+                        <p className="about-line">{t('Local-only. No accounts, no telemetry, no cloud. Your data lives on this machine.')}</p>
+                        <p className="about-section-title">{t('New in this release')}</p>
                         <ul className="about-changelog">
-                          <li><b>Fedora / RHEL <code>.rpm</code> build</b> — Tauri v2's native <code>rpm</code> bundle target is on; the release ships <code>omnio-&lt;version&gt;-1.x86_64.rpm</code> next to the AppImage and <code>.deb</code>. Install with <code>sudo dnf install ./omnio-&lt;version&gt;-1.x86_64.rpm</code> on Fedora / RHEL / CentOS / Rocky / Alma / openSUSE / Amazon Linux 2023.</li>
-                          <li><b>Arch AUR: <code>omnio-bin</code></b> — the release publishes a stamped PKGBUILD that repackages the upstream <code>.deb</code> for Arch and derivatives. <code>yay -S omnio-bin</code>.</li>
-                          <li><b>winget: <code>TonyMontania.Omnio</code></b> — three installer entries (NSIS + MSI + portable ZIP), each with its own SHA256. <code>winget install TonyMontania.Omnio</code>.</li>
-                          <li><b>In-app updater picks the right asset for every install variant</b> — the detector was broken for portable (looked for an env var that doesn't exist), MSI (no branch at all) and <code>.deb</code> (Linux always got AppImage). It now reads <code>current_exe()</code>, matches against Tauri v2's default install directories on Windows, and reads <code>/etc/os-release</code> on Linux to split <code>.deb</code> from <code>.rpm</code>. Portable users finally get the portable ZIP; MSI users get the MSI; Fedora users get the RPM.</li>
+                          <li><b>{t('Fedora / RHEL')}{' '}<code>.rpm</code> {t('build')}</b>{' '}{t('— Tauri v2\'s native')}{' '}<code>rpm</code>{' '}{t('bundle target is on; the release ships')}{' '}<code>{t('omnio-<version>-1.x86_64.rpm')}</code>{' '}{t('next to the AppImage and')}{' '}<code>.deb</code>{t('. Install with')}{' '}<code>{t('sudo dnf install ./omnio-<version>-1.x86_64.rpm')}</code>{' '}{t('on Fedora / RHEL / CentOS / Rocky / Alma / openSUSE / Amazon Linux 2023.')}</li>
+                          <li><b>{t('Arch AUR:')}{' '}<code>omnio-bin</code></b>{' '}{t('— the release publishes a stamped PKGBUILD that repackages the upstream')}{' '}<code>.deb</code>{' '}{t('for Arch and derivatives.')}{' '}<code>{t('yay -S omnio-bin')}</code>.</li>
+                          <li><b>winget: <code>{t('TonyMontania.Omnio')}</code></b>{' '}{t('— three installer entries (NSIS + MSI + portable ZIP), each with its own SHA256.')}{' '}<code>{t('winget install TonyMontania.Omnio')}</code>.</li>
+                          <li><b>{t('In-app updater picks the right asset for every install variant')}</b>{' '}{t('— the detector was broken for portable (looked for an env var that doesn\'t exist), MSI (no branch at all) and')}{' '}<code>.deb</code>{' '}{t('(Linux always got AppImage). It now reads')}{' '}<code>{t('current_exe()')}</code>{t(', matches against Tauri v2\'s default install directories on Windows, and reads')}{' '}<code>/etc/os-release</code>{' '}{t('on Linux to split')}{' '}<code>.deb</code> {t('from')} <code>.rpm</code>{t('. Portable users finally get the portable ZIP; MSI users get the MSI; Fedora users get the RPM.')}</li>
                         </ul>
                         <p className="about-line">
                           <a
                             href="https://github.com/TonyMontania/Omnio/releases"
                             className="about-releases-link"
                             onClick={(e) => { e.preventDefault(); invoke('updates:open-url', 'https://github.com/TonyMontania/Omnio/releases') }}
-                          >Show all release notes →</a>
+                          >{t('Show all release notes →')}</a>
                         </p>
-                        <p className="about-line about-stack">Built with Tauri · Rust · React · Vite · TypeScript</p>
+                        <p className="about-line about-stack">{t('Built with Tauri · Rust · React · Vite · TypeScript')}</p>
                         <p className="about-line" style={{ marginTop: 8 }}>
-                          Arcade → Grid mode adapted from{' '}
+                          {t('Arcade → Grid mode adapted from')}{' '}
                           <a
                             href="https://github.com/doopu/1ccTracker"
                             className="about-releases-link"
                             onClick={(e) => { e.preventDefault(); invoke('updates:open-url', 'https://github.com/doopu/1ccTracker') }}
-                          >doopu/1ccTracker</a>
+                          >{t('doopu/1ccTracker')}</a>
                           .
                         </p>
                       </div>
@@ -4497,7 +4512,7 @@ function App() {
               {subView === 'artists' ? (
                 <div className="content-scroll">
                   <div className={`folder-grid folder-grid-${classicLayout}`}>
-                    {musicArtists.length === 0 && <p className="empty">No artists yet.</p>}
+                    {musicArtists.length === 0 && <p className="empty">{t('No artists yet.')}</p>}
                     {sortFolders(
                       musicArtists.filter((a) => !search.trim() || a.name.toLowerCase().includes(search.trim().toLowerCase())),
                       folderSort,
@@ -4523,14 +4538,14 @@ function App() {
               ) : showFolderListing ? (
                 <div className="content-scroll">
                   <div className={`folder-grid folder-grid-${classicLayout}`}>
-                    {categoryCollections.length === 0 && <p className="empty">You haven't created any groups here yet.</p>}
+                    {categoryCollections.length === 0 && <p className="empty">{t('You haven\'t created any groups here yet.')}</p>}
                     {sortFolders(
                       categoryCollections.filter((c) => !search.trim() || c.name.toLowerCase().includes(search.trim().toLowerCase())),
                       folderSort,
                       (c) => c.itemIds.length,
                     ).map((c) => (
                       <div key={c.id} className="folder-card" onClick={() => { setActiveCollectionId(c.id); resetListControls(); setSortBy('custom') }}>
-                        <button className="folder-edit" onClick={(e) => { e.stopPropagation(); openCollectionEditModal(c) }} title="Edit group">✎</button>
+                        <button className="folder-edit" onClick={(e) => { e.stopPropagation(); openCollectionEditModal(c) }} title={t('Edit group')}>✎</button>
                         <button className="delete" onClick={(e) => { e.stopPropagation(); handleDeleteCollection(c.id) }}>✕</button>
                         <div className="folder-art">
                           {c.cover
@@ -4546,12 +4561,12 @@ function App() {
               ) : (
                 <>
                   <div className="content-scroll">
-                  {sortBy === 'custom' && <p className="hint drag-hint">Drag cards to reorder them.</p>}
-                  {deleteMode && <p className="hint drag-hint" style={{ color: 'var(--danger)' }}>Delete mode — click the red ✕ on any card to remove it.</p>}
+                  {sortBy === 'custom' && <p className="hint drag-hint">{t('Drag cards to reorder them.')}</p>}
+                  {deleteMode && <p className="hint drag-hint" style={{ color: 'var(--danger)' }}>{t('Delete mode — click the red ✕ on any card to remove it.')}</p>}
 
                   {layout === 'kanban' ? (
                     getUniversalStatusOptions(activeCategory).length === 0 ? (
-                      <p className="hint">This library doesn't have a status enum, so the Kanban view isn't available. Switch to Grid or List.</p>
+                      <p className="hint">{t('This library doesn\'t have a status enum, so the Kanban view isn\'t available. Switch to Grid or List.')}</p>
                     ) : (
                       <KanbanView
                         items={visibleItems}
@@ -4577,14 +4592,14 @@ function App() {
                             itemsInCategory.length === 0 ? (
                               <div className="empty-state">
                                 <div className="empty-state-icon"><CategoryIcon id={activeCategory} /></div>
-                                <h3>Your {current?.label.toLowerCase()} library is empty</h3>
-                                <p>Add your first {current?.singular ?? 'item'} to start tracking.</p>
-                                <button className="add-btn" onClick={openAddPanel}>+ Add {current?.singular ?? 'item'}</button>
+                                <h3>{t('Your {label} library is empty', { label: current?.label.toLowerCase() })}</h3>
+                                <p>{t('Add your first {singular} to start tracking.', { singular: current?.singular ?? 'item' })}</p>
+                                <button className="add-btn" onClick={openAddPanel}>{t('+ Add {singular}', { singular: current?.singular ?? 'item' })}</button>
                               </div>
                             ) : (
                               <div className="empty-state small">
-                                <p>No items match your filters.</p>
-                                <button className="secondary-btn" onClick={() => { resetListControls() }}>Clear filters</button>
+                                <p>{t('No items match your filters.')}</p>
+                                <button className="secondary-btn" onClick={() => { resetListControls() }}>{t('Clear filters')}</button>
                               </div>
                             )
                           )}
@@ -4673,22 +4688,22 @@ function App() {
             <div className="panel-backdrop">
             <aside className="detail-panel fullscreen">
               <div className="panel-header">
-              <h3>{editingId ? `Edit ${current?.label}` : `Add ${current?.label}`}</h3>
+              <h3>{editingId ? t('Edit {label}', { label: current?.label }) : t('Add {label}', { label: current?.label })}</h3>
               <div className="panel-header-actions">
                 {!editingId && (
                   <button
                     type="button"
                     className="ghost"
-                    title={`Save the current status / tags / platforms as the default for new ${current?.label ?? 'items'}`}
+                    title={t('Save the current status / tags / platforms as the default for new {label}', { label: current?.label ?? 'items' })}
                     onClick={() => {
                       const template = captureCurrentTemplate()
                       setSettings((s) => ({
                         ...s,
                         itemTemplates: { ...(s.itemTemplates ?? {}), [activeCategory]: template },
                       }))
-                      setToast(`Template saved for ${current?.label ?? 'this category'}`)
+                      setToast(t('Template saved for {label}', { label: current?.label ?? t('this category') }))
                     }}
-                  >Save as template</button>
+                  >{t('Save as template')}</button>
                 )}
                 <button className="panel-close" onClick={() => closePanel()}>✕</button>
               </div>
@@ -4697,12 +4712,12 @@ function App() {
                 <div className="edit-columns">
                 <aside className="edit-preview-col">
                   <div className="edit-preview-topbar">
-                    <span className="edit-preview-label">Live preview</span>
-                    {editingItem && <span className="edit-preview-added">Added {new Date(editingItem.createdAt).toLocaleDateString()}</span>}
+                    <span className="edit-preview-label">{t('Live preview')}</span>
+                    {editingItem && <span className="edit-preview-added">{t('Added {date}', { date: new Date(editingItem.createdAt).toLocaleDateString(locale()) })}</span>}
                   </div>
                   <div className="edit-preview-toggle">
-                    <button type="button" className={editPreviewMode === 'card' ? 'active' : ''} onClick={() => setEditPreviewMode('card')}>Card</button>
-                    <button type="button" className={editPreviewMode === 'detail' ? 'active' : ''} onClick={() => setEditPreviewMode('detail')}>Detail</button>
+                    <button type="button" className={editPreviewMode === 'card' ? 'active' : ''} onClick={() => setEditPreviewMode('card')}>{t('Card')}</button>
+                    <button type="button" className={editPreviewMode === 'detail' ? 'active' : ''} onClick={() => setEditPreviewMode('detail')}>{t('Detail')}</button>
                   </div>
                   {editPreviewMode === 'card' ? (
                     <div className="edit-preview-frame card-mode list grid edit-preview-grid">
@@ -4731,7 +4746,7 @@ function App() {
                                   <img className="pd-logo" src={assetSrc(logoImage)} alt="" />
                                 )}
                               </div>
-                            : <div className="pd-banner">No banner
+                            : <div className="pd-banner">{t('No banner')}
                                 {isVideojuegos && logoImage && (
                                   <img className="pd-logo" src={assetSrc(logoImage)} alt="" />
                                 )}
@@ -4745,7 +4760,7 @@ function App() {
                             {cover ? <img src={assetSrc(cover)} alt="" /> : <span>{(title || '?').charAt(0).toUpperCase()}</span>}
                           </div>
                           <div className="pd-info">
-                            <h3 className="pd-title">{title || 'Untitled'}</h3>
+                            <h3 className="pd-title">{title || t('Untitled')}</h3>
                             {alternativeTitles.length > 0 && (
                               <p className="pd-line pd-alt">{alternativeTitles.join(' · ')}</p>
                             )}
@@ -4759,155 +4774,155 @@ function App() {
                               if (activeCategory === 'peliculas' && duration) parts.push(`${duration} min`)
                               return parts.length > 0 ? <p className="pd-line">{parts.join(' · ')}</p> : null
                             })()}
-                            {isVideojuegos && playTime && <p className="pd-line">{playTime}h played</p>}
+                            {isVideojuegos && playTime && <p className="pd-line">{t('{playTime}h played', { playTime: playTime })}</p>}
                             {isVideojuegos && gameStatus && <p className="pd-line pd-status">{gameStatus.replace('_', ' ')}</p>}
-                            {activeCategory === 'peliculas' && consumed && <p className="pd-line pd-status">Watched{timesWatched && ` · ${timesWatched}x`}</p>}
+                            {activeCategory === 'peliculas' && consumed && <p className="pd-line pd-status">{t('Watched')}{timesWatched && ` · ${timesWatched}x`}</p>}
                             {(activeCategory === 'anime' || activeCategory === 'donghua') && (
                               <>
                                 {watchStatus && <p className="pd-line pd-status">{watchStatus.replace(/_/g, ' ')}</p>}
-                                {(episodesWatched || totalEpisodes) && <p className="pd-line">Episodes: {episodesWatched || '0'}{totalEpisodes && ` / ${totalEpisodes}`}</p>}
+                                {(episodesWatched || totalEpisodes) && <p className="pd-line">{t('Episodes: {episodesWatched}', { episodesWatched: episodesWatched || '0' })}{totalEpisodes && ` / ${totalEpisodes}`}</p>}
                               </>
                             )}
                             {activeCategory === 'series' && (
                               <>
                                 {seriesStatus && <p className="pd-line pd-status">{seriesStatus.replace(/_/g, ' ')}</p>}
-                                {(episodesWatched || totalEpisodes) && <p className="pd-line">Episodes: {episodesWatched || '0'}{totalEpisodes && ` / ${totalEpisodes}`}</p>}
+                                {(episodesWatched || totalEpisodes) && <p className="pd-line">{t('Episodes: {episodesWatched}', { episodesWatched: episodesWatched || '0' })}{totalEpisodes && ` / ${totalEpisodes}`}</p>}
                               </>
                             )}
                             {isMangaLike(activeCategory) && (
                               <>
                                 {readingStatus && <p className="pd-line pd-status">{readingStatus.replace(/_/g, ' ')}</p>}
-                                {(chaptersRead || totalChapters) && <p className="pd-line">Chapters: {chaptersRead || '0'}{totalChapters && ` / ${totalChapters}`}</p>}
-                                {(volumesRead || totalVolumesM) && <p className="pd-line">Volumes: {volumesRead || '0'}{totalVolumesM && ` / ${totalVolumesM}`}</p>}
+                                {(chaptersRead || totalChapters) && <p className="pd-line">{t('Chapters: {chaptersRead}', { chaptersRead: chaptersRead || '0' })}{totalChapters && ` / ${totalChapters}`}</p>}
+                                {(volumesRead || totalVolumesM) && <p className="pd-line">{t('Volumes: {volumesRead}', { volumesRead: volumesRead || '0' })}{totalVolumesM && ` / ${totalVolumesM}`}</p>}
                               </>
                             )}
-                            {activeCategory === 'musica' && consumed && <p className="pd-line pd-status">Listened</p>}
+                            {activeCategory === 'musica' && consumed && <p className="pd-line pd-status">{t('Listened')}</p>}
                           </div>
                         </div>
 
                         {/* Category-specific field rows */}
                         {isVideojuegos && (
                           <div className="pd-fields">
-                            {devs.length > 0 && <div className="pd-field-row"><span className="pd-key">Developers</span><span className="pd-val">{devs.join(', ')}</span></div>}
-                            {publishers.length > 0 && <div className="pd-field-row"><span className="pd-key">Publishers</span><span className="pd-val">{publishers.join(', ')}</span></div>}
-                            {platforms.length > 0 && <div className="pd-field-row"><span className="pd-key">Platforms</span><span className="pd-val">{platforms.join(', ')}</span></div>}
-                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
-                            {ownership && <div className="pd-field-row"><span className="pd-key">Ownership</span><span className="pd-val">{ownership}</span></div>}
-                            {gameSource && <div className="pd-field-row"><span className="pd-key">Source</span><span className="pd-val">{gameSource}</span></div>}
-                            {franchise && <div className="pd-field-row"><span className="pd-key">Franchise</span><span className="pd-val">{franchise}</span></div>}
-                            {(achievementsUnlocked || achievementsTotal) && <div className="pd-field-row"><span className="pd-key">Achievements</span><span className="pd-val">{achievementsUnlocked || '0'} / {achievementsTotal || '?'}</span></div>}
-                            {ageRating && <div className="pd-field-row"><span className="pd-key">Age rating</span><span className="pd-val">{ageRating}</span></div>}
-                            {hasDlc && dlcList.length > 0 && <div className="pd-field-row"><span className="pd-key">DLC</span><span className="pd-val">{dlcList.length}</span></div>}
-                            {hasAddons && addonsList.length > 0 && <div className="pd-field-row"><span className="pd-key">Addons</span><span className="pd-val">{addonsList.length}</span></div>}
-                            {isBundle && bundleContents.length > 0 && <div className="pd-field-row"><span className="pd-key">Bundle</span><span className="pd-val">{bundleContents.length} games</span></div>}
+                            {devs.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Developers')}</span><span className="pd-val">{devs.join(', ')}</span></div>}
+                            {publishers.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Publishers')}</span><span className="pd-val">{publishers.join(', ')}</span></div>}
+                            {platforms.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Platforms')}</span><span className="pd-val">{platforms.join(', ')}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {ownership && <div className="pd-field-row"><span className="pd-key">{t('Ownership')}</span><span className="pd-val">{ownership}</span></div>}
+                            {gameSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{gameSource}</span></div>}
+                            {franchise && <div className="pd-field-row"><span className="pd-key">{t('Franchise')}</span><span className="pd-val">{franchise}</span></div>}
+                            {(achievementsUnlocked || achievementsTotal) && <div className="pd-field-row"><span className="pd-key">{t('Achievements')}</span><span className="pd-val">{achievementsUnlocked || '0'} / {achievementsTotal || '?'}</span></div>}
+                            {ageRating && <div className="pd-field-row"><span className="pd-key">{t('Age rating')}</span><span className="pd-val">{ageRating}</span></div>}
+                            {hasDlc && dlcList.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('DLC')}</span><span className="pd-val">{dlcList.length}</span></div>}
+                            {hasAddons && addonsList.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Addons')}</span><span className="pd-val">{addonsList.length}</span></div>}
+                            {isBundle && bundleContents.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Bundle')}</span><span className="pd-val">{t('{bundleContents} games', { bundleContents: bundleContents.length })}</span></div>}
                           </div>
                         )}
 
                         {activeCategory === 'musica' && (
                           <div className="pd-fields">
-                            {musicSource && <div className="pd-field-row"><span className="pd-key">Source</span><span className="pd-val">{musicSource}</span></div>}
-                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
-                            {label && <div className="pd-field-row"><span className="pd-key">Label</span><span className="pd-val">{label}</span></div>}
-                            {producers.length > 0 && <div className="pd-field-row"><span className="pd-key">Producers</span><span className="pd-val">{producers.join(', ')}</span></div>}
-                            {partOfAlbum && <div className="pd-field-row"><span className="pd-key">Part of</span><span className="pd-val">{partOfAlbum}</span></div>}
-                            {hasTracks && tracks.length > 0 && <div className="pd-field-row"><span className="pd-key">Tracks</span><span className="pd-val">{tracks.length}</span></div>}
-                            {editions.length > 0 && <div className="pd-field-row"><span className="pd-key">Editions</span><span className="pd-val">{editions.length}</span></div>}
-                            {singleCovers.length > 0 && <div className="pd-field-row"><span className="pd-key">Singles</span><span className="pd-val">{singleCovers.length}</span></div>}
+                            {musicSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{musicSource}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {label && <div className="pd-field-row"><span className="pd-key">{t('Label')}</span><span className="pd-val">{label}</span></div>}
+                            {producers.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Producers')}</span><span className="pd-val">{producers.join(', ')}</span></div>}
+                            {partOfAlbum && <div className="pd-field-row"><span className="pd-key">{t('Part of')}</span><span className="pd-val">{partOfAlbum}</span></div>}
+                            {hasTracks && tracks.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Tracks')}</span><span className="pd-val">{tracks.length}</span></div>}
+                            {editions.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Editions')}</span><span className="pd-val">{editions.length}</span></div>}
+                            {singleCovers.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Singles')}</span><span className="pd-val">{singleCovers.length}</span></div>}
                           </div>
                         )}
 
                         {activeCategory === 'peliculas' && (
                           <div className="pd-fields">
-                            {directors.length > 0 && <div className="pd-field-row"><span className="pd-key">Directors</span><span className="pd-val">{directors.join(', ')}</span></div>}
-                            {writers.length > 0 && <div className="pd-field-row"><span className="pd-key">Writers</span><span className="pd-val">{writers.join(', ')}</span></div>}
-                            {cast.length > 0 && <div className="pd-field-row"><span className="pd-key">Cast</span><span className="pd-val">{cast.slice(0, 6).join(', ')}{cast.length > 6 && ` +${cast.length - 6}`}</span></div>}
-                            {productionCompanies.length > 0 && <div className="pd-field-row"><span className="pd-key">Production</span><span className="pd-val">{productionCompanies.join(', ')}</span></div>}
-                            {distributors.length > 0 && <div className="pd-field-row"><span className="pd-key">Distributed by</span><span className="pd-val">{distributors.join(', ')}</span></div>}
-                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
-                            {movieSource && <div className="pd-field-row"><span className="pd-key">Source</span><span className="pd-val">{movieSource}</span></div>}
-                            {franchise && <div className="pd-field-row"><span className="pd-key">Franchise</span><span className="pd-val">{franchise}</span></div>}
-                            {contentRating && <div className="pd-field-row"><span className="pd-key">Content rating</span><span className="pd-val">{contentRating}</span></div>}
-                            {watchedWhere && <div className="pd-field-row"><span className="pd-key">Watched on</span><span className="pd-val">{watchedWhere}</span></div>}
+                            {directors.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Directors')}</span><span className="pd-val">{directors.join(', ')}</span></div>}
+                            {writers.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Writers')}</span><span className="pd-val">{writers.join(', ')}</span></div>}
+                            {cast.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Cast')}</span><span className="pd-val">{cast.slice(0, 6).join(', ')}{cast.length > 6 && ` +${cast.length - 6}`}</span></div>}
+                            {productionCompanies.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Production')}</span><span className="pd-val">{productionCompanies.join(', ')}</span></div>}
+                            {distributors.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Distributed by')}</span><span className="pd-val">{distributors.join(', ')}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {movieSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{movieSource}</span></div>}
+                            {franchise && <div className="pd-field-row"><span className="pd-key">{t('Franchise')}</span><span className="pd-val">{franchise}</span></div>}
+                            {contentRating && <div className="pd-field-row"><span className="pd-key">{t('Content rating')}</span><span className="pd-val">{contentRating}</span></div>}
+                            {watchedWhere && <div className="pd-field-row"><span className="pd-key">{t('Watched on')}</span><span className="pd-val">{watchedWhere}</span></div>}
                           </div>
                         )}
 
                         {activeCategory === 'series' && (
                           <div className="pd-fields">
-                            {directors.length > 0 && <div className="pd-field-row"><span className="pd-key">Directors</span><span className="pd-val">{directors.join(', ')}</span></div>}
-                            {showrunners.length > 0 && <div className="pd-field-row"><span className="pd-key">Showrunners</span><span className="pd-val">{showrunners.join(', ')}</span></div>}
-                            {writers.length > 0 && <div className="pd-field-row"><span className="pd-key">Writers</span><span className="pd-val">{writers.join(', ')}</span></div>}
-                            {cast.length > 0 && <div className="pd-field-row"><span className="pd-key">Cast</span><span className="pd-val">{cast.slice(0, 6).join(', ')}{cast.length > 6 && ` +${cast.length - 6}`}</span></div>}
-                            {network && <div className="pd-field-row"><span className="pd-key">Network</span><span className="pd-val">{network}</span></div>}
-                            {country && <div className="pd-field-row"><span className="pd-key">Country</span><span className="pd-val">{country}</span></div>}
-                            {language && <div className="pd-field-row"><span className="pd-key">Language</span><span className="pd-val">{language}</span></div>}
-                            {seriesFormat && <div className="pd-field-row"><span className="pd-key">Format</span><span className="pd-val">{seriesFormat}</span></div>}
-                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
-                            {contentRating && <div className="pd-field-row"><span className="pd-key">Content rating</span><span className="pd-val">{contentRating}</span></div>}
-                            {hasSeasons && seasons.length > 0 && <div className="pd-field-row"><span className="pd-key">Seasons</span><span className="pd-val">{seasons.length}</span></div>}
+                            {directors.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Directors')}</span><span className="pd-val">{directors.join(', ')}</span></div>}
+                            {showrunners.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Showrunners')}</span><span className="pd-val">{showrunners.join(', ')}</span></div>}
+                            {writers.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Writers')}</span><span className="pd-val">{writers.join(', ')}</span></div>}
+                            {cast.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Cast')}</span><span className="pd-val">{cast.slice(0, 6).join(', ')}{cast.length > 6 && ` +${cast.length - 6}`}</span></div>}
+                            {network && <div className="pd-field-row"><span className="pd-key">{t('Network')}</span><span className="pd-val">{network}</span></div>}
+                            {country && <div className="pd-field-row"><span className="pd-key">{t('Country')}</span><span className="pd-val">{country}</span></div>}
+                            {language && <div className="pd-field-row"><span className="pd-key">{t('Language')}</span><span className="pd-val">{language}</span></div>}
+                            {seriesFormat && <div className="pd-field-row"><span className="pd-key">{t('Format')}</span><span className="pd-val">{seriesFormat}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {contentRating && <div className="pd-field-row"><span className="pd-key">{t('Content rating')}</span><span className="pd-val">{contentRating}</span></div>}
+                            {hasSeasons && seasons.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Seasons')}</span><span className="pd-val">{seasons.length}</span></div>}
                           </div>
                         )}
 
                         {(activeCategory === 'anime' || activeCategory === 'donghua') && (
                           <div className="pd-fields">
-                            {studios.length > 0 && <div className="pd-field-row"><span className="pd-key">Studios</span><span className="pd-val">{studios.join(', ')}</span></div>}
-                            {animeFormat && <div className="pd-field-row"><span className="pd-key">Format</span><span className="pd-val">{animeFormat}</span></div>}
-                            {airingStatus && <div className="pd-field-row"><span className="pd-key">Airing</span><span className="pd-val">{airingStatus}</span></div>}
-                            {(season || seasonYear) && <div className="pd-field-row"><span className="pd-key">Season</span><span className="pd-val">{season} {seasonYear}</span></div>}
-                            {demographic && <div className="pd-field-row"><span className="pd-key">Demographic</span><span className="pd-val">{demographic}</span></div>}
-                            {animeSource && <div className="pd-field-row"><span className="pd-key">Source</span><span className="pd-val">{animeSource}</span></div>}
-                            {ageRating && <div className="pd-field-row"><span className="pd-key">Age rating</span><span className="pd-val">{ageRating}</span></div>}
-                            {episodeDuration && <div className="pd-field-row"><span className="pd-key">Ep. duration</span><span className="pd-val">{episodeDuration} min</span></div>}
-                            {(airedFrom || airedTo) && <div className="pd-field-row"><span className="pd-key">Aired</span><span className="pd-val">{airedFrom || '?'} → {airedTo || '?'}</span></div>}
-                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
-                            {favoriteEpisode && <div className="pd-field-row"><span className="pd-key">Fav episode</span><span className="pd-val">#{favoriteEpisode}{favoriteEpisodeNote && ` — ${favoriteEpisodeNote}`}</span></div>}
-                            {hasEpisodes && episodes.length > 0 && <div className="pd-field-row"><span className="pd-key">Episode list</span><span className="pd-val">{episodes.length}</span></div>}
+                            {studios.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Studios')}</span><span className="pd-val">{studios.join(', ')}</span></div>}
+                            {animeFormat && <div className="pd-field-row"><span className="pd-key">{t('Format')}</span><span className="pd-val">{animeFormat}</span></div>}
+                            {airingStatus && <div className="pd-field-row"><span className="pd-key">{t('Airing')}</span><span className="pd-val">{airingStatus}</span></div>}
+                            {(season || seasonYear) && <div className="pd-field-row"><span className="pd-key">{t('Season')}</span><span className="pd-val">{season} {seasonYear}</span></div>}
+                            {demographic && <div className="pd-field-row"><span className="pd-key">{t('Demographic')}</span><span className="pd-val">{demographic}</span></div>}
+                            {animeSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{animeSource}</span></div>}
+                            {ageRating && <div className="pd-field-row"><span className="pd-key">{t('Age rating')}</span><span className="pd-val">{ageRating}</span></div>}
+                            {episodeDuration && <div className="pd-field-row"><span className="pd-key">{t('Ep. duration')}</span><span className="pd-val">{t('{episodeDuration} min', { episodeDuration: episodeDuration })}</span></div>}
+                            {(airedFrom || airedTo) && <div className="pd-field-row"><span className="pd-key">{t('Aired')}</span><span className="pd-val">{airedFrom || '?'} → {airedTo || '?'}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {favoriteEpisode && <div className="pd-field-row"><span className="pd-key">{t('Fav episode')}</span><span className="pd-val">#{favoriteEpisode}{favoriteEpisodeNote && ` — ${favoriteEpisodeNote}`}</span></div>}
+                            {hasEpisodes && episodes.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Episode list')}</span><span className="pd-val">{episodes.length}</span></div>}
                           </div>
                         )}
 
                         {isMangaLike(activeCategory) && (
                           <div className="pd-fields">
-                            {mangaAuthors.length > 0 && <div className="pd-field-row"><span className="pd-key">Authors</span><span className="pd-val">{mangaAuthors.join(', ')}</span></div>}
-                            {mangaArtists.length > 0 && <div className="pd-field-row"><span className="pd-key">Artists</span><span className="pd-val">{mangaArtists.join(', ')}</span></div>}
-                            {magazine && <div className="pd-field-row"><span className="pd-key">Magazine</span><span className="pd-val">{magazine}</span></div>}
-                            {pubStatus && <div className="pd-field-row"><span className="pd-key">Publication</span><span className="pd-val">{pubStatus.replace(/_/g, ' ')}</span></div>}
-                            {mangaSource && <div className="pd-field-row"><span className="pd-key">Source</span><span className="pd-val">{mangaSource}</span></div>}
-                            {(startYear || endYear) && <div className="pd-field-row"><span className="pd-key">Ran</span><span className="pd-val">{startYear || '?'} → {endYear || 'present'}</span></div>}
-                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">Genres</span><span className="pd-val">{genres.join(', ')}</span></div>}
-                            {ageRating && <div className="pd-field-row"><span className="pd-key">Age rating</span><span className="pd-val">{ageRating}</span></div>}
-                            {volumeCovers.length > 0 && <div className="pd-field-row"><span className="pd-key">Vol. covers</span><span className="pd-val">{volumeCovers.length}</span></div>}
-                            {hasChapters && chapters.length > 0 && <div className="pd-field-row"><span className="pd-key">Chapter list</span><span className="pd-val">{chapters.length}</span></div>}
+                            {mangaAuthors.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Authors')}</span><span className="pd-val">{mangaAuthors.join(', ')}</span></div>}
+                            {mangaArtists.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Artists')}</span><span className="pd-val">{mangaArtists.join(', ')}</span></div>}
+                            {magazine && <div className="pd-field-row"><span className="pd-key">{t('Magazine')}</span><span className="pd-val">{magazine}</span></div>}
+                            {pubStatus && <div className="pd-field-row"><span className="pd-key">{t('Publication')}</span><span className="pd-val">{pubStatus.replace(/_/g, ' ')}</span></div>}
+                            {mangaSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{mangaSource}</span></div>}
+                            {(startYear || endYear) && <div className="pd-field-row"><span className="pd-key">{t('Ran')}</span><span className="pd-val">{startYear || '?'} → {endYear || 'present'}</span></div>}
+                            {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
+                            {ageRating && <div className="pd-field-row"><span className="pd-key">{t('Age rating')}</span><span className="pd-val">{ageRating}</span></div>}
+                            {volumeCovers.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Vol. covers')}</span><span className="pd-val">{volumeCovers.length}</span></div>}
+                            {hasChapters && chapters.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Chapter list')}</span><span className="pd-val">{chapters.length}</span></div>}
                           </div>
                         )}
 
                         {(description || mangaDescription || movieDescription || animeDescription || seriesDescription) && (
                           <div className="pd-section">
-                            <span className="pd-section-label">Description</span>
+                            <span className="pd-section-label">{t('Description')}</span>
                             <p className="pd-desc">{description || mangaDescription || movieDescription || animeDescription || seriesDescription}</p>
                           </div>
                         )}
 
                         {(gameReview || musicReview || movieReview || animeReview || seriesReview || mangaReview) && (
                           <div className="pd-section">
-                            <span className="pd-section-label">Review{hasSpoilers ? ' — contains spoilers' : ''}</span>
+                            <span className="pd-section-label">{t('Review{value}', { value: hasSpoilers ? t(' — contains spoilers') : '' })}</span>
                             <p className="pd-desc">{gameReview || musicReview || movieReview || animeReview || seriesReview || mangaReview}</p>
                           </div>
                         )}
 
                         {notes && (
                           <div className="pd-section">
-                            <span className="pd-section-label">Notes</span>
+                            <span className="pd-section-label">{t('Notes')}</span>
                             <div className="pd-desc" dangerouslySetInnerHTML={{ __html: renderMiniMarkdown(notes) }} />
                           </div>
                         )}
 
                         {relatedItems.length > 0 && (
-                          <div className="pd-field-row"><span className="pd-key">Related</span><span className="pd-val">{relatedItems.length} item{relatedItems.length !== 1 ? 's' : ''}</span></div>
+                          <div className="pd-field-row"><span className="pd-key">{t('Related')}</span><span className="pd-val">{plural(relatedItems.length, '{n} item', '{n} items')}</span></div>
                         )}
                         {recommendedItems.length > 0 && (
-                          <div className="pd-field-row"><span className="pd-key">Recommendations</span><span className="pd-val">{recommendedItems.length}</span></div>
+                          <div className="pd-field-row"><span className="pd-key">{t('Recommendations')}</span><span className="pd-val">{recommendedItems.length}</span></div>
                         )}
                         {rewatches.length > 0 && (
-                          <div className="pd-field-row"><span className="pd-key">History log</span><span className="pd-val">{rewatches.length} entr{rewatches.length !== 1 ? 'ies' : 'y'}</span></div>
+                          <div className="pd-field-row"><span className="pd-key">{t('History log')}</span><span className="pd-val">{plural(rewatches.length, '{n} entry', '{n} entries')}</span></div>
                         )}
 
                         {tags.length > 0 && (
@@ -4918,7 +4933,7 @@ function App() {
                         {editingId && (() => {
                           const groups = categoryCollections.filter((c) => c.itemIds.includes(editingId))
                           return groups.length > 0 ? (
-                            <div className="pd-field-row"><span className="pd-key">Groups</span><span className="pd-val">{groups.map((g) => g.name).join(', ')}</span></div>
+                            <div className="pd-field-row"><span className="pd-key">{t('Groups')}</span><span className="pd-val">{groups.map((g) => g.name).join(', ')}</span></div>
                           ) : null
                         })()}
                       </div>
@@ -4935,15 +4950,15 @@ function App() {
                         role="tab"
                         className={editorTab === tab ? 'editor-tab active' : 'editor-tab'}
                         onClick={() => setEditorTab(tab)}
-                      >{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
+                      >{t(EDITOR_TAB_LABELS[tab])}</button>
                     ))}
                   </div>
 
                   <div className="form" data-editor-tab={editorTab}>
                     <div className="metadata-sources-panel">
                       <div className="metadata-sources-header">
-                        <span className="metadata-sources-title">↗ Fetch metadata</span>
-                        <span className="metadata-sources-hint">Auto-fills title, cover, and category-specific fields</span>
+                        <span className="metadata-sources-title">{t('↗ Fetch metadata')}</span>
+                        <span className="metadata-sources-hint">{t('Auto-fills title, cover, and category-specific fields')}</span>
                       </div>
                       <div className="metadata-sources-grid">
                         {/* Iterated from the fetcher registry — see
@@ -4968,12 +4983,12 @@ function App() {
                     </div>
 
                     <div className="form-section-header" data-belongs-to="overview">
-                      <span className="form-section-title">Basic info</span>
+                      <span className="form-section-title">{t('Basic info')}</span>
                     </div>
                     <div className="field-group">
-                      <label>Title</label>
+                      <label>{t('Title')}</label>
                       <input
-                        placeholder="Title — or paste an IGDB / TMDb / AniList / VNDB / MangaDex / OpenLibrary / Steam URL"
+                        placeholder={t('Title — or paste an IGDB / TMDb / AniList / VNDB / MangaDex / OpenLibrary / Steam URL')}
                         value={title}
                         onChange={(e) => {
                           const v = e.target.value
@@ -4983,7 +4998,7 @@ function App() {
                           if (match) {
                             setTitle(match.query)
                             setActiveFetcher(match.fetcherId)
-                            setToast(`Opening ${match.source} search…`)
+                            setToast(t('Opening {source} search…', { source: match.source }))
                           } else {
                             setTitle(v)
                           }
@@ -4992,40 +5007,40 @@ function App() {
                     </div>
 
                     <div className="form-section-header" data-belongs-to="media">
-                      <span className="form-section-title">Media</span>
+                      <span className="form-section-title">{t('Media')}</span>
                       <span className="form-section-hint">
-                        {isVideojuegos ? 'Cover · banner · logo'
-                          : (activeCategory === 'peliculas' || activeCategory === 'series') ? 'Cover · backdrop'
-                          : (isAnime || isMangaLike(activeCategory)) ? 'Cover · banner'
-                          : 'Cover'}
+                        {isVideojuegos ? t('Cover · banner · logo')
+                          : (activeCategory === 'peliculas' || activeCategory === 'series') ? t('Cover · backdrop')
+                          : (isAnime || isMangaLike(activeCategory)) ? t('Cover · banner')
+                          : t('Cover')}
                       </span>
                     </div>
                     <div className="field-group image-drop" {...imageDropHandlers(setCover)}>
-                      <label>Cover</label>
+                      <label>{t('Cover')}</label>
                       <input
-                        placeholder={cover.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL · drop here to upload'}
+                        placeholder={cover.startsWith('data:') ? t('Image uploaded from your PC') : t('Image URL · drop here to upload')}
                         value={cover.startsWith('data:') ? '' : cover}
                         onChange={(e) => setCover(e.target.value)}
                       />
                       <div className="upload-row">
-                        <button type="button" className="upload-btn" onClick={() => fileInputRef.current?.click()}>Upload from PC</button>
-                        {isVideojuegos && <button type="button" className="upload-btn" onClick={() => setSgdbOpen('grids')} title="Fetch from SteamGridDB">↗ SteamGridDB</button>}
-                        {cover && <button type="button" className="upload-btn clear" onClick={() => setCover('')}>Clear</button>}
+                        <button type="button" className="upload-btn" onClick={() => fileInputRef.current?.click()}>{t('Upload from PC')}</button>
+                        {isVideojuegos && <button type="button" className="upload-btn" onClick={() => setSgdbOpen('grids')} title={t('Fetch from SteamGridDB')}>{t('↗ SteamGridDB')}</button>}
+                        {cover && <button type="button" className="upload-btn clear" onClick={() => setCover('')}>{t('Clear')}</button>}
                       </div>
                       <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleCoverFile} />
                     </div>
 
                     {(activeCategory === 'peliculas' || isSeriesLike) && (
                       <div className="field-group image-drop" {...imageDropHandlers(setMovieBanner)}>
-                        <label>Backdrop image</label>
+                        <label>{t('Backdrop image')}</label>
                         <input
-                          placeholder={movieBanner.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                          placeholder={movieBanner.startsWith('data:') ? t('Image uploaded from your PC') : t('Image URL')}
                           value={movieBanner.startsWith('data:') ? '' : movieBanner}
                           onChange={(e) => setMovieBanner(e.target.value)}
                         />
                         <div className="upload-row">
-                          <button type="button" className="upload-btn" onClick={() => movieBannerFileInputRef.current?.click()}>Upload from PC</button>
-                          {movieBanner && <button type="button" className="upload-btn clear" onClick={() => setMovieBanner('')}>Clear</button>}
+                          <button type="button" className="upload-btn" onClick={() => movieBannerFileInputRef.current?.click()}>{t('Upload from PC')}</button>
+                          {movieBanner && <button type="button" className="upload-btn clear" onClick={() => setMovieBanner('')}>{t('Clear')}</button>}
                         </div>
                         <input type="file" accept="image/*" ref={movieBannerFileInputRef} style={{ display: 'none' }} onChange={handleMovieBannerFile} />
                       </div>
@@ -5033,15 +5048,15 @@ function App() {
 
                     {(isAnime || isMangaLike(activeCategory)) && (
                       <div className="field-group image-drop" {...imageDropHandlers(setBannerImage)}>
-                        <label>Banner image</label>
+                        <label>{t('Banner image')}</label>
                         <input
-                          placeholder={bannerImage.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                          placeholder={bannerImage.startsWith('data:') ? t('Image uploaded from your PC') : t('Image URL')}
                           value={bannerImage.startsWith('data:') ? '' : bannerImage}
                           onChange={(e) => setBannerImage(e.target.value)}
                         />
                         <div className="upload-row">
-                          <button type="button" className="upload-btn" onClick={() => bannerFileInputRef.current?.click()}>Upload from PC</button>
-                          {bannerImage && <button type="button" className="upload-btn clear" onClick={() => setBannerImage('')}>Clear</button>}
+                          <button type="button" className="upload-btn" onClick={() => bannerFileInputRef.current?.click()}>{t('Upload from PC')}</button>
+                          {bannerImage && <button type="button" className="upload-btn clear" onClick={() => setBannerImage('')}>{t('Clear')}</button>}
                         </div>
                         <input type="file" accept="image/*" ref={bannerFileInputRef} style={{ display: 'none' }} onChange={handleBannerFile} />
                       </div>
@@ -5050,30 +5065,30 @@ function App() {
                     {isVideojuegos && (
                       <>
                         <div className="field-group image-drop" {...imageDropHandlers(setBannerImage)}>
-                          <label>Banner image</label>
+                          <label>{t('Banner image')}</label>
                           <input
-                            placeholder={bannerImage.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                            placeholder={bannerImage.startsWith('data:') ? t('Image uploaded from your PC') : t('Image URL')}
                             value={bannerImage.startsWith('data:') ? '' : bannerImage}
                             onChange={(e) => setBannerImage(e.target.value)}
                           />
                           <div className="upload-row">
-                            <button type="button" className="upload-btn" onClick={() => bannerFileInputRef.current?.click()}>Upload from PC</button>
-                            <button type="button" className="upload-btn" onClick={() => setSgdbOpen('heroes')} title="Fetch from SteamGridDB">↗ SteamGridDB</button>
-                            {bannerImage && <button type="button" className="upload-btn clear" onClick={() => setBannerImage('')}>Clear</button>}
+                            <button type="button" className="upload-btn" onClick={() => bannerFileInputRef.current?.click()}>{t('Upload from PC')}</button>
+                            <button type="button" className="upload-btn" onClick={() => setSgdbOpen('heroes')} title={t('Fetch from SteamGridDB')}>{t('↗ SteamGridDB')}</button>
+                            {bannerImage && <button type="button" className="upload-btn clear" onClick={() => setBannerImage('')}>{t('Clear')}</button>}
                           </div>
                           <input type="file" accept="image/*" ref={bannerFileInputRef} style={{ display: 'none' }} onChange={handleBannerFile} />
                         </div>
                         <div className="field-group image-drop" {...imageDropHandlers(setLogoImage)}>
-                          <label>Logo image</label>
+                          <label>{t('Logo image')}</label>
                           <input
-                            placeholder={logoImage.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL'}
+                            placeholder={logoImage.startsWith('data:') ? t('Image uploaded from your PC') : t('Image URL')}
                             value={logoImage.startsWith('data:') ? '' : logoImage}
                             onChange={(e) => setLogoImage(e.target.value)}
                           />
                           <div className="upload-row">
-                            <button type="button" className="upload-btn" onClick={() => logoFileInputRef.current?.click()}>Upload from PC</button>
-                            <button type="button" className="upload-btn" onClick={() => setSgdbOpen('logos')} title="Fetch from SteamGridDB">↗ SteamGridDB</button>
-                            {logoImage && <button type="button" className="upload-btn clear" onClick={() => setLogoImage('')}>Clear</button>}
+                            <button type="button" className="upload-btn" onClick={() => logoFileInputRef.current?.click()}>{t('Upload from PC')}</button>
+                            <button type="button" className="upload-btn" onClick={() => setSgdbOpen('logos')} title={t('Fetch from SteamGridDB')}>{t('↗ SteamGridDB')}</button>
+                            {logoImage && <button type="button" className="upload-btn clear" onClick={() => setLogoImage('')}>{t('Clear')}</button>}
                           </div>
                           <input type="file" accept="image/*" ref={logoFileInputRef} style={{ display: 'none' }} onChange={handleLogoFile} />
                         </div>
@@ -5292,16 +5307,16 @@ function App() {
 
                 {isManga && (
                   <div className="field-group manga-bookmark">
-                    <label>Bookmark</label>
-                    <p className="hint">Where you left off — a chapter cursor plus a short note so you can pick right back up next time.</p>
+                    <label>{t('Bookmark')}</label>
+                    <p className="hint">{t('Where you left off — a chapter cursor plus a short note so you can pick right back up next time.')}</p>
                     <div className="manga-bookmark-row">
                       <input
-                        placeholder="Chapter (e.g. 47, 47.5, Vol 8 Ch 2)"
+                        placeholder={t('Chapter (e.g. 47, 47.5, Vol 8 Ch 2)')}
                         value={bookmarkChapter}
                         onChange={(e) => setBookmarkChapter(e.target.value)}
                       />
                       <input
-                        placeholder="Note — last panel of the arc, cliffhanger, page number…"
+                        placeholder={t('Note — last panel of the arc, cliffhanger, page number…')}
                         value={bookmarkNote}
                         onChange={(e) => setBookmarkNote(e.target.value)}
                       />
@@ -5434,31 +5449,31 @@ function App() {
 
                     {activeCategory === 'musica' && (
                       <div className="field-group listening-note">
-                        <label>Listening note</label>
-                        <p className="hint">A quick anecdote — where you were the first time you heard it, what mood it belongs to, a friend who put you on. Different from Review; this one is for the memory.</p>
+                        <label>{t('Listening note')}</label>
+                        <p className="hint">{t('A quick anecdote — where you were the first time you heard it, what mood it belongs to, a friend who put you on. Different from Review; this one is for the memory.')}</p>
                         <textarea
                           rows={3}
                           value={listeningNote}
                           onChange={(e) => setListeningNote(e.target.value)}
-                          placeholder="First time I heard this was at Sam's beach house 2022…"
+                          placeholder={t('First time I heard this was at Sam\'s beach house 2022…')}
                         />
                       </div>
                     )}
 
                     <div className="form-section-header" data-belongs-to="notes">
-                      <span className="form-section-title">Notes, tags & groups</span>
+                      <span className="form-section-title">{t('Notes, tags & groups')}</span>
                     </div>
                     <div className="field-group">
-                      <label>{activeCategory === 'peliculas' ? 'Review' : 'Notes (supports **bold**, *italic*, and "- " lists)'}</label>
+                      <label>{activeCategory === 'peliculas' ? t('Review') : t('Notes (supports **bold**, *italic*, and "- " lists)')}</label>
                       <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
                       {notes.trim() && <div className="notes-preview" dangerouslySetInnerHTML={{ __html: renderMiniMarkdown(notes) }} />}
                     </div>
 
                     {editingId && (
                       <div className="field-group">
-                        <label>Groups</label>
+                        <label>{t('Groups')}</label>
                         <div className="pills">
-                          {categoryCollections.length === 0 && <span className="hint">No groups here yet.</span>}
+                          {categoryCollections.length === 0 && <span className="hint">{t('No groups here yet.')}</span>}
                           {categoryCollections.map((c) => (
                             <button key={c.id} type="button" className={c.itemIds.includes(editingId) ? 'pill active' : 'pill'} onClick={() => handleToggleItemInCollection(c.id, editingId)}>
                               {c.name}
@@ -5477,31 +5492,31 @@ function App() {
                     {suggestedTags.length > 0 && (
                       <div className="tag-suggestions">
                         <div className="tag-suggestions-header">
-                          <span>Suggested from the last fetch</span>
+                          <span>{t('Suggested from the last fetch')}</span>
                           <button
                             type="button"
                             className="tag-suggestions-dismiss-all"
                             onClick={() => setSuggestedTags([])}
-                            title="Dismiss all suggestions"
-                          >Dismiss all</button>
+                            title={t('Dismiss all suggestions')}
+                          >{t('Dismiss all')}</button>
                         </div>
                         <div className="tag-suggestions-chips">
-                          {suggestedTags.map((t) => (
-                            <span key={t} className="tag-suggestion-chip">
+                          {suggestedTags.map((tag) => (
+                            <span key={tag} className="tag-suggestion-chip">
                               <button
                                 type="button"
                                 className="tag-suggestion-accept"
                                 onClick={() => {
-                                  setTags((prev) => prev.includes(t) ? prev : [...prev, t])
-                                  setSuggestedTags((prev) => prev.filter((x) => x !== t))
+                                  setTags((prev) => prev.includes(tag) ? prev : [...prev, tag])
+                                  setSuggestedTags((prev) => prev.filter((x) => x !== tag))
                                 }}
-                                title={`Accept "${t}" as a tag`}
-                              >+ {t}</button>
+                                title={t('Accept "{tag}" as a tag', { tag: tag })}
+                              >+ {tag}</button>
                               <button
                                 type="button"
                                 className="tag-suggestion-dismiss"
-                                onClick={() => setSuggestedTags((prev) => prev.filter((x) => x !== t))}
-                                title="Dismiss"
+                                onClick={() => setSuggestedTags((prev) => prev.filter((x) => x !== tag))}
+                                title={t('Dismiss')}
                               >✕</button>
                             </span>
                           ))}
@@ -5516,8 +5531,8 @@ function App() {
                               })
                               setSuggestedTags([])
                             }}
-                            title="Accept every suggestion"
-                          >Accept all</button>
+                            title={t('Accept every suggestion')}
+                          >{t('Accept all')}</button>
                         </div>
                       </div>
                     )}
@@ -5529,27 +5544,27 @@ function App() {
                     />
 
                     <div className="field-group">
-                      <label>Custom fields — your own key/value pairs</label>
+                      <label>{t('Custom fields — your own key/value pairs')}</label>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {customFields.map((f, i) => (
                           <div key={f.id} style={{ display: 'flex', gap: 6 }}>
                             <input
                               value={f.key}
                               onChange={(e) => setCustomFields((prev) => prev.map((x, j) => (j === i ? { ...x, key: e.target.value } : x)))}
-                              placeholder="Key (e.g. My score)"
+                              placeholder={t('Key (e.g. My score)')}
                               style={{ flex: '0 0 30%' }}
                             />
                             <input
                               value={f.value}
                               onChange={(e) => setCustomFields((prev) => prev.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
-                              placeholder="Value"
+                              placeholder={t('Value')}
                               style={{ flex: 1 }}
                             />
                             <button
                               type="button"
                               className="secondary-btn"
                               onClick={() => setCustomFields((prev) => prev.filter((_, j) => j !== i))}
-                              title="Remove"
+                              title={t('Remove')}
                             >✕</button>
                           </div>
                         ))}
@@ -5558,12 +5573,12 @@ function App() {
                           className="secondary-btn"
                           style={{ alignSelf: 'flex-start' }}
                           onClick={() => setCustomFields((prev) => [...prev, { id: crypto.randomUUID(), key: '', value: '' }])}
-                        >+ Add field</button>
+                        >{t('+ Add field')}</button>
                       </div>
                     </div>
                     <div className="field-group">
-                      <label>Adapted from another library item</label>
-                      <p className="hint" style={{ margin: '2px 0 6px' }}>Link this item to the original work it's based on — anime → manga, movie → book, series → comic, game → novel, etc. The reverse edge ("Adapted as") shows on the source item automatically.</p>
+                      <label>{t('Adapted from another library item')}</label>
+                      <p className="hint" style={{ margin: '2px 0 6px' }}>{t('Link this item to the original work it\'s based on — anime → manga, movie → book, series → comic, game → novel, etc. The reverse edge ("Adapted as") shows on the source item automatically.')}</p>
                       <BasedOnPicker
                         currentItemId={editingId ?? undefined}
                         value={basedOnItemId}
@@ -5576,23 +5591,23 @@ function App() {
                 </div>
 
                 <div className="panel-footer">
-                  {editingId && <button className="danger" onClick={handleDeleteFromPanel}>Delete</button>}
-                  <button type="button" className="ghost" onClick={() => askConfirm('Clear every field in this editor? The item stays in your library — Save changes only overwrites when you press it.', () => resetForm())}>Clear fields</button>
+                  {editingId && <button className="danger" onClick={handleDeleteFromPanel}>{t('Delete')}</button>}
+                  <button type="button" className="ghost" onClick={() => askConfirm(t('Clear every field in this editor? The item stays in your library — Save changes only overwrites when you press it.'), () => resetForm())}>{t('Clear fields')}</button>
                   {editingId && (
                     <div className="bulk-drop">
-                      <button type="button" className="ghost" onClick={() => setMoveMenuOpen((v) => !v)}>Move to library ▾</button>
+                      <button type="button" className="ghost" onClick={() => setMoveMenuOpen((v) => !v)}>{t('Move to library ▾')}</button>
                       {moveMenuOpen && (
                         <div className="bulk-menu">
                           {CATEGORIES.filter((c) => c.id !== activeCategory).map((c) => (
                             <button key={c.id} type="button" onClick={() => {
                               setMoveMenuOpen(false)
                               askConfirm(
-                                `Move "${title || 'this item'}" to ${c.label}? Category-specific fields stay on the item and reappear if you move it back.`,
+                                t('Move "{title}" to {label}? Category-specific fields stay on the item and reappear if you move it back.', { title: title || 'this item', label: c.label }),
                                 () => {
                                   if (!editingId) return
                                   setItems((all) => all.map((it) => it.id === editingId ? { ...it, categoryId: c.id } : it))
                                   setCollections((all) => all.map((col) => col.categoryId === c.id ? col : { ...col, itemIds: col.itemIds.filter((id) => id !== editingId) }))
-                                  setToast(`Moved to ${c.label}`)
+                                  setToast(t('Moved to {label}', { label: c.label }))
                                   closePanel()
                                 },
                               )
@@ -5603,8 +5618,8 @@ function App() {
                     </div>
                   )}
                   <div className="panel-footer-right">
-                    <button className="ghost" onClick={() => closePanel()}>Cancel</button>
-                    <button className="primary" onClick={handleSave}>{editingId ? 'Save changes' : 'Add'}</button>
+                    <button className="ghost" onClick={() => closePanel()}>{t('Cancel')}</button>
+                    <button className="primary" onClick={handleSave}>{editingId ? t('Save changes') : t('Add')}</button>
                   </div>
                 </div>
               </>
@@ -5618,11 +5633,11 @@ function App() {
       {!settings.welcomeShown && items.length === 0 && loaded && (
         <div className="modal-overlay">
           <div className="modal-box welcome-modal">
-            <p className="modal-brand">Welcome to Omnio</p>
+            <p className="modal-brand">{t('Welcome to Omnio')}</p>
             {welcomeStep === 'libraries' ? (
               <>
                 <p className="modal-message">
-                  Which libraries do you want to enable? You can turn them on or off later in <b>Settings → Libraries</b>.
+                  {t('Which libraries do you want to enable? You can turn them on or off later in')}{' '}<b>{t('Settings → Libraries')}</b>.
                 </p>
                 <div className="library-toggle-list welcome-libs">
                   {CATEGORIES.map((cat) => {
@@ -5648,52 +5663,52 @@ function App() {
                     const firstEnabled = picked[0]
                     if (firstEnabled) setActiveCategory(firstEnabled)
                     setWelcomeStep('keys')
-                  }}>Continue →</button>
+                  }}>{t('Continue →')}</button>
                 </div>
               </>
             ) : welcomeStep === 'keys' ? (
               <>
                 <p className="modal-message">
-                  API keys for metadata sources — optional but they unlock the ↗ Fetch buttons in the editors. All free, keyless sources (AniList, MAL, Kitsu, MangaDex, MusicBrainz, OpenLibrary) work out of the box.
+                  {t('API keys for metadata sources — optional but they unlock the ↗ Fetch buttons in the editors. All free, keyless sources (AniList, MAL, Kitsu, MangaDex, MusicBrainz, OpenLibrary) work out of the box.')}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>SteamGridDB (game covers/banners/logos)</span>
-                    <input type="password" placeholder="Free key at steamgriddb.com/profile/preferences/api" value={settings.sgdbApiKey ?? ''} onChange={(e) => setSettings((s) => ({ ...s, sgdbApiKey: e.target.value }))} />
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('SteamGridDB (game covers/banners/logos)')}</span>
+                    <input type="password" placeholder={t('Free key at steamgriddb.com/profile/preferences/api')} value={settings.sgdbApiKey ?? ''} onChange={(e) => setSettings((s) => ({ ...s, sgdbApiKey: e.target.value }))} />
                   </label>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>TMDb (movies + series)</span>
-                    <input type="password" placeholder="Free v3 key at themoviedb.org/settings/api" value={settings.tmdbApiKey ?? ''} onChange={(e) => setSettings((s) => ({ ...s, tmdbApiKey: e.target.value }))} />
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('TMDb (movies + series)')}</span>
+                    <input type="password" placeholder={t('Free v3 key at themoviedb.org/settings/api')} value={settings.tmdbApiKey ?? ''} onChange={(e) => setSettings((s) => ({ ...s, tmdbApiKey: e.target.value }))} />
                   </label>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>IGDB (games full metadata) — Twitch Client ID + Secret</span>
-                    <input type="text" placeholder="Client ID (dev.twitch.tv/console/apps)" value={settings.igdbClientId ?? ''} onChange={(e) => setSettings((s) => ({ ...s, igdbClientId: e.target.value }))} />
-                    <input type="password" placeholder="Client Secret" value={settings.igdbClientSecret ?? ''} onChange={(e) => setSettings((s) => ({ ...s, igdbClientSecret: e.target.value }))} />
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('IGDB (games full metadata) — Twitch Client ID + Secret')}</span>
+                    <input type="text" placeholder={t('Client ID (dev.twitch.tv/console/apps)')} value={settings.igdbClientId ?? ''} onChange={(e) => setSettings((s) => ({ ...s, igdbClientId: e.target.value }))} />
+                    <input type="password" placeholder={t('Client Secret')} value={settings.igdbClientSecret ?? ''} onChange={(e) => setSettings((s) => ({ ...s, igdbClientSecret: e.target.value }))} />
                   </label>
                 </div>
                 <div className="modal-actions" style={{ gap: 8, marginTop: 16 }}>
                   <span style={{ marginRight: 'auto', fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>2 / 3</span>
-                  <button className="secondary-btn" onClick={() => setWelcomeStep('libraries')}>← Back</button>
-                  <button className="secondary-btn" onClick={() => setWelcomeStep('tips')}>Skip →</button>
-                  <button className="danger-solid" onClick={() => setWelcomeStep('tips')}>Continue →</button>
+                  <button className="secondary-btn" onClick={() => setWelcomeStep('libraries')}>{t('← Back')}</button>
+                  <button className="secondary-btn" onClick={() => setWelcomeStep('tips')}>{t('Skip →')}</button>
+                  <button className="danger-solid" onClick={() => setWelcomeStep('tips')}>{t('Continue →')}</button>
                 </div>
               </>
             ) : (
               <>
                 <p className="modal-message">
-                  You're all set. A few tips to get started:
+                  {t('You\'re all set. A few tips to get started:')}
                 </p>
                 <ul className="welcome-tips">
-                  <li>Pick a library from the Home dashboard.</li>
-                  <li>Click <b>+ Add</b> or use <b>↗ Fetch metadata</b> in the editor to fill fields from AniList / TMDb / IGDB / etc.</li>
-                  <li>Personalize theme, density, card fields and card zoom in <b>Settings</b>.</li>
-                  <li>Press <b>?</b> anytime for the shortcuts cheatsheet · <b>Ctrl+K</b> for global search · <b>F5</b> to refresh.</li>
-                  <li>Right-click any card for quick actions (open, edit, duplicate, move, delete).</li>
+                  <li>{t('Pick a library from the Home dashboard.')}</li>
+                  <li>{t('Click')}{' '}<b>{t('+ Add')}</b>{' '}{t('or use')}{' '}<b>{t('↗ Fetch metadata')}</b>{' '}{t('in the editor to fill fields from AniList / TMDb / IGDB / etc.')}</li>
+                  <li>{t('Personalize theme, density, card fields and card zoom in')}{' '}<b>{t('Settings')}</b>.</li>
+                  <li>{t('Press')}{' '}<b>?</b>{' '}{t('anytime for the shortcuts cheatsheet ·')}{' '}<b>{t('Ctrl+K')}</b>{' '}{t('for global search ·')}{' '}<b>{t('F5')}</b>{' '}{t('to refresh.')}</li>
+                  <li>{t('Right-click any card for quick actions (open, edit, duplicate, move, delete).')}</li>
                 </ul>
                 <div className="modal-actions" style={{ gap: 8 }}>
                   <span style={{ marginRight: 'auto', fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>3 / 3</span>
-                  <button className="secondary-btn" onClick={() => setWelcomeStep('keys')}>← Back</button>
-                  <button className="danger-solid" onClick={() => setSettings((s) => ({ ...s, welcomeShown: true }))}>Get started</button>
+                  <button className="secondary-btn" onClick={() => setWelcomeStep('keys')}>{t('← Back')}</button>
+                  <button className="danger-solid" onClick={() => setSettings((s) => ({ ...s, welcomeShown: true }))}>{t('Get started')}</button>
                 </div>
               </>
             )}
@@ -5704,29 +5719,29 @@ function App() {
       {editingCollectionId && (
         <div className="modal-overlay" onClick={closeCollectionEditModal}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ width: 380 }}>
-            <p className="modal-brand">Edit group</p>
+            <p className="modal-brand">{t('Edit group')}</p>
             <div className="field-group">
-              <label>Name</label>
+              <label>{t('Name')}</label>
               <input value={collectionNameField} onChange={(e) => setCollectionNameField(e.target.value)} autoFocus />
             </div>
             <div className="field-group">
-              <label>Cover image</label>
+              <label>{t('Cover image')}</label>
               {collectionCoverField && (
                 <div className="cover-preview">
                   <img src={assetSrc(collectionCoverField) ?? collectionCoverField} alt="" />
                 </div>
               )}
               <div className="upload-row">
-                <button type="button" className="upload-btn" onClick={() => collectionCoverFileRef.current?.click()}>Upload</button>
+                <button type="button" className="upload-btn" onClick={() => collectionCoverFileRef.current?.click()}>{t('Upload')}</button>
                 <input type="file" accept="image/*" ref={collectionCoverFileRef} style={{ display: 'none' }} onChange={handleCollectionCoverFile} />
                 {collectionCoverField && (
-                  <button type="button" className="upload-btn clear" onClick={() => setCollectionCoverField('')}>Clear</button>
+                  <button type="button" className="upload-btn clear" onClick={() => setCollectionCoverField('')}>{t('Clear')}</button>
                 )}
               </div>
             </div>
             <div className="modal-actions">
-              <button className="ghost" onClick={closeCollectionEditModal}>Cancel</button>
-              <button className="primary" onClick={handleSaveCollectionEdit}>Save</button>
+              <button className="ghost" onClick={closeCollectionEditModal}>{t('Cancel')}</button>
+              <button className="primary" onClick={handleSaveCollectionEdit}>{t('Save')}</button>
             </div>
           </div>
         </div>
@@ -5735,17 +5750,17 @@ function App() {
       {confirmState && (
         <div className="modal-overlay">
           <div className="modal-box">
-            <p className="modal-brand">Omnio</p>
+            <p className="modal-brand">{t('Omnio')}</p>
             <p className="modal-message">{confirmState.message}</p>
             {confirmState.suppressible && (
               <label className="dont-ask">
                 <input type="checkbox" checked={dontAskAgain} onChange={(e) => setDontAskAgain(e.target.checked)} />
-                <span>Don’t ask again</span>
+                <span>{t('Don’t ask again')}</span>
               </label>
             )}
             <div className="modal-actions">
-              <button className="ghost" onClick={() => { confirmState.onCancel?.(); setConfirmState(null) }}>Cancel</button>
-              <button className="danger-solid" onClick={() => { if (confirmState.suppressible && dontAskAgain) setSettings((s) => ({ ...s, confirmDelete: false })); confirmState.onConfirm(); setConfirmState(null) }}>Confirm</button>
+              <button className="ghost" onClick={() => { confirmState.onCancel?.(); setConfirmState(null) }}>{t('Cancel')}</button>
+              <button className="danger-solid" onClick={() => { if (confirmState.suppressible && dontAskAgain) setSettings((s) => ({ ...s, confirmDelete: false })); confirmState.onConfirm(); setConfirmState(null) }}>{t('Confirm')}</button>
             </div>
           </div>
         </div>
@@ -5767,7 +5782,7 @@ function App() {
         <div className="modal-overlay">
           <div className="modal-panel artist-editor-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: '94vw', maxHeight: '88vh' }}>
             <div className="modal-header">
-              <h2>Edit Artist</h2>
+              <h2>{t('Edit Artist')}</h2>
               <button type="button" className="panel-close" onClick={closeArtistPanel}>✕</button>
             </div>
             <div className="editor-tabs-bar" role="tablist">
@@ -5786,34 +5801,34 @@ function App() {
                 {artistEditorTab === 'overview' && (
                   <>
                     <div className="field-group">
-                      <label>Name</label>
+                      <label>{t('Name')}</label>
                       <input value={artistNameField} onChange={(e) => setArtistNameField(e.target.value)} />
                     </div>
                     <div className="field-group image-drop" {...imageDropHandlers(setArtistPhotoField)}>
-                      <label>Photo</label>
+                      <label>{t('Photo')}</label>
                       <input
-                        placeholder={artistPhotoField.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL · drop here to upload'}
+                        placeholder={artistPhotoField.startsWith('data:') ? t('Image uploaded from your PC') : t('Image URL · drop here to upload')}
                         value={artistPhotoField.startsWith('data:') ? '' : artistPhotoField}
                         onChange={(e) => setArtistPhotoField(e.target.value)}
                       />
                       <div className="upload-row">
-                        <button type="button" className="upload-btn" onClick={() => artistPhotoFileInputRef.current?.click()}>Upload from PC</button>
-                        <button type="button" className="upload-btn" onClick={() => setArtistImageSearch('photo')}>Search online</button>
-                        {artistPhotoField && <button type="button" className="upload-btn clear" onClick={() => setArtistPhotoField('')}>Clear</button>}
+                        <button type="button" className="upload-btn" onClick={() => artistPhotoFileInputRef.current?.click()}>{t('Upload from PC')}</button>
+                        <button type="button" className="upload-btn" onClick={() => setArtistImageSearch('photo')}>{t('Search online')}</button>
+                        {artistPhotoField && <button type="button" className="upload-btn clear" onClick={() => setArtistPhotoField('')}>{t('Clear')}</button>}
                       </div>
                       <input type="file" accept="image/*" ref={artistPhotoFileInputRef} style={{ display: 'none' }} onChange={handleArtistPhotoFile} />
                     </div>
                     <div className="field-group image-drop" {...imageDropHandlers(setArtistBannerField)}>
-                      <label>Banner image</label>
+                      <label>{t('Banner image')}</label>
                       <input
-                        placeholder={artistBannerField.startsWith('data:') ? 'Image uploaded from your PC' : 'Image URL · drop here to upload'}
+                        placeholder={artistBannerField.startsWith('data:') ? t('Image uploaded from your PC') : t('Image URL · drop here to upload')}
                         value={artistBannerField.startsWith('data:') ? '' : artistBannerField}
                         onChange={(e) => setArtistBannerField(e.target.value)}
                       />
                       <div className="upload-row">
-                        <button type="button" className="upload-btn" onClick={() => artistBannerFileInputRef.current?.click()}>Upload from PC</button>
-                        <button type="button" className="upload-btn" onClick={() => setArtistImageSearch('banner')}>Search online</button>
-                        {artistBannerField && <button type="button" className="upload-btn clear" onClick={() => setArtistBannerField('')}>Clear</button>}
+                        <button type="button" className="upload-btn" onClick={() => artistBannerFileInputRef.current?.click()}>{t('Upload from PC')}</button>
+                        <button type="button" className="upload-btn" onClick={() => setArtistImageSearch('banner')}>{t('Search online')}</button>
+                        {artistBannerField && <button type="button" className="upload-btn clear" onClick={() => setArtistBannerField('')}>{t('Clear')}</button>}
                       </div>
                       <input type="file" accept="image/*" ref={artistBannerFileInputRef} style={{ display: 'none' }} onChange={handleArtistBannerFile} />
                     </div>
@@ -5832,35 +5847,35 @@ function App() {
                 {artistEditorTab === 'details' && (
                   <>
                     <div className="field-group">
-                      <label>Origin</label>
-                      <input value={artistOrigin} onChange={(e) => setArtistOrigin(e.target.value)} placeholder="e.g. London, England" />
+                      <label>{t('Origin')}</label>
+                      <input value={artistOrigin} onChange={(e) => setArtistOrigin(e.target.value)} placeholder={t('e.g. London, England')} />
                     </div>
                     <div className="field-row">
                       <div className="field-group">
-                        <label>Status</label>
+                        <label>{t('Status')}</label>
                         <select value={artistBandStatus} onChange={(e) => setArtistBandStatus(e.target.value as BandStatus | '')}>
-                          <option value="">Unspecified</option>
+                          <option value="">{t('Unspecified')}</option>
                           {BAND_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
                       </div>
                       <div className="field-group">
-                        <label>Years active</label>
+                        <label>{t('Years active')}</label>
                         <div className="field-row">
-                          <input value={artistActiveFrom} onChange={(e) => setArtistActiveFrom(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="From" />
-                          <input value={artistActiveTo} onChange={(e) => setArtistActiveTo(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="To" />
+                          <input value={artistActiveFrom} onChange={(e) => setArtistActiveFrom(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder={t('From')} />
+                          <input value={artistActiveTo} onChange={(e) => setArtistActiveTo(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder={t('To')} />
                         </div>
                       </div>
                     </div>
                     <TagEditor
-                      label="Genres"
-                      placeholder="Add genre"
+                      label={t('Genres')}
+                      placeholder={t('Add genre')}
                       tags={artistGenres}
                       onAdd={(g) => setArtistGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
                       onRemove={(i) => setArtistGenres((prev) => prev.filter((_, idx) => idx !== i))}
                     />
                     <TagEditor
-                      label="Labels"
-                      placeholder="Add record label"
+                      label={t('Labels')}
+                      placeholder={t('Add record label')}
                       tags={artistLabels}
                       onAdd={(l) => setArtistLabels((prev) => prev.includes(l) ? prev : [...prev, l])}
                       onRemove={(i) => setArtistLabels((prev) => prev.filter((_, idx) => idx !== i))}
@@ -5869,7 +5884,7 @@ function App() {
                 )}
                 {artistEditorTab === 'members' && (
                   <div className="field-group">
-                    <label>Members</label>
+                    <label>{t('Members')}</label>
                     <BandMembersEditor members={artistMembers} onChange={setArtistMembers} />
                   </div>
                 )}
@@ -5879,9 +5894,9 @@ function App() {
               </div>
             </div>
             <div className="modal-footer">
-              <button type="button" className="danger-btn" onClick={() => { const id = editingArtistId!; closeArtistPanel(); handleDeleteArtist(id) }} style={{ marginRight: 'auto' }}>Delete</button>
-              <button type="button" className="ghost-btn" onClick={closeArtistPanel}>Cancel</button>
-              <button type="button" className="primary-btn" onClick={handleSaveArtistEdit}>Save changes</button>
+              <button type="button" className="danger-btn" onClick={() => { const id = editingArtistId!; closeArtistPanel(); handleDeleteArtist(id) }} style={{ marginRight: 'auto' }}>{t('Delete')}</button>
+              <button type="button" className="ghost-btn" onClick={closeArtistPanel}>{t('Cancel')}</button>
+              <button type="button" className="primary-btn" onClick={handleSaveArtistEdit}>{t('Save changes')}</button>
             </div>
           </div>
         </div>
@@ -5965,7 +5980,7 @@ function App() {
               createdAt: Date.now(),
             }
             setItems((prev) => [...prev, stub])
-            setToast(`Added "${title}"`)
+            setToast(t('Added "{title}"', { title: title }))
           }}
           onClose={() => setQuickAddOpen(false)}
         />
@@ -6009,7 +6024,7 @@ function App() {
                 return { ...a, members: nextMembers }
               }))
               const merged = Object.keys(mapping).length
-              setToast(`Merged ${merged} role variant${merged === 1 ? '' : 's'} across ${touchedArtists} artist${touchedArtists === 1 ? '' : 's'}`)
+              setToast(plural(merged, 'Merged {n} role variant across {artists}', 'Merged {n} role variants across {artists}', { artists: plural(touchedArtists, '{n} artist', '{n} artists') }))
             }}
           />
         </Suspense>
@@ -6024,7 +6039,7 @@ function App() {
             onSave={(next) => {
               setSettings((s) => ({ ...s, tagTree: next }))
               const count = Object.keys(next).length
-              setToast(count === 0 ? 'Tag hierarchy cleared' : `Tag hierarchy saved (${count} nested tag${count === 1 ? '' : 's'})`)
+              setToast(count === 0 ? t('Tag hierarchy cleared') : plural(count, 'Tag hierarchy saved ({n} nested tag)', 'Tag hierarchy saved ({n} nested tags)'))
             }}
           />
         </Suspense>
@@ -6053,7 +6068,7 @@ function App() {
               return { ...it, genres: next }
             }))
             const merged = Object.keys(mapping).length
-            setToast(`Merged ${merged} variant${merged === 1 ? '' : 's'} across ${changed} item${changed === 1 ? '' : 's'}`)
+            setToast(plural(merged, 'Merged {n} variant across {items}', 'Merged {n} variants across {items}', { items: plural(changed, '{n} item', '{n} items') }))
           }}
         />
       )}
@@ -6077,7 +6092,7 @@ function App() {
             const targetLabel = CATEGORIES.find((c) => c.id === cid)?.label ?? cid
             if (isCategoryId(cid)) {
               setItems((prev) => prev.map((i) => (i.id === target.id ? { ...i, categoryId: cid } as AnyItem : i)))
-              setToast(`Moved "${target.title}" to ${targetLabel}`)
+              setToast(t('Moved "{title}" to {targetLabel}', { title: target.title, targetLabel: targetLabel }))
             }
             setLibraryPickerFor(null)
           }}
@@ -6099,7 +6114,7 @@ function App() {
               return { ...p, entries: [...p.entries, { categoryId: it.categoryId, itemId: it.id, addedAt: Date.now() }], updatedAt: Date.now() }
             }))
             const pl = playlists.find((p) => p.id === playlistId)
-            if (pl) setToast(`Added to "${pl.name}"`)
+            if (pl) setToast(t('Added to "{name}"', { name: pl.name }))
             setPlaylistPickerFor(null)
           }}
           onCreate={(name) => {
@@ -6108,7 +6123,7 @@ function App() {
             const it = playlistPickerFor
             const entries = it ? [{ categoryId: it.categoryId, itemId: it.id, addedAt: Date.now() }] : []
             setPlaylists((prev) => [...prev, { id, name, entries, createdAt: Date.now() }])
-            setToast(`Created "${name}"`)
+            setToast(t('Created "{name}"', { name: name }))
             return id
           }}
         />
@@ -6118,31 +6133,31 @@ function App() {
         <div className="modal-overlay" onClick={() => setShortcutsOpen(false)}>
           <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 620, width: '90vw' }}>
             <div className="modal-header">
-              <h2>Keyboard shortcuts</h2>
+              <h2>{t('Keyboard shortcuts')}</h2>
               <button type="button" className="panel-close" onClick={() => setShortcutsOpen(false)}>✕</button>
             </div>
             <div className="modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px 32px' }}>
                 {[
-                  { section: 'Navigation', rows: [
-                    ['Ctrl+K', 'Global search across every library'],
-                    ['Ctrl+F', 'Search inside the current library'],
-                    ['F5', 'Refresh the library from disk'],
-                    ['?', 'Show this cheatsheet'],
-                    ['Esc', 'Close any open modal, panel or detail view'],
+                  { section: t('Navigation'), rows: [
+                    ['Ctrl+K', t('Global search across every library')],
+                    ['Ctrl+F', t('Search inside the current library')],
+                    ['F5', t('Refresh the library from disk')],
+                    ['?', t('Show this cheatsheet')],
+                    [t('Esc'), t('Close any open modal, panel or detail view')],
                   ]},
-                  { section: 'Editing', rows: [
-                    ['Ctrl+Z', 'Undo the last change'],
-                    ['Ctrl+Shift+Z', 'Redo'],
-                    ['Ctrl+Y', 'Redo (alt)'],
+                  { section: t('Editing'), rows: [
+                    ['Ctrl+Z', t('Undo the last change')],
+                    ['Ctrl+Shift+Z', t('Redo')],
+                    ['Ctrl+Y', t('Redo (alt)')],
                   ]},
-                  { section: 'Selection', rows: [
-                    ['Shift+click', 'Toggle multi-select on a card'],
-                    ['Click', 'When any card is selected, single click toggles too'],
+                  { section: t('Selection'), rows: [
+                    ['Shift+click', t('Toggle multi-select on a card')],
+                    [t('Click'), t('When any card is selected, single click toggles too')],
                   ]},
-                  { section: 'Detail views', rows: [
-                    ['Edit', 'Opens the full editor pre-filled with the item'],
-                    ['Duplicate', 'Creates a "(Copy)" of the current item'],
+                  { section: t('Detail views'), rows: [
+                    [t('Edit'), t('Opens the full editor pre-filled with the item')],
+                    [t('Duplicate'), t('Creates a "(Copy)" of the current item')],
                   ]},
                 ].map((g) => (
                   <div key={g.section}>
@@ -6171,22 +6186,22 @@ function App() {
         <div className="modal-overlay" onClick={() => setBrokenAssetsOpen(false)}>
           <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: '90vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
-              <h2>Broken cover audit</h2>
+              <h2>{t('Broken cover audit')}</h2>
               <button type="button" className="panel-close" onClick={() => setBrokenAssetsOpen(false)}>✕</button>
             </div>
             <div className="modal-body" style={{ overflowY: 'auto' }}>
               {brokenAssets.length === 0 ? (
-                <p className="hint">No broken references. Every asset path in your library resolves to a real file on disk.</p>
+                <p className="hint">{t('No broken references. Every asset path in your library resolves to a real file on disk.')}</p>
               ) : (
                 <>
-                  <p className="hint">{brokenAssets.length} reference{brokenAssets.length === 1 ? '' : 's'} point to a file that no longer exists. Click <strong>Clear</strong> to blank the field — the item updates live, no reload needed. Then re-open the item and re-fetch cleanly.</p>
+                  <p className="hint">{plural(brokenAssets.length, '{n} reference point to a file that no longer exists. Click', '{n} references point to a file that no longer exists. Click')}{' '}<strong>{t('Clear')}</strong>{' '}{t('to blank the field — the item updates live, no reload needed. Then re-open the item and re-fetch cleanly.')}</p>
                   <div className="settings-actions" style={{ marginBottom: 12 }}>
                     <button type="button" className="secondary-btn" onClick={() => {
                       brokenAssets.forEach((b) => applyClearedRefLocally(b))
                       const n = brokenAssets.length
                       setBrokenAssets([])
-                      setToast(`Cleared ${n} reference${n === 1 ? '' : 's'}`)
-                    }}>Clear all {brokenAssets.length}</button>
+                      setToast(plural(n, 'Cleared {n} reference', 'Cleared {n} references'))
+                    }}>{t('Clear all {brokenAssets}', { brokenAssets: brokenAssets.length })}</button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {brokenAssets.map((b, i) => (
@@ -6200,8 +6215,8 @@ function App() {
                         <button type="button" className="secondary-btn" onClick={() => {
                           applyClearedRefLocally(b)
                           setBrokenAssets((list) => list.filter((_, j) => j !== i))
-                          setToast('Reference cleared')
-                        }}>Clear</button>
+                          setToast(t('Reference cleared'))
+                        }}>{t('Clear')}</button>
                       </div>
                     ))}
                   </div>
@@ -6221,7 +6236,7 @@ function App() {
         onApplyTag={bulkAddTag}
         onApplyRating={(r) => {
           setItems((all) => all.map((it) => selectedIds.has(it.id) ? { ...it, rating: r || undefined } : it))
-          setToast(r ? `Rating set to ★${r} on ${selectedIds.size} items` : `Rating cleared on ${selectedIds.size} items`)
+          setToast(r ? t('Rating set to ★{r} on {selectedIds} items', { r: r, selectedIds: selectedIds.size }) : t('Rating cleared on {selectedIds} items', { selectedIds: selectedIds.size }))
         }}
         onApplyGenre={(op, g) => {
           setItems((all) => all.map((it) => {
@@ -6233,7 +6248,7 @@ function App() {
             }
             return { ...it, genres: cur.filter((x) => x !== g) }
           }))
-          setToast(op === 'add' ? `Genre "${g}" added to ${selectedIds.size} items` : `Genre "${g}" removed from ${selectedIds.size} items`)
+          setToast(op === 'add' ? t('Genre "{g}" added to {selectedIds} items', { g: g, selectedIds: selectedIds.size }) : t('Genre "{g}" removed from {selectedIds} items', { g: g, selectedIds: selectedIds.size }))
         }}
         onAddToGroup={bulkAddToGroup}
         onMoveToLibrary={bulkMoveToLibrary}
@@ -6241,14 +6256,14 @@ function App() {
         onExportHtml={async () => {
           const picked = items.filter((i) => selectedIds.has(i.id))
           if (picked.length === 0) return
-          const dir = await pickFolder('Choose where to export the selection', settings.lastExportFolder)
+          const dir = await pickFolder(t('Choose where to export the selection'), settings.lastExportFolder)
           if (!dir) return
           const includesMusic = picked.some((i) => i.categoryId === 'musica')
           const scopedArtists = includesMusic ? musicArtists : []
-          const html = buildStaticSiteHtml(picked, scopedArtists, `Omnio selection (${picked.length} items)`)
+          const html = buildStaticSiteHtml(picked, scopedArtists, t('Omnio selection ({picked} items)', { picked: picked.length }))
           const r = await window.ipcRenderer.invoke('export:site', dir, html)
-          if (r?.ok) { setToast(`Exported ${picked.length} items to ${r.path}`); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
-          else setToast(`Export failed: ${r?.error ?? 'unknown'}`)
+          if (r?.ok) { setToast(t('Exported {picked} items to {path}', { picked: picked.length, path: r.path })); setSettings((s) => ({ ...s, lastExportFolder: dir })) }
+          else setToast(t('Export failed: {error}', { error: r?.error ?? 'unknown' }))
         }}
       />
 
@@ -6272,7 +6287,7 @@ function App() {
               if (isLocalAssetPath(logoImage) && logoImage !== savedLogo && logoImage !== rel) window.ipcRenderer.invoke('image:delete', logoImage)
               setLogoImage(rel)
             }
-            setToast('Artwork downloaded')
+            setToast(t('Artwork downloaded'))
           }}
           onClose={() => setSgdbOpen(null)}
         />
@@ -6291,7 +6306,7 @@ function App() {
               window.ipcRenderer.invoke('image:delete', currentBundle)
             }
             setBundleContents((prev) => prev.map((b) => b.id === bundleSgdbFor.entryId ? { ...b, cover: rel } : b))
-            setToast('Bundle cover downloaded')
+            setToast(t('Bundle cover downloaded'))
           }}
           onClose={() => setBundleSgdbFor(null)}
         />
@@ -6314,7 +6329,7 @@ function App() {
           existingItems={items}
           onImport={(newItems) => {
             setItems((all) => [...all, ...newItems])
-            setToast(`Imported ${newItems.length} items`)
+            setToast(t('Imported {newItems} items', { newItems: newItems.length }))
           }}
           onClose={() => setMalOpen(false)}
         />
@@ -6325,7 +6340,7 @@ function App() {
           existingItems={items}
           onImport={(newItems) => {
             setItems((all) => [...all, ...newItems])
-            setToast(`Imported ${newItems.length} items`)
+            setToast(t('Imported {newItems} items', { newItems: newItems.length }))
           }}
           onClose={() => setGenericImportOpen(false)}
         />
@@ -6336,7 +6351,7 @@ function App() {
           <SteamImporter
             onImport={(newItems) => {
               setItems((all) => [...all, ...newItems])
-              setToast(`Imported ${newItems.length} games from Steam`)
+              setToast(t('Imported {newItems} games from Steam', { newItems: newItems.length }))
             }}
             onClose={() => setSteamOpen(false)}
           />
@@ -6348,7 +6363,7 @@ function App() {
           existingItems={items}
           onImport={(newItems) => {
             setItems((all) => [...all, ...newItems])
-            setToast(`Imported ${newItems.length} movie${newItems.length === 1 ? '' : 's'} from Letterboxd`)
+            setToast(plural(newItems.length, 'Imported {n} movie from Letterboxd', 'Imported {n} movies from Letterboxd'))
           }}
           onClose={() => setLetterboxdOpen(false)}
         />
@@ -6360,7 +6375,7 @@ function App() {
             existingItems={items}
             onImport={(newItems) => {
               setItems((all) => [...all, ...newItems])
-              setToast(`Imported ${newItems.length} game${newItems.length === 1 ? '' : 's'} from Backloggd`)
+              setToast(plural(newItems.length, 'Imported {n} game from Backloggd', 'Imported {n} games from Backloggd'))
             }}
             onClose={() => setBackloggdOpen(false)}
           />
@@ -6373,7 +6388,7 @@ function App() {
             existingItems={items}
             onImport={(newItems) => {
               setItems((all) => [...all, ...newItems])
-              setToast(`Imported ${newItems.length} book${newItems.length === 1 ? '' : 's'} from StoryGraph`)
+              setToast(plural(newItems.length, 'Imported {n} book from StoryGraph', 'Imported {n} books from StoryGraph'))
             }}
             onClose={() => setStoryGraphOpen(false)}
           />
@@ -6386,7 +6401,7 @@ function App() {
             existingItems={items}
             onImport={(newItems) => {
               setItems((all) => [...all, ...newItems])
-              setToast(`Imported ${newItems.length} entr${newItems.length === 1 ? 'y' : 'ies'} from IMDb`)
+              setToast(plural(newItems.length, 'Imported {n} entry from IMDb', 'Imported {n} entries from IMDb'))
             }}
             onClose={() => setImdbOpen(false)}
           />
@@ -6399,7 +6414,7 @@ function App() {
             existingItems={items}
             onImport={(newItems) => {
               setItems((all) => [...all, ...newItems])
-              setToast(`Imported ${newItems.length} album${newItems.length === 1 ? '' : 's'} from RateYourMusic`)
+              setToast(plural(newItems.length, 'Imported {n} album from RateYourMusic', 'Imported {n} albums from RateYourMusic'))
             }}
             onClose={() => setRymOpen(false)}
           />
@@ -6413,7 +6428,7 @@ function App() {
             existingItems={items}
             onImport={(newItems) => {
               setItems((all) => [...all, ...newItems])
-              setToast(`Imported ${newItems.length} album${newItems.length === 1 ? '' : 's'} from folder`)
+              setToast(plural(newItems.length, 'Imported {n} album from folder', 'Imported {n} albums from folder'))
             }}
             onClose={() => setMusicScanOpen(false)}
           />
@@ -6433,7 +6448,7 @@ function App() {
                 if (!patch) return it
                 return { ...it, consumed: patch.consumed, rewatches: patch.rewatches } as Item
               }))
-              setToast(`Synced ${patches.length} album${patches.length === 1 ? '' : 's'} from Last.fm`)
+              setToast(plural(patches.length, 'Synced {n} album from Last.fm', 'Synced {n} albums from Last.fm'))
             }}
             onClose={() => setLastFmOpen(false)}
           />
@@ -6446,7 +6461,7 @@ function App() {
             existingItems={items}
             onImport={(newItems) => {
               setItems((all) => [...all, ...newItems])
-              setToast(`Imported ${newItems.length} show${newItems.length === 1 ? '' : 's'} from Serializd`)
+              setToast(plural(newItems.length, 'Imported {n} show from Serializd', 'Imported {n} shows from Serializd'))
             }}
             onClose={() => setSerializdOpen(false)}
           />
@@ -6459,7 +6474,7 @@ function App() {
             existingItems={items}
             onImport={(newItems) => {
               setItems((all) => [...all, ...newItems])
-              setToast(`Imported ${newItems.length} album${newItems.length === 1 ? '' : 's'} from Spotify`)
+              setToast(plural(newItems.length, 'Imported {n} album from Spotify', 'Imported {n} albums from Spotify'))
             }}
             onClose={() => setSpotifyOpen(false)}
           />
@@ -6475,7 +6490,7 @@ function App() {
               return [...next, ...creates]
             })
             const total = updates.size + creates.length
-            setToast(`Applied Discogs data to ${total} release${total === 1 ? '' : 's'}`)
+            setToast(plural(total, 'Applied Discogs data to {n} release', 'Applied Discogs data to {n} releases'))
           }}
           onClose={() => setDiscogsImportOpen(false)}
         />
@@ -6496,7 +6511,7 @@ function App() {
               return [...next, ...movieCreates, ...seriesCreates]
             })
             const total = movieUpdates.size + movieCreates.length + seriesUpdates.size + seriesCreates.length
-            setToast(`Applied Trakt data to ${total} item${total === 1 ? '' : 's'}`)
+            setToast(plural(total, 'Applied Trakt data to {n} item', 'Applied Trakt data to {n} items'))
           }}
           onClose={() => setTraktImportOpen(false)}
         />
@@ -6509,7 +6524,7 @@ function App() {
             onImport={({ updates, creates }) => {
               setItems((all) => [...all.map((it) => (updates.has(it.id) ? { ...it, ...updates.get(it.id) } as AnyItem : it)), ...creates])
               const total = updates.size + creates.length
-              setToast(`Imported ${total} visual novel${total === 1 ? '' : 's'} from VNDB`)
+              setToast(plural(total, 'Imported {n} visual novel from VNDB', 'Imported {n} visual novels from VNDB'))
               void (async () => {
                 for (const it of creates) {
                   if (!it.cover?.startsWith('http')) continue
@@ -6532,7 +6547,7 @@ function App() {
               return [...next, ...creates]
             })
             const total = updates.size + creates.length
-            setToast(`Applied Last.fm data to ${total} album${total === 1 ? '' : 's'}`)
+            setToast(plural(total, 'Applied Last.fm data to {n} album', 'Applied Last.fm data to {n} albums'))
           }}
           onClose={() => setLastfmImportOpen(false)}
         />
@@ -6549,7 +6564,7 @@ function App() {
             const totalEntries = [...updates.values()].reduce((s, arr) => s + arr.length, 0)
               + creates.reduce((s, it) => s + (it.highlights?.length ?? 0), 0)
             const bookCount = updates.size + creates.length
-            setToast(`Imported ${totalEntries} highlight${totalEntries === 1 ? '' : 's'} across ${bookCount} book${bookCount === 1 ? '' : 's'}`)
+            setToast(plural(totalEntries, 'Imported {n} highlight across {books}', 'Imported {n} highlights across {books}', { books: plural(bookCount, '{n} book', '{n} books') }))
           }}
           onClose={() => setHighlightsImportOpen(false)}
         />
@@ -6604,7 +6619,7 @@ function App() {
             existingItems={items}
             onImport={(newItems) => {
               setItems((all) => [...all, ...newItems])
-              setToast(`Added ${newItems.length} game${newItems.length === 1 ? '' : 's'} from install scan · open each to fetch cover/metadata`)
+              setToast(plural(newItems.length, 'Added {n} game from install scan · open each to fetch cover/metadata', 'Added {n} games from install scan · open each to fetch cover/metadata'))
             }}
             onClose={() => setInstallScanOpen(false)}
           />
@@ -6626,7 +6641,7 @@ function App() {
                 createdAt: now,
               } as AnyItem))
               setItems((all) => [...all, ...newItems])
-              setToast(`Added ${newItems.length} placeholder album${newItems.length === 1 ? '' : 's'} — open each to fetch cover/metadata`)
+              setToast(plural(newItems.length, 'Added {n} placeholder album — open each to fetch cover/metadata', 'Added {n} placeholder albums — open each to fetch cover/metadata'))
             }}
             onClose={() => setDiscographyCheckerOpen(false)}
           />
@@ -6672,16 +6687,16 @@ function App() {
       {updateModalOpen && updateInfo && (
         <div className="modal-overlay" onClick={() => downloadState.phase !== 'downloading' && setUpdateModalOpen(false)}>
           <div className="modal-box" style={{ width: 440 }} onClick={(e) => e.stopPropagation()}>
-            <p className="modal-brand">Update to Omnio {updateInfo.latest}</p>
+            <p className="modal-brand">{t('Update to Omnio {latest}', { latest: updateInfo.latest })}</p>
             {downloadState.phase === 'downloading' && (() => {
               const pct = downloadState.total > 0 ? Math.floor((downloadState.received / downloadState.total) * 100) : 0
               const mb = (n: number) => (n / (1024 * 1024)).toFixed(1)
               return (
                 <>
-                  <p className="modal-message">Downloading {updateInfo.matchedAssetName}…</p>
+                  <p className="modal-message">{t('Downloading {matchedAssetName}…', { matchedAssetName: updateInfo.matchedAssetName })}</p>
                   <div className="update-progress"><div className="update-progress-bar" style={{ width: `${pct}%` }} /></div>
                   <p className="hint" style={{ marginTop: 8 }}>
-                    {mb(downloadState.received)} MB{downloadState.total > 0 ? ` / ${mb(downloadState.total)} MB` : ''} · {pct}%
+                    {t('{received} MB{value} · {pct}%', { received: mb(downloadState.received), value: downloadState.total > 0 ? ` ${t('/ {total} MB', { total: mb(downloadState.total) })}` : '', pct: pct })}
                   </p>
                 </>
               )
@@ -6689,30 +6704,30 @@ function App() {
             {downloadState.phase === 'done' && (
               <>
                 <p className="modal-message">
-                  Download complete.{' '}
-                  {updateInstallKind === 'win-nsis' && 'Click Install to launch the setup — Windows will show a SmartScreen prompt because the build is unsigned.'}
-                  {updateInstallKind === 'win-portable' && 'The new portable exe is in your Downloads folder. Close Omnio and run it to finish the update.'}
-                  {(updateInstallKind === 'mac-arm64' || updateInstallKind === 'mac-x64') && 'Click Open DMG to mount the disk image. Drag Omnio.app to Applications like a normal install.'}
-                  {updateInstallKind === 'linux-appimage' && 'Click Replace and relaunch to make the new AppImage the active one.'}
-                  {updateInstallKind === 'unknown' && 'The file is in your Downloads folder.'}
+                  {t('Download complete.')}{' '}
+                  {updateInstallKind === 'win-nsis' && t('Click Install to launch the setup — Windows will show a SmartScreen prompt because the build is unsigned.')}
+                  {updateInstallKind === 'win-portable' && t('The new portable exe is in your Downloads folder. Close Omnio and run it to finish the update.')}
+                  {(updateInstallKind === 'mac-arm64' || updateInstallKind === 'mac-x64') && t('Click Open DMG to mount the disk image. Drag Omnio.app to Applications like a normal install.')}
+                  {updateInstallKind === 'linux-appimage' && t('Click Replace and relaunch to make the new AppImage the active one.')}
+                  {updateInstallKind === 'unknown' && t('The file is in your Downloads folder.')}
                 </p>
                 <div className="modal-actions">
-                  <button className="ghost" onClick={() => setUpdateModalOpen(false)}>Close</button>
+                  <button className="ghost" onClick={() => setUpdateModalOpen(false)}>{t('Close')}</button>
                   <button className="primary" onClick={finalizeUpdate}>
-                    {updateInstallKind === 'win-nsis' ? 'Install now' :
-                      updateInstallKind === 'linux-appimage' ? 'Replace and relaunch' :
-                      (updateInstallKind === 'mac-arm64' || updateInstallKind === 'mac-x64') ? 'Open DMG' :
-                      'Reveal in folder'}
+                    {updateInstallKind === 'win-nsis' ? t('Install now') :
+                      updateInstallKind === 'linux-appimage' ? t('Replace and relaunch') :
+                      (updateInstallKind === 'mac-arm64' || updateInstallKind === 'mac-x64') ? t('Open DMG') :
+                      t('Reveal in folder')}
                   </button>
                 </div>
               </>
             )}
             {downloadState.phase === 'error' && (
               <>
-                <p className="modal-message" style={{ color: 'var(--danger)' }}>Download failed: {downloadState.message}</p>
+                <p className="modal-message" style={{ color: 'var(--danger)' }}>{t('Download failed: {message}', { message: downloadState.message })}</p>
                 <div className="modal-actions">
-                  <button className="ghost" onClick={() => setUpdateModalOpen(false)}>Close</button>
-                  <button className="primary" onClick={startAssistedDownload}>Retry</button>
+                  <button className="ghost" onClick={() => setUpdateModalOpen(false)}>{t('Close')}</button>
+                  <button className="primary" onClick={startAssistedDownload}>{t('Retry')}</button>
                 </div>
               </>
             )}
@@ -6723,10 +6738,10 @@ function App() {
       {alertMsg && (
         <div className="modal-overlay">
           <div className="modal-box">
-            <p className="modal-brand">Omnio</p>
+            <p className="modal-brand">{t('Omnio')}</p>
             <p className="modal-message">{alertMsg}</p>
             <div className="modal-actions">
-              <button className="primary" onClick={() => setAlertMsg(null)}>OK</button>
+              <button className="primary" onClick={() => setAlertMsg(null)}>{t('OK')}</button>
             </div>
           </div>
         </div>

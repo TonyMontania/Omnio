@@ -3,6 +3,7 @@
 
 import type { Episode } from '../../types'
 import { UnitListEditor } from './UnitListEditor'
+import { t } from '../../i18n'
 
 // AniDB-style prefix legend: S / C / T / P / O carry meaning. Show it
 // as a hover tooltip on the # cell so users don't have to remember
@@ -35,11 +36,11 @@ function anidbNumberGroup(number: string): string | undefined {
 }
 const EPISODE_CONFIG = {
   noun: 'episode' as const,
-  doneLabel: 'Watched',
+  doneLabel: t('Watched'),
   showFiller: true,
   showAirdate: true,
   showLength: true,
-  numberPlaceholder: 'Ep #',
+  numberPlaceholder: t('Ep #'),
   numberTooltip: anidbNumberTooltip,
   numberGroup: anidbNumberGroup,
 }

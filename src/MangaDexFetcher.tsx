@@ -6,6 +6,7 @@
 import type { Item, MangaSource, PublicationStatus, MangaVolume, AgeRating, Demographic } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { t } from './i18n'
 
 interface Props {
   initialQuery: string
@@ -141,7 +142,7 @@ function mangaToPatch(m: MdManga): Partial<Item> {
 export default function MangaDexFetcher({ initialQuery, categoryId, onApply, onClose }: Props) {
   const search = async (q: string): Promise<FetcherResult<MdManga>> => {
     const r = await window.ipcRenderer.invoke('mangadex:search', q)
-    return r?.ok ? { ok: true, data: r.data as MdManga[] } : { ok: false, error: r?.error ?? 'Search failed' }
+    return r?.ok ? { ok: true, data: r.data as MdManga[] } : { ok: false, error: r?.error ?? t('Search failed') }
   }
 
   const apply = async (m: MdManga) => {
@@ -185,16 +186,11 @@ export default function MangaDexFetcher({ initialQuery, categoryId, onApply, onC
 
   return (
     <FetcherModal<MdManga>
-      title="MangaDex"
+      title={t('MangaDex')}
       hint={
-        <>Free, no API key. Applying overwrites title, alternative titles, description,
-        release year, authors, artists, genres, total chapters/volumes, publication
-        status, cover and per-volume covers (each volume that MangaDex has art
-        for lands in the gallery). Rating, reading status, notes and personal
-        history are left alone. Each hit is labelled by origin (JP / KR / CN)
-        so you can spot manga vs manhwa vs manhua at a glance.</>
+        <>{t('Free, no API key. Applying overwrites title, alternative titles, description, release year, authors, artists, genres, total chapters/volumes, publication status, cover and per-volume covers (each volume that MangaDex has art for lands in the gallery). Rating, reading status, notes and personal history are left alone. Each hit is labelled by origin (JP / KR / CN) so you can spot manga vs manhwa vs manhua at a glance.')}</>
       }
-      placeholder="Search title, e.g. 'chainsaw man' or 'solo leveling'…"
+      placeholder={t('Search title, e.g. \'chainsaw man\' or \'solo leveling\'…')}
       initialQuery={initialQuery}
       onSearch={search}
       onApply={apply}

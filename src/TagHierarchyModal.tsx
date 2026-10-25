@@ -6,6 +6,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item } from './types'
+import { t } from './i18n'
 
 type Props = {
   items: Item[]
@@ -55,25 +56,23 @@ export default function TagHierarchyModal({ items, tagTree, onClose, onSave }: P
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel tag-hierarchy-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640, width: '92vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Tag hierarchy</h2>
+          <h2>{t('Tag hierarchy')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint">
-            Pick a parent tag for any child so the Filters dropdown groups them
-            visually and selecting the parent matches every descendant.
-            {' '}{allTags.length} tags · {rootCount} top-level · {childCount} nested.
+            {t('Pick a parent tag for any child so the Filters dropdown groups them visually and selecting the parent matches every descendant. {allTags} tags · {rootCount} top-level · {childCount} nested.', { allTags: allTags.length, rootCount: rootCount, childCount: childCount })}
           </p>
-          {allTags.length === 0 && <p className="hint">No tags yet — add some to items first.</p>}
+          {allTags.length === 0 && <p className="hint">{t('No tags yet — add some to items first.')}</p>}
           <div className="tag-hierarchy-list">
             {allTags.map((tag) => {
               const parent = draft[tag] ?? ''
               return (
                 <div key={tag} className="tag-hierarchy-row">
                   <span className="tag-hierarchy-child">{tag}</span>
-                  <span className="tag-hierarchy-arrow">→ parent</span>
+                  <span className="tag-hierarchy-arrow">{t('→ parent')}</span>
                   <select value={parent} onChange={(e) => setParent(tag, e.target.value)}>
-                    <option value="">— top level</option>
+                    <option value="">{t('— top level')}</option>
                     {parentOptions(tag).map((p) => (
                       <option key={p} value={p}>{p}</option>
                     ))}
@@ -84,8 +83,8 @@ export default function TagHierarchyModal({ items, tagTree, onClose, onSave }: P
           </div>
         </div>
         <div className="modal-footer">
-          <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
-          <button type="button" className="primary-btn" onClick={() => { onSave(draft); onClose() }}>Save hierarchy</button>
+          <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
+          <button type="button" className="primary-btn" onClick={() => { onSave(draft); onClose() }}>{t('Save hierarchy')}</button>
         </div>
       </div>
     </div>

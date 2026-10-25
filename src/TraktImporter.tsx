@@ -26,6 +26,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item, SeriesStatus } from './types'
+import { plural, t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -256,7 +257,7 @@ export default function TraktImporter({ existingItems, onImport, onClose }: Prop
         merged = mergeParsed(merged, parseFile(text))
       }
       if (merged.movies.length === 0 && merged.shows.length === 0) {
-        setError('No Trakt movies or shows found. Expected the JSON files from trakt.tv/settings/data (watched movies / watched shows / ratings).')
+        setError(t('No Trakt movies or shows found. Expected the JSON files from trakt.tv/settings/data (watched movies / watched shows / ratings).'))
         setBusy(false)
         return
       }
@@ -361,15 +362,12 @@ export default function TraktImporter({ existingItems, onImport, onClose }: Prop
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel trakt-importer" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 900, width: '95vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Import from Trakt.tv</h2>
+          <h2>{t('Import from Trakt.tv')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Go to <b>trakt.tv/settings/data</b> and export your history. Drop any of the resulting JSON
-            files here (watched movies, watched shows, ratings — drop them all together and ratings
-            merge into the matching rows). Per row you can apply the data to an existing library item
-            or create a new one. Watchlists and per-episode detail are skipped in this pass.
+            {t('Go to')}{' '}<b>trakt.tv/settings/data</b>{' '}{t('and export your history. Drop any of the resulting JSON files here (watched movies, watched shows, ratings — drop them all together and ratings merge into the matching rows). Per row you can apply the data to an existing library item or create a new one. Watchlists and per-episode detail are skipped in this pass.')}
           </p>
 
           <div className="importer-dropzone">
@@ -385,7 +383,7 @@ export default function TraktImporter({ existingItems, onImport, onClose }: Prop
               }}
             />
             <label htmlFor="trakt-file-input" className="importer-file-btn">
-              {busy ? 'Reading…' : (parsed.movies.length + parsed.shows.length > 0) ? 'Pick different files' : '+ Pick Trakt JSON files'}
+              {busy ? t('Reading…') : (parsed.movies.length + parsed.shows.length > 0) ? t('Pick different files') : t('+ Pick Trakt JSON files')}
             </label>
             {fileNames.length > 0 && <span className="importer-file-list">{fileNames.join(' · ')}</span>}
           </div>
@@ -395,20 +393,20 @@ export default function TraktImporter({ existingItems, onImport, onClose }: Prop
           {parsed.movies.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{parsed.movies.length} movie{parsed.movies.length === 1 ? '' : 's'}</span>
-                <span className="importer-new">{summary.mCreate} to create</span>
-                <span className="importer-dupe">{summary.mApply} to apply</span>
+                <span>{plural(parsed.movies.length, '{n} movie', '{n} movies')}</span>
+                <span className="importer-new">{t('{mCreate} to create', { mCreate: summary.mCreate })}</span>
+                <span className="importer-dupe">{t('{mApply} to apply', { mApply: summary.mApply })}</span>
               </div>
               <div className="importer-table-wrap">
                 <table className="importer-table">
                   <thead>
                     <tr>
-                      <th>Movie</th>
-                      <th style={{ width: 60 }}>Year</th>
-                      <th style={{ width: 60 }}>Plays</th>
-                      <th style={{ width: 110 }}>Last watched</th>
-                      <th style={{ width: 60 }}>Rating</th>
-                      <th style={{ width: 180 }}>Action</th>
+                      <th>{t('Movie')}</th>
+                      <th style={{ width: 60 }}>{t('Year')}</th>
+                      <th style={{ width: 60 }}>{t('Plays')}</th>
+                      <th style={{ width: 110 }}>{t('Last watched')}</th>
+                      <th style={{ width: 60 }}>{t('Rating')}</th>
+                      <th style={{ width: 180 }}>{t('Action')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -424,9 +422,9 @@ export default function TraktImporter({ existingItems, onImport, onClose }: Prop
                           <td>{m.rating ? m.rating.toFixed(1) : '—'}</td>
                           <td>
                             <select value={action} onChange={(e) => setMovieAction(m.key, e.target.value as Action)}>
-                              {match && <option value="apply">Apply to existing</option>}
-                              <option value="create">Create in Movies</option>
-                              <option value="skip">Skip</option>
+                              {match && <option value="apply">{t('Apply to existing')}</option>}
+                              <option value="create">{t('Create in Movies')}</option>
+                              <option value="skip">{t('Skip')}</option>
                             </select>
                           </td>
                         </tr>
@@ -441,20 +439,20 @@ export default function TraktImporter({ existingItems, onImport, onClose }: Prop
           {parsed.shows.length > 0 && (
             <>
               <div className="importer-summary" style={{ marginTop: 18 }}>
-                <span>{parsed.shows.length} show{parsed.shows.length === 1 ? '' : 's'}</span>
-                <span className="importer-new">{summary.sCreate} to create</span>
-                <span className="importer-dupe">{summary.sApply} to apply</span>
+                <span>{plural(parsed.shows.length, '{n} show', '{n} shows')}</span>
+                <span className="importer-new">{t('{sCreate} to create', { sCreate: summary.sCreate })}</span>
+                <span className="importer-dupe">{t('{sApply} to apply', { sApply: summary.sApply })}</span>
               </div>
               <div className="importer-table-wrap">
                 <table className="importer-table">
                   <thead>
                     <tr>
-                      <th>Show</th>
-                      <th style={{ width: 60 }}>Year</th>
-                      <th style={{ width: 80 }}>Episodes</th>
-                      <th style={{ width: 110 }}>Last watched</th>
-                      <th style={{ width: 60 }}>Rating</th>
-                      <th style={{ width: 180 }}>Action</th>
+                      <th>{t('Show')}</th>
+                      <th style={{ width: 60 }}>{t('Year')}</th>
+                      <th style={{ width: 80 }}>{t('Episodes')}</th>
+                      <th style={{ width: 110 }}>{t('Last watched')}</th>
+                      <th style={{ width: 60 }}>{t('Rating')}</th>
+                      <th style={{ width: 180 }}>{t('Action')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -470,9 +468,9 @@ export default function TraktImporter({ existingItems, onImport, onClose }: Prop
                           <td>{s.rating ? s.rating.toFixed(1) : '—'}</td>
                           <td>
                             <select value={action} onChange={(e) => setShowAction(s.key, e.target.value as Action)}>
-                              {match && <option value="apply">Apply to existing</option>}
-                              <option value="create">Create in Series</option>
-                              <option value="skip">Skip</option>
+                              {match && <option value="apply">{t('Apply to existing')}</option>}
+                              <option value="create">{t('Create in Series')}</option>
+                              <option value="skip">{t('Skip')}</option>
                             </select>
                           </td>
                         </tr>
@@ -486,14 +484,14 @@ export default function TraktImporter({ existingItems, onImport, onClose }: Prop
         </div>
         {(parsed.movies.length > 0 || parsed.shows.length > 0) && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button
               type="button"
               className="primary-btn"
               disabled={totalToApply === 0}
               onClick={handleImport}
             >
-              Apply to {totalToApply} item{totalToApply === 1 ? '' : 's'}
+              {plural(totalToApply, 'Apply to {n} item', 'Apply to {n} items')}
             </button>
           </div>
         )}

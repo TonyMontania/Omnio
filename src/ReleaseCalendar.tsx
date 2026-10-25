@@ -7,6 +7,7 @@ import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
 import { CalendarIcon } from './icons'
 import type { PluginPageMeta } from './plugins/registry'
+import { locale, t } from './i18n'
 
 interface Props {
   items: Item[]
@@ -66,9 +67,9 @@ function scheduledEpisodes(it: Item, next: NonNullable<Item['nextAiring']>, star
     if (Number.isFinite(total) && total > 0 && episode > total) break
     const date = new Date(first.getFullYear(), first.getMonth(), first.getDate() + 7 * k, first.getHours(), first.getMinutes())
     if (date > hardCap) break
-    const name = next.season ? `S${next.season}E${episode}` : `Episode ${episode}`
-    const time = next.dateOnly ? '' : ` · ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
-    out.push({ item: it, date, label: `${name}${time}`, source: 'episode', episodeNumber: episode })
+    const name = next.season ? t('S{season}E{episode}', { season: next.season, episode: episode }) : t('Episode {episode}', { episode: episode })
+    const time = next.dateOnly ? '' : ` · ${date.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })}`
+    out.push({ item: it, date, label: t('{name}{time}', { name: name, time: time }), source: 'episode', episodeNumber: episode })
     if (!weekly) break
   }
   return out
@@ -147,7 +148,7 @@ function collectEpisodeEntries(items: Item[], today: Date): Entry[] {
       out.push({
         item: it,
         date: new Date(cursor),
-        label: `Episode ${episodeNumber}`,
+        label: t('Episode {episodeNumber}', { episodeNumber: episodeNumber }),
         source: 'episode',
         episodeNumber,
       })
@@ -172,11 +173,11 @@ function collectEntries(items: Item[], today: Date): Entry[] {
     // Prefer the most-precise date the item carries. releaseDate covers
     // games/movies/music-albums/books; airedFrom covers anime/donghua/series;
     // releaseYear + startYear are year-only fallbacks for older entries.
-    push(parseISODate(it.releaseDate), 'Release', 'release')
-    push(parseISODate(it.airedFrom), 'Airs from', 'aired')
+    push(parseISODate(it.releaseDate), t('Release'), 'release')
+    push(parseISODate(it.airedFrom), t('Airs from'), 'aired')
     // Only fall back to releaseYear if there's no releaseDate (avoid dup).
-    if (!it.releaseDate) push(parseYear(it.releaseYear), 'Release', 'release')
-    if (!it.airedFrom && !it.releaseDate) push(parseYear(it.startYear), 'Starts airing', 'aired')
+    if (!it.releaseDate) push(parseYear(it.releaseYear), t('Release'), 'release')
+    if (!it.airedFrom && !it.releaseDate) push(parseYear(it.startYear), t('Starts airing'), 'aired')
   }
   // Dedup: same item + same date + same source is redundant.
   const seen = new Set<string>()
@@ -189,7 +190,7 @@ function collectEntries(items: Item[], today: Date): Entry[] {
 }
 
 function fmtMonthYear(d: Date): string {
-  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+  return d.toLocaleDateString(locale(), { month: 'long', year: 'numeric' })
 }
 
 // Whole-day VEVENTs keyed by item id + source so re-imports dedupe
@@ -239,7 +240,7 @@ function downloadFile(name: string, mime: string, content: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 function fmtDay(d: Date): string {
-  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  return d.toLocaleDateString(locale(), { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }
 function isSameMonth(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth()
@@ -297,12 +298,12 @@ export default function ReleaseCalendar({ items, onNavigate, setPageMeta }: Prop
   useEffect(() => {
     setPageMeta({
       icon: <CalendarIcon />,
-      title: 'Release calendar',
+      title: t('Release calendar'),
       count: { n: entries.length, unit: 'upcoming' },
       actions: (
         <div className="ctl">
-          <select className="ctl-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label="Library">
-            <option value="">All libraries</option>
+          <select className="ctl-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label={t('Library')}>
+            <option value="">{t('All libraries')}</option>
             {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
           <button
@@ -310,15 +311,15 @@ export default function ReleaseCalendar({ items, onNavigate, setPageMeta }: Prop
             className={`icon-btn text${includeEpisodes ? ' on' : ''}`}
             aria-pressed={includeEpisodes}
             onClick={() => setIncludeEpisodes((v) => !v)}
-            title="Add one event per upcoming episode for currently-airing anime and series"
-          >{includeEpisodes ? '✓ ' : ''}Per-episode</button>
+            title={t('Add one event per upcoming episode for currently-airing anime and series')}
+          >{t('{value}Per-episode', { value: includeEpisodes ? '✓ ' : '' })}</button>
           <button
             type="button"
             className="secondary-btn"
             disabled={entries.length === 0}
             onClick={() => downloadFile('omnio-releases.ics', 'text/calendar', toICS(entries))}
-            title="Download an iCal file you can import into Google Calendar, Outlook, Apple Calendar, etc."
-          >↓ Export .ics</button>
+            title={t('Download an iCal file you can import into Google Calendar, Outlook, Apple Calendar, etc.')}
+          >{t('↓ Export .ics')}</button>
         </div>
       ),
     })
@@ -331,14 +332,14 @@ export default function ReleaseCalendar({ items, onNavigate, setPageMeta }: Prop
 
           <section>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h2 className="page-section-title">Coming up next</h2>
+              <h2 className="page-section-title">{t('Coming up next')}</h2>
               <div className="seg">
-                <button className={comingLayout === 'list' ? 'on' : ''} onClick={() => setComingLayout('list')}>☰ List</button>
-                <button className={comingLayout === 'grid' ? 'on' : ''} onClick={() => setComingLayout('grid')}>▦ Grid</button>
+                <button className={comingLayout === 'list' ? 'on' : ''} onClick={() => setComingLayout('list')}>{t('☰ List')}</button>
+                <button className={comingLayout === 'grid' ? 'on' : ''} onClick={() => setComingLayout('grid')}>{t('▦ Grid')}</button>
               </div>
             </div>
             {upcoming.length === 0 ? (
-              <p className="hint">Nothing on the horizon. Add items with future <code>releaseDate</code>, <code>airedFrom</code>, <code>releaseYear</code> or <code>startYear</code> and they'll show up here.</p>
+              <p className="hint">{t('Nothing on the horizon. Add items with future')}{' '}<code>{t('releaseDate')}</code>, <code>{t('airedFrom')}</code>, <code>{t('releaseYear')}</code> {t('or')} <code>{t('startYear')}</code>{' '}{t('and they\'ll show up here.')}</p>
             ) : comingLayout === 'grid' ? (
               // Grid mode: cover-first cards laid out on an auto-fill grid.
               // Same click target as the list rows so tap-to-open still works.
@@ -361,7 +362,7 @@ export default function ReleaseCalendar({ items, onNavigate, setPageMeta }: Prop
                       <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{e.item.title}</div>
                       <div className="hint" style={{ margin: 0, fontSize: 11, lineHeight: 1.3 }}>
                         <div>{fmtDay(e.date)}</div>
-                        <div>{e.label}{category ? ` · ${category.label}` : ''}</div>
+                        <div>{e.label}{category ? ` ${t('· {label}', { label: category.label })}` : ''}</div>
                       </div>
                     </button>
                   )
@@ -403,12 +404,12 @@ export default function ReleaseCalendar({ items, onNavigate, setPageMeta }: Prop
               <h2 className="page-section-title">{fmtMonthYear(monthCursor)}</h2>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button type="button" className="secondary-btn" onClick={prevMonth}>←</button>
-                <button type="button" className="secondary-btn" onClick={jumpToday}>Today</button>
+                <button type="button" className="secondary-btn" onClick={jumpToday}>{t('Today')}</button>
                 <button type="button" className="secondary-btn" onClick={nextMonth}>→</button>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((w) => (
+              {[t('Sun'), t('Mon'), t('Tue'), t('Wed'), t('Thu'), t('Fri'), t('Sat')].map((w) => (
                 <div key={w} style={{ fontSize: 11, textAlign: 'center', color: 'var(--text-dim)', padding: '4px 0', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{w}</div>
               ))}
               {Array.from({ length: firstDayWeekday }).map((_, i) => (
@@ -439,7 +440,7 @@ export default function ReleaseCalendar({ items, onNavigate, setPageMeta }: Prop
                           key={`${e.item.id}-${k}`}
                           type="button"
                           onClick={() => onNavigate(e.item)}
-                          title={`${e.item.title} · ${e.label}`}
+                          title={t('{title} · {label}', { title: e.item.title, label: e.label })}
                           style={{
                             fontSize: 11,
                             padding: '2px 4px',
@@ -456,7 +457,7 @@ export default function ReleaseCalendar({ items, onNavigate, setPageMeta }: Prop
                         >{e.item.title}</button>
                       ))}
                       {entriesOn.length > 3 && (
-                        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>+{entriesOn.length - 3} more</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{t('+{entriesOn} more', { entriesOn: entriesOn.length - 3 })}</span>
                       )}
                     </div>
                   </div>

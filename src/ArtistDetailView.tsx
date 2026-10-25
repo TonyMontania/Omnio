@@ -3,6 +3,7 @@ import type { Item, MusicArtist, MusicField } from './types'
 import { assetSrc, getBandStatusLabel, getMemberStatus } from './types'
 import ItemCard from './ItemCard'
 import BandTimeline from './components/BandTimeline'
+import { t } from './i18n'
 
 type SortMode = 'recent' | 'alpha' | 'rating' | 'yearDesc' | 'yearAsc' | 'duration'
 type Tab = 'discography' | 'about' | 'concerts'
@@ -52,17 +53,17 @@ export default function ArtistDetailView({ artist, items, layout, search, sortMo
 
   const allMembers = artist.members ?? []
   const memberSections = [
-    { list: allMembers.filter((m) => getMemberStatus(m) === 'current'), label: 'Current members', formerish: false },
-    { list: allMembers.filter((m) => getMemberStatus(m) === 'current-touring'), label: 'Touring members', formerish: false },
-    { list: allMembers.filter((m) => getMemberStatus(m) === 'former'), label: 'Former members', formerish: true },
-    { list: allMembers.filter((m) => getMemberStatus(m) === 'former-touring'), label: 'Former touring', formerish: true },
+    { list: allMembers.filter((m) => getMemberStatus(m) === 'current'), label: t('Current members'), formerish: false },
+    { list: allMembers.filter((m) => getMemberStatus(m) === 'current-touring'), label: t('Touring members'), formerish: false },
+    { list: allMembers.filter((m) => getMemberStatus(m) === 'former'), label: t('Former members'), formerish: true },
+    { list: allMembers.filter((m) => getMemberStatus(m) === 'former-touring'), label: t('Former touring'), formerish: true },
   ]
   const facts: [string, string | null | undefined][] = [
-    ['Origin', artist.origin],
-    ['Status', artist.bandStatus ? getBandStatusLabel(artist.bandStatus) : null],
-    ['Years active', activePeriod],
-    ['Genres', artist.genres?.join(', ')],
-    ['Labels', artist.labels?.join(', ')],
+    [t('Origin'), artist.origin],
+    [t('Status'), artist.bandStatus ? getBandStatusLabel(artist.bandStatus) : null],
+    [t('Years active'), activePeriod],
+    [t('Genres'), artist.genres?.join(', ')],
+    [t('Labels'), artist.labels?.join(', ')],
   ]
   const shownFacts = facts.filter(([, v]) => !!v)
   const concerts = artist.concerts ?? []
@@ -74,9 +75,9 @@ export default function ArtistDetailView({ artist, items, layout, search, sortMo
   ].filter(Boolean).join(' · ')
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
-    { id: 'discography', label: 'Discography', count: items.length },
-    { id: 'about', label: 'About' },
-    ...(concerts.length > 0 ? [{ id: 'concerts' as Tab, label: 'Concerts', count: concerts.length }] : []),
+    { id: 'discography', label: t('Discography'), count: items.length },
+    { id: 'about', label: t('About') },
+    ...(concerts.length > 0 ? [{ id: 'concerts' as Tab, label: t('Concerts'), count: concerts.length }] : []),
   ]
   const backdrop = artist.bannerImage || artist.photo
 
@@ -85,12 +86,12 @@ export default function ArtistDetailView({ artist, items, layout, search, sortMo
       <header className="hero">
         <div className={`hero-stage${artist.bannerImage ? '' : ' no-banner'}`}>
           {backdrop && <img className="hero-bg" src={assetSrc(backdrop)} alt="" aria-hidden />}
-          {artist.bannerImage && <img className="hero-banner zoomable" src={assetSrc(artist.bannerImage)} alt="" data-zoom-label="Banner" />}
+          {artist.bannerImage && <img className="hero-banner zoomable" src={assetSrc(artist.bannerImage)} alt="" data-zoom-label={t('Banner')} />}
         </div>
         <div className="hero-body">
           <div className="hero-avatar">
             {artist.photo
-              ? <img className="zoomable" src={assetSrc(artist.photo)} alt={artist.name} data-zoom-label="Photo" />
+              ? <img className="zoomable" src={assetSrc(artist.photo)} alt={artist.name} data-zoom-label={t('Photo')} />
               : <span>{artist.name.charAt(0).toUpperCase()}</span>}
           </div>
           <div className="hero-text">
@@ -111,7 +112,7 @@ export default function ArtistDetailView({ artist, items, layout, search, sortMo
 
       {tab === 'discography' && (
         <div className={layout === 'grid' ? 'list grid' : layout === 'compact' ? 'list compact' : 'list'}>
-          {shownItems.length === 0 && <p className="empty">{query ? 'No releases match your search.' : 'Nothing from this artist yet.'}</p>}
+          {shownItems.length === 0 && <p className="empty">{query ? t('No releases match your search.') : t('Nothing from this artist yet.')}</p>}
           {shownItems.map((item) => (
             <ItemCard key={item.id} item={item} layout={layout} onOpen={onOpenItem} onDelete={onDeleteItem} musicFields={musicFields} />
           ))}
@@ -122,14 +123,14 @@ export default function ArtistDetailView({ artist, items, layout, search, sortMo
         <div className="hero-panel">
           {shownFacts.length > 0
             ? <dl className="facts">{shownFacts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-            : <p className="empty">No details yet. Add origin, genres or members from Edit.</p>}
+            : <p className="empty">{t('No details yet. Add origin, genres or members from Edit.')}</p>}
           {allMembers.length > 0 && memberSections.map((section) => section.list.length === 0 ? null : (
             <section key={section.label} className="hero-section">
               <h3>{section.label}</h3>
               <ul className="member-list">
                 {section.list.map((m) => (
                   <li key={m.id} className={section.formerish ? 'former' : ''}>
-                    <span className="member-name">{m.name}{m.deceased && <span className="m-deceased" title="Deceased"> †</span>}</span>
+                    <span className="member-name">{m.name}{m.deceased && <span className="m-deceased" title={t('Deceased')}> †</span>}</span>
                     {m.roles.length > 0 && <span className="member-roles">{m.roles.join(', ')}</span>}
                     {(m.joinedIn || (section.formerish && m.leftIn)) && (
                       <span className="member-period">{m.joinedIn || '?'} – {section.formerish ? (m.leftIn || '?') : 'present'}</span>
@@ -147,7 +148,7 @@ export default function ArtistDetailView({ artist, items, layout, search, sortMo
           ))}
           {allMembers.length > 0 && (
             <section className="hero-section">
-              <h3>Timeline</h3>
+              <h3>{t('Timeline')}</h3>
               <BandTimeline artist={artist} releases={items} />
             </section>
           )}

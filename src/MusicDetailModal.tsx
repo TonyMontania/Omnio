@@ -12,6 +12,7 @@ import DetailReview from './components/detail/DetailReview'
 import DetailNotes from './components/detail/DetailNotes'
 import CoverPlaceholder from './components/CoverPlaceholder'
 import { numColumnWidth } from './utils/numColumn'
+import { plural, t } from './i18n'
 
 
 interface Props {
@@ -56,14 +57,14 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
       <DetailShell
         item={item}
         coverShape="square"
-        chips={[item.musicType ? getMusicTypeLabel(item.musicType) : null, item.consumed ? 'Listened' : 'Not listened', item.releaseYear || (item.releaseDate ? item.releaseDate.slice(0, 4) : null)]}
+        chips={[item.musicType ? getMusicTypeLabel(item.musicType) : null, item.consumed ? t('Listened') : t('Not listened'), item.releaseYear || (item.releaseDate ? item.releaseDate.slice(0, 4) : null)]}
         subtitle={item.alternativeTitles && item.alternativeTitles.length > 0 ? item.alternativeTitles.join(' · ') : undefined}
         meta={[item.artist, albumLike ? item.label : null].filter(Boolean).join(' · ') || undefined}
         stats={[
-          ['Rating', item.rating ? <StarRatingDisplay value={item.rating} /> : null],
-          ['Tracks', albumLike && item.tracks && item.tracks.length > 0 ? String(item.tracks.length) : null],
-          ['Length', totalDuration],
-          ['Listened on', albumLike && item.finishedAt ? formatIsoDate(item.finishedAt) : null],
+          [t('Rating'), item.rating ? <StarRatingDisplay value={item.rating} /> : null],
+          [t('Tracks'), albumLike && item.tracks && item.tracks.length > 0 ? String(item.tracks.length) : null],
+          [t('Length'), totalDuration],
+          [t('Listened on'), albumLike && item.finishedAt ? formatIsoDate(item.finishedAt) : null],
         ]}
         onEdit={onEdit}
         onDuplicate={onDuplicate}
@@ -71,19 +72,19 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
         tabs={[
           {
             id: 'overview',
-            label: 'Overview',
+            label: t('Overview'),
             content: (
               <>
                 <DetailFacts facts={[
-                  ['Artist', item.artist],
-                  ['Label', albumLike ? item.label : null],
-                  ['Produced by', item.producers?.join(', ')],
-                  ['Released', releaseLabel],
-                  ['Type', item.musicType ? getMusicTypeLabel(item.musicType) : null],
-                  ['Source', item.musicSource ? getMusicSourceLabel(item.musicSource) : null],
-                  ['Genres', albumLike ? item.genres?.join(', ') : null],
-                  ['Vinyl condition', item.vinylCondition ? getVinylConditionLabel(item.vinylCondition) : null],
-                  ['Part of', !albumLike && (() => {
+                  [t('Artist'), item.artist],
+                  [t('Label'), albumLike ? item.label : null],
+                  [t('Produced by'), item.producers?.join(', ')],
+                  [t('Released'), releaseLabel],
+                  [t('Type'), item.musicType ? getMusicTypeLabel(item.musicType) : null],
+                  [t('Source'), item.musicSource ? getMusicSourceLabel(item.musicSource) : null],
+                  [t('Genres'), albumLike ? item.genres?.join(', ') : null],
+                  [t('Vinyl condition'), item.vinylCondition ? getVinylConditionLabel(item.vinylCondition) : null],
+                  [t('Part of'), !albumLike && (() => {
                 // Prefer the live reference over the free-text label — when
                 // both are set, the ID always wins. Clicking navigates to
                 // the target album's detail view via the same handler that
@@ -95,16 +96,16 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
                       type="button"
                       className="pill static clickable"
                       onClick={() => onNavigate(linkedAlbum.id)}
-                      title="Open linked album"
-                    >Part of: {linkedAlbum.title}</button>
+                      title={t('Open linked album')}
+                    >{t('Part of: {title}', { title: linkedAlbum.title })}</button>
                   )
                 }
-                if (item.partOfAlbum) return <span className="pill static">Part of: {item.partOfAlbum}</span>
+                if (item.partOfAlbum) return <span className="pill static">{t('Part of: {partOfAlbum}', { partOfAlbum: item.partOfAlbum })}</span>
                 return null
               })()],
-                  ['Groups', groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
+                  [t('Groups'), groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
                 ]} />
-                {item.tags && item.tags.length > 0 && <DetailSection title="Tags"><DetailChips values={item.tags} /></DetailSection>}
+                {item.tags && item.tags.length > 0 && <DetailSection title={t('Tags')}><DetailChips values={item.tags} /></DetailSection>}
                 <DetailReview review={item.musicReview} hasSpoilers={item.hasSpoilers} />
                 <DetailNotes notes={item.notes} />
                 <CustomFieldsView fields={item.customFields} />
@@ -113,7 +114,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
           },
           {
             id: 'tracks',
-            label: 'Tracklist',
+            label: t('Tracklist'),
             count: item.tracks?.length,
             hidden: !albumLike || !item.tracks || item.tracks.length === 0,
             content: <>
@@ -138,14 +139,14 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
           return Array.from(map.entries()).map(([disc, list]) => ({ disc, list: list! }))
         })()
 
-        const renderRow = (t: typeof item.tracks[0]) => (
-          <tr key={t.id}>
-            <td className="col-fav">{t.favorite && <span className="track-fav-star" aria-label="Favourite">★</span>}</td>
-            <td className="col-num">{t.number}</td>
-            <td className="col-title">{t.name}</td>
+        const renderRow = (tr: typeof item.tracks[0]) => (
+          <tr key={tr.id}>
+            <td className="col-fav">{tr.favorite && <span className="track-fav-star" aria-label={t('Favourite')}>★</span>}</td>
+            <td className="col-num">{tr.number}</td>
+            <td className="col-title">{tr.name}</td>
             <td className="col-artist">
               {(() => {
-                const raw = t.artist?.trim()
+                const raw = tr.artist?.trim()
                 if (!raw) return null
                 // Only split on separators that mean "multiple artists"
                 // — commas, ampersands, `feat.` / `ft.`, and ` x `. Do
@@ -159,7 +160,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
                   .filter(Boolean)
                 // Always render as pills — same visual weight whether
                 // there's one artist or many, so a track with a lone
-                // "Architects" doesn't sit next to another track with
+                // "Architects" doesn'tr sit next to another track with
                 // "Architects · Jon Green" in a different style. Before,
                 // the single-artist branch fell back to plain text.
                 return (
@@ -169,12 +170,12 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
                 )
               })()}
             </td>
-            <td className="col-duration">{t.duration}</td>
-            <td className="col-rating">{t.rating ? <StarRatingDisplay value={t.rating} /> : null}</td>
-            <td className="col-listened">{t.listened ? '✓' : ''}</td>
+            <td className="col-duration">{tr.duration}</td>
+            <td className="col-rating">{tr.rating ? <StarRatingDisplay value={tr.rating} /> : null}</td>
+            <td className="col-listened">{tr.listened ? '✓' : ''}</td>
             <td className="col-lyrics">
-              <button type="button" className={t.lyrics ? 'lyrics-btn has-lyrics' : 'lyrics-btn'} onClick={() => openLyrics(t)}>
-                {t.lyrics ? 'View' : '+ Add'}
+              <button type="button" className={tr.lyrics ? 'lyrics-btn has-lyrics' : 'lyrics-btn'} onClick={() => openLyrics(tr)}>
+                {tr.lyrics ? t('View') : t('+ Add')}
               </button>
             </td>
           </tr>
@@ -183,23 +184,23 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
         return (
           <div className="field-group music-tracklist">
             <div className="tracklist-header-row">
-              <label>Tracklist</label>
-              {totalDuration && <span className="tracklist-total">Total: {totalDuration}</span>}
+              <label>{t('Tracklist')}</label>
+              {totalDuration && <span className="tracklist-total">{t('Total: {totalDuration}', { totalDuration: totalDuration })}</span>}
             </div>
             {groups.map(({ disc, list }) => (
               <div key={disc || 'single'} className="track-disc-group">
-                {isMultiDisc && <div className="track-disc-divider">Disc {disc} <span className="track-disc-count">· {list.length} {list.length === 1 ? 'track' : 'tracks'}</span></div>}
+                {isMultiDisc && <div className="track-disc-divider">{t('Disc {disc}', { disc: disc })}{' '}<span className="track-disc-count">· {plural(list.length, '{n} track', '{n} tracks')}</span></div>}
                 <table className="track-table">
                   <thead>
                     <tr>
                       <th className="col-fav"></th>
                       <th className="col-num" style={{ width: numColumnWidth(list.map((t) => t.number)) }}>#</th>
-                      <th className="col-title">Title</th>
-                      <th className="col-artist">Artist</th>
-                      <th className="col-duration">Duration</th>
-                      <th className="col-rating">Rating</th>
-                      <th className="col-listened">Listened</th>
-                      <th className="col-lyrics">Lyrics</th>
+                      <th className="col-title">{t('Title')}</th>
+                      <th className="col-artist">{t('Artist')}</th>
+                      <th className="col-duration">{t('Duration')}</th>
+                      <th className="col-rating">{t('Rating')}</th>
+                      <th className="col-listened">{t('Listened')}</th>
+                      <th className="col-lyrics">{t('Lyrics')}</th>
                     </tr>
                   </thead>
                   <tbody>{list.map(renderRow)}</tbody>
@@ -214,18 +215,18 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
           },
           {
             id: 'editions',
-            label: 'Editions',
+            label: t('Editions'),
             count: editionCount,
             hidden: editionCount === 0,
             content: <>
       {albumLike && item.singleCovers && item.singleCovers.length > 0 && (
         <div className="field-group single-covers-gallery">
-          <label>Single covers</label>
+          <label>{t('Single covers')}</label>
           <div className="single-covers-grid">
             {item.singleCovers.map((s) => (
               <div key={s.id} className="single-cover-card">
                 <img className="zoomable" src={assetSrc(s.cover)} alt={s.name} data-zoom-group={`music-singles-${item.id}`} data-zoom-label={s.name} data-zoom-caption={s.year ? String(s.year) : undefined} />
-                <span>{s.name}{s.year ? ` (${s.year})` : ''}</span>
+                <span>{s.name}{s.year ? ` ${t('({year})', { year: s.year })}` : ''}</span>
               </div>
             ))}
           </div>
@@ -234,7 +235,7 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
 
       {albumLike && item.editions && item.editions.length > 0 && (
         <div className="field-group music-editions">
-          <label>Editions</label>
+          <label>{t('Editions')}</label>
           {item.editions.map((ed) => {
             // Editions without their own cover fall back to the album's main
             // cover — Deluxe / Anniversary re-issues almost always share
@@ -271,20 +272,20 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
           },
           {
             id: 'history',
-            label: 'Listen history',
+            label: t('Listen history'),
             count: item.rewatches?.length,
             hidden: !item.rewatches || item.rewatches.length === 0,
-            content: <DetailHistoryTable label="Listen history" entries={item.rewatches ?? []} />,
+            content: <DetailHistoryTable label={t('Listen history')} entries={item.rewatches ?? []} />,
           },
           {
             id: 'related',
-            label: 'Related',
+            label: t('Related'),
             count: relatedCount,
             hidden: relatedCount === 0,
             content: (
               <>
-                <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-                <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
+                <DetailCoverStrip label={t('Related')} entries={relatedEntries} onNavigate={onNavigate} />
+                <DetailCoverStrip label={t('Recommendations')} entries={recommendedEntries} onNavigate={onNavigate} />
               </>
             ),
           },
@@ -305,23 +306,23 @@ export default function MusicDetailModal({ item, groups, allMusic, onEdit, onDup
                 className="lyrics-textarea"
                 value={lyricsDraft}
                 onChange={(e) => setLyricsDraft(e.target.value)}
-                placeholder="Paste or type the lyrics here…"
+                placeholder={t('Paste or type the lyrics here…')}
                 rows={16}
                 autoFocus
               />
             ) : (
-              <pre className="lyrics-view">{currentLyricsTrack.lyrics || 'No lyrics yet.'}</pre>
+              <pre className="lyrics-view">{currentLyricsTrack.lyrics || t('No lyrics yet.')}</pre>
             )}
             <div className="modal-actions">
               {lyricsEditing ? (
                 <>
-                  <button className="ghost" onClick={() => { setLyricsEditing(false); setLyricsDraft(currentLyricsTrack.lyrics ?? '') }}>Cancel</button>
-                  <button className="danger-solid" onClick={() => { onSaveTrackLyrics(currentLyricsTrack.id, lyricsDraft); setLyricsEditing(false) }}>Save lyrics</button>
+                  <button className="ghost" onClick={() => { setLyricsEditing(false); setLyricsDraft(currentLyricsTrack.lyrics ?? '') }}>{t('Cancel')}</button>
+                  <button className="danger-solid" onClick={() => { onSaveTrackLyrics(currentLyricsTrack.id, lyricsDraft); setLyricsEditing(false) }}>{t('Save lyrics')}</button>
                 </>
               ) : (
                 <>
-                  <button className="ghost" onClick={() => setLyricsTrackId(null)}>Close</button>
-                  <button className="danger-solid" onClick={() => setLyricsEditing(true)}>Edit</button>
+                  <button className="ghost" onClick={() => setLyricsTrackId(null)}>{t('Close')}</button>
+                  <button className="danger-solid" onClick={() => setLyricsEditing(true)}>{t('Edit')}</button>
                 </>
               )}
             </div>

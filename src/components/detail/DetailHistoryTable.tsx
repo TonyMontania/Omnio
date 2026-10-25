@@ -5,6 +5,7 @@
 // to the timeline layout requested in docs/DEFERRED.md.
 
 import { useState } from 'react'
+import { locale, t } from '../../i18n'
 
 export interface HistoryEntry {
   id: string
@@ -17,7 +18,7 @@ function fmtDate(raw?: string): string {
   if (!raw) return '—'
   const d = new Date(raw)
   if (Number.isNaN(d.getTime())) return raw
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return d.toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 export default function DetailHistoryTable({ label, entries }: {
@@ -54,7 +55,7 @@ export default function DetailHistoryTable({ label, entries }: {
                       onClick={() => setExpanded((prev) => ({ ...prev, [r.id]: !prev[r.id] }))}
                       aria-expanded={isOpen}
                     >
-                      {isOpen ? 'Hide notes' : 'Show notes'}
+                      {isOpen ? t('Hide notes') : t('Show notes')}
                     </button>
                   )}
                 </div>

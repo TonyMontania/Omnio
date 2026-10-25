@@ -6,6 +6,7 @@ import { useMemo } from 'react'
 import type { Item, Season, SeriesFormat } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { t } from './i18n'
 
 type Kind = 'movie' | 'tv'
 
@@ -206,7 +207,7 @@ export default function TmdbFetcher({ apiKey, initialQuery, kind, categoryId, on
 
   const search = async (q: string): Promise<FetcherResult<Hit>> => {
     const r = await window.ipcRenderer.invoke('tmdb:search', apiKey, q, kind)
-    return r?.ok ? { ok: true, data: r.data as Hit[] } : { ok: false, error: r?.error ?? 'Search failed' }
+    return r?.ok ? { ok: true, data: r.data as Hit[] } : { ok: false, error: r?.error ?? t('Search failed') }
   }
 
   const apply = async (h: Hit) => {
@@ -240,20 +241,17 @@ export default function TmdbFetcher({ apiKey, initialQuery, kind, categoryId, on
 
   return (
     <FetcherModal<Hit>
-      title={kind === 'movie' ? 'TMDb · Movies' : 'TMDb · TV Series'}
+      title={kind === 'movie' ? t('TMDb · Movies') : t('TMDb · TV Series')}
       disabled={!keyLooksSet}
       disabledMessage={
-        <>Set your TMDb API key in Settings → Data → Integrations first.
-        Register a free one at <code>themoviedb.org/settings/api</code> (takes ~2 minutes).</>
+        <>{t('Set your TMDb API key in Settings → Data → Integrations first. Register a free one at')}{' '}<code>themoviedb.org/settings/api</code>{' '}{t('(takes ~2 minutes).')}</>
       }
       hint={
-        <>Applying overwrites the standard fields (title, description, cover, banner,
-        {kind === 'movie'
-          ? ' release date, directors, writers, cast, production companies, genres, runtime, franchise, content rating (MPAA)'
-          : ' first-aired date, aired range, showrunners, directors, writers, cast, network, country, language, genres, format, seasons, total episodes, content rating (TV-MA…)'
-        }). Rating, notes, watch status and personal history are left alone.</>
+        <>{t('Applying overwrites the standard fields (title, description, cover, banner,{value}). Rating, notes, watch status and personal history are left alone.', { value: kind === 'movie'
+          ? t(' release date, directors, writers, cast, production companies, genres, runtime, franchise, content rating (MPAA)')
+          : t(' first-aired date, aired range, showrunners, directors, writers, cast, network, country, language, genres, format, seasons, total episodes, content rating (TV-MA…)') })}</>
       }
-      placeholder={kind === 'movie' ? 'Search movies…' : 'Search TV series…'}
+      placeholder={kind === 'movie' ? t('Search movies…') : t('Search TV series…')}
       initialQuery={initialQuery}
       onSearch={search}
       onApply={apply}

@@ -5,6 +5,7 @@
 // it's persisted on the item (pcgwPage) so we don't re-search.
 
 import { useEffect, useState, useCallback } from 'react'
+import { t } from '../../i18n'
 
 type PathRow = { OS: string; Type: string; Location: string }
 type PathsResp = { pageName: string; pageUrl: string; rows: PathRow[] }
@@ -95,13 +96,13 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
   return (
     <div className="pcgw-panel">
       <div className="pcgw-header">
-        <span className="pcgw-label">Save locations · PCGamingWiki</span>
+        <span className="pcgw-label">{t('Save locations · PCGamingWiki')}</span>
         {(state.kind === 'paths' || state.kind === 'no-paths') && (
           <>
-            <a className="pcgw-link" href={state.data.pageUrl} target="_blank" rel="noopener noreferrer" title="Open wiki page">
+            <a className="pcgw-link" href={state.data.pageUrl} target="_blank" rel="noopener noreferrer" title={t('Open wiki page')}>
               {state.data.pageName} ↗
             </a>
-            <button type="button" className="pcgw-rematch" onClick={handleRematch} title="Match a different wiki page">Re-match</button>
+            <button type="button" className="pcgw-rematch" onClick={handleRematch} title={t('Match a different wiki page')}>{t('Re-match')}</button>
           </>
         )}
       </div>
@@ -112,19 +113,19 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
           className="pcgw-search-btn"
           onClick={runSearch}
           disabled={!gameTitle.trim()}
-          title={gameTitle.trim() ? 'Search PCGamingWiki for this title' : 'Give the game a title first'}
+          title={gameTitle.trim() ? t('Search PCGamingWiki for this title') : t('Give the game a title first')}
         >
-          Find save locations
+          {t('Find save locations')}
         </button>
       )}
 
       {(state.kind === 'searching' || state.kind === 'loading') && (
-        <span className="pcgw-status">{state.kind === 'searching' ? 'Searching PCGamingWiki…' : 'Fetching paths…'}</span>
+        <span className="pcgw-status">{state.kind === 'searching' ? t('Searching PCGamingWiki…') : t('Fetching paths…')}</span>
       )}
 
       {state.kind === 'pick' && (
         <>
-          <p className="pcgw-status">Multiple matches — pick the right game:</p>
+          <p className="pcgw-status">{t('Multiple matches — pick the right game:')}</p>
           <ul className="pcgw-hits">
             {state.hits.map((hit) => (
               <li key={hit.title}>
@@ -137,22 +138,21 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
 
       {state.kind === 'not-found' && (
         <div className="pcgw-notfound">
-          <span>No match on PCGamingWiki.</span>
-          <button type="button" onClick={runSearch} disabled={!gameTitle.trim()}>Retry</button>
+          <span>{t('No match on PCGamingWiki.')}</span>
+          <button type="button" onClick={runSearch} disabled={!gameTitle.trim()}>{t('Retry')}</button>
         </div>
       )}
 
       {state.kind === 'no-paths' && (
         <p className="pcgw-status">
-          Wiki page found but no save/config paths have been documented there yet.
-          Check the page for other info (mods, cloud sync, tweaks).
+          {t('Wiki page found but no save/config paths have been documented there yet. Check the page for other info (mods, cloud sync, tweaks).')}
         </p>
       )}
 
       {state.kind === 'error' && (
         <div className="pcgw-notfound">
           <span className="pcgw-error">{state.error}</span>
-          <button type="button" onClick={runSearch}>Retry</button>
+          <button type="button" onClick={runSearch}>{t('Retry')}</button>
         </div>
       )}
 
@@ -160,9 +160,9 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
         <table className="pcgw-table">
           <thead>
             <tr>
-              <th>Type</th>
-              <th>OS</th>
-              <th>Location</th>
+              <th>{t('Type')}</th>
+              <th>{t('OS')}</th>
+              <th>{t('Location')}</th>
               <th></th>
             </tr>
           </thead>
@@ -177,8 +177,8 @@ export default function PcgwSavePaths({ gameTitle, pcgwPage, onPageMatched }: Pr
                     type="button"
                     className="pcgw-copy"
                     onClick={() => copyLocation(row.Location, i)}
-                    title="Copy path to clipboard"
-                  >{copiedIdx === i ? 'Copied' : 'Copy'}</button>
+                    title={t('Copy path to clipboard')}
+                  >{copiedIdx === i ? t('Copied') : t('Copy')}</button>
                 </td>
               </tr>
             ))}

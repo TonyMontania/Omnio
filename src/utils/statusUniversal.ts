@@ -20,6 +20,7 @@ import {
   BOOK_STATUS_OPTIONS,
   VN_STATUS_OPTIONS,
 } from '../types/options'
+import { t } from '../i18n'
 
 export interface UniversalStatusOption {
   value: string
@@ -27,13 +28,13 @@ export interface UniversalStatusOption {
 }
 
 const MOVIE_STATUS_OPTIONS: UniversalStatusOption[] = [
-  { value: 'unwatched', label: 'Not watched' },
-  { value: 'watched',   label: 'Watched' },
+  { value: 'unwatched', label: t('Not watched') },
+  { value: 'watched',   label: t('Watched') },
 ]
 
 const MUSIC_STATUS_OPTIONS: UniversalStatusOption[] = [
-  { value: 'unlistened', label: 'Not listened' },
-  { value: 'listened',   label: 'Listened' },
+  { value: 'unlistened', label: t('Not listened') },
+  { value: 'listened',   label: t('Listened') },
 ]
 
 export function getUniversalStatusOptions(categoryId: string): UniversalStatusOption[] {

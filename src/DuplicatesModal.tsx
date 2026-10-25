@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react'
 import type { Item } from './types'
 import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
+import { t } from './i18n'
 
 interface Props {
   items: Item[]
@@ -87,19 +88,18 @@ export default function DuplicatesModal({ items, onOpenItem, onClose }: Props) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel duplicates-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Similar titles</h2>
+          <h2>{t('Similar titles')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint">
-            Titles that look close within the same category. Nothing is deleted here — this is a heads-up so
-            you can open both, decide which to keep, and remove the other by hand.
+            {t('Titles that look close within the same category. Nothing is deleted here — this is a heads-up so you can open both, decide which to keep, and remove the other by hand.')}
           </p>
           {visible.length === 0 && (
             <p className="hint" style={{ marginTop: 24 }}>
               {pairs.length === 0
-                ? 'No suspicious pairs. Your library looks clean.'
-                : 'All pairs dismissed for this session.'}
+                ? t('No suspicious pairs. Your library looks clean.')
+                : t('All pairs dismissed for this session.')}
             </p>
           )}
           {visible.map((p) => (
@@ -140,7 +140,7 @@ function DupRow({ pair, onOpen, onIgnore }: {
       <div className="dup-mid">
         <span className="dup-similarity">{pct}%</span>
         <span className="dup-cat">{catLabel}</span>
-        <button type="button" className="link-btn" onClick={onIgnore}>Ignore</button>
+        <button type="button" className="link-btn" onClick={onIgnore}>{t('Ignore')}</button>
       </div>
       <div className="dup-side">
         <button type="button" className="dup-thumb-btn" onClick={() => onOpen(pair.b)}>

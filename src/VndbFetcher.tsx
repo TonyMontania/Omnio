@@ -8,6 +8,7 @@ import type {
 } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { t } from './i18n'
 
 interface Props {
   initialQuery: string
@@ -357,7 +358,7 @@ async function downloadCharacterImages(
 export default function VndbFetcher({ initialQuery, onApply, onClose }: Props) {
   const search = async (q: string): Promise<FetcherResult<VndbVnHit>> => {
     const r = await window.ipcRenderer.invoke('vndb:search', q)
-    return r?.ok ? { ok: true, data: r.data as VndbVnHit[] } : { ok: false, error: r?.error ?? 'Search failed' }
+    return r?.ok ? { ok: true, data: r.data as VndbVnHit[] } : { ok: false, error: r?.error ?? t('Search failed') }
   }
 
   const apply = async (h: VndbVnHit) => {
@@ -427,9 +428,9 @@ export default function VndbFetcher({ initialQuery, onApply, onClose }: Props) {
 
   return (
     <FetcherModal<VndbVnHit>
-      title="VNDB"
-      hint={<>Free, no API key. Fills title, aliases, description, developers, staff, characters (with voice actors), tags, length, community rating, editions, dev status, screenshots (with NSFW flags), and every release cover — one for each region so you can pick which one to show as the main cover. Publishers are pulled from every release with a country flag per language.</>}
-      placeholder="Search a visual novel…"
+      title={t('VNDB')}
+      hint={<>{t('Free, no API key. Fills title, aliases, description, developers, staff, characters (with voice actors), tags, length, community rating, editions, dev status, screenshots (with NSFW flags), and every release cover — one for each region so you can pick which one to show as the main cover. Publishers are pulled from every release with a country flag per language.')}</>}
+      placeholder={t('Search a visual novel…')}
       initialQuery={initialQuery}
       onSearch={search}
       onApply={apply}

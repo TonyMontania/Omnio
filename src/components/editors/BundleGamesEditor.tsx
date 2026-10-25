@@ -6,6 +6,7 @@ import { useRef, useState } from 'react'
 import type { BundleGame, GameStatus } from '../../types'
 import { assetSrc, GAME_STATUS_OPTIONS } from '../../types'
 import { pickImageToDataUrl, assetBasename } from '../../utils/files'
+import { t } from '../../i18n'
 
 export default function BundleGamesEditor({
   enabled, onToggle, entries, onChange, onRequestSgdb,
@@ -30,21 +31,21 @@ export default function BundleGamesEditor({
 
   return (
     <div className="field-group">
-      <label>Is this a bundle / collection?</label>
+      <label>{t('Is this a bundle / collection?')}</label>
       <div className="yesno">
-        <button type="button" className={enabled ? 'pill active' : 'pill'} onClick={() => onToggle(true)}>Yes</button>
-        <button type="button" className={!enabled ? 'pill active' : 'pill'} onClick={() => onToggle(false)}>No</button>
+        <button type="button" className={enabled ? 'pill active' : 'pill'} onClick={() => onToggle(true)}>{t('Yes')}</button>
+        <button type="button" className={!enabled ? 'pill active' : 'pill'} onClick={() => onToggle(false)}>{t('No')}</button>
       </div>
       {enabled && (
         <div className="bundle-list">
           <div className="tag-list-input">
             <input
-              placeholder="Game inside the bundle (e.g. Metal Gear Solid 2)"
+              placeholder={t('Game inside the bundle (e.g. Metal Gear Solid 2)')}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
             />
-            <button type="button" onClick={add}>Add</button>
+            <button type="button" onClick={add}>{t('Add')}</button>
           </div>
           {entries.length > 0 && (
             <div className="bundle-rows">
@@ -88,7 +89,7 @@ function BundleRow({ entry, onPatch, onRemove, onRequestSgdb }: {
           className="bundle-name"
           value={entry.name}
           onChange={(e) => onPatch({ name: e.target.value })}
-          placeholder="Title"
+          placeholder={t('Title')}
         />
         <div className="bundle-controls">
           <select
@@ -98,18 +99,18 @@ function BundleRow({ entry, onPatch, onRemove, onRequestSgdb }: {
             {GAME_STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
           <button type="button" className="upload-btn" onClick={() => fileInput.current?.click()}>
-            {entry.cover ? 'Change cover' : 'Upload cover'}
+            {entry.cover ? t('Change cover') : t('Upload cover')}
           </button>
           {onRequestSgdb && (
-            <button type="button" className="upload-btn" onClick={() => onRequestSgdb(entry.id, entry.name)} title="Fetch from SteamGridDB">↗ SteamGridDB</button>
+            <button type="button" className="upload-btn" onClick={() => onRequestSgdb(entry.id, entry.name)} title={t('Fetch from SteamGridDB')}>{t('↗ SteamGridDB')}</button>
           )}
           {entry.cover && (
-            <button type="button" className="upload-btn clear" onClick={() => onPatch({ cover: undefined })}>Clear</button>
+            <button type="button" className="upload-btn clear" onClick={() => onPatch({ cover: undefined })}>{t('Clear')}</button>
           )}
           <input type="file" accept="image/*" ref={fileInput} style={{ display: 'none' }} onChange={uploadCover} />
         </div>
       </div>
-      <button type="button" className="bundle-remove" onClick={onRemove} title="Remove">✕</button>
+      <button type="button" className="bundle-remove" onClick={onRemove} title={t('Remove')}>✕</button>
     </div>
   )
 }

@@ -24,6 +24,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item, Highlight } from './types'
+import { plural, t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -163,7 +164,7 @@ export default function HighlightsImporter({ existingItems, onImport, onClose }:
       const text = await file.text()
       const parsed = parseClippings(text)
       if (parsed.length === 0) {
-        setError('No highlights or notes found. Point at your Kindle\'s My Clippings.txt.')
+        setError(t('No highlights or notes found. Point at your Kindle\'s My Clippings.txt.'))
         setBusy(false)
         return
       }
@@ -239,15 +240,12 @@ export default function HighlightsImporter({ existingItems, onImport, onClose }:
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel highlights-importer" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 780, width: '94vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Import Kindle highlights</h2>
+          <h2>{t('Import Kindle highlights')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Plug your Kindle in via USB and drop <code>documents/My Clippings.txt</code> here. Every
-            highlight and note gets parsed, grouped by book, and matched against your library. Per book
-            you choose to merge into the existing entry or create a new one. Bookmarks are skipped
-            (they carry no text).
+            {t('Plug your Kindle in via USB and drop')}{' '}<code>{t('documents/My Clippings.txt')}</code>{' '}{t('here. Every highlight and note gets parsed, grouped by book, and matched against your library. Per book you choose to merge into the existing entry or create a new one. Bookmarks are skipped (they carry no text).')}
           </p>
 
           <div className="importer-dropzone">
@@ -263,7 +261,7 @@ export default function HighlightsImporter({ existingItems, onImport, onClose }:
               }}
             />
             <label htmlFor="highlights-file-input" className="importer-file-btn">
-              {busy ? 'Reading…' : books.length > 0 ? 'Pick different file' : '+ Pick My Clippings.txt'}
+              {busy ? t('Reading…') : books.length > 0 ? t('Pick different file') : t('+ Pick My Clippings.txt')}
             </label>
             {fileName && <span className="importer-file-list">{fileName}</span>}
           </div>
@@ -273,18 +271,18 @@ export default function HighlightsImporter({ existingItems, onImport, onClose }:
           {books.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{books.length} book{books.length === 1 ? '' : 's'} parsed · {books.reduce((s, b) => s + b.entries.length, 0)} entries</span>
-                <span className="importer-new">{summary.toCreate} to create</span>
-                <span className="importer-dupe">{summary.toMerge} to merge</span>
+                <span>{plural(books.length, '{n} book parsed · {reduce} entries', '{n} books parsed · {reduce} entries', { reduce: books.reduce((s, b) => s + b.entries.length, 0) })}</span>
+                <span className="importer-new">{t('{toCreate} to create', { toCreate: summary.toCreate })}</span>
+                <span className="importer-dupe">{t('{toMerge} to merge', { toMerge: summary.toMerge })}</span>
               </div>
 
               <div className="importer-table-wrap">
                 <table className="importer-table highlights-table">
                   <thead>
                     <tr>
-                      <th>Book</th>
-                      <th style={{ width: 90 }}>Entries</th>
-                      <th style={{ width: 180 }}>Action</th>
+                      <th>{t('Book')}</th>
+                      <th style={{ width: 90 }}>{t('Entries')}</th>
+                      <th style={{ width: 180 }}>{t('Action')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -296,14 +294,14 @@ export default function HighlightsImporter({ existingItems, onImport, onClose }:
                           <td>
                             <div className="hl-book-title">{b.title}</div>
                             {b.author && <div className="hl-book-author">{b.author}</div>}
-                            {match && <div className="hl-book-match">→ matches "{match.title}"</div>}
+                            {match && <div className="hl-book-match">{t('→ matches "{title}"', { title: match.title })}</div>}
                           </td>
                           <td>{b.entries.length}</td>
                           <td>
                             <select value={action} onChange={(e) => setAction(b.key, e.target.value as Action)}>
-                              {match && <option value="merge">Merge into existing</option>}
-                              <option value="create">Create new book</option>
-                              <option value="skip">Skip</option>
+                              {match && <option value="merge">{t('Merge into existing')}</option>}
+                              <option value="create">{t('Create new book')}</option>
+                              <option value="skip">{t('Skip')}</option>
                             </select>
                           </td>
                         </tr>
@@ -317,14 +315,14 @@ export default function HighlightsImporter({ existingItems, onImport, onClose }:
         </div>
         {books.length > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button
               type="button"
               className="primary-btn"
               disabled={summary.toMerge + summary.toCreate === 0}
               onClick={handleImport}
             >
-              Import {summary.entries} entr{summary.entries === 1 ? 'y' : 'ies'}
+              {plural(summary.entries, 'Import {n} entry', 'Import {n} entries')}
             </button>
           </div>
         )}

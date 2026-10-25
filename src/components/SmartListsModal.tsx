@@ -11,6 +11,7 @@ import type { SmartList, SmartListRule } from '../types/smartLists'
 import { CATEGORIES } from '../categories'
 import { getUniversalStatusOptions } from '../utils/statusUniversal'
 import type { CategoryId } from '../types/items'
+import { plural, t } from '../i18n'
 
 interface Props {
   open: boolean
@@ -25,16 +26,16 @@ interface Props {
 type RuleKind = SmartListRule['kind']
 
 const RULE_LABELS: Record<RuleKind, string> = {
-  favorite: 'Favorite',
-  minRating: 'Minimum rating',
-  maxRating: 'Maximum rating',
-  hasTag: 'Has tag',
-  status: 'Status is one of',
-  yearMin: 'Year ≥',
-  yearMax: 'Year ≤',
-  hasReview: 'Has review',
-  hasCover: 'Has cover',
-  consumed: 'Finished / consumed',
+  favorite: t('Favorite'),
+  minRating: t('Minimum rating'),
+  maxRating: t('Maximum rating'),
+  hasTag: t('Has tag'),
+  status: t('Status is one of'),
+  yearMin: t('Year ≥'),
+  yearMax: t('Year ≤'),
+  hasReview: t('Has review'),
+  hasCover: t('Has cover'),
+  consumed: t('Finished / consumed'),
 }
 
 const RULE_KINDS = Object.keys(RULE_LABELS) as RuleKind[]
@@ -76,7 +77,7 @@ export default function SmartListsModal({ open, smartLists, onClose, onSave, onD
   const startNew = () => {
     const list: SmartList = {
       id: crypto.randomUUID(),
-      name: 'Untitled list',
+      name: t('Untitled list'),
       categoryId: 'all',
       rules: [],
       createdAt: Date.now(),
@@ -121,15 +122,15 @@ export default function SmartListsModal({ open, smartLists, onClose, onSave, onD
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal smart-lists-modal" onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
-          <h2>Smart lists</h2>
-          <button className="modal-close" onClick={onClose} title="Close">✕</button>
+          <h2>{t('Smart lists')}</h2>
+          <button className="modal-close" onClick={onClose} title={t('Close')}>✕</button>
         </header>
 
         <div className="smart-lists-body">
           <aside className="smart-lists-side">
-            <button className="secondary-btn" onClick={startNew}>+ New smart list</button>
+            <button className="secondary-btn" onClick={startNew}>{t('+ New smart list')}</button>
             <ul className="smart-lists-nav">
-              {smartLists.length === 0 && <li className="empty">No smart lists yet.</li>}
+              {smartLists.length === 0 && <li className="empty">{t('No smart lists yet.')}</li>}
               {smartLists.map((l) => (
                 <li
                   key={l.id}
@@ -138,8 +139,7 @@ export default function SmartListsModal({ open, smartLists, onClose, onSave, onD
                 >
                   <div className="smart-list-name">{l.name}</div>
                   <div className="smart-list-meta">
-                    {l.categoryId === 'all' ? 'All libraries' : (CATEGORIES.find((c) => c.id === l.categoryId)?.label ?? l.categoryId)}
-                    {' · '}{l.rules.length} rule{l.rules.length === 1 ? '' : 's'}
+                    {plural(l.rules.length, '{label} · {n} rule', '{label} · {n} rules', { label: l.categoryId === 'all' ? t('All libraries') : (CATEGORIES.find((c) => c.id === l.categoryId)?.label ?? l.categoryId) })}
                   </div>
                 </li>
               ))}
@@ -147,24 +147,24 @@ export default function SmartListsModal({ open, smartLists, onClose, onSave, onD
           </aside>
 
           <section className="smart-lists-editor">
-            {!activeDraft && <p className="empty">Pick a list on the left, or create a new one.</p>}
+            {!activeDraft && <p className="empty">{t('Pick a list on the left, or create a new one.')}</p>}
             {activeDraft && (
               <>
                 <div className="field-row">
-                  <label>Name</label>
+                  <label>{t('Name')}</label>
                   <input
                     value={activeDraft.name}
                     onChange={(e) => patch({ name: e.target.value })}
-                    placeholder="e.g. 4-star games I never finished"
+                    placeholder={t('e.g. 4-star games I never finished')}
                   />
                 </div>
                 <div className="field-row">
-                  <label>Scope</label>
+                  <label>{t('Scope')}</label>
                   <select
                     value={activeDraft.categoryId}
                     onChange={(e) => patch({ categoryId: e.target.value })}
                   >
-                    <option value="all">All libraries</option>
+                    <option value="all">{t('All libraries')}</option>
                     {CATEGORIES.map((c) => (
                       <option key={c.id} value={c.id}>{c.label}</option>
                     ))}
@@ -173,18 +173,18 @@ export default function SmartListsModal({ open, smartLists, onClose, onSave, onD
 
                 <div className="smart-lists-rules">
                   <div className="smart-lists-rules-header">
-                    <span>Rules</span>
-                    <div className="smart-lists-mode-toggle" title="How to combine the rules">
+                    <span>{t('Rules')}</span>
+                    <div className="smart-lists-mode-toggle" title={t('How to combine the rules')}>
                       <button
                         type="button"
                         className={(activeDraft.mode ?? 'and') === 'and' ? 'pill active' : 'pill'}
                         onClick={() => patch({ mode: 'and' })}
-                      >Match ALL (AND)</button>
+                      >{t('Match ALL (AND)')}</button>
                       <button
                         type="button"
                         className={activeDraft.mode === 'or' ? 'pill active' : 'pill'}
                         onClick={() => patch({ mode: 'or' })}
-                      >Match ANY (OR)</button>
+                      >{t('Match ANY (OR)')}</button>
                     </div>
                     <select
                       value=""
@@ -194,14 +194,14 @@ export default function SmartListsModal({ open, smartLists, onClose, onSave, onD
                         e.target.value = ''
                       }}
                     >
-                      <option value="">+ Add rule…</option>
+                      <option value="">{t('+ Add rule…')}</option>
                       {RULE_KINDS.map((k) => (
                         <option key={k} value={k}>{RULE_LABELS[k]}</option>
                       ))}
                     </select>
                   </div>
                   {activeDraft.rules.length === 0 && (
-                    <p className="hint">No rules yet — the list matches everything in scope.</p>
+                    <p className="hint">{t('No rules yet — the list matches everything in scope.')}</p>
                   )}
                   <ul className="smart-lists-rule-list">
                     {activeDraft.rules.map((rule, i) => (
@@ -219,8 +219,8 @@ export default function SmartListsModal({ open, smartLists, onClose, onSave, onD
                           type="button"
                           className="smart-list-rule-remove"
                           onClick={() => removeRule(i)}
-                          title="Remove rule"
-                          aria-label="Remove rule"
+                          title={t('Remove rule')}
+                          aria-label={t('Remove rule')}
                         >✕</button>
                       </li>
                     ))}
@@ -228,10 +228,10 @@ export default function SmartListsModal({ open, smartLists, onClose, onSave, onD
                 </div>
 
                 <div className="smart-lists-actions">
-                  <button className="secondary-btn" onClick={() => onDelete(activeDraft.id)}>Delete list</button>
+                  <button className="secondary-btn" onClick={() => onDelete(activeDraft.id)}>{t('Delete list')}</button>
                   <div className="spacer" />
-                  <button className="secondary-btn" onClick={() => onApply(activeDraft)}>Apply</button>
-                  <button className="primary-btn" onClick={commit}>Save</button>
+                  <button className="secondary-btn" onClick={() => onApply(activeDraft)}>{t('Apply')}</button>
+                  <button className="primary-btn" onClick={commit}>{t('Save')}</button>
                 </div>
               </>
             )}
@@ -257,8 +257,8 @@ function RuleInput({ rule, onChange, allTags, statusOptions }: RuleInputProps) {
     case 'consumed':
       return (
         <select value={rule.value ? 'y' : 'n'} onChange={(e) => onChange({ ...rule, value: e.target.value === 'y' })}>
-          <option value="y">Yes</option>
-          <option value="n">No</option>
+          <option value="y">{t('Yes')}</option>
+          <option value="n">{t('No')}</option>
         </select>
       )
     case 'minRating':
@@ -284,7 +284,7 @@ function RuleInput({ rule, onChange, allTags, statusOptions }: RuleInputProps) {
       )
     case 'status':
       if (statusOptions.length === 0) {
-        return <span className="hint">Status filter needs a specific library scope.</span>
+        return <span className="hint">{t('Status filter needs a specific library scope.')}</span>
       }
       return (
         <div className="status-multi">

@@ -25,6 +25,19 @@ describe('i18n', () => {
     expect(plural(4, '{n} item', '{n} items')).toBe('4 items')
   })
 
+  it('fills extra placeholders in plural forms and translates them', () => {
+    const one = 'Merged {n} variant across {items}'
+    const other = 'Merged {n} variants across {items}'
+    expect(plural(2, one, other, { items: plural(3, '{n} item', '{n} items') })).toBe('Merged 2 variants across 3 items')
+    setLanguage('es')
+    expect(plural(1, '{n} item', '{n} items')).toBe('1 elemento')
+    expect(plural(2, one, other, { items: plural(3, '{n} item', '{n} items') })).toBe('Se unificaron 2 variantes en 3 elementos')
+  })
+
+  it('treats missing values as empty', () => {
+    expect(t('Saved to {path}', { path: undefined })).toBe('Saved to ')
+  })
+
   it('switches the date locale with the language', () => {
     expect(locale()).toBe('en-US')
     setLanguage('es')

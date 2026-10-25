@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import type { Playthrough } from '../../types/entities'
 import { parseDurationToSeconds } from '../../types'
+import { t } from '../../i18n'
 
 interface Props {
   playthroughs: Playthrough[]
@@ -48,14 +49,14 @@ export default function PlaythroughsEditor({ playthroughs, onChange }: Props) {
   return (
     <div className="field-group playthroughs-editor">
       <div className="playthroughs-head">
-        <label>Playthroughs / runs</label>
+        <label>{t('Playthroughs / runs')}</label>
         {playthroughs.length > 0 && <span className="playthroughs-total">{totalLabel}</span>}
-        <button type="button" className="secondary-btn" onClick={add}>+ Add playthrough</button>
+        <button type="button" className="secondary-btn" onClick={add}>{t('+ Add playthrough')}</button>
       </div>
-      <p className="hint">Log discrete runs — a first campaign, a NG+ replay, a co-op with a friend. Different from the single "Play time" field above; use this when a game deserves more than one bullet.</p>
+      <p className="hint">{t('Log discrete runs — a first campaign, a NG+ replay, a co-op with a friend. Different from the single "Play time" field above; use this when a game deserves more than one bullet.')}</p>
 
       {playthroughs.length === 0 && (
-        <p className="hint" style={{ opacity: 0.6, marginTop: 8 }}>No playthroughs logged yet.</p>
+        <p className="hint" style={{ opacity: 0.6, marginTop: 8 }}>{t('No playthroughs logged yet.')}</p>
       )}
 
       <ul className="playthroughs-list">
@@ -71,45 +72,45 @@ export default function PlaythroughsEditor({ playthroughs, onChange }: Props) {
                   type="button"
                   className="playthrough-remove"
                   onClick={(e) => { e.stopPropagation(); remove(p.id) }}
-                  title="Remove playthrough"
-                  aria-label="Remove playthrough"
+                  title={t('Remove playthrough')}
+                  aria-label={t('Remove playthrough')}
                 >✕</button>
               </div>
               {isOpen && (
                 <div className="playthrough-body">
                   <div className="playthrough-row">
-                    <label>Started</label>
+                    <label>{t('Started')}</label>
                     <input type="date" value={p.startedAt ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, startedAt: e.target.value || undefined }))} />
-                    <label>Finished</label>
+                    <label>{t('Finished')}</label>
                     <input type="date" value={p.finishedAt ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, finishedAt: e.target.value || undefined }))} />
                   </div>
                   <div className="playthrough-row">
-                    <label>Hours</label>
-                    <input placeholder="e.g. 24h, 12:30, 80" value={p.hours ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, hours: e.target.value || undefined }))} />
-                    <label>Platform</label>
-                    <input placeholder="PC, PS5, Switch…" value={p.platform ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, platform: e.target.value || undefined }))} />
+                    <label>{t('Hours')}</label>
+                    <input placeholder={t('e.g. 24h, 12:30, 80')} value={p.hours ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, hours: e.target.value || undefined }))} />
+                    <label>{t('Platform')}</label>
+                    <input placeholder={t('PC, PS5, Switch…')} value={p.platform ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, platform: e.target.value || undefined }))} />
                   </div>
                   <div className="playthrough-row">
-                    <label>Character / class</label>
-                    <input placeholder="Sorcerer, Ranger, Solo no-death…" value={p.character ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, character: e.target.value || undefined }))} />
-                    <label>Difficulty</label>
-                    <input placeholder="Very hard, NG+7, Ironman…" value={p.difficulty ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, difficulty: e.target.value || undefined }))} />
+                    <label>{t('Character / class')}</label>
+                    <input placeholder={t('Sorcerer, Ranger, Solo no-death…')} value={p.character ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, character: e.target.value || undefined }))} />
+                    <label>{t('Difficulty')}</label>
+                    <input placeholder={t('Very hard, NG+7, Ironman…')} value={p.difficulty ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, difficulty: e.target.value || undefined }))} />
                   </div>
                   <div className="playthrough-row">
-                    <label>Co-op / solo</label>
-                    <input placeholder="Solo, with @friend, guild raid…" value={p.coop ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, coop: e.target.value || undefined }))} />
-                    <label>Milestones hit</label>
+                    <label>{t('Co-op / solo')}</label>
+                    <input placeholder={t('Solo, with @friend, guild raid…')} value={p.coop ?? ''} onChange={(e) => patch(p.id, (x) => ({ ...x, coop: e.target.value || undefined }))} />
+                    <label>{t('Milestones hit')}</label>
                     <input
-                      placeholder="Comma-separated (true ending, no-death, all optionals)"
+                      placeholder={t('Comma-separated (true ending, no-death, all optionals)')}
                       value={(p.achievementsHit ?? []).join(', ')}
                       onChange={(e) => patch(p.id, (x) => ({ ...x, achievementsHit: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) }))}
                     />
                   </div>
                   <div className="playthrough-note">
-                    <label>Note</label>
+                    <label>{t('Note')}</label>
                     <textarea
                       rows={3}
-                      placeholder="Mods used, house rules, memorable moments…"
+                      placeholder={t('Mods used, house rules, memorable moments…')}
                       value={p.note ?? ''}
                       onChange={(e) => patch(p.id, (x) => ({ ...x, note: e.target.value || undefined }))}
                     />
@@ -131,6 +132,6 @@ function summarize(p: Playthrough, i: number): string {
   if (p.finishedAt) parts.push(p.finishedAt)
   else if (p.startedAt) parts.push(`started ${p.startedAt}`)
   if (p.hours) parts.push(p.hours)
-  if (parts.length === 0) return `Run #${i + 1}`
+  if (parts.length === 0) return t('Run #{i}', { i: i + 1 })
   return parts.join(' · ')
 }

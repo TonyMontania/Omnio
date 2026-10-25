@@ -14,6 +14,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item } from './types'
+import { plural, t } from './i18n'
 
 interface Props {
   existingItems: Item[]
@@ -64,13 +65,13 @@ export default function MusicFolderScanner({ existingItems, onImport, onClose }:
   }
 
   const scan = async () => {
-    if (!rootPath.trim()) { setError('Pick a folder first.'); return }
+    if (!rootPath.trim()) { setError(t('Pick a folder first.')); return }
     setBusy(true); setError(null); setRows([])
     try {
       const r = await window.ipcRenderer.invoke('music:scan_folder', rootPath.trim()) as
         | { ok: true; albums: ScannedAlbum[] }
         | { ok: false; error: string }
-      if (!r?.ok) { setError(r?.error ?? 'Scan failed'); return }
+      if (!r?.ok) { setError(r?.error ?? t('Scan failed')); return }
       const parsed: Row[] = r.albums.map((a) => {
         const existing = existingByKey.get(normalizeKey(a.artist, a.album))
         return {
@@ -126,20 +127,18 @@ export default function MusicFolderScanner({ existingItems, onImport, onClose }:
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 900, width: '94vw', maxHeight: '86vh' }}>
         <div className="modal-header">
-          <h2>Scan local music folder</h2>
+          <h2>{t('Scan local music folder')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Point at a folder that holds your music. Supported layouts (mix inside a root is fine):
+            {t('Point at a folder that holds your music. Supported layouts (mix inside a root is fine):')}
             <br />
-            <code>Artist/Album/track.mp3</code> · <code>Artist/YYYY - Album/track.mp3</code> · <code>Artist/Album (YYYY)/track.mp3</code> · <code>Artist/[YYYY] Album/track.mp3</code>
+            <code>{t('Artist/Album/track.mp3')}</code> · <code>{t('Artist/YYYY - Album/track.mp3')}</code> · <code>{t('Artist/Album (YYYY)/track.mp3')}</code> · <code>{t('Artist/[YYYY] Album/track.mp3')}</code>
             <br />
-            <code>Artist - Album/track.mp3</code> · <code>Artist - Album [YYYY]/track.mp3</code> · <code>Artist_-_Album/track.mp3</code>
+            <code>{t('Artist - Album/track.mp3')}</code> · <code>{t('Artist - Album [YYYY]/track.mp3')}</code> · <code>{t('Artist_-_Album/track.mp3')}</code>
             <br />
-            <code>Genre/Artist/…</code> and <code>Artist/Discography/YYYY - Album/</code> grouping folders are followed through.
-            Multi-disc albums (<code>CD1</code> / <code>Disc 2</code> / <code>Vol. 3</code> subfolders) are rolled up into one entry.
-            Cover art picks any <code>cover</code>/<code>folder</code>/<code>front</code>/<code>artwork</code> in jpg/png/webp — or the first image in the folder.
+            <code>{t('Genre/Artist/…')}</code> {t('and')} <code>{t('Artist/Discography/YYYY - Album/')}</code>{' '}{t('grouping folders are followed through. Multi-disc albums (')}<code>{t('CD1')}</code> / <code>{t('Disc 2')}</code> / <code>{t('Vol. 3')}</code>{' '}{t('subfolders) are rolled up into one entry. Cover art picks any')}{' '}<code>cover</code>/<code>folder</code>/<code>front</code>/<code>artwork</code>{' '}{t('in jpg/png/webp — or the first image in the folder.')}
           </p>
 
           <div className="importer-summary" style={{ marginTop: 4 }}>
@@ -147,12 +146,12 @@ export default function MusicFolderScanner({ existingItems, onImport, onClose }:
               type="text"
               value={rootPath}
               onChange={(e) => setRootPath(e.target.value)}
-              placeholder="e.g. F:\Music\Rock"
+              placeholder={t('e.g. F:\\Music\\Rock')}
               style={{ flex: 1, minWidth: 260 }}
             />
-            <button type="button" className="secondary-btn" onClick={pickFolder}>Browse…</button>
+            <button type="button" className="secondary-btn" onClick={pickFolder}>{t('Browse…')}</button>
             <button type="button" className="secondary-btn" onClick={scan} disabled={busy || !rootPath.trim()}>
-              {busy ? 'Scanning…' : 'Scan'}
+              {busy ? t('Scanning…') : t('Scan')}
             </button>
           </div>
 
@@ -161,12 +160,12 @@ export default function MusicFolderScanner({ existingItems, onImport, onClose }:
           {rows.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{rows.length} albums</span>
-                <span className="importer-new">{toImportCount} to import</span>
-                <span className="importer-dupe">{dupCount} already in library</span>
+                <span>{t('{rows} albums', { rows: rows.length })}</span>
+                <span className="importer-new">{t('{toImportCount} to import', { toImportCount: toImportCount })}</span>
+                <span className="importer-dupe">{t('{dupCount} already in library', { dupCount: dupCount })}</span>
                 <div className="importer-select-actions">
-                  <button type="button" onClick={() => setAll('create')}>Select all new</button>
-                  <button type="button" onClick={() => setAll('skip')}>Select none</button>
+                  <button type="button" onClick={() => setAll('create')}>{t('Select all new')}</button>
+                  <button type="button" onClick={() => setAll('skip')}>{t('Select none')}</button>
                 </div>
               </div>
               <div className="importer-table-wrap">
@@ -174,11 +173,11 @@ export default function MusicFolderScanner({ existingItems, onImport, onClose }:
                   <thead>
                     <tr>
                       <th style={{ width: 32 }}></th>
-                      <th>Album</th>
-                      <th>Artist</th>
-                      <th style={{ width: 60 }}>Year</th>
-                      <th style={{ width: 60 }}>Tracks</th>
-                      <th style={{ width: 80 }}>Cover</th>
+                      <th>{t('Album')}</th>
+                      <th>{t('Artist')}</th>
+                      <th style={{ width: 60 }}>{t('Year')}</th>
+                      <th style={{ width: 60 }}>{t('Tracks')}</th>
+                      <th style={{ width: 80 }}>{t('Cover')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -193,8 +192,8 @@ export default function MusicFolderScanner({ existingItems, onImport, onClose }:
                           />
                         </td>
                         <td>
-                          <div style={{ fontWeight: 600 }}>{r.album || <em style={{ color: 'var(--text-faint)' }}>(no name)</em>}</div>
-                          {r.existingId && <div style={{ fontSize: 10.5, color: 'var(--accent)' }}>already in library</div>}
+                          <div style={{ fontWeight: 600 }}>{r.album || <em style={{ color: 'var(--text-faint)' }}>{t('(no name)')}</em>}</div>
+                          {r.existingId && <div style={{ fontSize: 10.5, color: 'var(--accent)' }}>{t('already in library')}</div>}
                         </td>
                         <td>{r.artist || <span style={{ color: 'var(--text-faint)' }}>—</span>}</td>
                         <td>{r.year ?? '—'}</td>
@@ -210,9 +209,9 @@ export default function MusicFolderScanner({ existingItems, onImport, onClose }:
         </div>
         {rows.length > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button type="button" className="primary-btn" disabled={toImportCount === 0} onClick={handleImport}>
-              Import {toImportCount} album{toImportCount === 1 ? '' : 's'}
+              {plural(toImportCount, 'Import {n} album', 'Import {n} albums')}
             </button>
           </div>
         )}

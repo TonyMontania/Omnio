@@ -10,6 +10,7 @@ import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
 import { BasedOnDisplay } from './components/BasedOn'
 import DetailNotes from './components/detail/DetailNotes'
+import { t } from './i18n'
 
 const timelineSortKey = (i: Item) => i.releaseDate || i.releaseYear || ''
 const yearOf = (i: Item) => timelineSortKey(i).slice(0, 4)
@@ -55,10 +56,10 @@ export default function BookDetailModal({ item, groups, allBooks, onEdit, onDupl
       subtitle={item.alternativeTitles && item.alternativeTitles.length > 0 ? item.alternativeTitles.join(' · ') : undefined}
       meta={item.authors && item.authors.length > 0 ? item.authors.join(', ') : undefined}
       stats={[
-        ['Rating', item.rating ? `★ ${item.rating}` : null],
-        ['Pages', item.pagesRead ? `${item.pagesRead}${item.totalPages ? ` / ${item.totalPages}` : ''}` : item.totalPages ? `${item.totalPages} total` : null],
-        ['Series', item.saga ? `${item.saga}${item.sagaIndex ? ` #${item.sagaIndex}` : ''}` : null],
-        ['Finished', item.finishedAt ? formatDay(item.finishedAt) : null],
+        [t('Rating'), item.rating ? t('★ {rating}', { rating: item.rating }) : null],
+        [t('Pages'), item.pagesRead ? t('{pagesRead}{value}', { pagesRead: item.pagesRead, value: item.totalPages ? ` ${t('/ {totalPages}', { totalPages: item.totalPages })}` : '' }) : item.totalPages ? t('{totalPages} total', { totalPages: item.totalPages }) : null],
+        [t('Series'), item.saga ? t('{saga}{value}', { saga: item.saga, value: item.sagaIndex ? ` ${t('#{sagaIndex}', { sagaIndex: item.sagaIndex })}` : '' }) : null],
+        [t('Finished'), item.finishedAt ? formatDay(item.finishedAt) : null],
       ]}
       onEdit={onEdit}
       onDuplicate={onDuplicate}
@@ -66,26 +67,26 @@ export default function BookDetailModal({ item, groups, allBooks, onEdit, onDupl
       tabs={[
         {
           id: 'overview',
-          label: 'Overview',
+          label: t('Overview'),
           content: (
             <>
               {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
               {item.description && <p className="detail-description">{item.description}</p>}
               <DetailFacts facts={[
-                ['Authors', item.authors?.join(', ')],
-                ['Publisher', item.publisher],
-                ['Published', item.releaseDate ? formatDay(item.releaseDate) : item.releaseYear],
-                ['Series', item.saga ? `${item.saga}${item.sagaIndex ? ` · ${item.sagaIndex}` : ''}` : null],
-                ['Translator', item.translator],
+                [t('Authors'), item.authors?.join(', ')],
+                [t('Publisher'), item.publisher],
+                [t('Published'), item.releaseDate ? formatDay(item.releaseDate) : item.releaseYear],
+                [t('Series'), item.saga ? t('{saga}{value}', { saga: item.saga, value: item.sagaIndex ? ` ${t('· {sagaIndex}', { sagaIndex: item.sagaIndex })}` : '' }) : null],
+                [t('Translator'), item.translator],
                 ['ISBN', item.isbn],
-                ['Format', item.bookFormat ? getBookFormatLabel(item.bookFormat) : null],
-                ['Genres', item.genres?.join(', ')],
-                ['Source', item.bookSource ? getBookSourceLabel(item.bookSource) : null],
-                ['Age rating', item.ageRating ? getAgeRatingLabel(item.ageRating) : null],
-                ['Started', item.startDate ? formatDay(item.startDate) : null],
-                ['Groups', groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
+                [t('Format'), item.bookFormat ? getBookFormatLabel(item.bookFormat) : null],
+                [t('Genres'), item.genres?.join(', ')],
+                [t('Source'), item.bookSource ? getBookSourceLabel(item.bookSource) : null],
+                [t('Age rating'), item.ageRating ? getAgeRatingLabel(item.ageRating) : null],
+                [t('Started'), item.startDate ? formatDay(item.startDate) : null],
+                [t('Groups'), groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
               ]} />
-              {item.tags && item.tags.length > 0 && <DetailSection title="Tags"><DetailChips values={item.tags} /></DetailSection>}
+              {item.tags && item.tags.length > 0 && <DetailSection title={t('Tags')}><DetailChips values={item.tags} /></DetailSection>}
               <DetailReview review={item.bookReview} hasSpoilers={item.hasSpoilers} />
               <DetailNotes notes={item.notes} />
               <CustomFieldsView fields={item.customFields} />
@@ -94,13 +95,13 @@ export default function BookDetailModal({ item, groups, allBooks, onEdit, onDupl
         },
         {
           id: 'highlights',
-          label: 'Highlights',
+          label: t('Highlights'),
           count: noteCount,
           hidden: noteCount === 0,
           content: <>
           {item.chapterNotes && item.chapterNotes.length > 0 && (
             <div className="field-group">
-              <label>Notes per chapter ({item.chapterNotes.length})</label>
+              <label>{t('Notes per chapter ({chapterNotes})', { chapterNotes: item.chapterNotes.length })}</label>
               <ul className="chapter-notes-list detail">
                 {item.chapterNotes.map((n) => (
                   <li key={n.id} className="chapter-notes-row">
@@ -114,15 +115,15 @@ export default function BookDetailModal({ item, groups, allBooks, onEdit, onDupl
 
           {item.highlights && item.highlights.length > 0 && (
             <div className="field-group">
-              <label>Highlights &amp; notes ({item.highlights.length})</label>
+              <label>{t('Highlights & notes ({highlights})', { highlights: item.highlights.length })}</label>
               <ul className="highlights-list">
                 {item.highlights.map((h) => (
                   <li key={h.id} className="highlights-row">
                     {h.text && <blockquote className="highlights-text">{h.text}</blockquote>}
-                    {h.note && <p className="highlights-note"><span className="highlights-note-label">Note</span> {h.note}</p>}
+                    {h.note && <p className="highlights-note"><span className="highlights-note-label">{t('Note')}</span> {h.note}</p>}
                     <div className="highlights-meta">
-                      {h.page && <span>Page {h.page}</span>}
-                      {h.location && <span>Loc {h.location}</span>}
+                      {h.page && <span>{t('Page {page}', { page: h.page })}</span>}
+                      {h.location && <span>{t('Loc {location}', { location: h.location })}</span>}
                       {h.addedAt && <span>{h.addedAt}</span>}
                     </div>
                   </li>
@@ -135,21 +136,21 @@ export default function BookDetailModal({ item, groups, allBooks, onEdit, onDupl
         },
         {
           id: 'history',
-          label: 'Rereads',
+          label: t('Rereads'),
           count: item.rewatches?.length,
           hidden: !item.rewatches || item.rewatches.length === 0,
-          content: <DetailHistoryTable label="Reread history" entries={item.rewatches ?? []} />,
+          content: <DetailHistoryTable label={t('Reread history')} entries={item.rewatches ?? []} />,
         },
         {
           id: 'related',
-          label: 'Related',
+          label: t('Related'),
           count: relatedCount,
           hidden: relatedCount === 0,
           content: (
             <>
-              <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
+              <DetailCoverStrip label={t('Related')} entries={relatedEntries} onNavigate={onNavigate} />
               <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
-              <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
+              <DetailCoverStrip label={t('Recommendations')} entries={recommendedEntries} onNavigate={onNavigate} />
             </>
           ),
         },

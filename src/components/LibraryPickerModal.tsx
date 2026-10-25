@@ -6,6 +6,7 @@
 // come back if the user moves it back.
 
 import { CATEGORIES } from '../categories'
+import { t } from '../i18n'
 
 interface Props {
   currentCategoryId: string
@@ -24,14 +25,14 @@ export default function LibraryPickerModal({ currentCategoryId, enabledCategorie
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal library-picker" onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
-          <h2>Move to library</h2>
+          <h2>{t('Move to library')}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </header>
         <div className="library-picker-hint">
-          Pick a destination. The item's fields specific to its old library stay on the record — nothing is dropped.
+          {t('Pick a destination. The item\'s fields specific to its old library stay on the record — nothing is dropped.')}
         </div>
         <ul className="library-picker-list">
-          {targets.length === 0 && <li className="empty">No other enabled libraries.</li>}
+          {targets.length === 0 && <li className="empty">{t('No other enabled libraries.')}</li>}
           {targets.map((c) => (
             <li key={c.id} onClick={() => { onPick(c.id); onClose() }}>
               <span className="library-picker-name">{c.label}</span>

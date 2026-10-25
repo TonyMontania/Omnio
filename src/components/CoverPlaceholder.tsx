@@ -1,4 +1,5 @@
-// Per-category SVG placeholder for items that don't (yet) have a cover.
+
+import { t } from '../i18n'// Per-category SVG placeholder for items that don't (yet) have a cover.
 // Renders inside <div class="cover-preview-placeholder"> or any container
 // that sizes it (aspect-ratio + flex-center). Keeps the icon monochrome
 // so it inherits color from `currentColor` — themes swap `--text-dim`.
@@ -14,7 +15,7 @@ export default function CoverPlaceholder({ categoryId, label }: Props) {
       <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         {glyphFor(categoryId)}
       </svg>
-      {label !== undefined && <span className="cover-placeholder-label">{label ?? 'No cover'}</span>}
+      {label !== undefined && <span className="cover-placeholder-label">{label ?? t('No cover')}</span>}
     </div>
   )
 }

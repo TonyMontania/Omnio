@@ -10,6 +10,7 @@ import DetailHistoryTable from './components/detail/DetailHistoryTable'
 import DetailReview from './components/detail/DetailReview'
 import { BasedOnDisplay } from './components/BasedOn'
 import DetailNotes from './components/detail/DetailNotes'
+import { t } from './i18n'
 
 interface Props {
   item: VnItem
@@ -71,10 +72,10 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onEdit, o
       subtitle={item.vnAliases && item.vnAliases.length > 0 ? item.vnAliases.join(' · ') : undefined}
       meta={item.devs && item.devs.length > 0 ? item.devs.join(', ') : undefined}
       stats={[
-        ['Your rating', item.rating ? `★ ${item.rating}` : null],
+        [t('Your rating'), item.rating ? t('★ {rating}', { rating: item.rating }) : null],
         ['VNDB score', item.vnCommunityRating ? `${item.vnCommunityRating} / 10` : null],
-        ['Play time', item.playTime || (item.vnLengthHours ? `~${item.vnLengthHours}h` : null)],
-        ['Finished', item.finishedAt ? formatDay(item.finishedAt) : null],
+        [t('Play time'), item.playTime || (item.vnLengthHours ? t('~{vnLengthHours}h', { vnLengthHours: item.vnLengthHours }) : null)],
+        [t('Finished'), item.finishedAt ? formatDay(item.finishedAt) : null],
       ]}
       onEdit={onEdit}
       onDuplicate={onDuplicate}
@@ -82,28 +83,28 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onEdit, o
       tabs={[
         {
           id: 'overview',
-          label: 'Overview',
+          label: t('Overview'),
           content: (
             <>
               {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
               {item.vnDescription && <p className="detail-description">{item.vnDescription}</p>}
               <DetailFacts facts={[
-                ['Developers', item.devs?.join(', ')],
-                ['Released', item.releaseDate ? formatDay(item.releaseDate) : releaseYearOnly],
-                ['Development', item.vnDevStatus ? DEVSTATUS_LABEL(item.vnDevStatus) : null],
-                ['Length', [item.vnLength ? LENGTH_LABEL(item.vnLength) : '', item.vnLengthHours ? `~${item.vnLengthHours}h` : ''].filter(Boolean).join(' · ')],
-                ['Engine', item.vnEngine],
-                ['Original language', item.vnOriginalLanguage ? `${vnLangFlag(item.vnOriginalLanguage)} ${vnLangLabel(item.vnOriginalLanguage)}` : null],
-                ['Platforms', item.platforms?.join(', ')],
-                ['Languages', item.vnLanguages && item.vnLanguages.length > 0 ? item.vnLanguages.map((l) => `${vnLangFlag(l)} ${l}`).join('  ') : null],
-                ['Started', item.startDate ? formatDay(item.startDate) : null],
+                [t('Developers'), item.devs?.join(', ')],
+                [t('Released'), item.releaseDate ? formatDay(item.releaseDate) : releaseYearOnly],
+                [t('Development'), item.vnDevStatus ? DEVSTATUS_LABEL(item.vnDevStatus) : null],
+                [t('Length'), [item.vnLength ? LENGTH_LABEL(item.vnLength) : '', item.vnLengthHours ? t('~{vnLengthHours}h', { vnLengthHours: item.vnLengthHours }) : ''].filter(Boolean).join(' · ')],
+                [t('Engine'), item.vnEngine],
+                [t('Original language'), item.vnOriginalLanguage ? t('{vnOriginalLanguage} {vnOriginalLanguage2}', { vnOriginalLanguage: vnLangFlag(item.vnOriginalLanguage), vnOriginalLanguage2: vnLangLabel(item.vnOriginalLanguage) }) : null],
+                [t('Platforms'), item.platforms?.join(', ')],
+                [t('Languages'), item.vnLanguages && item.vnLanguages.length > 0 ? item.vnLanguages.map((l) => t('{l} {l2}', { l: vnLangFlag(l), l2: l })).join('  ') : null],
+                [t('Started'), item.startDate ? formatDay(item.startDate) : null],
                 ['VNDB', item.vndbId],
-                ['Groups', groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
+                [t('Groups'), groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
               ]} />
-              {item.tags && item.tags.length > 0 && <DetailSection title="Tags"><DetailChips values={item.tags} /></DetailSection>}
+              {item.tags && item.tags.length > 0 && <DetailSection title={t('Tags')}><DetailChips values={item.tags} /></DetailSection>}
           {pubByLang.size > 0 && (
             <div className="field-group">
-              <label>Publishers by region</label>
+              <label>{t('Publishers by region')}</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {Array.from(pubByLang.entries()).map(([lang, plist]) => (
                   <div key={lang} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '4px 8px', background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)' }}>
@@ -114,7 +115,7 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onEdit, o
                         <span key={p.id}>
                           {i > 0 && <span style={{ color: 'var(--text-faint)' }}> · </span>}
                           <b>{p.name}</b>
-                          {p.role === 'developer' && <span style={{ color: 'var(--text-faint)', fontSize: 11, marginLeft: 4 }}>(dev)</span>}
+                          {p.role === 'developer' && <span style={{ color: 'var(--text-faint)', fontSize: 11, marginLeft: 4 }}>{t('(dev)')}</span>}
                         </span>
                       ))}
                     </span>
@@ -126,7 +127,7 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onEdit, o
 
           {item.vnEditions && item.vnEditions.length > 0 && (
             <div className="field-group">
-              <label>Editions ({item.vnEditions.length})</label>
+              <label>{t('Editions ({vnEditions})', { vnEditions: item.vnEditions.length })}</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {item.vnEditions.map((e) => (
                   <div key={e.id} style={{ display: 'flex', gap: 8, padding: '4px 8px', background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)' }}>
@@ -147,13 +148,13 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onEdit, o
         },
         {
           id: 'characters',
-          label: 'Characters',
+          label: t('Characters'),
           count: item.vnCharacters?.length,
           hidden: !item.vnCharacters || item.vnCharacters.length === 0,
           content: <>
           {item.vnCharacters && item.vnCharacters.length > 0 && (
             <div className="field-group">
-              <label>Cast ({item.vnCharacters.length})</label>
+              <label>{t('Cast ({vnCharacters})', { vnCharacters: item.vnCharacters.length })}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
                 {item.vnCharacters.map((c) => (
                   <div key={c.id} style={{ display: 'flex', gap: 10, padding: 10, background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)' }}>
@@ -170,7 +171,7 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onEdit, o
                       <div style={{ color: 'var(--text-faint)', fontSize: 11, fontFamily: 'var(--font-mono)' }}>{CHAR_ROLE_LABEL(c.role)}</div>
                       {c.seiyuu && (
                         <div style={{ color: 'var(--text-dim)', fontSize: 12 }}>
-                          CV: {c.seiyuu}
+                          {t('CV: {seiyuu}', { seiyuu: c.seiyuu })}
                         </div>
                       )}
                       {c.description && <div style={{ fontSize: 12, marginTop: 4, color: 'var(--text-dim)' }}>{c.description}</div>}
@@ -185,13 +186,13 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onEdit, o
         },
         {
           id: 'staff',
-          label: 'Staff',
+          label: t('Staff'),
           count: item.vnStaff?.length,
           hidden: !item.vnStaff || item.vnStaff.length === 0,
           content: <>
           {(item.vnStaff && item.vnStaff.length > 0) && (
             <div className="field-group">
-              <label>Staff ({item.vnStaff.length})</label>
+              <label>{t('Staff ({vnStaff})', { vnStaff: item.vnStaff.length })}</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {Array.from(staffByRole.entries()).map(([role, list]) => (
                   <div key={role} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -223,13 +224,13 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onEdit, o
         },
         {
           id: 'media',
-          label: 'Covers & screenshots',
+          label: t('Covers & screenshots'),
           count: mediaCount,
           hidden: mediaCount === 0,
           content: <>
           {nonMainCovers.length > 0 && (
             <div className="field-group">
-              <label>Covers ({nonMainCovers.length})</label>
+              <label>{t('Covers ({nonMainCovers})', { nonMainCovers: nonMainCovers.length })}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
                 {nonMainCovers.map((c) => (
                   <div key={c.id} style={{ position: 'relative', aspectRatio: '3 / 4', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border-soft)' }}>
@@ -250,7 +251,7 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onEdit, o
 
           {item.vnScreenshots && item.vnScreenshots.length > 0 && (
             <div className="field-group">
-              <label>Screenshots ({item.vnScreenshots.length})</label>
+              <label>{t('Screenshots ({vnScreenshots})', { vnScreenshots: item.vnScreenshots.length })}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
                 {item.vnScreenshots.map((s) => {
                   const revealed = revealedScreens.has(s.id)
@@ -268,7 +269,7 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onEdit, o
                       <img src={assetSrc(s.path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: shouldBlur ? 'blur(18px)' : 'none' }} />
                       {shouldBlur && (
                         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)', color: '#fff', fontSize: 12, fontWeight: 600 }}>
-                          Click to reveal · NSFW
+                          {t('Click to reveal · NSFW')}
                         </div>
                       )}
                     </div>
@@ -290,20 +291,20 @@ export default function VisualNovelDetailModal({ item, groups, allVns, onEdit, o
         },
         {
           id: 'history',
-          label: 'Replays',
+          label: t('Replays'),
           count: item.rewatches?.length,
           hidden: !item.rewatches || item.rewatches.length === 0,
-          content: <DetailHistoryTable label="Replay history" entries={item.rewatches ?? []} />,
+          content: <DetailHistoryTable label={t('Replay history')} entries={item.rewatches ?? []} />,
         },
         {
           id: 'related',
-          label: 'Related',
+          label: t('Related'),
           count: relatedCount,
           hidden: relatedCount === 0,
           content: (
             <>
-              <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
-              <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
+              <DetailCoverStrip label={t('Related')} entries={relatedEntries} onNavigate={onNavigate} />
+              <DetailCoverStrip label={t('Recommendations')} entries={recommendedEntries} onNavigate={onNavigate} />
             </>
           ),
         },

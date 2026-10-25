@@ -39,7 +39,7 @@ interface Props {
 }
 
 const SIZE_LABELS: Record<WidgetSize, string> = {
-  small: 'Small', medium: 'Medium', large: 'Full width',
+  small: t('Small'), medium: t('Medium'), large: t('Full width'),
 }
 // CSS grid column-span per size. The board itself is a 4-column grid.
 const SIZE_SPAN: Record<WidgetSize, number> = { small: 1, medium: 2, large: 4 }
@@ -163,7 +163,7 @@ export default function HomeBoard(props: Props) {
     <div className="home">
       {editing && (
         <div className="home-edit-bar">
-          <span className="hint">Drag widgets to reorder them, or use ↑ / ↓. Resize, filter by library or remove each one from its header.</span>
+          <span className="hint">{t('Drag widgets to reorder them, or use ↑ / ↓. Resize, filter by library or remove each one from its header.')}</span>
         </div>
       )}
 
@@ -231,16 +231,16 @@ export default function HomeBoard(props: Props) {
               >
                 <header className="home-widget-header">
                   <h2>
-                    {editing && <span className="home-widget-grip" title="Drag to reorder" aria-hidden>⋮⋮</span>}
+                    {editing && <span className="home-widget-grip" title={t('Drag to reorder')} aria-hidden>⋮⋮</span>}
                     {w.label}
                     {filtered && <span className="home-widget-filter-tag">{filtered}</span>}
                   </h2>
                   {editing && (
                     <div className="home-widget-controls">
-                      <button type="button" title="Move up" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
-                      <button type="button" title="Move down" onClick={() => move(idx, +1)} disabled={idx === effectiveLayout.length - 1}>↓</button>
+                      <button type="button" title={t('Move up')} onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
+                      <button type="button" title={t('Move down')} onClick={() => move(idx, +1)} disabled={idx === effectiveLayout.length - 1}>↓</button>
                       <select
-                        title="Resize"
+                        title={t('Resize')}
                         value={slot.size}
                         onChange={(e) => resize(idx, e.target.value as WidgetSize)}
                       >
@@ -249,25 +249,25 @@ export default function HomeBoard(props: Props) {
                         ))}
                       </select>
                       {w.libraryFilter !== false && (
-                        <button type="button" title="Choose which libraries this widget shows" className={filtered ? 'active' : ''} onClick={() => setFilterIdx(filterIdx === idx ? null : idx)}>Libraries</button>
+                        <button type="button" title={t('Choose which libraries this widget shows')} className={filtered ? 'active' : ''} onClick={() => setFilterIdx(filterIdx === idx ? null : idx)}>{t('Libraries')}</button>
                       )}
-                      <button type="button" className="danger" title="Remove" onClick={() => remove(idx)}>✕</button>
+                      <button type="button" className="danger" title={t('Remove')} onClick={() => remove(idx)}>✕</button>
                     </div>
                   )}
                 </header>
                 {editing && filterIdx === idx && (
                   <div className="home-widget-libraries">
-                    <span className="hint">Show items from:</span>
+                    <span className="hint">{t('Show items from:')}</span>
                     {libraryOptions.map((c) => (
                       <label key={c.id}>
                         <input type="checkbox" checked={slot.categories?.includes(c.id) ?? false} onChange={() => toggleLibrary(idx, c.id)} />
                         {c.label}
                       </label>
                     ))}
-                    <span className="hint">{filtered ? '' : 'Nothing checked = every library.'}</span>
+                    <span className="hint">{filtered ? '' : t('Nothing checked = every library.')}</span>
                   </div>
                 )}
-                <div className="home-widget-body">{body ?? <p className="hint">Nothing to show right now — will appear on the right day.</p>}</div>
+                <div className="home-widget-body">{body ?? <p className="hint">{t('Nothing to show right now — will appear on the right day.')}</p>}</div>
               </section>
             )
           })}
@@ -278,12 +278,12 @@ export default function HomeBoard(props: Props) {
         <div className="modal-overlay" onClick={() => setPickerOpen(false)}>
           <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 780, width: '92vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
-              <h2>Add widget</h2>
+              <h2>{t('Add widget')}</h2>
               <button type="button" className="panel-close" onClick={() => setPickerOpen(false)}>✕</button>
             </div>
             <div className="modal-body" style={{ overflowY: 'auto' }}>
               {availableToAdd.length === 0
-                ? <p className="hint">Every widget is already on your board.</p>
+                ? <p className="hint">{t('Every widget is already on your board.')}</p>
                 : <ul className="home-widget-picker">
                     {availableToAdd.map((w) => (
                       <li key={w.id}>

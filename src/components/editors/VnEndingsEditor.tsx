@@ -9,6 +9,7 @@
 
 import { useMemo } from 'react'
 import type { VnEnding } from '../../types/entities'
+import { t } from '../../i18n'
 
 interface Props {
   endings: VnEnding[]
@@ -47,27 +48,27 @@ export default function VnEndingsEditor({ endings, onChange }: Props) {
   return (
     <div className="field-group vn-endings-editor">
       <div className="vn-endings-head">
-        <label>Routes / endings</label>
+        <label>{t('Routes / endings')}</label>
         {endings.length > 0 && (
-          <span className="vn-endings-count">{seenCount} / {endings.length} seen</span>
+          <span className="vn-endings-count">{t('{seenCount} / {endings} seen', { seenCount: seenCount, endings: endings.length })}</span>
         )}
-        <button type="button" className="secondary-btn" onClick={() => add(undefined)}>+ Add ending</button>
+        <button type="button" className="secondary-btn" onClick={() => add(undefined)}>{t('+ Add ending')}</button>
       </div>
-      <p className="hint">Track the routes and endings you've unlocked. Optional Route field groups endings under the same heroine / path; leave it blank for standalone endings.</p>
+      <p className="hint">{t('Track the routes and endings you\'ve unlocked. Optional Route field groups endings under the same heroine / path; leave it blank for standalone endings.')}</p>
 
       {endings.length === 0 && (
-        <p className="hint" style={{ opacity: 0.6, marginTop: 8 }}>No endings tracked yet.</p>
+        <p className="hint" style={{ opacity: 0.6, marginTop: 8 }}>{t('No endings tracked yet.')}</p>
       )}
 
       <div className="vn-endings-groups">
         {grouped.map(([route, list]) => (
           <div key={route || '__common__'} className="vn-endings-group">
             <div className="vn-endings-group-head">
-              <h4>{route || 'Common / standalone'}</h4>
+              <h4>{route || t('Common / standalone')}</h4>
               <span className="vn-endings-group-count">
                 {list.filter((e) => e.seen).length} / {list.length}
               </span>
-              <button type="button" className="pill" onClick={() => add(route || undefined)}>+ ending here</button>
+              <button type="button" className="pill" onClick={() => add(route || undefined)}>{t('+ ending here')}</button>
             </div>
             <ul className="vn-endings-list">
               {list.map((e) => (
@@ -81,19 +82,19 @@ export default function VnEndingsEditor({ endings, onChange }: Props) {
                   </label>
                   <input
                     className="vn-ending-name"
-                    placeholder="Ending name"
+                    placeholder={t('Ending name')}
                     value={e.name}
                     onChange={(ev) => patch(e.id, (x) => ({ ...x, name: ev.target.value }))}
                   />
                   <input
                     className="vn-ending-route"
-                    placeholder="Route (optional)"
+                    placeholder={t('Route (optional)')}
                     value={e.route ?? ''}
                     onChange={(ev) => patch(e.id, (x) => ({ ...x, route: ev.target.value || undefined }))}
                   />
                   <input
                     className="vn-ending-kind"
-                    placeholder="Kind (good / bad / true / normal)"
+                    placeholder={t('Kind (good / bad / true / normal)')}
                     value={e.kind ?? ''}
                     onChange={(ev) => patch(e.id, (x) => ({ ...x, kind: ev.target.value || undefined }))}
                   />
@@ -102,14 +103,14 @@ export default function VnEndingsEditor({ endings, onChange }: Props) {
                     type="date"
                     value={e.seenAt ?? ''}
                     onChange={(ev) => patch(e.id, (x) => ({ ...x, seenAt: ev.target.value || undefined }))}
-                    title="Date you saw this ending"
+                    title={t('Date you saw this ending')}
                   />
                   <button
                     type="button"
                     className="vn-ending-remove"
                     onClick={() => remove(e.id)}
-                    title="Remove ending"
-                    aria-label="Remove ending"
+                    title={t('Remove ending')}
+                    aria-label={t('Remove ending')}
                   >✕</button>
                 </li>
               ))}

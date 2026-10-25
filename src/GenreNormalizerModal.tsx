@@ -9,6 +9,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item } from './types'
+import { plural, t } from './i18n'
 
 type Props = {
   items: Item[]
@@ -142,21 +143,18 @@ export default function GenreNormalizerModal({ items, onClose, onApply }: Props)
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel genre-normalizer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: '92vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Genre normalizer</h2>
+          <h2>{t('Genre normalizer')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           {remainingGroups.length === 0 ? (
             <p className="hint" style={{ margin: 0 }}>
-              No duplicate-looking genres detected. Your library's genre labels normalize to
-              unique slugs — nothing to merge.
+              {t('No duplicate-looking genres detected. Your library\'s genre labels normalize to unique slugs — nothing to merge.')}
             </p>
           ) : (
             <>
               <p className="hint" style={{ marginTop: 0 }}>
-                Detected {remainingGroups.length} group{remainingGroups.length === 1 ? '' : 's'} of genre labels that look like the same
-                concept spelled differently. Pick the canonical label per group and click <b>Merge</b>.
-                Only <code>genres[]</code> is touched — your <code>tags[]</code> stay as-is.
+                {plural(remainingGroups.length, 'Detected {n} group of genre labels that look like the same concept spelled differently. Pick the canonical label per group and click', 'Detected {n} groups of genre labels that look like the same concept spelled differently. Pick the canonical label per group and click')}{' '}<b>{t('Merge')}</b>{t('. Only')}{' '}<code>{t('genres[]')}</code>{' '}{t('is touched — your')}{' '}<code>{t('tags[]')}</code>{' '}{t('stay as-is.')}
               </p>
               <div className="genre-groups">
                 {remainingGroups.map((group) => {
@@ -168,7 +166,7 @@ export default function GenreNormalizerModal({ items, onClose, onApply }: Props)
                     <div key={group.slug} className="genre-group">
                       <div className="genre-group-header">
                         <span className="genre-group-meta">
-                          {selectedCount} of {group.variants.length} selected · {group.affectedItems} item{group.affectedItems === 1 ? '' : 's'} affected
+                          {plural(group.affectedItems, '{selectedCount} of {variants} selected · {n} item affected', '{selectedCount} of {variants} selected · {n} items affected', { selectedCount: selectedCount, variants: group.variants.length })}
                         </span>
                       </div>
                       <ul className="genre-variants">
@@ -188,7 +186,7 @@ export default function GenreNormalizerModal({ items, onClose, onApply }: Props)
                       </ul>
                       <div className="genre-group-actions">
                         <label className="genre-canonical-field">
-                          <span>Merge as</span>
+                          <span>{t('Merge as')}</span>
                           <input
                             type="text"
                             value={cur.canonical}
@@ -199,7 +197,7 @@ export default function GenreNormalizerModal({ items, onClose, onApply }: Props)
                             {group.variants.map((v) => <option key={v.label} value={v.label} />)}
                           </datalist>
                         </label>
-                        <button type="button" className="secondary-btn" disabled={!canMerge} onClick={() => mergeGroup(group)}>Merge</button>
+                        <button type="button" className="secondary-btn" disabled={!canMerge} onClick={() => mergeGroup(group)}>{t('Merge')}</button>
                       </div>
                     </div>
                   )
@@ -210,8 +208,8 @@ export default function GenreNormalizerModal({ items, onClose, onApply }: Props)
         </div>
         {remainingGroups.length > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Close</button>
-            <button type="button" className="primary-btn" onClick={mergeAll}>Merge all groups</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Close')}</button>
+            <button type="button" className="primary-btn" onClick={mergeAll}>{t('Merge all groups')}</button>
           </div>
         )}
       </div>

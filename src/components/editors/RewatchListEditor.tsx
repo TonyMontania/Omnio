@@ -8,6 +8,7 @@
 import { useState } from 'react'
 import type { RewatchEntry, RewatchKind } from '../../types'
 import { StarRatingInput } from '../../StarRating'
+import { t } from '../../i18n'
 
 // The verbs shown in the picker adapt to the surrounding category so
 // "Finished reading" reads naturally in Books and "Finished watching"
@@ -23,11 +24,11 @@ export interface RewatchLabels {
 const KIND_ORDER: RewatchKind[] = ['rewatch', 'started', 'finished', 'dropped', 'note']
 
 const DEFAULT_LABELS: Required<RewatchLabels> = {
-  rewatch: 'Rewatched',
-  started: 'Started',
-  finished: 'Finished',
-  dropped: 'Dropped',
-  note: 'Note',
+  rewatch: t('Rewatched'),
+  started: t('Started'),
+  finished: t('Finished'),
+  dropped: t('Dropped'),
+  note: t('Note'),
 }
 
 function ordinal(n: number): string {
@@ -90,20 +91,20 @@ export default function RewatchListEditor({
     <div className="track-editor">
       <div className="track-editor-row">
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <select className="rewatch-kind" value={kind} onChange={(e) => setKind(e.target.value as RewatchKind)} title="What kind of entry">
+        <select className="rewatch-kind" value={kind} onChange={(e) => setKind(e.target.value as RewatchKind)} title={t('What kind of entry')}>
           {KIND_ORDER.map((k) => <option key={k} value={k}>{verbFor(k)}</option>)}
         </select>
-        <input className="track-name" placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        <button type="button" onClick={handleAdd}>Add entry</button>
+        <input className="track-name" placeholder={t('Notes (optional)')} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <button type="button" onClick={handleAdd}>{t('Add entry')}</button>
       </div>
       {sorted.length > 0 && (
         <table className="track-table">
           <thead>
             <tr>
-              <th className="col-num">Date</th>
-              <th>Kind</th>
-              <th className="col-rating">Rating</th>
-              <th className="col-title">Notes</th>
+              <th className="col-num">{t('Date')}</th>
+              <th>{t('Kind')}</th>
+              <th className="col-rating">{t('Rating')}</th>
+              <th className="col-title">{t('Notes')}</th>
               <th />
               <th className="col-spacer"></th>
             </tr>
@@ -123,7 +124,7 @@ export default function RewatchListEditor({
                     >
                       {KIND_ORDER.map((k) => <option key={k} value={k}>{verbFor(k)}</option>)}
                     </select>
-                    {nth && <span className="rewatch-nth-chip"> · {ordinal(nth)} time</span>}
+                    {nth && <span className="rewatch-nth-chip">{' '}{t('· {nth} time', { nth: ordinal(nth) })}</span>}
                   </td>
                   <td className="col-rating"><StarRatingInput value={r.rating ?? 0} onChange={(v) => onRatingChange(r.id, v)} /></td>
                   <td className="col-title"><input className="track-artist-cell" value={r.notes ?? ''} onChange={(e) => onUpdate(r.id, { notes: e.target.value })} placeholder="—" /></td>

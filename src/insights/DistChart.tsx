@@ -1,10 +1,11 @@
 // Pie / bar chart for status distribution. Data comes from getDistribution().
 
 import type { DistSlice } from './stats'
+import { t } from '../i18n'
 
 export default function DistChart({ data, mode }: { data: DistSlice[]; mode: 'pie' | 'bar' }) {
   const total = data.reduce((a, d) => a + d.value, 0)
-  if (total === 0) return <p className="hint">No data yet.</p>
+  if (total === 0) return <p className="hint">{t('No data yet.')}</p>
 
   if (mode === 'bar') {
     return (

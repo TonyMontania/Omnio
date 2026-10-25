@@ -4,6 +4,7 @@
 import type { Item, Track } from './types'
 import { FetcherModal, type FetcherResult } from './components/FetcherModal'
 import { assetBasename, downloadImageAsset } from './utils/files'
+import { t } from './i18n'
 
 interface Props {
   initialQuery: string
@@ -90,7 +91,7 @@ const THUMB_FETCH_LIMIT = 8
 export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) {
   const search = async (q: string): Promise<FetcherResult<SearchHit>> => {
     const r = await window.ipcRenderer.invoke('vgmdb:search', q)
-    if (!r?.ok) return { ok: false, error: r?.error ?? 'Search failed (vgmdb.info may be down)' }
+    if (!r?.ok) return { ok: false, error: r?.error ?? t('Search failed (vgmdb.info may be down)') }
     const hits = r.data as SearchHit[]
     await Promise.all(
       hits.slice(0, THUMB_FETCH_LIMIT).map(async (h) => {
@@ -171,27 +172,23 @@ export default function VgmdbFetcher({ initialQuery, onApply, onClose }: Props) 
 
   return (
     <FetcherModal<SearchHit>
-      title="VGMdb · Game & anime soundtracks"
+      title={t('VGMdb · Game & anime soundtracks')}
       hint={
-        <>Video-game music database. No API key — routed through the community
-        <code> vgmdb.info </code> JSON proxy. Applying overwrites title, artist
-        (performers or composers), alternative titles, full release date, label,
-        distributor, genres, producers (falling back to composers when VGMdb
-        doesn't split the role), cover and tracklist; sets type to <em>OST</em>
-        and source to <em>Soundtrack</em>. Best fit for game/anime OSTs and
-        Japanese physical releases.</>
+        <>{t('Video-game music database. No API key — routed through the community')}
+        <code> vgmdb.info </code>{' '}{t('JSON proxy. Applying overwrites title, artist (performers or composers), alternative titles, full release date, label, distributor, genres, producers (falling back to composers when VGMdb doesn\'t split the role), cover and tracklist; sets type to')}{' '}<em>{t('OST')}</em>
+        {t('and source to')}{' '}<em>{t('Soundtrack')}</em>{t('. Best fit for game/anime OSTs and Japanese physical releases.')}</>
       }
-      placeholder="Search album, e.g. 'nier automata ost'…"
+      placeholder={t('Search album, e.g. \'nier automata ost\'…')}
       initialQuery={initialQuery}
       onSearch={search}
       onApply={apply}
       onClose={onClose}
       renderHit={(hit) => {
-        const t = displayName(hit.titles)
+        const name = displayName(hit.titles)
         const y = (hit.release_date ?? '').slice(0, 4)
         return {
           key: hit.link,
-          title: t || '(untitled)',
+          title: name || t('(untitled)'),
           sub: [y, hit.media_format, hit.catalog].filter(Boolean).join(' · '),
           thumbUrl: hit.picture_small,
         }

@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Item } from './types'
 import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
+import { t } from './i18n'
 
 interface Props {
   open: boolean
@@ -23,9 +24,9 @@ interface Props {
 // the game/book/anime portrait aspect ratio; music covers overflow
 // slightly but crop cleanly at that ratio too.
 const PRESETS = [
-  { key: 'sm', label: 'Small (1080p)', width: 1920, cols: 12 },
-  { key: 'md', label: 'Medium (2K)', width: 2560, cols: 14 },
-  { key: 'lg', label: 'Large (4K)', width: 3840, cols: 16 },
+  { key: 'sm', label: t('Small (1080p)'), width: 1920, cols: 12 },
+  { key: 'md', label: t('Medium (2K)'), width: 2560, cols: 14 },
+  { key: 'lg', label: t('Large (4K)'), width: 3840, cols: 16 },
 ] as const
 
 export default function CoverWallExporter({ open, items, enabledCategories, onClose }: Props) {
@@ -37,7 +38,7 @@ export default function CoverWallExporter({ open, items, enabledCategories, onCl
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [bg, setBg] = useState('#0a0a0a')
   const [showTitle, setShowTitle] = useState(true)
-  const [title, setTitle] = useState('My Omnio wall')
+  const [title, setTitle] = useState(t('My Omnio wall'))
 
   // First render populates the category filter with everything the
   // user has enabled. `open` reset keeps this fresh across sessions.
@@ -166,15 +167,15 @@ export default function CoverWallExporter({ open, items, enabledCategories, onCl
       <div className="modal-panel cover-wall-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <h2>Cover wall export</h2>
-            <p className="modal-subtitle">Compose every cover in your library into a single sharable PNG.</p>
+            <h2>{t('Cover wall export')}</h2>
+            <p className="modal-subtitle">{t('Compose every cover in your library into a single sharable PNG.')}</p>
           </div>
-          <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
+          <button className="modal-close" onClick={onClose} aria-label={t('Close')}>×</button>
         </div>
         <div className="modal-body cover-wall-body">
           <div className="cover-wall-form">
             <div className="cover-wall-row">
-              <label className="cover-wall-label">Resolution</label>
+              <label className="cover-wall-label">{t('Resolution')}</label>
               <div className="pills">
                 {PRESETS.map((p) => (
                   <button key={p.key} type="button" className={preset === p.key ? 'pill active' : 'pill'} onClick={() => setPreset(p.key)}>{p.label}</button>
@@ -183,7 +184,7 @@ export default function CoverWallExporter({ open, items, enabledCategories, onCl
             </div>
 
             <div className="cover-wall-row">
-              <label className="cover-wall-label">Include categories</label>
+              <label className="cover-wall-label">{t('Include categories')}</label>
               <div className="pills">
                 {CATEGORIES.map((c) => {
                   const count = items.filter((i) => i.categoryId === c.id && i.cover).length
@@ -206,11 +207,11 @@ export default function CoverWallExporter({ open, items, enabledCategories, onCl
 
             <div className="cover-wall-grid">
               <div className="cover-wall-row">
-                <label className="cover-wall-label">Title on the wall</label>
+                <label className="cover-wall-label">{t('Title on the wall')}</label>
                 <div className="cover-wall-title-row">
                   <label className="cover-wall-check">
                     <input type="checkbox" checked={showTitle} onChange={(e) => setShowTitle(e.target.checked)} />
-                    <span>Show title</span>
+                    <span>{t('Show title')}</span>
                   </label>
                   <input
                     type="text"
@@ -218,13 +219,13 @@ export default function CoverWallExporter({ open, items, enabledCategories, onCl
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     disabled={!showTitle}
-                    placeholder="My Omnio wall"
+                    placeholder={t('My Omnio wall')}
                   />
                 </div>
               </div>
 
               <div className="cover-wall-row">
-                <label className="cover-wall-label">Background</label>
+                <label className="cover-wall-label">{t('Background')}</label>
                 <div className="cover-wall-color-row">
                   <input type="color" value={bg} onChange={(e) => setBg(e.target.value)} />
                   <span className="cover-wall-color-hex">{bg.toUpperCase()}</span>
@@ -233,20 +234,20 @@ export default function CoverWallExporter({ open, items, enabledCategories, onCl
             </div>
 
             <div className="cover-wall-summary">
-              <b>{filteredItems.length}</b> covers · target <b>{activePreset.width}px</b> wide · ~<b>{Math.ceil(filteredItems.length / activePreset.cols) || 0}</b> rows
+              <b>{filteredItems.length}</b>{' '}{t('covers · target')}{' '}<b>{t('{width}px', { width: activePreset.width })}</b>{' '}{t('wide · ~')}<b>{Math.ceil(filteredItems.length / activePreset.cols) || 0}</b> rows
             </div>
           </div>
 
           {previewUrl && (
             <div className="cover-wall-preview">
-              <img src={previewUrl} alt="Preview of the composed cover wall" />
+              <img src={previewUrl} alt={t('Preview of the composed cover wall')} />
             </div>
           )}
 
           <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
         <div className="modal-footer cover-wall-footer">
-          <button type="button" className="secondary-btn" onClick={onClose}>Close</button>
+          <button type="button" className="secondary-btn" onClick={onClose}>{t('Close')}</button>
           <div className="cover-wall-footer-actions">
             <button
               type="button"
@@ -255,11 +256,11 @@ export default function CoverWallExporter({ open, items, enabledCategories, onCl
               disabled={rendering || filteredItems.length === 0}
             >
               {rendering
-                ? `Rendering… ${progress ? `${progress.done}/${progress.total}` : ''}`
-                : (previewUrl ? 'Re-render' : 'Render wall')}
+                ? t('Rendering… {value}', { value: progress ? t('{done}/{total}', { done: progress.done, total: progress.total }) : '' })
+                : (previewUrl ? t('Re-render') : t('Render wall'))}
             </button>
             {previewUrl && (
-              <button type="button" className="add-btn" onClick={download}>Download PNG</button>
+              <button type="button" className="add-btn" onClick={download}>{t('Download PNG')}</button>
             )}
           </div>
         </div>

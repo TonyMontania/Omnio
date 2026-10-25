@@ -2,6 +2,7 @@
 // grid; `wide` spans both columns for long values.
 
 import { useRef, useState, type ReactNode } from 'react'
+import { t } from '../../i18n'
 
 export function Field({ label, wide, hint, children }: { label: string; wide?: boolean; hint?: string; children: ReactNode }) {
   return (
@@ -71,9 +72,9 @@ export function ImageSlot({ label, src, shape = 'wide', onFile, onRemove, extra 
           const file = e.dataTransfer.files?.[0]
           if (file && file.type.startsWith('image/')) onFile(file)
         }}
-        title={src ? `Replace ${label.toLowerCase()}` : `Add ${label.toLowerCase()}`}
+        title={src ? t('Replace {label}', { label: label.toLowerCase() }) : t('Add {label}', { label: label.toLowerCase() })}
       >
-        {src ? <img src={src} alt="" /> : <span>Drop an image or click to choose</span>}
+        {src ? <img src={src} alt="" /> : <span>{t('Drop an image or click to choose')}</span>}
       </button>
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => {
         const file = e.target.files?.[0]
@@ -82,7 +83,7 @@ export function ImageSlot({ label, src, shape = 'wide', onFile, onRemove, extra 
       }} />
       <div className="es-image-actions">
         {extra}
-        {src && onRemove && <button type="button" className="es-btn small danger" onClick={onRemove}>Remove</button>}
+        {src && onRemove && <button type="button" className="es-btn small danger" onClick={onRemove}>{t('Remove')}</button>}
       </div>
     </div>
   )
@@ -111,7 +112,7 @@ export function ImportBox({ value, onChange, onImport, busy, status, placeholder
       <div className="es-import-row">
         <span className="es-import-status">{status}</span>
         <button type="button" className="es-btn primary" onClick={onImport} disabled={busy || !value.trim()}>
-          {busy ? 'Importing…' : 'Import'}
+          {busy ? t('Importing…') : t('Import')}
         </button>
       </div>
     </div>
@@ -130,10 +131,10 @@ export function DetailPreview({ banner, title, subtitle, chips, facts, descripti
   const shown = (facts ?? []).filter(([, v]) => !!v)
   return (
     <div className="es-detail">
-      <div className="es-detail-banner">{banner ? <img src={banner} alt="" /> : <span>No cover</span>}</div>
+      <div className="es-detail-banner">{banner ? <img src={banner} alt="" /> : <span>{t('No cover')}</span>}</div>
       <div className="es-detail-body">
         {chips && chips.length > 0 && <div className="es-detail-chips">{chips.map((c) => <span key={c}>{c}</span>)}</div>}
-        <div className="es-detail-title">{title || 'Untitled'}</div>
+        <div className="es-detail-title">{title || t('Untitled')}</div>
         {subtitle && <div className="es-detail-sub">{subtitle}</div>}
         {shown.length > 0 && (
           <dl className="es-detail-facts">
@@ -177,11 +178,11 @@ export function ImportReview({ cover, title, meta, fields, status }: {
   return (
     <>
       <div className="es-review">
-        <div className="es-review-cover">{cover ? <img src={cover} alt="" /> : <span>No cover</span>}</div>
+        <div className="es-review-cover">{cover ? <img src={cover} alt="" /> : <span>{t('No cover')}</span>}</div>
         <div className="es-review-info">
-          <div className="es-review-title">{title || 'Untitled'}</div>
+          <div className="es-review-title">{title || t('Untitled')}</div>
           {meta && <div className="es-review-meta">{meta}</div>}
-          <div className="es-review-count">{filled} of {fields.length} fields filled</div>
+          <div className="es-review-count">{t('{filled} of {fields} fields filled', { filled: filled, fields: fields.length })}</div>
         </div>
       </div>
       <div className="es-review-fields">

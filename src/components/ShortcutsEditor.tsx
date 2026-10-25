@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { KEYBOARD_ACTIONS, formatCombo } from '../utils/keyboardActions'
+import { t } from '../i18n'
 
 interface Props {
   overrides: Record<string, string>
@@ -52,11 +53,9 @@ export default function ShortcutsEditor({ overrides, onChange }: Props) {
     <div className="shortcuts-editor" ref={rowRef}>
       <div className="shortcuts-editor-head">
         <p className="hint" style={{ margin: 0, flex: 1 }}>
-          Click <b>Record</b> and press a keystroke to rebind an action.
-          Press <kbd>Esc</kbd> to cancel a recording. Empty binding = the
-          action is disabled entirely.
+          {t('Click')}{' '}<b>{t('Record')}</b>{' '}{t('and press a keystroke to rebind an action. Press')}{' '}<kbd>{t('Esc')}</kbd>{' '}{t('to cancel a recording. Empty binding = the action is disabled entirely.')}
         </p>
-        <button type="button" className="secondary-btn" onClick={resetAll}>Reset all to defaults</button>
+        <button type="button" className="secondary-btn" onClick={resetAll}>{t('Reset all to defaults')}</button>
       </div>
       <ul className="shortcuts-editor-list">
         {KEYBOARD_ACTIONS.map((action) => {
@@ -72,9 +71,9 @@ export default function ShortcutsEditor({ overrides, onChange }: Props) {
               </div>
               <div className="shortcut-row-combo">
                 {isRecording
-                  ? <span className="shortcut-recording">Press a key…</span>
+                  ? <span className="shortcut-recording">{t('Press a key…')}</span>
                   : disabled
-                    ? <span className="shortcut-disabled">Disabled</span>
+                    ? <span className="shortcut-disabled">{t('Disabled')}</span>
                     : <kbd className={overridden ? 'shortcut-kbd overridden' : 'shortcut-kbd'}>{bound}</kbd>}
               </div>
               <div className="shortcut-row-actions">
@@ -82,9 +81,9 @@ export default function ShortcutsEditor({ overrides, onChange }: Props) {
                   type="button"
                   className={isRecording ? 'pill active' : 'pill'}
                   onClick={() => setRecordingId(isRecording ? null : action.id)}
-                >{isRecording ? 'Cancel' : 'Record'}</button>
-                <button type="button" className="pill" onClick={() => disable(action.id)} disabled={disabled}>Disable</button>
-                <button type="button" className="pill" onClick={() => reset(action.id)} disabled={!overridden}>Reset</button>
+                >{isRecording ? t('Cancel') : t('Record')}</button>
+                <button type="button" className="pill" onClick={() => disable(action.id)} disabled={disabled}>{t('Disable')}</button>
+                <button type="button" className="pill" onClick={() => reset(action.id)} disabled={!overridden}>{t('Reset')}</button>
               </div>
             </li>
           )

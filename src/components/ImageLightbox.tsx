@@ -5,6 +5,7 @@
 
 import { useEffect, useCallback } from 'react'
 import { assetSrc } from '../types'
+import { t } from '../i18n'
 
 type Props = {
   images: { src: string; caption?: string; label?: string }[]
@@ -34,7 +35,7 @@ export default function ImageLightbox({ images, index, onIndex, onClose }: Props
   return (
     <div className="lightbox-overlay" onClick={onClose}>
       {images.length > 1 && (
-        <button type="button" className="lightbox-nav prev" onClick={(e) => { e.stopPropagation(); prev() }} title="Previous (←)">‹</button>
+        <button type="button" className="lightbox-nav prev" onClick={(e) => { e.stopPropagation(); prev() }} title={t('Previous (←)')}>‹</button>
       )}
       <figure className="lightbox-figure" onClick={(e) => e.stopPropagation()}>
         <img src={resolved} alt={cur.caption ?? cur.label ?? ''} />
@@ -47,9 +48,9 @@ export default function ImageLightbox({ images, index, onIndex, onClose }: Props
         )}
       </figure>
       {images.length > 1 && (
-        <button type="button" className="lightbox-nav next" onClick={(e) => { e.stopPropagation(); next() }} title="Next (→)">›</button>
+        <button type="button" className="lightbox-nav next" onClick={(e) => { e.stopPropagation(); next() }} title={t('Next (→)')}>›</button>
       )}
-      <button type="button" className="lightbox-close" onClick={onClose} title="Close (Esc)">✕</button>
+      <button type="button" className="lightbox-close" onClick={onClose} title={t('Close (Esc)')}>✕</button>
     </div>
   )
 }

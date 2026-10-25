@@ -8,6 +8,7 @@
 
 import type { Item, MusicArtist } from '../types'
 import { GAME_STATUS_OPTIONS, MANGA_STATUS_OPTIONS } from '../types'
+import { locale, t } from '../i18n'
 
 // ---- Playtime formatting ----
 
@@ -33,14 +34,14 @@ export function getCategoryStats(categoryId: string, list: Item[]): { label: str
   const ratedItems = list.filter((i) => i.rating)
   const avgRating = ratedItems.length ? (ratedItems.reduce((a, i) => a + (i.rating || 0), 0) / ratedItems.length).toFixed(1) : null
 
-  const base: { label: string; value: string }[] = [{ label: 'Total in library', value: String(list.length) }]
+  const base: { label: string; value: string }[] = [{ label: t('Total in library'), value: String(list.length) }]
 
   if (categoryId === 'videojuegos') {
     const totalMin = list.reduce((acc, i) => acc + parsePlayTime(i.playTime), 0)
     const completed = list.filter((i) => i.gameStatus === 'completed').length
     const pct = list.length ? Math.round((completed / list.length) * 100) : 0
-    base.push({ label: 'Hours played', value: formatMinutes(totalMin) })
-    base.push({ label: 'Completed', value: `${pct}%` })
+    base.push({ label: t('Hours played'), value: formatMinutes(totalMin) })
+    base.push({ label: t('Completed'), value: `${pct}%` })
   } else if (categoryId === 'peliculas') {
     const watchedMin = list.reduce((acc, i) => {
       if (!i.consumed) return acc
@@ -50,8 +51,8 @@ export function getCategoryStats(categoryId: string, list: Item[]): { label: str
       const totalTimes = Math.max(times, 1 + rewatches)
       return acc + dur * totalTimes
     }, 0)
-    base.push({ label: 'Watch time', value: formatMinutes(watchedMin) })
-    base.push({ label: 'Watched', value: String(list.filter((i) => i.consumed).length) })
+    base.push({ label: t('Watch time'), value: formatMinutes(watchedMin) })
+    base.push({ label: t('Watched'), value: String(list.filter((i) => i.consumed).length) })
   } else if (categoryId === 'series') {
     const epsWatched = list.reduce((acc, i) => acc + parseInt(i.episodesWatched || '0', 10), 0)
     const totalMin = list.reduce((acc, i) => acc + (parseInt(i.episodesWatched || '0', 10) * parseInt(i.episodeDuration || '0', 10)), 0)
@@ -61,18 +62,18 @@ export function getCategoryStats(categoryId: string, list: Item[]): { label: str
     }, 0)
     const completed = list.filter((i) => i.seriesStatus === 'completed').length
     const pct = list.length ? Math.round((completed / list.length) * 100) : 0
-    base.push({ label: 'Episodes watched', value: String(epsWatched) })
-    if (totalMin > 0) base.push({ label: 'Total watch time', value: formatMinutes(totalMin) })
-    base.push({ label: 'Seasons watched', value: String(seasonsWatched) })
-    base.push({ label: 'Completed', value: `${pct}%` })
+    base.push({ label: t('Episodes watched'), value: String(epsWatched) })
+    if (totalMin > 0) base.push({ label: t('Total watch time'), value: formatMinutes(totalMin) })
+    base.push({ label: t('Seasons watched'), value: String(seasonsWatched) })
+    base.push({ label: t('Completed'), value: `${pct}%` })
   } else if (categoryId === 'anime' || categoryId === 'donghua') {
     const epsWatched = list.reduce((acc, i) => acc + parseInt(i.episodesWatched || '0', 10), 0)
     const totalMin = list.reduce((acc, i) => acc + (parseInt(i.episodesWatched || '0', 10) * parseInt(i.episodeDuration || '0', 10)), 0)
     const completed = list.filter((i) => i.watchStatus === 'completed').length
     const pct = list.length ? Math.round((completed / list.length) * 100) : 0
-    base.push({ label: 'Episodes watched', value: String(epsWatched) })
-    if (totalMin > 0) base.push({ label: 'Total watch time', value: formatMinutes(totalMin) })
-    base.push({ label: 'Completed', value: `${pct}%` })
+    base.push({ label: t('Episodes watched'), value: String(epsWatched) })
+    if (totalMin > 0) base.push({ label: t('Total watch time'), value: formatMinutes(totalMin) })
+    base.push({ label: t('Completed'), value: `${pct}%` })
   } else if (categoryId === 'manga' || categoryId === 'manhwa' || categoryId === 'manhua' || categoryId === 'comics_west') {
     const totalChaptersRead = list.reduce((acc, i) => {
       if (i.hasChapters && i.chapters) return acc + i.chapters.filter((c) => c.read).length
@@ -81,15 +82,15 @@ export function getCategoryStats(categoryId: string, list: Item[]): { label: str
     const totalVolumesRead = list.reduce((acc, i) => acc + parseInt(i.volumesRead || '0', 10), 0)
     const completed = list.filter((i) => i.mangaStatus === 'completed').length
     const pct = list.length ? Math.round((completed / list.length) * 100) : 0
-    base.push({ label: 'Chapters read', value: String(totalChaptersRead) })
-    if (totalVolumesRead > 0) base.push({ label: 'Volumes read', value: String(totalVolumesRead) })
-    base.push({ label: 'Completed', value: `${pct}%` })
+    base.push({ label: t('Chapters read'), value: String(totalChaptersRead) })
+    if (totalVolumesRead > 0) base.push({ label: t('Volumes read'), value: String(totalVolumesRead) })
+    base.push({ label: t('Completed'), value: `${pct}%` })
   } else if (categoryId === 'musica') {
-    base.push({ label: 'Listened', value: String(list.filter((i) => i.consumed).length) })
+    base.push({ label: t('Listened'), value: String(list.filter((i) => i.consumed).length) })
   }
 
-  if (avgRating) base.push({ label: 'Average rating', value: `★ ${avgRating}` })
-  base.push({ label: `Completed in ${currentYear}`, value: String(finishedThisYear) })
+  if (avgRating) base.push({ label: t('Average rating'), value: `★ ${avgRating}` })
+  base.push({ label: t('Completed in {currentYear}', { currentYear: currentYear }), value: String(finishedThisYear) })
 
   return base
 }
@@ -192,8 +193,8 @@ export function getDistribution(categoryId: string, list: Item[]): DistSlice[] {
   if (categoryId === 'peliculas' || categoryId === 'musica') {
     const done = list.filter((i) => i.consumed).length
     return [
-      { label: categoryId === 'musica' ? 'Listened' : 'Watched', value: done, color: 'var(--status-completed)' },
-      { label: categoryId === 'musica' ? 'Not listened' : 'Not watched', value: list.length - done, color: 'var(--status-backlog)' },
+      { label: categoryId === 'musica' ? t('Listened') : t('Watched'), value: done, color: 'var(--status-completed)' },
+      { label: categoryId === 'musica' ? t('Not listened') : t('Not watched'), value: list.length - done, color: 'var(--status-backlog)' },
     ]
   }
   if (categoryId === 'manga' || categoryId === 'manhwa' || categoryId === 'manhua' || categoryId === 'comics_west') {
@@ -207,9 +208,9 @@ export function getDistribution(categoryId: string, list: Item[]): DistSlice[] {
   const partial = list.filter((i) => i.units && i.units.some((u) => u.watched) && !i.units.every((u) => u.watched)).length
   const none = list.length - full - partial
   return [
-    { label: 'Completed', value: full, color: 'var(--status-completed)' },
-    { label: 'In progress', value: partial, color: 'var(--status-playing)' },
-    { label: 'Not started', value: none, color: 'var(--status-backlog)' },
+    { label: t('Completed'), value: full, color: 'var(--status-completed)' },
+    { label: t('In progress'), value: partial, color: 'var(--status-playing)' },
+    { label: t('Not started'), value: none, color: 'var(--status-backlog)' },
   ]
 }
 
@@ -289,7 +290,7 @@ export function getTimeInvested(categoryId: string, list: Item[]): TimeInvested 
 
 export function formatHours(minutes: number): string {
   const hours = minutes / 60
-  if (hours >= 100) return `${Math.round(hours).toLocaleString()}h`
+  if (hours >= 100) return `${Math.round(hours).toLocaleString(locale())}h`
   if (hours >= 1) return `${hours.toFixed(1).replace(/\.0$/, '')}h`
   return `${minutes}m`
 }

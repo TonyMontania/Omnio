@@ -1,5 +1,5 @@
 import type { DragEvent } from 'react'
-import { getGameStatus, getCategoryLine, getMusicTypeLabel, getMangaStatus, isMangaLike, getAnimeStatus, getSeriesStatus, getBookStatus, renderMiniMarkdown, assetSrc, DEFAULT_GAME_FIELDS, DEFAULT_MUSIC_FIELDS, DEFAULT_MANGA_FIELDS, DEFAULT_MOVIE_FIELDS, DEFAULT_ANIME_FIELDS, DEFAULT_SERIES_FIELDS, DEFAULT_BOOK_FIELDS, DEFAULT_VN_FIELDS, VN_STATUS_OPTIONS, VN_LENGTH_OPTIONS } from './types'
+import { getGameStatus, getCategoryLine, getMusicTypeLabel, getMangaStatus, isMangaLike, getAnimeStatus, getSeriesStatus, getBookStatus, renderMiniMarkdown, assetSrc, DEFAULT_GAME_FIELDS, DEFAULT_MUSIC_FIELDS, DEFAULT_MANGA_FIELDS, DEFAULT_MOVIE_FIELDS, DEFAULT_ANIME_FIELDS, DEFAULT_SERIES_FIELDS, DEFAULT_BOOK_FIELDS, DEFAULT_VN_FIELDS, VN_STATUS_OPTIONS, VN_LENGTH_OPTIONS, WEEKDAY_OPTIONS } from './types'
 import { useLongPress } from './utils/useLongPress'
 import type { AnyItem, GameField, MusicField, MangaField, MovieField, AnimeField, SeriesField, BookField, VnField } from './types'
 import { getUniversalStatusValue, statusTone } from './utils/statusUniversal'
@@ -8,6 +8,7 @@ import { displayLibraryCustomValue } from './types/customFields'
 import { OMNIO_ITEM_DRAG_TYPE } from './Sidebar'
 import { airingWeekday, isCurrentlyAiring } from './utils/airing'
 import { formatCountdown } from './utils/anilist'
+import { locale, t } from './i18n'
 
 interface Props {
   item: AnyItem
@@ -96,7 +97,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
 
   // One line under the title: status dot + label, then details, then rating.
   const statusLabel = gs?.label ?? ms?.label ?? as?.label ?? ss?.label ?? bs?.label ?? vns?.label
-    ?? (showMovieStatus ? (item.consumed ? 'Watched' : 'Not watched') : null)
+    ?? (showMovieStatus ? (item.consumed ? t('Watched') : t('Not watched')) : null)
   const tone = statusLabel ? statusTone(getUniversalStatusValue(item)) : null
   const musicYearType = isMusic
     ? [mf!.releaseYear ? musicYear : '', mf!.type && item.musicType ? getMusicTypeLabel(item.musicType) : ''].filter(Boolean).join(' · ')
@@ -176,7 +177,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
           if (!p) return null
           const pct = Math.min(100, Math.max(0, (p[0] / p[1]) * 100))
           return (
-            <div className="card-progress" title={`${p[0]} / ${p[1]}`}>
+            <div className="card-progress" title={t('{p} / {p2}', { p: p[0], p2: p[1] })}>
               <div className="card-progress-fill" style={{ width: `${pct}%` }} />
             </div>
           )
@@ -199,22 +200,23 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
         {(isAnime || isSeries) && isCurrentlyAiring(item) && (() => {
           const day = airingWeekday(item)
           const next = item.nextAiring && item.nextAiring.airingAt * 1000 > Date.now() ? item.nextAiring : null
+          const dayOption = day ? WEEKDAY_OPTIONS.find((o) => o.value === day) : undefined
           const title = next
-            ? `Episode ${next.episode} airs ${new Date(next.airingAt * 1000).toLocaleString(undefined, { weekday: 'long', hour: '2-digit', minute: '2-digit' })}`
-            : day ? `New episodes on ${day}` : 'Currently airing'
+            ? t('Episode {episode} airs {when}', { episode: next.episode, when: new Date(next.airingAt * 1000).toLocaleString(locale(), { weekday: 'long', hour: '2-digit', minute: '2-digit' }) })
+            : dayOption ? t('New episodes on {day}', { day: dayOption.label }) : t('Currently airing')
           return (
             <p className="airing-chip" title={title}>
               <span className="airing-dot" aria-hidden />
-              {next ? `Ep ${next.episode} · ${formatCountdown(next.airingAt)}` : day ? `Airs ${day.slice(0, 3)}` : 'Airing'}
+              {next ? t('Ep {episode} · {airingAt}', { episode: next.episode, airingAt: formatCountdown(next.airingAt) }) : dayOption ? t('Airs {day}', { day: dayOption.short }) : t('Airing')}
             </p>
           )
         })()}
         {isGame && gf!.deckCompat && item.deckCompat && item.deckCompat !== 'unknown' && (
           <p
             className={`deck-chip deck-${item.deckCompat}`}
-            title={`Steam Deck: ${item.deckCompat}`}
+            title={t('Steam Deck: {deckCompat}', { deckCompat: item.deckCompat })}
           >
-            <span aria-hidden style={{ fontSize: 10 }}>◆</span> Deck: {item.deckCompat}
+            <span aria-hidden style={{ fontSize: 10 }}>◆</span>{' '}{t('Deck: {deckCompat}', { deckCompat: item.deckCompat })}
           </p>
         )}
         {isMovie && (() => {
@@ -222,11 +224,11 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
           const logged = item.viewings?.length ?? 0
           const total = Number.isFinite(explicit) ? Math.max(explicit, logged) : logged
           if (total <= 1) return null
-          return <p className="movie-times-chip" title={`${total} viewings`}>× {total} watched</p>
+          return <p className="movie-times-chip" title={t('{total} viewings', { total: total })}>{t('× {total} watched', { total: total })}</p>
         })()}
         {isManga && item.bookmarkChapter && (
-          <p className="manga-bookmark-chip" title={item.bookmarkNote || `Bookmark at ${item.bookmarkChapter}`}>
-            ⌘ Ch. {item.bookmarkChapter}
+          <p className="manga-bookmark-chip" title={item.bookmarkNote || t('Bookmark at {bookmarkChapter}', { bookmarkChapter: item.bookmarkChapter })}>
+            {t('⌘ Ch. {bookmarkChapter}', { bookmarkChapter: item.bookmarkChapter })}
           </p>
         )}
 
@@ -246,7 +248,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
               const v = item.libraryCustomFieldValues?.[def.id]
               if (v == null || v === '') return null
               return (
-                <span key={def.id} className="card-custom-field" title={`${def.name}: ${displayLibraryCustomValue(def, v)}`}>
+                <span key={def.id} className="card-custom-field" title={t('{name}: {def}', { name: def.name, def: displayLibraryCustomValue(def, v) })}>
                   <span className="card-custom-field-key">{def.name}</span>
                   <span className="card-custom-field-val">{displayLibraryCustomValue(def, v)}</span>
                 </span>
@@ -259,7 +261,7 @@ export default function ItemCard({ item, layout, onOpen, onDelete, onToggleFavor
         <button
           type="button"
           className={item.favorite ? 'card-fav on' : 'card-fav'}
-          title={item.favorite ? 'Favorited (click to remove)' : 'Mark as favorite'}
+          title={item.favorite ? t('Favorited (click to remove)') : t('Mark as favorite')}
           onClick={(e) => { e.stopPropagation(); onToggleFavorite(item) }}
         >★</button>
       )}

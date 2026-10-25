@@ -5,6 +5,7 @@
 // See src-tauri/src/handlers/data.rs: data:list-backups / data:restore-backup.
 
 import { useEffect, useState } from 'react'
+import { t } from './i18n'
 
 interface Snapshot {
   file: string      // 'snapshot-1' … 'snapshot-5'
@@ -23,14 +24,14 @@ function labelFor(file: string): string {
   const m = /snapshot-(\d)/.exec(file)
   if (!m) return file
   const n = parseInt(m[1], 10)
-  return `Snapshot ${n}`
+  return t('Snapshot {n2}', { n2: n })
 }
 
 function formatWhen(ms: number): string {
   const diff = Date.now() - ms
   const min = Math.floor(diff / 60000)
   if (min < 1) return 'just now'
-  if (min < 60) return `${min} min ago`
+  if (min < 60) return t('{min} min ago', { min: min })
   const hr = Math.floor(min / 60)
   if (hr < 24) return `${hr}h ago`
   const day = Math.floor(hr / 24)
@@ -54,13 +55,12 @@ export default function BackupList({ onRestore }: { onRestore: (file: string) =>
   return (
     <div className="backup-list">
       <p className="hint" style={{ marginTop: 0 }}>
-        Omnio keeps the last 5 saves in <code>data/backups/</code>, one directory per snapshot.
-        Restore any of them if something goes wrong — your current library gets moved to
-        <code> data.pre-restore/ </code> first, so nothing is ever destroyed.
+        {t('Omnio keeps the last 5 saves in')}{' '}<code>data/backups/</code>{t(', one directory per snapshot. Restore any of them if something goes wrong — your current library gets moved to')}
+        <code> data.pre-restore/ </code>{' '}{t('first, so nothing is ever destroyed.')}
       </p>
-      {loading && <p className="hint">Reading…</p>}
+      {loading && <p className="hint">{t('Reading…')}</p>}
       {!loading && snaps.length === 0 && (
-        <p className="hint">No snapshots yet — they appear after the next save.</p>
+        <p className="hint">{t('No snapshots yet — they appear after the next save.')}</p>
       )}
       {!loading && snaps.length > 0 && (
         <ul className="backup-list-items">
@@ -69,12 +69,12 @@ export default function BackupList({ onRestore }: { onRestore: (file: string) =>
               <span className="backup-file">{labelFor(s.file)}</span>
               <span className="backup-when">{formatWhen(s.mtime)}</span>
               <span className="backup-size">{formatSize(s.size)}</span>
-              <button type="button" className="secondary-btn small" onClick={() => onRestore(s.file)}>Restore</button>
+              <button type="button" className="secondary-btn small" onClick={() => onRestore(s.file)}>{t('Restore')}</button>
             </li>
           ))}
         </ul>
       )}
-      <button type="button" className="link-btn" onClick={refresh}>↻ Refresh</button>
+      <button type="button" className="link-btn" onClick={refresh}>{t('↻ Refresh')}</button>
     </div>
   )
 }

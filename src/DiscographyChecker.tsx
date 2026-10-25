@@ -8,6 +8,7 @@
 
 import { useMemo, useState } from 'react'
 import type { Item } from './types'
+import { plural, t } from './i18n'
 
 interface Props {
   items: Item[]
@@ -72,7 +73,7 @@ export default function DiscographyChecker({ items, onAddMissing, onClose }: Pro
       // search endpoint and returns whatever hits fit.
       const query = `artist:"${artist.trim().replace(/"/g, '')}" AND primarytype:album AND status:official`
       const res = await window.ipcRenderer.invoke('mb:search', query) as { ok: boolean; error?: string; result?: MbHit[] }
-      if (!res?.ok) { setError(res?.error || 'MusicBrainz request failed'); setBusy(false); return }
+      if (!res?.ok) { setError(res?.error || t('MusicBrainz request failed')); setBusy(false); return }
       const hits = res.result ?? []
       const filtered = hits
         .filter(isStudioAlbum)
@@ -119,38 +120,37 @@ export default function DiscographyChecker({ items, onAddMissing, onClose }: Pro
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 760, width: '94vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>Discography completion</h2>
+          <h2>{t('Discography completion')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <p className="hint" style={{ marginTop: 0 }}>
-            Enter an artist you already have in your library. We query MusicBrainz for their studio
-            discography (no compilations / live / soundtracks) and flag every album you don't have yet.
+            {t('Enter an artist you already have in your library. We query MusicBrainz for their studio discography (no compilations / live / soundtracks) and flag every album you don\'t have yet.')}
           </p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <input
               type="text"
-              placeholder="Artist name (exact match)"
+              placeholder={t('Artist name (exact match)')}
               value={artist}
               onChange={(e) => setArtist(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') search() }}
               style={{ flex: 1 }}
             />
             <button type="button" className="secondary-btn" onClick={search} disabled={busy || !artist.trim()}>
-              {busy ? 'Searching…' : 'Search'}
+              {busy ? t('Searching…') : t('Search')}
             </button>
           </div>
           {error && <p className="save-files-error">{error}</p>}
           {albums.length > 0 && (
             <>
               <div className="importer-summary">
-                <span>{albums.length} studio albums</span>
-                <span className="importer-new">{have.length} in your library</span>
-                <span className="importer-dupe">{missing.length} missing</span>
+                <span>{t('{albums} studio albums', { albums: albums.length })}</span>
+                <span className="importer-new">{t('{have} in your library', { have: have.length })}</span>
+                <span className="importer-dupe">{t('{missing} missing', { missing: missing.length })}</span>
               </div>
               <div className="importer-table-wrap">
                 <table className="importer-table">
-                  <thead><tr><th style={{ width: 32 }}></th><th>Album</th><th style={{ width: 70 }}>Year</th><th style={{ width: 110 }}>Status</th></tr></thead>
+                  <thead><tr><th style={{ width: 32 }}></th><th>{t('Album')}</th><th style={{ width: 70 }}>{t('Year')}</th><th style={{ width: 110 }}>{t('Status')}</th></tr></thead>
                   <tbody>
                     {albums.map((a) => {
                       const has = musicByKey.has(keyOf(a.title, artist))
@@ -161,7 +161,7 @@ export default function DiscographyChecker({ items, onAddMissing, onClose }: Pro
                           )}</td>
                           <td>{a.title}</td>
                           <td>{a.year ?? '—'}</td>
-                          <td>{has ? <span className="importer-badge dupe">You have it</span> : <span className="importer-badge new">Missing</span>}</td>
+                          <td>{has ? <span className="importer-badge dupe">{t('You have it')}</span> : <span className="importer-badge new">{t('Missing')}</span>}</td>
                         </tr>
                       )
                     })}
@@ -173,9 +173,9 @@ export default function DiscographyChecker({ items, onAddMissing, onClose }: Pro
         </div>
         {missing.length > 0 && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
             <button type="button" className="primary-btn" disabled={selected.size === 0} onClick={handleAdd}>
-              Add {selected.size} placeholder{selected.size === 1 ? '' : 's'}
+              {plural(selected.size, 'Add {n} placeholder', 'Add {n} placeholders')}
             </button>
           </div>
         )}

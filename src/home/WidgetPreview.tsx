@@ -3,6 +3,7 @@
 // from the theme via the .wp-* classes in home.css.
 
 import type { ReactElement } from 'react'
+import { t } from '../i18n'
 
 const W = 160
 const H = 90
@@ -56,7 +57,7 @@ const DRAWINGS: Record<string, () => ReactElement[]> = {
   }),
   'recently-added': () => coverRow(18, 5, 22, 32).concat([0, 1, 2].flatMap((i) => [
     accent(10 + i * 28, 14, 18, 8, 2),
-    <text key={k()} className="wp-on-accent wp-tiny" x={19 + i * 28} y={20} textAnchor="middle">NEW</text>,
+    <text key={k()} className="wp-on-accent wp-tiny" x={19 + i * 28} y={20} textAnchor="middle">{t('NEW')}</text>,
   ])).concat([line(12, 60, 60, true)]),
   pinned: () => coverRow(22, 5, 22, 32).concat([0, 1, 2, 3, 4].flatMap((i) => [
     <line key={k()} className="wp-accent-stroke" x1={23 + i * 28} y1={18} x2={23 + i * 28} y2={27} />,

@@ -3,6 +3,7 @@
 // tend to be paragraph-length); the rest is compact.
 
 import type { BookHighlight } from '../../types/entities'
+import { plural, t } from '../../i18n'
 
 interface Props {
   highlights: BookHighlight[]
@@ -26,37 +27,37 @@ export default function BookHighlightsEditor({ highlights, onChange }: Props) {
   return (
     <div className="field-group book-highlights">
       <div className="book-highlights-head">
-        <label>Highlights &amp; quotes</label>
+        <label>{t('Highlights & quotes')}</label>
         {highlights.length > 0 && (
           <span className="book-highlights-count">
-            {highlights.length} highlight{highlights.length === 1 ? '' : 's'}
+            {plural(highlights.length, '{n} highlight', '{n} highlights')}
           </span>
         )}
-        <button type="button" className="secondary-btn" onClick={add}>+ Add highlight</button>
+        <button type="button" className="secondary-btn" onClick={add}>{t('+ Add highlight')}</button>
       </div>
-      <p className="hint">Save passages worth remembering — a Kindle-style highlights list you can revisit without opening the book.</p>
+      <p className="hint">{t('Save passages worth remembering — a Kindle-style highlights list you can revisit without opening the book.')}</p>
 
       {highlights.length === 0 ? (
-        <p className="hint" style={{ opacity: 0.6 }}>No highlights yet.</p>
+        <p className="hint" style={{ opacity: 0.6 }}>{t('No highlights yet.')}</p>
       ) : (
         <ul className="book-highlights-list">
           {highlights.map((h) => (
             <li key={h.id} className="book-highlight">
               <div className="book-highlight-row">
-                <input placeholder="Page" value={h.page ?? ''} onChange={(e) => patch(h.id, (x) => ({ ...x, page: e.target.value || undefined }))} />
+                <input placeholder={t('Page')} value={h.page ?? ''} onChange={(e) => patch(h.id, (x) => ({ ...x, page: e.target.value || undefined }))} />
                 <input type="date" value={h.capturedAt ?? ''} onChange={(e) => patch(h.id, (x) => ({ ...x, capturedAt: e.target.value || undefined }))} />
-                <button type="button" className="book-highlight-remove" onClick={() => remove(h.id)} title="Remove highlight" aria-label="Remove highlight">✕</button>
+                <button type="button" className="book-highlight-remove" onClick={() => remove(h.id)} title={t('Remove highlight')} aria-label={t('Remove highlight')}>✕</button>
               </div>
               <textarea
                 className="book-highlight-text"
-                placeholder="The passage itself…"
+                placeholder={t('The passage itself…')}
                 rows={3}
                 value={h.text}
                 onChange={(e) => patch(h.id, (x) => ({ ...x, text: e.target.value }))}
               />
               <input
                 className="book-highlight-note"
-                placeholder="Optional note — why did this stand out?"
+                placeholder={t('Optional note — why did this stand out?')}
                 value={h.note ?? ''}
                 onChange={(e) => patch(h.id, (x) => ({ ...x, note: e.target.value || undefined }))}
               />

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { AnyItem } from '../../types'
 import { assetSrc } from '../../types'
 import CoverPlaceholder from '../CoverPlaceholder'
+import { t } from '../../i18n'
 
 export interface DetailTab {
   id: string
@@ -60,13 +61,13 @@ export default function DetailShell({ item, coverShape = 'poster', banner = item
       <header className="hero item-hero">
         <div className={`hero-stage${banner ? '' : ' no-banner'}`}>
           {backdrop && <img className="hero-bg" src={assetSrc(backdrop)} alt="" aria-hidden />}
-          {banner && <img className="hero-banner zoomable" src={assetSrc(banner)} alt="" data-zoom-label="Banner" />}
-          {item.logoImage && <img className="hero-logo zoomable" src={assetSrc(item.logoImage)} alt={item.title} data-zoom-label="Logo" />}
+          {banner && <img className="hero-banner zoomable" src={assetSrc(banner)} alt="" data-zoom-label={t('Banner')} />}
+          {item.logoImage && <img className="hero-logo zoomable" src={assetSrc(item.logoImage)} alt={item.title} data-zoom-label={t('Logo')} />}
         </div>
         <div className="hero-body">
           <div className={`hero-cover ${coverShape}`}>
             {item.cover
-              ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label="Cover" />
+              ? <img className="zoomable" src={assetSrc(item.cover)} alt={item.title} data-zoom-label={t('Cover')} />
               : <CoverPlaceholder categoryId={item.categoryId} />}
           </div>
           <div className="hero-text">
@@ -76,14 +77,14 @@ export default function DetailShell({ item, coverShape = 'poster', banner = item
             {meta && <p className="hero-meta">{meta}</p>}
           </div>
           <div className="hero-actions">
-            <button type="button" className="add-btn" onClick={onEdit}>✎ Edit</button>
+            <button type="button" className="add-btn" onClick={onEdit}>{t('✎ Edit')}</button>
             <div className="pop-wrap" ref={menuRef}>
-              <button type="button" className={`icon-btn${menuOpen ? ' on' : ''}`} aria-label="More actions" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>⋯</button>
+              <button type="button" className={`icon-btn${menuOpen ? ' on' : ''}`} aria-label={t('More actions')} aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>⋯</button>
               {menuOpen && (
                 <div className="pop" role="menu">
                   <div className="pop-list">
-                    <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onDuplicate() }}><span className="pop-icon" aria-hidden>⧉</span>Duplicate</button>
-                    <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onExport() }}><span className="pop-icon" aria-hidden>↓</span>Export as JSON</button>
+                    <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onDuplicate() }}><span className="pop-icon" aria-hidden>⧉</span>{t('Duplicate')}</button>
+                    <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onExport() }}><span className="pop-icon" aria-hidden>↓</span>{t('Export as JSON')}</button>
                   </div>
                 </div>
               )}

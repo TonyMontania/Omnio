@@ -6,6 +6,7 @@
 import { lazy, Suspense } from 'react'
 import type { Item, FranchiseSection, FranchiseGraph } from '../../types'
 import { assetSrc } from '../../types'
+import { t } from '../../i18n'
 
 const FranchiseGraphPreview = lazy(() => import('./FranchiseGraphPreview'))
 
@@ -60,21 +61,21 @@ export default function DetailFranchiseTimeline({ items, currentId, franchise, y
   return (
     <div className="field-group">
       <div className="franchise-strip-header">
-        <label>Franchise{franchise ? ` — ${franchise}` : ''}</label>
+        <label>{t('Franchise{value}', { value: franchise ? ` ${t('— {franchise}', { franchise: franchise })}` : '' })}</label>
         {franchise && onOpenCrossLibrary && (
           <button
             type="button"
             className="franchise-strip-open"
             onClick={() => onOpenCrossLibrary(franchise)}
-            title="Open the full cross-library timeline (all categories, custom sections)"
+            title={t('Open the full cross-library timeline (all categories, custom sections)')}
           >
-            See full franchise ↗
+            {t('See full franchise ↗')}
           </button>
         )}
       </div>
       {showGraph ? (
         graphHasContent ? (
-          <Suspense fallback={<p className="hint">Loading diagram…</p>}>
+          <Suspense fallback={<p className="hint">{t('Loading diagram…')}</p>}>
             <FranchiseGraphPreview
               graph={graph!}
               items={items}
@@ -83,7 +84,7 @@ export default function DetailFranchiseTimeline({ items, currentId, franchise, y
             />
           </Suspense>
         ) : (
-          <p className="hint">This franchise is set to diagram view but no nodes are on the canvas yet. Open <b>See full franchise ↗</b> and drop some items in.</p>
+          <p className="hint">{t('This franchise is set to diagram view but no nodes are on the canvas yet. Open')}{' '}<b>{t('See full franchise ↗')}</b>{' '}{t('and drop some items in.')}</p>
         )
       ) : hasSections ? (
         <div className="franchise-sections-strip">
@@ -97,7 +98,7 @@ export default function DetailFranchiseTimeline({ items, currentId, franchise, y
           ))}
           {ungrouped.length > 0 && (
             <div className="franchise-section-strip">
-              <div className="franchise-section-strip-title franchise-section-strip-title-muted">Ungrouped</div>
+              <div className="franchise-section-strip-title franchise-section-strip-title-muted">{t('Ungrouped')}</div>
               <div className="franchise-timeline">
                 {ungrouped.map((f) => renderItem(f))}
               </div>

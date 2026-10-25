@@ -12,6 +12,7 @@ import DetailReview from './components/detail/DetailReview'
 import { BasedOnDisplay } from './components/BasedOn'
 import DetailNotes from './components/detail/DetailNotes'
 import { numColumnWidth } from './utils/numColumn'
+import { t } from './i18n'
 
 interface Props {
   item: AnimeItem
@@ -65,11 +66,11 @@ export default function AnimeDetailModal({ item, groups, allAnime, onEdit, onDup
       subtitle={item.alternativeTitles && item.alternativeTitles.length > 0 ? item.alternativeTitles.join(' · ') : undefined}
       meta={item.studios && item.studios.length > 0 ? item.studios.join(', ') : undefined}
       stats={[
-        ['Rating', item.rating ? `★ ${item.rating}` : null],
-        ['Episodes', item.episodesWatched ? `${item.episodesWatched}${item.totalEpisodes ? ` / ${item.totalEpisodes}` : ''}` : item.totalEpisodes ? `${item.totalEpisodes} total` : null],
-        ['Watch time', totalRuntime !== null ? formatDurationMinutes(String(totalRuntime)) : null],
-        ['Next episode', nextEp ? `Ep. ${nextEp.number}` : null],
-        ['Finished', item.finishedAt ? formatDay(item.finishedAt) : null],
+        [t('Rating'), item.rating ? t('★ {rating}', { rating: item.rating }) : null],
+        [t('Episodes'), item.episodesWatched ? t('{episodesWatched}{value}', { episodesWatched: item.episodesWatched, value: item.totalEpisodes ? ` ${t('/ {totalEpisodes}', { totalEpisodes: item.totalEpisodes })}` : '' }) : item.totalEpisodes ? t('{totalEpisodes} total', { totalEpisodes: item.totalEpisodes }) : null],
+        [t('Watch time'), totalRuntime !== null ? formatDurationMinutes(String(totalRuntime)) : null],
+        [t('Next episode'), nextEp ? t('Ep. {number}', { number: nextEp.number }) : null],
+        [t('Finished'), item.finishedAt ? formatDay(item.finishedAt) : null],
       ]}
       onEdit={onEdit}
       onDuplicate={onDuplicate}
@@ -77,29 +78,29 @@ export default function AnimeDetailModal({ item, groups, allAnime, onEdit, onDup
       tabs={[
         {
           id: 'overview',
-          label: 'Overview',
+          label: t('Overview'),
           content: (
             <>
               {allItems && <BasedOnDisplay itemId={item.id} allItems={allItems} onNavigate={onNavigate} />}
               {item.animeDescription && <p className="detail-description">{item.animeDescription}</p>}
               <DetailFacts facts={[
-                ['Studios', item.studios?.join(', ')],
-                ['Aired', airedRange],
-                ['Season', item.season ? `${getAnimeSeasonLabel(item.season)} ${item.seasonYear ?? ''}` : item.seasonYear],
-                ['Format', item.animeFormat ? getAnimeFormatLabel(item.animeFormat) : null],
-                ['Airing', item.airingStatus ? getAiringStatusLabel(item.airingStatus) : null],
-                ['Episode length', item.episodeDuration ? `${item.episodeDuration} min` : null],
-                ['Genres', item.genres?.join(', ')],
-                ['Demographic', item.demographic ? getDemographicLabel(item.demographic) : null],
-                ['Source', item.animeSource ? getAnimeSourceLabel(item.animeSource) : null],
-                ['Age rating', item.ageRating ? getAgeRatingLabel(item.ageRating) : null],
-                ['Started', item.startDate ? formatDay(item.startDate) : null],
-                ['Next episode', nextEp ? `Ep. ${nextEp.number}${nextEp.title ? ` — ${nextEp.title}` : ''}` : null],
-                ['Favorite episode', item.favoriteEpisode ? `#${item.favoriteEpisode}${item.favoriteEpisodeNote ? ` — ${item.favoriteEpisodeNote}` : ''}` : null],
-                ['Dropped at', item.watchStatus === 'dropped' && (item.droppedAtEpisode || item.droppedReason) ? [item.droppedAtEpisode ? `Ep. ${item.droppedAtEpisode}` : '', item.droppedReason ?? ''].filter(Boolean).join(' — ') : null],
-                ['Groups', groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
+                [t('Studios'), item.studios?.join(', ')],
+                [t('Aired'), airedRange],
+                [t('Season'), item.season ? t('{season} {seasonYear}', { season: getAnimeSeasonLabel(item.season), seasonYear: item.seasonYear ?? '' }) : item.seasonYear],
+                [t('Format'), item.animeFormat ? getAnimeFormatLabel(item.animeFormat) : null],
+                [t('Airing'), item.airingStatus ? getAiringStatusLabel(item.airingStatus) : null],
+                [t('Episode length'), item.episodeDuration ? t('{episodeDuration} min', { episodeDuration: item.episodeDuration }) : null],
+                [t('Genres'), item.genres?.join(', ')],
+                [t('Demographic'), item.demographic ? getDemographicLabel(item.demographic) : null],
+                [t('Source'), item.animeSource ? getAnimeSourceLabel(item.animeSource) : null],
+                [t('Age rating'), item.ageRating ? getAgeRatingLabel(item.ageRating) : null],
+                [t('Started'), item.startDate ? formatDay(item.startDate) : null],
+                [t('Next episode'), nextEp ? t('Ep. {number}{value}', { number: nextEp.number, value: nextEp.title ? ` ${t('— {title}', { title: nextEp.title })}` : '' }) : null],
+                [t('Favorite episode'), item.favoriteEpisode ? t('#{favoriteEpisode}{value}', { favoriteEpisode: item.favoriteEpisode, value: item.favoriteEpisodeNote ? ` ${t('— {favoriteEpisodeNote}', { favoriteEpisodeNote: item.favoriteEpisodeNote })}` : '' }) : null],
+                [t('Dropped at'), item.watchStatus === 'dropped' && (item.droppedAtEpisode || item.droppedReason) ? [item.droppedAtEpisode ? t('Ep. {droppedAtEpisode}', { droppedAtEpisode: item.droppedAtEpisode }) : '', item.droppedReason ?? ''].filter(Boolean).join(' — ') : null],
+                [t('Groups'), groups.length > 0 ? groups.map((g) => g.name).join(', ') : null],
               ]} />
-              {item.tags && item.tags.length > 0 && <DetailSection title="Tags"><DetailChips values={item.tags} /></DetailSection>}
+              {item.tags && item.tags.length > 0 && <DetailSection title={t('Tags')}><DetailChips values={item.tags} /></DetailSection>}
               <DetailReview review={item.animeReview} hasSpoilers={item.hasSpoilers} />
               <DetailNotes notes={item.notes} />
               <CustomFieldsView fields={item.customFields} />
@@ -108,7 +109,7 @@ export default function AnimeDetailModal({ item, groups, allAnime, onEdit, onDup
         },
         {
           id: 'episodes',
-          label: 'Episodes',
+          label: t('Episodes'),
           count: episodeCount,
           hidden: episodeCount === 0,
           content: <>
@@ -164,38 +165,38 @@ export default function AnimeDetailModal({ item, groups, allAnime, onEdit, onDup
                   <td className="col-num" title={tooltipFor(ep.number)}>{ep.number}</td>
                   <td className="col-title">{ep.title ?? '—'}</td>
                   {hasAirdate && <td className="col-airdate">{ep.airdate ?? ''}</td>}
-                  {hasLength && <td className="col-length">{ep.length ? `${ep.length}m` : ''}</td>}
+                  {hasLength && <td className="col-length">{ep.length ? t('{ep}m', { ep: ep.length }) : ''}</td>}
                   <td className="col-listened">{ep.watched ? '✓' : ''}</td>
-                  <td className="col-rating">{ep.rating ? `★ ${ep.rating}` : ''}</td>
-                  <td className="col-fav">{ep.filler ? 'F' : ''}</td>
+                  <td className="col-rating">{ep.rating ? t('★ {rating}', { rating: ep.rating }) : ''}</td>
+                  <td className="col-fav">{ep.filler ? t('F') : ''}</td>
                   <td className="col-spacer"></td>
                 </tr>
               )
             }
             return (
               <div className="field-group">
-                <label>Episodes</label>
+                <label>{t('Episodes')}</label>
                 {hasPrefixes && (
                   <div className="episode-number-legend">
-                    <span>Number prefix legend (AniDB):</span>
-                    <code>1, 2, 3…</code> regular ·
-                    <code>S</code> special / OVA ·
-                    <code>C</code> credits (opening/ending) ·
-                    <code>T</code> trailer / PV ·
-                    <code>P</code> parody ·
-                    <code>O</code> other
+                    <span>{t('Number prefix legend (AniDB):')}</span>
+                    <code>1, 2, 3…</code>{' '}{t('regular ·')}
+                    <code>{t('S')}</code>{' '}{t('special / OVA ·')}
+                    <code>{t('C')}</code>{' '}{t('credits (opening/ending) ·')}
+                    <code>{t('T')}</code>{' '}{t('trailer / PV ·')}
+                    <code>{t('P')}</code>{' '}{t('parody ·')}
+                    <code>{t('O')}</code> other
                   </div>
                 )}
                 <table className="track-table episode-table">
                   <thead>
                     <tr>
                       <th className="col-num" style={{ width: numColumnWidth((item.episodes ?? []).map((ep) => ep.number)) }}>#</th>
-                      <th className="col-title">Title</th>
-                      {hasAirdate && <th className="col-airdate">Air date</th>}
-                      {hasLength && <th className="col-length">Length</th>}
+                      <th className="col-title">{t('Title')}</th>
+                      {hasAirdate && <th className="col-airdate">{t('Air date')}</th>}
+                      {hasLength && <th className="col-length">{t('Length')}</th>}
                       <th className="col-listened">✓</th>
-                      <th className="col-rating">Rating</th>
-                      <th className="col-fav">Filler</th>
+                      <th className="col-rating">{t('Rating')}</th>
+                      <th className="col-fav">{t('Filler')}</th>
                       <th className="col-spacer"></th>
                     </tr>
                   </thead>
@@ -209,21 +210,21 @@ export default function AnimeDetailModal({ item, groups, allAnime, onEdit, onDup
         },
         {
           id: 'history',
-          label: 'Rewatches',
+          label: t('Rewatches'),
           count: item.rewatches?.length,
           hidden: !item.rewatches || item.rewatches.length === 0,
-          content: <DetailHistoryTable label="Rewatch history" entries={item.rewatches ?? []} />,
+          content: <DetailHistoryTable label={t('Rewatch history')} entries={item.rewatches ?? []} />,
         },
         {
           id: 'related',
-          label: 'Related',
+          label: t('Related'),
           count: relatedCount,
           hidden: relatedCount === 0,
           content: (
             <>
-              <DetailCoverStrip label="Related" entries={relatedEntries} onNavigate={onNavigate} />
+              <DetailCoverStrip label={t('Related')} entries={relatedEntries} onNavigate={onNavigate} />
               <DetailFranchiseTimeline items={franchiseItems} currentId={item.id} franchise={item.franchise} yearOf={yearOf} onNavigate={onNavigate} onOpenCrossLibrary={onOpenCrossLibraryFranchise} sections={franchiseSections} viewMode={franchiseViewMode} graph={franchiseGraph} />
-              <DetailCoverStrip label="Recommendations" entries={recommendedEntries} onNavigate={onNavigate} />
+              <DetailCoverStrip label={t('Recommendations')} entries={recommendedEntries} onNavigate={onNavigate} />
             </>
           ),
         },

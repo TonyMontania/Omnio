@@ -4,6 +4,7 @@
 
 import { useState } from 'react'
 import type { ConcertEntry } from '../../types'
+import { t } from '../../i18n'
 
 type Props = {
   entries: ConcertEntry[]
@@ -30,22 +31,22 @@ export default function ConcertLogEditor({ entries, onChange }: Props) {
 
   return (
     <div className="field-group">
-      <label>Concerts attended</label>
+      <label>{t('Concerts attended')}</label>
       <div className="concert-add-row">
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <input placeholder="Venue" value={venue} onChange={(e) => setVenue(e.target.value)} />
-        <input placeholder="City (optional)" value={city} onChange={(e) => setCity(e.target.value)} />
-        <button type="button" onClick={add} disabled={!date && !venue.trim()}>+ Add</button>
+        <input placeholder={t('Venue')} value={venue} onChange={(e) => setVenue(e.target.value)} />
+        <input placeholder={t('City (optional)')} value={city} onChange={(e) => setCity(e.target.value)} />
+        <button type="button" onClick={add} disabled={!date && !venue.trim()}>{t('+ Add')}</button>
       </div>
       <textarea
         className="concert-notes-input"
-        placeholder="Setlist (one line per song) or notes — optional, applies to the next Add"
+        placeholder={t('Setlist (one line per song) or notes — optional, applies to the next Add')}
         value={setlist}
         onChange={(e) => setSetlist(e.target.value)}
         rows={2}
       />
       <input
-        placeholder="Extra notes — optional"
+        placeholder={t('Extra notes — optional')}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
       />
@@ -57,7 +58,7 @@ export default function ConcertLogEditor({ entries, onChange }: Props) {
                 <span className="concert-date">{c.date || '—'}</span>
                 <span className="concert-venue">{c.venue}</span>
                 {c.city && <span className="concert-city">{c.city}</span>}
-                <button type="button" className="concert-delete" onClick={() => remove(c.id)} title="Delete">✕</button>
+                <button type="button" className="concert-delete" onClick={() => remove(c.id)} title={t('Delete')}>✕</button>
               </div>
               {c.setlist && <pre className="concert-setlist">{c.setlist}</pre>}
               {c.notes && <p className="concert-notes">{c.notes}</p>}

@@ -9,6 +9,7 @@ import {
   type AniListMedia as Media, type StaffEdge,
   aniListCommonPatch, aniListAnimePatch, aniListCover, aniListThemeTags, aniListTitle, stripAniListHtml, PUB_STATUS_MAP,
 } from './utils/anilist'
+import { t } from './i18n'
 
 type MediaType = 'ANIME' | 'MANGA'
 
@@ -45,7 +46,7 @@ function splitMangaStaff(staff?: { edges?: StaffEdge[] }): { authors: string[]; 
 export default function AniListFetcher({ initialQuery, kind, categoryId, onApply, onClose }: Props) {
   const search = async (q: string): Promise<FetcherResult<Media>> => {
     const r = await window.ipcRenderer.invoke('anilist:search', q, kind)
-    return r?.ok ? { ok: true, data: r.data as Media[] } : { ok: false, error: r?.error ?? 'Search failed' }
+    return r?.ok ? { ok: true, data: r.data as Media[] } : { ok: false, error: r?.error ?? t('Search failed') }
   }
 
   const apply = async (m: Media) => {
@@ -73,13 +74,11 @@ export default function AniListFetcher({ initialQuery, kind, categoryId, onApply
 
   return (
     <FetcherModal<Media>
-      title={kind === 'ANIME' ? 'AniList · Anime' : 'AniList · Manga'}
+      title={kind === 'ANIME' ? t('AniList · Anime') : t('AniList · Manga')}
       hint={
-        <>AniList is free and needs no API key. Applying overwrites the standard fields
-        (title, description, cover, banner, dates, episodes/chapters, studios, source, genres).
-        Rating, notes, watch/read status and personal history stay as they are.</>
+        <>{t('AniList is free and needs no API key. Applying overwrites the standard fields (title, description, cover, banner, dates, episodes/chapters, studios, source, genres). Rating, notes, watch/read status and personal history stay as they are.')}</>
       }
-      placeholder={`Search ${kind === 'ANIME' ? 'anime' : 'manga'}…`}
+      placeholder={t('Search {value}…', { value: kind === 'ANIME' ? 'anime' : 'manga' })}
       initialQuery={initialQuery}
       onSearch={search}
       onApply={apply}

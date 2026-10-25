@@ -6,6 +6,7 @@ import { useState } from 'react'
 import type { Item, AnimeFormat, AiringStatus, Episode } from './types'
 import { assetBasename, downloadImageAsset } from './utils/files'
 import { invoke } from './utils/ipc'
+import { t } from './i18n'
 
 interface Props {
   initialUrl?: string
@@ -216,7 +217,7 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
     if (r.ok) {
       setDumpCount(r.data.count)
     } else {
-      setSearchError(`Could not download the title dump — ${r.error}`)
+      setSearchError(t('Could not download the title dump — {error}', { error: r.error }))
     }
     setSearchBusy('idle')
   }
@@ -228,11 +229,11 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
     const r = await invoke('anidb:search-titles', q, 25)
     if (r.ok) {
       setSearchResults(r.data)
-      if (r.data.length === 0) setSearchError('No matches. Try a different spelling or the romaji title.')
+      if (r.data.length === 0) setSearchError(t('No matches. Try a different spelling or the romaji title.'))
     } else {
       setSearchResults(null)
       if (r.error.includes('not downloaded')) {
-        setSearchError('Title cache not downloaded yet. Click "Download title dump" first (one-time, ~10 MB).')
+        setSearchError(t('Title cache not downloaded yet. Click "Download title dump" first (one-time, ~10 MB).'))
       } else {
         setSearchError(r.error)
       }
@@ -250,8 +251,8 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
 
   const fetchOne = async (overrideAid?: string) => {
     const aid = overrideAid ?? extractAid(input)
-    if (!aid) { setError('Paste an AniDB URL (anidb.net/anime/12345) or a numeric AID.'); return }
-    if (!anidbClient) { setError('Set your AniDB client name in Settings → Data → Integrations first.'); return }
+    if (!aid) { setError(t('Paste an AniDB URL (anidb.net/anime/12345) or a numeric AID.')); return }
+    if (!anidbClient) { setError(t('Set your AniDB client name in Settings → Data → Integrations first.')); return }
     setError(null)
     setBusy(true)
     try {
@@ -265,7 +266,7 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
         // client or maintenance page reads distinctly from a genuine
         // "no such AID".
         const preview = res.data.trim().replace(/\s+/g, ' ').slice(0, 250)
-        setError(`Could not parse AniDB response. First bytes of what AniDB sent back:\n\n${preview || '(empty response)'}\n\nCommon causes: newly-registered clients can take up to ~15 min to activate; API=UDP instead of HTTP on the client; wrong client version; rate limit exceeded ("banned" for ~24h).`)
+        setError(t('Could not parse AniDB response. First bytes of what AniDB sent back: {preview} Common causes: newly-registered clients can take up to ~15 min to activate; API=UDP instead of HTTP on the client; wrong client version; rate limit exceeded ("banned" for ~24h).', { preview: preview || t('(empty response)') }))
         setBusy(false)
         return
       }
@@ -323,7 +324,7 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
     <div className="modal-overlay">
       <div className="modal-panel anidb-fetcher" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: '92vw', maxHeight: '85vh' }}>
         <div className="modal-header">
-          <h2>AniDB deep fetch</h2>
+          <h2>{t('AniDB deep fetch')}</h2>
           <button type="button" className="panel-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
@@ -332,38 +333,36 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
               type="button"
               className={!searchMode ? 'pill active' : 'pill'}
               onClick={() => { setSearchMode(false); setSearchResults(null); setSearchError(null) }}
-            >By AID / URL</button>
+            >{t('By AID / URL')}</button>
             <button
               type="button"
               className={searchMode ? 'pill active' : 'pill'}
               onClick={() => { setSearchMode(true); setError(null); setResult(null) }}
-            >Search by title</button>
+            >{t('Search by title')}</button>
           </div>
 
           {!searchMode && (
             <p className="hint" style={{ marginTop: 0 }}>
-              AniDB's HTTP API has no title search — find the anime on
-              <b> anidb.net</b> first, then paste the URL (or just the AID number) below.
-              Rate-limited to one fetch every ~2 seconds per AniDB's terms.
-              Requires a registered client name (Settings → Data → Integrations).
+              {t('AniDB\'s HTTP API has no title search — find the anime on')}
+              <b> anidb.net</b>{' '}{t('first, then paste the URL (or just the AID number) below. Rate-limited to one fetch every ~2 seconds per AniDB\'s terms. Requires a registered client name (Settings → Data → Integrations).')}
             </p>
           )}
           {searchMode && (
             <p className="hint" style={{ marginTop: 0 }}>
-              Uses AniDB's public title dump — no rate limit, no client name needed. Download it once (~10 MB compressed) and every search after that runs 100 % locally. Re-download whenever you feel it's out of date (they refresh it daily).
+              {t('Uses AniDB\'s public title dump — no rate limit, no client name needed. Download it once (~10 MB compressed) and every search after that runs 100 % locally. Re-download whenever you feel it\'s out of date (they refresh it daily).')}
             </p>
           )}
 
           {!anidbClient && (
             <p className="save-files-error">
-              No AniDB client name set. Register one at anidb.net/software/add and add it in Settings → Data → Integrations.
+              {t('No AniDB client name set. Register one at anidb.net/software/add and add it in Settings → Data → Integrations.')}
             </p>
           )}
 
           {!searchMode && (
             <div className="discogs-creds">
               <label>
-                <span>AniDB URL or AID</span>
+                <span>{t('AniDB URL or AID')}</span>
                 <input
                   type="text"
                   value={input}
@@ -379,7 +378,7 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
                 onClick={() => void fetchOne()}
                 disabled={busy || !anidbClient || !input.trim()}
               >
-                {busy ? 'Fetching (respecting 2s throttle)…' : 'Fetch'}
+                {busy ? t('Fetching (respecting 2s throttle)…') : t('Fetch')}
               </button>
             </div>
           )}
@@ -391,7 +390,7 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Type an anime title (any language)…"
+                  placeholder={t('Type an anime title (any language)…')}
                   onKeyDown={(e) => { if (e.key === 'Enter') void runSearch(searchQuery) }}
                   autoFocus
                 />
@@ -401,16 +400,16 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
                   onClick={() => void runSearch(searchQuery)}
                   disabled={searchBusy !== 'idle' || !searchQuery.trim()}
                 >
-                  {searchBusy === 'searching' ? 'Searching…' : 'Search'}
+                  {searchBusy === 'searching' ? t('Searching…') : t('Search')}
                 </button>
                 <button
                   type="button"
                   className="pill"
                   onClick={() => void downloadDump()}
                   disabled={searchBusy !== 'idle'}
-                  title="One-time (or occasional) download of the AniDB title dump. Reusable across every search after."
+                  title={t('One-time (or occasional) download of the AniDB title dump. Reusable across every search after.')}
                 >
-                  {searchBusy === 'downloading' ? 'Downloading…' : (dumpCount ? `Re-download dump (${dumpCount})` : 'Download title dump')}
+                  {searchBusy === 'downloading' ? t('Downloading…') : (dumpCount ? t('Re-download dump ({dumpCount})', { dumpCount: dumpCount }) : t('Download title dump'))}
                 </button>
               </div>
               {searchError && <p className="save-files-error">{searchError}</p>}
@@ -422,12 +421,12 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
                       {r.altTitles.length > 0 && (
                         <div className="anidb-search-alts">{r.altTitles.slice(0, 3).join(' · ')}{r.altTitles.length > 3 && ' …'}</div>
                       )}
-                      <div className="anidb-search-aid">aid {r.aid}</div>
+                      <div className="anidb-search-aid">{t('aid {aid}', { aid: r.aid })}</div>
                     </li>
                   ))}
                 </ul>
               )}
-              {busy && <p className="hint">Fetching full details (respecting 2s throttle)…</p>}
+              {busy && <p className="hint">{t('Fetching full details (respecting 2s throttle)…')}</p>}
             </div>
           )}
 
@@ -444,16 +443,16 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
                   )}
                   <div className="anidb-meta">
                     {result.type && <span>{result.type}</span>}
-                    {result.episodeCount && <span>{result.episodeCount} ep</span>}
-                    {result.startDate && <span>{result.startDate}{result.endDate ? ` → ${result.endDate}` : ''}</span>}
+                    {result.episodeCount && <span>{t('{episodeCount} ep', { episodeCount: result.episodeCount })}</span>}
+                    {result.startDate && <span>{result.startDate}{result.endDate ? ` ${t('{t}', { t: t('{t}', { t: t('→ {endDate}', { endDate: result.endDate }) }) })}` : ''}</span>}
                   </div>
                   {result.studios.length > 0 && (
                     <p className="anidb-studios">{result.studios.join(', ')}</p>
                   )}
                   {result.tags.length > 0 && (
                     <div className="anidb-tags">
-                      {result.tags.slice(0, 10).map((t) => (
-                        <span key={t.name} className="anidb-tag" title={`weight ${t.weight}`}>{t.name}</span>
+                      {result.tags.slice(0, 10).map((tag) => (
+                        <span key={tag.name} className="anidb-tag" title={t('weight {weight}', { weight: tag.weight })}>{tag.name}</span>
                       ))}
                     </div>
                   )}
@@ -465,24 +464,24 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
                     return (
                       <div className="anidb-episodes-scope">
                         <div className="anidb-episodes-head">
-                          <span>Episode list</span>
+                          <span>{t('Episode list')}</span>
                           <span className="hint" style={{ fontSize: 11.5 }}>
-                            {nRegular} regular
+                            {t('{nRegular} regular', { nRegular: nRegular })}
                             {nSpecial > 0 && ` · ${nSpecial} special`}
                             {nOther > 0 && ` · ${nOther} other`}
                           </span>
                         </div>
                         <div className="anidb-episodes-options">
-                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'none'} onChange={() => setEpisodeScope('none')} /> Don't add episodes</label>
-                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'regular'} onChange={() => setEpisodeScope('regular')} /> Regular only ({nRegular})</label>
-                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'regular_specials'} onChange={() => setEpisodeScope('regular_specials')} /> Regular + specials ({nRegular + nSpecial})</label>
-                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'all'} onChange={() => setEpisodeScope('all')} /> Everything ({result.episodes.length})</label>
+                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'none'} onChange={() => setEpisodeScope('none')} />{' '}{t('Don\'t add episodes')}</label>
+                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'regular'} onChange={() => setEpisodeScope('regular')} />{' '}{t('Regular only ({nRegular})', { nRegular: nRegular })}</label>
+                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'regular_specials'} onChange={() => setEpisodeScope('regular_specials')} />{' '}{t('Regular + specials ({nRegular})', { nRegular: nRegular + nSpecial })}</label>
+                          <label><input type="radio" name="anidb-scope" checked={episodeScope === 'all'} onChange={() => setEpisodeScope('all')} />{' '}{t('Everything ({episodes})', { episodes: result.episodes.length })}</label>
                         </div>
-                        <p className="hint" style={{ marginTop: 4, fontSize: 11.5 }}>Applies to the item's <b>Episodes</b> section — replaces any existing list. Number, title (English → Romaji → first available) and order are copied from AniDB.</p>
+                        <p className="hint" style={{ marginTop: 4, fontSize: 11.5 }}>{t('Applies to the item\'s')}{' '}<b>{t('Episodes')}</b>{' '}{t('section — replaces any existing list. Number, title (English → Romaji → first available) and order are copied from AniDB.')}</p>
                       </div>
                     )
                   })()}
-                  <a className="pcgw-link" href={result.siteUrl} target="_blank" rel="noopener noreferrer">Open on AniDB ↗</a>
+                  <a className="pcgw-link" href={result.siteUrl} target="_blank" rel="noopener noreferrer">{t('Open on AniDB ↗')}</a>
                 </div>
               </div>
             </div>
@@ -490,8 +489,8 @@ export default function AniDBFetcher({ initialUrl, categoryId, onApply, onClose,
         </div>
         {result && (
           <div className="modal-footer">
-            <button type="button" className="ghost-btn" onClick={onClose}>Cancel</button>
-            <button type="button" className="primary-btn" onClick={apply}>Apply to editor</button>
+            <button type="button" className="ghost-btn" onClick={onClose}>{t('Cancel')}</button>
+            <button type="button" className="primary-btn" onClick={apply}>{t('Apply to editor')}</button>
           </div>
         )}
       </div>

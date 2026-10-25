@@ -4,6 +4,7 @@
 // in the same order; a library passes only the tabs it uses.
 
 import { useEffect, type ReactNode } from 'react'
+import { t } from '../../i18n'
 
 export type EditorTabId =
   | 'overview' | 'identity' | 'progress' | 'media'
@@ -12,14 +13,14 @@ export type EditorTabId =
 const TAB_ORDER: EditorTabId[] = ['overview', 'identity', 'progress', 'media', 'history', 'related', 'notes', 'links']
 
 const TAB_LABELS: Record<EditorTabId, string> = {
-  overview: 'Overview',
-  identity: 'Identity',
-  progress: 'Progress',
-  media: 'Media',
-  history: 'History',
-  related: 'Related',
-  notes: 'Notes',
-  links: 'Links',
+  overview: t('Overview'),
+  identity: t('Identity'),
+  progress: t('Progress'),
+  media: t('Media'),
+  history: t('History'),
+  related: t('Related'),
+  notes: t('Notes'),
+  links: t('Links'),
 }
 
 export interface EditorTab {
@@ -74,15 +75,15 @@ export default function EditorShell(p: Props) {
       >
         <header className="es-head">
           <h2>{p.title}</h2>
-          <button type="button" className="es-close" onClick={onCancel} aria-label="Close">✕</button>
+          <button type="button" className="es-close" onClick={onCancel} aria-label={t('Close')}>✕</button>
         </header>
 
         <aside className="es-side">
-          <span className="es-side-label">Live preview</span>
+          <span className="es-side-label">{t('Live preview')}</span>
           {p.preview.detail && (
-            <div className="es-seg" role="tablist" aria-label="Preview">
-              <button type="button" role="tab" aria-selected={p.previewMode === 'card'} className={p.previewMode === 'card' ? 'on' : ''} onClick={() => p.onPreviewMode('card')}>Card</button>
-              <button type="button" role="tab" aria-selected={p.previewMode === 'detail'} className={p.previewMode === 'detail' ? 'on' : ''} onClick={() => p.onPreviewMode('detail')}>Detail</button>
+            <div className="es-seg" role="tablist" aria-label={t('Preview')}>
+              <button type="button" role="tab" aria-selected={p.previewMode === 'card'} className={p.previewMode === 'card' ? 'on' : ''} onClick={() => p.onPreviewMode('card')}>{t('Card')}</button>
+              <button type="button" role="tab" aria-selected={p.previewMode === 'detail'} className={p.previewMode === 'detail' ? 'on' : ''} onClick={() => p.onPreviewMode('detail')}>{t('Detail')}</button>
             </div>
           )}
           <div className={`es-preview ${p.previewMode}`}>
@@ -113,9 +114,9 @@ export default function EditorShell(p: Props) {
 
         <footer className="es-foot">
           <div className="es-foot-start">{p.footerStart}</div>
-          <span className="es-foot-hint">Ctrl+S to save</span>
-          <button type="button" className="es-btn" onClick={onCancel}>Cancel</button>
-          <button type="submit" className="es-btn primary">{p.saveLabel ?? 'Save'}</button>
+          <span className="es-foot-hint">{t('Ctrl+S to save')}</span>
+          <button type="button" className="es-btn" onClick={onCancel}>{t('Cancel')}</button>
+          <button type="submit" className="es-btn primary">{p.saveLabel ?? t('Save')}</button>
         </footer>
       </form>
     </div>

@@ -8,6 +8,7 @@ import ErogesView from './ErogesView'
 import { loadData } from './ipc'
 import { reportPluginCount } from '../counts'
 import { SLUG } from './constants'
+import { t } from '../../i18n'
 
 // eslint-disable-next-line react-refresh/only-export-components
 const HeartIcon = () => (
@@ -18,16 +19,16 @@ const HeartIcon = () => (
 
 const def: PluginDef = {
   slug: 'eroges',
-  label: 'Eroges',
+  label: t('Eroges'),
   icon: HeartIcon,
   View: ErogesView,
   cardFields: [
-    { value: 'title', label: 'Title', default: true },
-    { value: 'version', label: 'Version', default: true },
-    { value: 'creator', label: 'Creator', default: true },
-    { value: 'engine', label: 'Engine', default: true },
-    { value: 'vn', label: 'VN', default: true },
-    { value: 'status', label: 'Status', default: true },
+    { value: 'title', label: t('Title'), default: true },
+    { value: 'version', label: t('Version'), default: true },
+    { value: 'creator', label: t('Creator'), default: true },
+    { value: 'engine', label: t('Engine'), default: true },
+    { value: 'vn', label: t('VN'), default: true },
+    { value: 'status', label: t('Status'), default: true },
   ],
   // Read the JSON once at boot so the sidebar count is populated
   // before the user opens the library. The ipcRenderer shim installs

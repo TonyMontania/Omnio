@@ -21,6 +21,7 @@ import EditionsEditor from './EditionsEditor'
 import RewatchListEditor from './RewatchListEditor'
 import RelatedListEditor from './RelatedListEditor'
 import RecommendationsEditor from './RecommendationsEditor'
+import { t } from '../../i18n'
 
 type Setter<T> = (updater: T | ((prev: T) => T)) => void
 
@@ -96,71 +97,71 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
   return (
     <>
       <div className="form-section-header" data-belongs-to="identity">
-        <span className="form-section-title">Music details</span>
-        <span className="form-section-hint">Artist, tracklist, editions, singles</span>
+        <span className="form-section-title">{t('Music details')}</span>
+        <span className="form-section-hint">{t('Artist, tracklist, editions, singles')}</span>
       </div>
       <div className="field-group">
-        <label>Artist</label>
+        <label>{t('Artist')}</label>
         <input value={artist} onChange={(e) => setArtist(e.target.value)} />
       </div>
       <TagEditor
-        label="Alternative titles"
-        placeholder="Add title (romaji, English…)"
+        label={t('Alternative titles')}
+        placeholder={t('Add title (romaji, English…)')}
         tags={alternativeTitles}
         onAdd={(t) => setAlternativeTitles((prev) => prev.includes(t) ? prev : [...prev, t])}
         onRemove={(i) => setAlternativeTitles((prev) => prev.filter((_, idx) => idx !== i))}
       />
       <div className="field-row">
         <div className="field-group">
-          <label>Type</label>
+          <label>{t('Type')}</label>
           <select value={musicType} onChange={(e) => setMusicType(e.target.value as MusicType | '')}>
-            <option value="">Unspecified</option>
+            <option value="">{t('Unspecified')}</option>
             {MUSIC_TYPE_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </div>
         <div className="field-group">
-          <label>Source</label>
+          <label>{t('Source')}</label>
           <select value={musicSource} onChange={(e) => setMusicSource(e.target.value as MusicSource | '')}>
-            <option value="">Unspecified</option>
+            <option value="">{t('Unspecified')}</option>
             {MUSIC_SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
       </div>
       <div className="field-row">
         <div className="field-group">
-          <label>Format</label>
+          <label>{t('Format')}</label>
           <select value={mediaOwnership} onChange={(e) => {
             const next = e.target.value as MediaOwnership | ''
             setMediaOwnership(next)
             // Purely digital or unset — no discs to count.
             if (next === 'digital' || next === 'neither' || next === '') setDiscCount('')
           }}>
-            <option value="">— unspecified</option>
+            <option value="">{t('— unspecified')}</option>
             {MEDIA_OWNERSHIP_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         {(mediaOwnership === 'physical' || mediaOwnership === 'both') && (
           <div className="field-group">
-            <label>Discs</label>
+            <label>{t('Discs')}</label>
             <input
               value={discCount}
               onChange={(e) => setDiscCount(e.target.value)}
-              placeholder="e.g. 1 or 2"
+              placeholder={t('e.g. 1 or 2')}
               inputMode="numeric"
             />
           </div>
         )}
       </div>
       <div className="field-group">
-        <label>Vinyl condition <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>Goldmine grading scale — leave blank if you don't own a physical copy</span></label>
+        <label>{t('Vinyl condition')}{' '}<span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 6 }}>{t('Goldmine grading scale — leave blank if you don\'t own a physical copy')}</span></label>
         <select value={vinylCondition} onChange={(e) => setVinylCondition(e.target.value as VinylCondition | '')}>
-          <option value="">— not owned</option>
+          <option value="">{t('— not owned')}</option>
           {VINYL_CONDITION_OPTIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </select>
       </div>
       <TagEditor
-        label="Producers"
-        placeholder="Add producer"
+        label={t('Producers')}
+        placeholder={t('Add producer')}
         tags={producers}
         onAdd={(p) => setProducers((prev) => prev.includes(p) ? prev : [...prev, p])}
         onRemove={(i) => setProducers((prev) => prev.filter((_, idx) => idx !== i))}
@@ -169,26 +170,26 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
       {isAlbumLikeMusic(musicType || undefined) ? (
         <>
           <div className="field-group">
-            <label>Released</label>
+            <label>{t('Released')}</label>
             <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
           </div>
           <TagEditor
-            label="Genres"
-            placeholder="Add genre"
+            label={t('Genres')}
+            placeholder={t('Add genre')}
             tags={genres}
             onAdd={(g) => setGenres((prev) => prev.includes(g) ? prev : [...prev, g])}
             onRemove={(i) => setGenres((prev) => prev.filter((_, idx) => idx !== i))}
           />
           <div className="field-group">
-            <label>Label</label>
+            <label>{t('Label')}</label>
             <input value={label} onChange={(e) => setLabel(e.target.value)} />
           </div>
           <div className="form-section-header" data-belongs-to="progress">
-            <span className="form-section-title">Progress</span>
-            <span className="form-section-hint">Listened toggle · tracklist · per-track rating</span>
+            <span className="form-section-title">{t('Progress')}</span>
+            <span className="form-section-hint">{t('Listened toggle · tracklist · per-track rating')}</span>
           </div>
           <div className="field-group">
-            <label>Listened?</label>
+            <label>{t('Listened?')}</label>
             <div className="yesno">
               <button type="button" className={consumed ? 'pill active' : 'pill'} onClick={() => {
                 setConsumed(true)
@@ -197,15 +198,15 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
                 // per-row clicks. Flipping back to "No" leaves the tracks
                 // alone (user might want to log individual listens later).
                 setTracks((prev) => prev.map((t) => (t.listened ? t : { ...t, listened: true })))
-              }}>Listened</button>
-              <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>No</button>
+              }}>{t('Listened')}</button>
+              <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>{t('No')}</button>
             </div>
           </div>
           <div className="field-group">
-            <label>Add tracks?</label>
+            <label>{t('Add tracks?')}</label>
             <div className="yesno">
-              <button type="button" className={hasTracks ? 'pill active' : 'pill'} onClick={() => setHasTracks(true)}>Yes</button>
-              <button type="button" className={!hasTracks ? 'pill active' : 'pill'} onClick={() => { setHasTracks(false); setTracks([]) }}>No</button>
+              <button type="button" className={hasTracks ? 'pill active' : 'pill'} onClick={() => setHasTracks(true)}>{t('Yes')}</button>
+              <button type="button" className={!hasTracks ? 'pill active' : 'pill'} onClick={() => { setHasTracks(false); setTracks([]) }}>{t('No')}</button>
             </div>
             {hasTracks && (
               <TrackListEditor
@@ -229,19 +230,19 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
             )}
           </div>
           <div className="form-section-header" data-belongs-to="overview">
-            <span className="form-section-title">Rating &amp; day listened</span>
+            <span className="form-section-title">{t('Rating & day listened')}</span>
           </div>
           <div className="field-group">
-            <label>Rating</label>
+            <label>{t('Rating')}</label>
             <RatingPicker value={rating} onChange={setRating} />
           </div>
           <div className="field-group">
-            <label>Day listened</label>
+            <label>{t('Day listened')}</label>
             <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
           </div>
           <div className="field-group">
-            <label>Single covers</label>
-            <p className="hint">Artwork for singles released with their own cover (often before the album).</p>
+            <label>{t('Single covers')}</label>
+            <p className="hint">{t('Artwork for singles released with their own cover (often before the album).')}</p>
             <SingleCoverEditor
               singles={singleCovers}
               onAdd={(s) => setSingleCovers((prev) => [...prev, { ...s, id: crypto.randomUUID() }])}
@@ -249,8 +250,8 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
             />
           </div>
           <div className="field-group">
-            <label>Editions</label>
-            <p className="hint">Deluxe, Japan, Anniversary… each with its own cover and extra tracks.</p>
+            <label>{t('Editions')}</label>
+            <p className="hint">{t('Deluxe, Japan, Anniversary… each with its own cover and extra tracks.')}</p>
             <EditionsEditor editions={editions} mainArtist={artist} onChange={setEditions} />
           </div>
         </>
@@ -258,17 +259,17 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
         <>
           <div className="field-row">
             <div className="field-group">
-              <label>Release date</label>
+              <label>{t('Release date')}</label>
               <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
             </div>
             <div className="field-group">
-              <label>Release year</label>
+              <label>{t('Release year')}</label>
               <input value={releaseYear} onChange={(e) => yearHandler(setReleaseYear)(e.target.value)} inputMode="numeric" maxLength={4} />
             </div>
           </div>
           <div className="field-row">
             <div className="field-group">
-              <label>Part of album</label>
+              <label>{t('Part of album')}</label>
               <select
                 value={partOfAlbumId}
                 onChange={(e) => {
@@ -283,29 +284,29 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
                   }
                 }}
               >
-                <option value="">— none —</option>
+                <option value="">{t('— none —')}</option>
                 {items
                   .filter((i) => i.categoryId === 'musica' && i.id !== editingId && isAlbumLikeMusic(i.musicType) && (!artist.trim() || (i.artist ?? '').toLowerCase() === artist.trim().toLowerCase()))
                   .sort((a, b) => a.title.localeCompare(b.title))
                   .map((i) => <option key={i.id} value={i.id}>{i.title}</option>)}
               </select>
-              <p className="hint">Link this single / EP / OST to the album it was later collected into. Options are filtered to album-like Music entries by the same artist.</p>
+              <p className="hint">{t('Link this single / EP / OST to the album it was later collected into. Options are filtered to album-like Music entries by the same artist.')}</p>
             </div>
             <div className="field-group">
-              <label>…or free-text</label>
+              <label>{t('…or free-text')}</label>
               <input
                 value={partOfAlbum}
                 onChange={(e) => setPartOfAlbum(e.target.value)}
-                placeholder="Album title (used when it isn't in your library)"
+                placeholder={t('Album title (used when it isn\'t in your library)')}
               />
             </div>
           </div>
           <div className="form-section-header" data-belongs-to="progress">
-            <span className="form-section-title">Progress</span>
-            <span className="form-section-hint">Listened toggle · tracklist · per-track rating</span>
+            <span className="form-section-title">{t('Progress')}</span>
+            <span className="form-section-hint">{t('Listened toggle · tracklist · per-track rating')}</span>
           </div>
           <div className="field-group">
-            <label>Listened?</label>
+            <label>{t('Listened?')}</label>
             <div className="yesno">
               <button type="button" className={consumed ? 'pill active' : 'pill'} onClick={() => {
                 setConsumed(true)
@@ -314,56 +315,56 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
                 // per-row clicks. Flipping back to "No" leaves the tracks
                 // alone (user might want to log individual listens later).
                 setTracks((prev) => prev.map((t) => (t.listened ? t : { ...t, listened: true })))
-              }}>Listened</button>
-              <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>No</button>
+              }}>{t('Listened')}</button>
+              <button type="button" className={!consumed ? 'pill active' : 'pill'} onClick={() => setConsumed(false)}>{t('No')}</button>
             </div>
           </div>
           <div className="form-section-header" data-belongs-to="overview">
-            <span className="form-section-title">Rating &amp; day listened</span>
+            <span className="form-section-title">{t('Rating & day listened')}</span>
           </div>
           <div className="field-group">
-            <label>Rating</label>
+            <label>{t('Rating')}</label>
             <RatingPicker value={rating} onChange={setRating} />
           </div>
           <div className="field-group">
-            <label>Completion date</label>
+            <label>{t('Completion date')}</label>
             <input type="date" value={finishedAt} onChange={(e) => setFinishedAt(e.target.value)} />
           </div>
         </>
       )}
       <div className="form-section-header" data-belongs-to="notes">
-        <span className="form-section-title">Review</span>
-        <span className="form-section-hint">Your take · with optional spoiler toggle</span>
+        <span className="form-section-title">{t('Review')}</span>
+        <span className="form-section-hint">{t('Your take · with optional spoiler toggle')}</span>
       </div>
       <div className="field-group">
-        <label>Review</label>
-        <textarea value={musicReview} onChange={(e) => setMusicReview(e.target.value)} rows={3} placeholder='Your review (supports **bold**, *italic*, and "- " lists)' />
+        <label>{t('Review')}</label>
+        <textarea value={musicReview} onChange={(e) => setMusicReview(e.target.value)} rows={3} placeholder={t('Your review (supports **bold**, *italic*, and "- " lists)')} />
         {musicReview.trim() && (
           <div className="yesno">
-            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>Contains spoilers</button>
-            <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>No spoilers</button>
+            <button type="button" className={hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(true)}>{t('Contains spoilers')}</button>
+            <button type="button" className={!hasSpoilers ? 'pill active' : 'pill'} onClick={() => setHasSpoilers(false)}>{t('No spoilers')}</button>
           </div>
         )}
       </div>
       <div className="form-section-header" data-belongs-to="history">
-        <span className="form-section-title">Listen history</span>
+        <span className="form-section-title">{t('Listen history')}</span>
       </div>
       <div className="field-group">
-        <label>Listen history</label>
+        <label>{t('Listen history')}</label>
         <RewatchListEditor
           rewatches={rewatches}
           onAdd={(r) => setRewatches((prev) => [...prev, { ...r, id: crypto.randomUUID() }])}
           onRemove={(id) => setRewatches((prev) => prev.filter((r) => r.id !== id))}
           onUpdate={(id, patch) => setRewatches((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r))}
           onRatingChange={(id, r) => setRewatches((prev) => prev.map((x) => x.id === id ? { ...x, rating: r || undefined } : x))}
-          labels={{ rewatch: 'Relistened', started: 'First heard', finished: 'Completed listen', dropped: 'Skipped through', note: 'Note' }}
+          labels={{ rewatch: t('Relistened'), started: t('First heard'), finished: t('Completed listen'), dropped: t('Skipped through'), note: t('Note') }}
         />
       </div>
       <div className="form-section-header" data-belongs-to="related">
-        <span className="form-section-title">Related &amp; recommendations</span>
+        <span className="form-section-title">{t('Related & recommendations')}</span>
       </div>
       <div className="field-group">
-        <label>Related albums</label>
+        <label>{t('Related albums')}</label>
         <RelatedListEditor
           related={relatedItems}
               crossLibrary
@@ -372,17 +373,17 @@ export default function MusicEditorSection(props: MusicEditorSectionProps) {
           onAdd={(id) => setRelatedItems((prev) => [...prev, { itemId: id, relation: 'sequel' }])}
           onRemove={(id) => setRelatedItems((prev) => prev.filter((r) => r.itemId !== id))}
           onChangeRelation={(id, r) => setRelatedItems((prev) => prev.map((x) => x.itemId === id ? { ...x, relation: r } : x))}
-          pickerPlaceholder="Add related album…"
+          pickerPlaceholder={t('Add related album…')}
         />
       </div>
       <div className="field-group">
-        <label>Recommendations</label>
+        <label>{t('Recommendations')}</label>
         <RecommendationsEditor
           ids={recommendedItems}
           options={items.filter((i) => i.categoryId === 'musica' && i.id !== editingId)}
           onAdd={(id) => setRecommendedItems((prev) => [...prev, id])}
           onRemove={(id) => setRecommendedItems((prev) => prev.filter((x) => x !== id))}
-          pickerPlaceholder="Add recommended album…"
+          pickerPlaceholder={t('Add recommended album…')}
         />
       </div>
     </>

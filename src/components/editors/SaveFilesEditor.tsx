@@ -6,6 +6,7 @@
 import { useRef, useState } from 'react'
 import type { SaveFile } from '../../types'
 import { formatBytes, formatDateTime } from '../../utils/format'
+import { t } from '../../i18n'
 
 type Props = {
   gameTitle: string
@@ -22,7 +23,7 @@ export default function SaveFilesEditor({ gameTitle, categoryId, saveFiles, onCh
 
   const uploadFiles = async (files: FileList | File[]) => {
     if (!gameTitle.trim()) {
-      setError('Give the game a title before adding save files.')
+      setError(t('Give the game a title before adding save files.'))
       return
     }
     setError(null)
@@ -42,7 +43,7 @@ export default function SaveFilesEditor({ gameTitle, categoryId, saveFiles, onCh
         if (res.ok && res.entry) {
           added.push(res.entry)
         } else {
-          setError(res.error ?? `Failed to save ${file.name}`)
+          setError(res.error ?? t('Failed to save {name}', { name: file.name }))
         }
       }
       if (added.length > 0) {
@@ -69,7 +70,7 @@ export default function SaveFilesEditor({ gameTitle, categoryId, saveFiles, onCh
 
   return (
     <div className="field-group">
-      <label>Save files</label>
+      <label>{t('Save files')}</label>
       <div
         className={dragOver ? 'save-files-dropzone dragover' : 'save-files-dropzone'}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
@@ -90,9 +91,9 @@ export default function SaveFilesEditor({ gameTitle, categoryId, saveFiles, onCh
           }}
         />
         <button type="button" className="save-files-add" onClick={() => inputRef.current?.click()} disabled={busy}>
-          {busy ? 'Uploading…' : '+ Add save file(s)'}
+          {busy ? t('Uploading…') : t('+ Add save file(s)')}
         </button>
-        <span className="save-files-hint">Any extension · drag files here · multiple accepted</span>
+        <span className="save-files-hint">{t('Any extension · drag files here · multiple accepted')}</span>
       </div>
       {error && <p className="save-files-error">{error}</p>}
       {saveFiles.length > 0 && (
@@ -107,13 +108,13 @@ export default function SaveFilesEditor({ gameTitle, categoryId, saveFiles, onCh
               </div>
               <input
                 className="save-files-note"
-                placeholder="Note (post-final boss, NG+, all collectibles…)"
+                placeholder={t('Note (post-final boss, NG+, all collectibles…)')}
                 value={entry.note ?? ''}
                 onChange={(e) => handleNoteChange(entry.id, e.target.value)}
               />
               <div className="save-files-actions">
-                <button type="button" onClick={() => handleOpenFolder(entry)} title="Open folder in file manager">Open folder</button>
-                <button type="button" className="save-files-delete" onClick={() => handleDelete(entry)} title="Delete">✕</button>
+                <button type="button" onClick={() => handleOpenFolder(entry)} title={t('Open folder in file manager')}>{t('Open folder')}</button>
+                <button type="button" className="save-files-delete" onClick={() => handleDelete(entry)} title={t('Delete')}>✕</button>
               </div>
             </li>
           ))}

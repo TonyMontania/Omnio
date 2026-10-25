@@ -4,6 +4,7 @@
 // tidy rows, not five collapsible cards.
 
 import type { MovieViewing, MovieFormat } from '../../types/entities'
+import { plural, t } from '../../i18n'
 
 interface Props {
   viewings: MovieViewing[]
@@ -11,12 +12,12 @@ interface Props {
 }
 
 const FORMAT_OPTIONS: { value: MovieFormat; label: string }[] = [
-  { value: 'theater',   label: 'Theater / cinema' },
-  { value: 'streaming', label: 'Streaming' },
-  { value: 'bluray',    label: 'Blu-ray' },
-  { value: 'dvd',       label: 'DVD' },
-  { value: 'download',  label: 'Download' },
-  { value: 'other',     label: 'Other' },
+  { value: 'theater',   label: t('Theater / cinema') },
+  { value: 'streaming', label: t('Streaming') },
+  { value: 'bluray',    label: t('Blu-ray') },
+  { value: 'dvd',       label: t('DVD') },
+  { value: 'download',  label: t('Download') },
+  { value: 'other',     label: t('Other') },
 ]
 
 export default function MovieViewingsEditor({ viewings, onChange }: Props) {
@@ -31,31 +32,31 @@ export default function MovieViewingsEditor({ viewings, onChange }: Props) {
   return (
     <div className="field-group movie-viewings">
       <div className="movie-viewings-head">
-        <label>Viewings</label>
+        <label>{t('Viewings')}</label>
         {viewings.length > 0 && (
           <span className="movie-viewings-count">
-            {viewings.length} viewing{viewings.length === 1 ? '' : 's'}
+            {plural(viewings.length, '{n} viewing', '{n} viewings')}
           </span>
         )}
-        <button type="button" className="secondary-btn" onClick={add}>+ Add viewing</button>
+        <button type="button" className="secondary-btn" onClick={add}>{t('+ Add viewing')}</button>
       </div>
-      <p className="hint">Log each watch — first time in a theater, a re-view at home, a rewatch on a plane. Nothing here is required.</p>
+      <p className="hint">{t('Log each watch — first time in a theater, a re-view at home, a rewatch on a plane. Nothing here is required.')}</p>
 
       {viewings.length === 0 ? (
-        <p className="hint" style={{ opacity: 0.6 }}>No viewings logged yet.</p>
+        <p className="hint" style={{ opacity: 0.6 }}>{t('No viewings logged yet.')}</p>
       ) : (
         <ul className="movie-viewings-list">
           {viewings.map((v) => (
             <li key={v.id} className="movie-viewing">
               <input type="date" value={v.date ?? ''} onChange={(e) => patch(v.id, (x) => ({ ...x, date: e.target.value || undefined }))} />
               <select value={v.format ?? ''} onChange={(e) => patch(v.id, (x) => ({ ...x, format: (e.target.value || undefined) as MovieFormat | undefined }))}>
-                <option value="">— format</option>
+                <option value="">{t('— format')}</option>
                 {FORMAT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
-              <input placeholder="Location" value={v.location ?? ''} onChange={(e) => patch(v.id, (x) => ({ ...x, location: e.target.value || undefined }))} />
-              <input placeholder="With whom" value={v.companions ?? ''} onChange={(e) => patch(v.id, (x) => ({ ...x, companions: e.target.value || undefined }))} />
-              <input placeholder="Note" value={v.note ?? ''} onChange={(e) => patch(v.id, (x) => ({ ...x, note: e.target.value || undefined }))} />
-              <button type="button" className="movie-viewing-remove" onClick={() => remove(v.id)} title="Remove viewing" aria-label="Remove viewing">✕</button>
+              <input placeholder={t('Location')} value={v.location ?? ''} onChange={(e) => patch(v.id, (x) => ({ ...x, location: e.target.value || undefined }))} />
+              <input placeholder={t('With whom')} value={v.companions ?? ''} onChange={(e) => patch(v.id, (x) => ({ ...x, companions: e.target.value || undefined }))} />
+              <input placeholder={t('Note')} value={v.note ?? ''} onChange={(e) => patch(v.id, (x) => ({ ...x, note: e.target.value || undefined }))} />
+              <button type="button" className="movie-viewing-remove" onClick={() => remove(v.id)} title={t('Remove viewing')} aria-label={t('Remove viewing')}>✕</button>
             </li>
           ))}
         </ul>

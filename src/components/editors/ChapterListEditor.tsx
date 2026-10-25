@@ -3,8 +3,9 @@
 
 import type { Chapter } from '../../types'
 import { UnitListEditor } from './UnitListEditor'
+import { t } from '../../i18n'
 
-const CHAPTER_CONFIG = { noun: 'chapter' as const, doneLabel: 'Read', showFiller: false, showScanlator: true, numberPlaceholder: 'Ch #' }
+const CHAPTER_CONFIG = { noun: 'chapter' as const, doneLabel: t('Read'), showFiller: false, showScanlator: true, numberPlaceholder: t('Ch #') }
 
 export default function ChapterListEditor({ chapters, onAdd, onRemove, onUpdate, onToggleRead, onRatingChange, onBulkAdd }: {
   chapters: Chapter[]

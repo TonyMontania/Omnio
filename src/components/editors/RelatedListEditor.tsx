@@ -5,6 +5,7 @@
 import type { RelatedItem, Item, RelationKind } from '../../types'
 import { RELATION_OPTIONS } from '../../types'
 import AnimeItemPicker from './AnimeItemPicker'
+import { t } from '../../i18n'
 
 type Props =
   | {
@@ -40,7 +41,7 @@ export default function RelatedListEditor(props: Props) {
   const pickerOptions = props.crossLibrary && props.allItems ? props.allItems : props.options
   const lookup = (id: string) => pickerOptions.find((o) => o.id === id) ?? props.options.find((o) => o.id === id)
   const ids = props.mode === 'recommendations' ? props.ids : props.related.map((r) => r.itemId)
-  const placeholder = props.pickerPlaceholder ?? (props.mode === 'recommendations' ? 'Add recommendation…' : 'Add related…')
+  const placeholder = props.pickerPlaceholder ?? (props.mode === 'recommendations' ? t('Add recommendation…') : t('Add related…'))
   return (
     <div>
       <AnimeItemPicker options={pickerOptions} excludeIds={ids} onPick={props.onAdd} placeholder={placeholder} showCategoryBadge={!!props.crossLibrary} />
@@ -52,7 +53,7 @@ export default function RelatedListEditor(props: Props) {
             return (
               <div key={id} className="related-row">
                 {it?.cover && <img src={it.cover} alt="" />}
-                <span className="related-title">{it?.title ?? '(missing)'}</span>
+                <span className="related-title">{it?.title ?? t('(missing)')}</span>
                 {rel && (
                   <select value={rel.relation} onChange={(e) => (props as Extract<Props, { mode?: 'related' }>).onChangeRelation(id, e.target.value as RelationKind)}>
                     {RELATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}

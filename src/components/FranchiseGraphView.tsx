@@ -20,6 +20,7 @@ import type {
 } from '../types'
 import { assetSrc } from '../types'
 import { CATEGORIES } from '../categories'
+import { t } from '../i18n'
 
 type ItemNodeData = {
   item: Item
@@ -106,12 +107,12 @@ function LabelNode({ data, selected }: NodeProps<Node<LabelNodeData>>) {
               if (e.key === 'Enter') { commit(); (e.target as HTMLInputElement).blur() }
               else if (e.key === 'Escape') { setDraft(text); setRenaming(false) }
             }}
-            placeholder="Label…"
+            placeholder={t('Label…')}
             autoFocus
             onPointerDown={(e) => e.stopPropagation()}
           />
         ) : (
-          <span>{text || (editing ? '(double-click to edit)' : '(empty)')}</span>
+          <span>{text || (editing ? t('(double-click to edit)') : t('(empty)'))}</span>
         )}
       </div>
     </>
@@ -167,7 +168,7 @@ function LabeledEdge(props: EdgeProps<Edge<LabeledEdgeData>>) {
             ) : (
               <span
                 onDoubleClick={() => data?.editing && setEditing(true)}
-                title={data?.editing ? 'Double-click to edit' : undefined}
+                title={data?.editing ? t('Double-click to edit') : undefined}
               >{data?.label}</span>
             )}
           </div>
@@ -199,25 +200,25 @@ const PRESET_COLORS = [
 ]
 
 const EDGE_TYPES: { value: FranchiseGraphEdgeType; label: string }[] = [
-  { value: 'bezier',     label: 'Curved' },
-  { value: 'straight',   label: 'Straight' },
-  { value: 'step',       label: 'Angled' },
-  { value: 'smoothstep', label: 'Angled (rounded)' },
+  { value: 'bezier',     label: t('Curved') },
+  { value: 'straight',   label: t('Straight') },
+  { value: 'step',       label: t('Angled') },
+  { value: 'smoothstep', label: t('Angled (rounded)') },
 ]
 
 const MARKER_TYPES: { value: FranchiseGraphEdgeMarker; label: string }[] = [
-  { value: 'arrow-closed', label: 'Solid ▶' },
-  { value: 'arrow',        label: 'Open ▷' },
-  { value: 'none',         label: 'No arrow' },
+  { value: 'arrow-closed', label: t('Solid ▶') },
+  { value: 'arrow',        label: t('Open ▷') },
+  { value: 'none',         label: t('No arrow') },
 ]
 
 const NODE_SHAPES: { value: FranchiseGraphNodeShape; label: string }[] = [
-  { value: 'rect',    label: 'Rectangle' },
-  { value: 'rounded', label: 'Rounded' },
-  { value: 'pill',    label: 'Pill' },
-  { value: 'circle',  label: 'Circle' },
-  { value: 'diamond', label: 'Diamond' },
-  { value: 'text',    label: 'Plain text' },
+  { value: 'rect',    label: t('Rectangle') },
+  { value: 'rounded', label: t('Rounded') },
+  { value: 'pill',    label: t('Pill') },
+  { value: 'circle',  label: t('Circle') },
+  { value: 'diamond', label: t('Diamond') },
+  { value: 'text',    label: t('Plain text') },
 ]
 
 export default function FranchiseGraphView(props: Props) {
@@ -430,7 +431,7 @@ function InnerGraphView({ franchise, items, graph, onSaveGraph, onNavigate, full
   }
 
   const clearAll = () => {
-    if (!window.confirm(`Clear the whole diagram for ${franchise}? This can't be undone.`)) return
+    if (!window.confirm(t('Clear the whole diagram for {franchise}? This can\'t be undone.', { franchise: franchise }))) return
     setRfNodes([])
     setRfEdges([])
     onSaveGraph(undefined)
@@ -611,65 +612,65 @@ function InnerGraphView({ franchise, items, graph, onSaveGraph, onNavigate, full
       <div className="franchise-graph-toolbar">
         <label className="franchise-graph-edit-toggle">
           <input type="checkbox" checked={editing} onChange={(e) => setEditing(e.target.checked)} />
-          Edit graph
+          {t('Edit graph')}
         </label>
 
         {editing && (
           <>
-            <div className="franchise-graph-toolbar-group" role="group" aria-label="History">
-              <IconBtn onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" label="Undo">
+            <div className="franchise-graph-toolbar-group" role="group" aria-label={t('History')}>
+              <IconBtn onClick={undo} disabled={!canUndo} title={t('Undo (Ctrl+Z)')} label={t('Undo')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 14l-4-4 4-4"/><path d="M5 10h9a5 5 0 010 10h-2"/></svg>
               </IconBtn>
-              <IconBtn onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Y)" label="Redo">
+              <IconBtn onClick={redo} disabled={!canRedo} title={t('Redo (Ctrl+Y)')} label={t('Redo')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 14l4-4-4-4"/><path d="M19 10h-9a5 5 0 000 10h2"/></svg>
               </IconBtn>
             </div>
 
-            <div className="franchise-graph-toolbar-group" role="group" aria-label="Zoom">
-              <IconBtn onClick={zoomOut} title="Zoom out" label="−"><span>−</span></IconBtn>
-              <span className="franchise-graph-zoom-level" onClick={zoomReset} title="Reset to 100%">{zoomPercent}%</span>
-              <IconBtn onClick={zoomIn} title="Zoom in" label="+"><span>+</span></IconBtn>
-              <IconBtn onClick={zoomFit} title="Fit to view" label="⤢">
+            <div className="franchise-graph-toolbar-group" role="group" aria-label={t('Zoom')}>
+              <IconBtn onClick={zoomOut} title={t('Zoom out')} label="−"><span>−</span></IconBtn>
+              <span className="franchise-graph-zoom-level" onClick={zoomReset} title={t('Reset to 100%')}>{zoomPercent}%</span>
+              <IconBtn onClick={zoomIn} title={t('Zoom in')} label="+"><span>+</span></IconBtn>
+              <IconBtn onClick={zoomFit} title={t('Fit to view')} label="⤢">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h6M4 4v6M20 4h-6M20 4v6M4 20h6M4 20v-6M20 20h-6M20 20v-6"/></svg>
               </IconBtn>
             </div>
 
             {multiSelected && (
-              <div className="franchise-graph-toolbar-group" role="group" aria-label="Align">
-                <IconBtn onClick={() => alignSelection('left')}     title="Align left"                     label="⇤">⇤</IconBtn>
-                <IconBtn onClick={() => alignSelection('center-h')} title="Center horizontally"            label="↔">↔</IconBtn>
-                <IconBtn onClick={() => alignSelection('right')}    title="Align right"                    label="⇥">⇥</IconBtn>
-                <IconBtn onClick={() => alignSelection('top')}      title="Align top"                      label="⤒">⤒</IconBtn>
-                <IconBtn onClick={() => alignSelection('center-v')} title="Center vertically"              label="↕">↕</IconBtn>
-                <IconBtn onClick={() => alignSelection('bottom')}   title="Align bottom"                   label="⤓">⤓</IconBtn>
+              <div className="franchise-graph-toolbar-group" role="group" aria-label={t('Align')}>
+                <IconBtn onClick={() => alignSelection('left')}     title={t('Align left')}                     label="⇤">⇤</IconBtn>
+                <IconBtn onClick={() => alignSelection('center-h')} title={t('Center horizontally')}            label="↔">↔</IconBtn>
+                <IconBtn onClick={() => alignSelection('right')}    title={t('Align right')}                    label="⇥">⇥</IconBtn>
+                <IconBtn onClick={() => alignSelection('top')}      title={t('Align top')}                      label="⤒">⤒</IconBtn>
+                <IconBtn onClick={() => alignSelection('center-v')} title={t('Center vertically')}              label="↕">↕</IconBtn>
+                <IconBtn onClick={() => alignSelection('bottom')}   title={t('Align bottom')}                   label="⤓">⤓</IconBtn>
               </div>
             )}
 
-            <div className="franchise-graph-toolbar-group" role="group" aria-label="Options">
-              <label className="franchise-graph-inline-toggle" title="Snap nodes to a 16px grid">
+            <div className="franchise-graph-toolbar-group" role="group" aria-label={t('Options')}>
+              <label className="franchise-graph-inline-toggle" title={t('Snap nodes to a 16px grid')}>
                 <input type="checkbox" checked={snapEnabled} onChange={(e) => setSnapEnabled(e.target.checked)} />
-                Snap
+                {t('Snap')}
               </label>
             </div>
 
             {(selectedNodeIds.length > 0 || selectedEdgeIds.length > 0) && (
-              <IconBtn onClick={deleteSelected} title="Delete selection (Del)" label="Delete" danger>
+              <IconBtn onClick={deleteSelected} title={t('Delete selection (Del)')} label={t('Delete')} danger>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/></svg>
               </IconBtn>
             )}
 
-            <button type="button" className="ghost" onClick={clearAll}>Clear all</button>
+            <button type="button" className="ghost" onClick={clearAll}>{t('Clear all')}</button>
           </>
         )}
 
         <span className="franchise-graph-hint" style={{ marginLeft: 'auto' }}>
           {editing
-            ? 'Drag between the dots on a card to connect. Shift-click to multi-select. Ctrl+Z / Ctrl+Y for undo/redo.'
-            : 'Double-click any card to open its detail.'}
+            ? t('Drag between the dots on a card to connect. Shift-click to multi-select. Ctrl+Z / Ctrl+Y for undo/redo.')
+            : t('Double-click any card to open its detail.')}
         </span>
 
         {onSetFullscreen && (
-          <IconBtn onClick={() => onSetFullscreen(!fullscreen)} title={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} label="Fullscreen">
+          <IconBtn onClick={() => onSetFullscreen(!fullscreen)} title={fullscreen ? t('Exit fullscreen') : t('Enter fullscreen')} label={t('Fullscreen')}>
             {fullscreen
               ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 4H5v4M15 4h4v4M9 20H5v-4M15 20h4v-4"/></svg>
               : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>}
@@ -679,35 +680,35 @@ function InnerGraphView({ franchise, items, graph, onSaveGraph, onNavigate, full
       <div className="franchise-graph-body">
         {editing && (
           <aside className="franchise-graph-shapes-panel">
-            <h4>Shapes</h4>
+            <h4>{t('Shapes')}</h4>
             <div className="franchise-graph-shapes-grid">
-              <button type="button" onClick={() => addLabelNode('rect')} title="Rectangle label">
+              <button type="button" onClick={() => addLabelNode('rect')} title={t('Rectangle label')}>
                 <span className="shape-preview shape-preview-rect" />
-                <span>Rectangle</span>
+                <span>{t('Rectangle')}</span>
               </button>
-              <button type="button" onClick={() => addLabelNode('rounded')} title="Rounded label">
+              <button type="button" onClick={() => addLabelNode('rounded')} title={t('Rounded label')}>
                 <span className="shape-preview shape-preview-rounded" />
-                <span>Rounded</span>
+                <span>{t('Rounded')}</span>
               </button>
-              <button type="button" onClick={() => addLabelNode('pill')} title="Pill label">
+              <button type="button" onClick={() => addLabelNode('pill')} title={t('Pill label')}>
                 <span className="shape-preview shape-preview-pill" />
-                <span>Pill</span>
+                <span>{t('Pill')}</span>
               </button>
-              <button type="button" onClick={() => addLabelNode('circle')} title="Circle label">
+              <button type="button" onClick={() => addLabelNode('circle')} title={t('Circle label')}>
                 <span className="shape-preview shape-preview-circle" />
-                <span>Circle</span>
+                <span>{t('Circle')}</span>
               </button>
-              <button type="button" onClick={() => addLabelNode('diamond')} title="Diamond label">
+              <button type="button" onClick={() => addLabelNode('diamond')} title={t('Diamond label')}>
                 <span className="shape-preview shape-preview-diamond" />
-                <span>Diamond</span>
+                <span>{t('Diamond')}</span>
               </button>
-              <button type="button" onClick={() => addLabelNode('text')} title="Plain text — no border, sits over other shapes">
-                <span className="shape-preview shape-preview-text">T</span>
-                <span>Text</span>
+              <button type="button" onClick={() => addLabelNode('text')} title={t('Plain text — no border, sits over other shapes')}>
+                <span className="shape-preview shape-preview-text">{t('T')}</span>
+                <span>{t('Text')}</span>
               </button>
             </div>
             <p className="hint" style={{ marginTop: 8 }}>
-              Tip: shapes default to the bottom layer so they read as backgrounds under items. Use <b>Send to back</b> / <b>Bring to front</b> in the Properties panel to change.
+              {t('Tip: shapes default to the bottom layer so they read as backgrounds under items. Use')}{' '}<b>{t('Send to back')}</b> / <b>{t('Bring to front')}</b>{' '}{t('in the Properties panel to change.')}
             </p>
           </aside>
         )}
@@ -745,7 +746,7 @@ function InnerGraphView({ franchise, items, graph, onSaveGraph, onNavigate, full
             <Background gap={16} />
             <MiniMap
               pannable zoomable
-              ariaLabel="Franchise graph minimap"
+              ariaLabel={t('Franchise graph minimap')}
               nodeColor={() => accentColor}
               maskColor="rgba(0, 0, 0, 0.6)"
               style={{ width: 160, height: 100 }}
@@ -756,25 +757,25 @@ function InnerGraphView({ franchise, items, graph, onSaveGraph, onNavigate, full
         {editing && (
           <aside className="franchise-graph-sidebar">
             <section className="franchise-graph-panel">
-              <h4>Properties</h4>
+              <h4>{t('Properties')}</h4>
               {(selectedEdge || selectedNode) ? (
                 <div className="franchise-graph-inspector">
                   {selectedEdge && (
                     <>
                       <label className="inspector-field">
-                        <span>Line style</span>
+                        <span>{t('Line style')}</span>
                         <select value={currentEdgeType} onChange={(e) => setEdgeType(selectedEdge.id, e.target.value as FranchiseGraphEdgeType)}>
                           {EDGE_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                         </select>
                       </label>
                       <label className="inspector-field">
-                        <span>Arrowhead</span>
+                        <span>{t('Arrowhead')}</span>
                         <select value={currentEdgeMarker} onChange={(e) => setEdgeMarker(selectedEdge.id, e.target.value as FranchiseGraphEdgeMarker)}>
                           {MARKER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                         </select>
                       </label>
                       <div className="inspector-field">
-                        <span>Color</span>
+                        <span>{t('Color')}</span>
                         <div className="inspector-swatches">
                           {PRESET_COLORS.map((c) => {
                             const resolved = c.value || accentColor
@@ -797,7 +798,7 @@ function InnerGraphView({ franchise, items, graph, onSaveGraph, onNavigate, full
                   )}
                   {selectedNode && isLabelNode && (
                     <label className="inspector-field">
-                      <span>Shape</span>
+                      <span>{t('Shape')}</span>
                       <select value={currentNodeShape} onChange={(e) => setNodeShape(selectedNode.id, e.target.value as FranchiseGraphNodeShape)}>
                         {NODE_SHAPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
@@ -805,10 +806,10 @@ function InnerGraphView({ franchise, items, graph, onSaveGraph, onNavigate, full
                   )}
                   {selectedNode && (
                     <div className="inspector-field">
-                      <span>Layer</span>
+                      <span>{t('Layer')}</span>
                       <div className="inspector-btn-row">
-                        <button type="button" className="secondary-btn" onClick={() => sendToBack(selectedNode.id)} title="Send to back — the node will sit under other shapes and cards">↓ Back</button>
-                        <button type="button" className="secondary-btn" onClick={() => bringToFront(selectedNode.id)} title="Bring to front — the node will sit above other shapes and cards">↑ Front</button>
+                        <button type="button" className="secondary-btn" onClick={() => sendToBack(selectedNode.id)} title={t('Send to back — the node will sit under other shapes and cards')}>{t('↓ Back')}</button>
+                        <button type="button" className="secondary-btn" onClick={() => bringToFront(selectedNode.id)} title={t('Bring to front — the node will sit above other shapes and cards')}>{t('↑ Front')}</button>
                       </div>
                     </div>
                   )}
@@ -816,24 +817,24 @@ function InnerGraphView({ franchise, items, graph, onSaveGraph, onNavigate, full
               ) : (
                 <p className="hint">
                   {selectedNodeIds.length > 1
-                    ? `${selectedNodeIds.length} nodes selected — use the align tools in the toolbar.`
-                    : 'Select an item, arrow or label to customize it.'}
+                    ? t('{selectedNodeIds} nodes selected — use the align tools in the toolbar.', { selectedNodeIds: selectedNodeIds.length })
+                    : t('Select an item, arrow or label to customize it.')}
                 </p>
               )}
             </section>
 
             <section className="franchise-graph-panel">
-              <h4>Items {available.length > 0 && <span className="panel-count">({available.length})</span>}</h4>
+              <h4>{t('Items')}{' '}{available.length > 0 && <span className="panel-count">({available.length})</span>}</h4>
               <input
                 type="text"
                 className="franchise-graph-side-search"
-                placeholder="Search…"
+                placeholder={t('Search…')}
                 value={itemsFilter}
                 onChange={(e) => setItemsFilter(e.target.value)}
               />
               {available.length === 0
-                ? <p className="hint">Every item is on the canvas.</p>
-                : <p className="hint">Click to drop onto the canvas.</p>}
+                ? <p className="hint">{t('Every item is on the canvas.')}</p>
+                : <p className="hint">{t('Click to drop onto the canvas.')}</p>}
               <ul>
                 {available
                   .filter((it) => !itemsFilter.trim() || it.title.toLowerCase().includes(itemsFilter.trim().toLowerCase()))
@@ -972,7 +973,7 @@ function rfEdgeToGraph(e: Edge): FranchiseGraphEdge {
 }
 
 function placeholderItem(id: string): Item {
-  return { id, categoryId: 'videojuegos', title: '(missing item)' } as unknown as Item
+  return { id, categoryId: 'videojuegos', title: t('(missing item)') } as unknown as Item
 }
 
 // Small icon button used across the toolbar. Same visual weight for

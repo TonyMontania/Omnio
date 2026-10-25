@@ -11,6 +11,7 @@
 import { useMemo, useState } from 'react'
 import type { Item } from '../types'
 import { CATEGORIES } from '../categories'
+import { plural, t } from '../i18n'
 
 interface Props {
   items: Item[]
@@ -79,7 +80,7 @@ export default function GenreHeatmap({ items, enabledCategories }: Props) {
   if (visibleRows.length === 0) {
     return (
       <div className="genre-heatmap-empty">
-        <p className="hint">No genres tagged yet across your libraries. Add a genre or two to a few items and this heatmap lights up.</p>
+        <p className="hint">{t('No genres tagged yet across your libraries. Add a genre or two to a few items and this heatmap lights up.')}</p>
       </div>
     )
   }
@@ -88,11 +89,11 @@ export default function GenreHeatmap({ items, enabledCategories }: Props) {
     <div className="genre-heatmap">
       <div className="genre-heatmap-header">
         <div>
-          <h3 className="insights-subheading" style={{ margin: 0 }}>Genres across libraries</h3>
-          <span className="hint">Cell intensity scales with the item count in that library. Empty cells mean no items with that genre in that library.</span>
+          <h3 className="insights-subheading" style={{ margin: 0 }}>{t('Genres across libraries')}</h3>
+          <span className="hint">{t('Cell intensity scales with the item count in that library. Empty cells mean no items with that genre in that library.')}</span>
         </div>
         <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span className="hint">Show top</span>
+          <span className="hint">{t('Show top')}</span>
           <select value={topN} onChange={(e) => setTopN(parseInt(e.target.value, 10))}>
             {[10, 15, 25, 50].map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
@@ -105,7 +106,7 @@ export default function GenreHeatmap({ items, enabledCategories }: Props) {
             <tr>
               <th className="genre-heatmap-corner"></th>
               {cats.map((c) => <th key={c.id} className="genre-heatmap-col-head">{c.label}</th>)}
-              <th className="genre-heatmap-total-head">Total</th>
+              <th className="genre-heatmap-total-head">{t('Total')}</th>
             </tr>
           </thead>
           <tbody>
@@ -123,7 +124,7 @@ export default function GenreHeatmap({ items, enabledCategories }: Props) {
                       key={c.id}
                       className="genre-heatmap-cell"
                       style={{ background: bg, color: alpha > 0.55 ? '#1a1408' : undefined }}
-                      title={`${r.genre} · ${c.label} · ${count} item${count === 1 ? '' : 's'}`}
+                      title={plural(count, '{genre} · {label} · {n} item', '{genre} · {label} · {n} items', { genre: r.genre, label: c.label })}
                     >{count > 0 ? count : ''}</td>
                   )
                 })}
@@ -136,7 +137,7 @@ export default function GenreHeatmap({ items, enabledCategories }: Props) {
 
       {rows.length > topN && (
         <p className="hint" style={{ marginTop: 8 }}>
-          Showing top {topN} of {rows.length} genres. {rows.length - topN} more hidden.
+          {t('Showing top {topN} of {rows} genres. {rows2} more hidden.', { topN: topN, rows: rows.length, rows2: rows.length - topN })}
         </p>
       )}
     </div>
