@@ -948,11 +948,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   filter: invert(0.4);
 }
 
-/* Library editors (item panel and artist panel) share the look of the
-   plugin editor: sentence-case labels, short fields two per row, small
+/* Library editors (item panel and artist panel) and dialogs share the
+   look of the plugin editor: sentence-case labels, short fields two per row, small
    uppercase section titles, a neutral Fetch metadata box and the live
    preview showing the real grid card. */
-:is(.edit-form-col, .artist-editor-modal) .field-group label {
+:is(.edit-form-col, .artist-editor-modal, .modal-panel, .modal-backdrop .modal) .field-group label {
   font-family: var(--font-body); font-size: 12px; font-weight: 500;
   letter-spacing: 0; text-transform: none; color: var(--text-dim);
 }

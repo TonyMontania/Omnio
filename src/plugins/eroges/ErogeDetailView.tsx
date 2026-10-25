@@ -6,6 +6,7 @@ import { f95CheckVersion, f95GamesByCreator, f95ThreadId, f95ThreadUrl } from '.
 import { cachedLastChanges, cachedThread, isNewerVersion, versionPatchFrom } from './f95Cache'
 import type { TagPrefs } from './constants'
 import ServiceLogo from '../../components/ServiceLogo'
+import { formatBytes, formatDateTime } from '../../utils/format'
 
 interface Props {
   game: ErogeItem
@@ -324,23 +325,40 @@ export default function ErogeDetailView({ game, f95Cookie, onEdit, onDelete, onU
 
       {activeTab === 'saves' && (
         <div className="er-panel">
-          <div className="er-panel-head">
-            <span>{saves.length === 0 ? 'No saves stored yet.' : `${saves.length} save${saves.length === 1 ? '' : 's'}`}</span>
-            <div className="er-panel-actions">
-              <button className="er-btn er-btn-sm" onClick={async () => { await savesAdd(game.name); refreshSaves() }}>+ Add</button>
-              <button className="er-btn er-btn-sm" onClick={() => savesOpenFolder(game.name)}>Open folder</button>
-              {saves.length > 0 && <button className="er-btn er-btn-sm er-btn-danger" onClick={async () => { if (confirm('Delete all saves?')) { await savesDeleteAll(game.name); refreshSaves() } }}>Delete all</button>}
-            </div>
-          </div>
-          {saves.map((s) => (
-            <div key={s.name} className="er-save-row">
-              <span className="er-save-name" title={s.name}>{s.name}</span>
-              <div className="er-save-actions">
-                <button className="er-btn er-btn-sm" onClick={() => savesReveal(game.name, s.name)}>View</button>
-                <button className="er-btn er-btn-sm er-btn-danger" aria-label={`Delete ${s.name}`} onClick={async () => { if (confirm(`Delete ${s.name}?`)) { await savesDelete(game.name, s.name); refreshSaves() } }}>×</button>
+          {saves.length === 0 ? (
+            <div className="er-saves-empty">
+              <span className="er-saves-empty-icon" aria-hidden>💾</span>
+              <p>No saves stored yet. Keep copies of your save files here, in a folder that's only for this game.</p>
+              <div className="er-panel-actions">
+                <button className="er-btn er-btn-primary" onClick={async () => { await savesAdd(game.name); refreshSaves() }}>+ Add save files</button>
+                <button className="er-btn" onClick={() => savesOpenFolder(game.name)}>Open folder</button>
               </div>
             </div>
-          ))}
+          ) : (
+            <>
+              <div className="er-panel-head">
+                <span>{saves.length} save{saves.length === 1 ? '' : 's'} · {formatBytes(saves.reduce((n, x) => n + x.size, 0))}</span>
+                <div className="er-panel-actions">
+                  <button className="er-btn er-btn-sm er-btn-primary" onClick={async () => { await savesAdd(game.name); refreshSaves() }}>+ Add</button>
+                  <button className="er-btn er-btn-sm" onClick={() => savesOpenFolder(game.name)}>Open folder</button>
+                  <button className="er-btn er-btn-sm er-btn-danger" onClick={async () => { if (confirm('Delete all saves?')) { await savesDeleteAll(game.name); refreshSaves() } }}>Delete all</button>
+                </div>
+              </div>
+              {saves.map((s) => (
+                <div key={s.name} className="er-save-row">
+                  <span className="er-save-icon" aria-hidden>▤</span>
+                  <div className="er-save-main">
+                    <span className="er-save-name" title={s.name}>{s.name}</span>
+                    <span className="er-save-sub">{formatBytes(s.size)} · {formatDateTime(new Date(s.mtime).toISOString())}</span>
+                  </div>
+                  <div className="er-save-actions">
+                    <button className="er-btn er-btn-sm" onClick={() => savesReveal(game.name, s.name)}>View</button>
+                    <button className="er-btn er-btn-sm er-btn-danger" aria-label={`Delete ${s.name}`} onClick={async () => { if (confirm(`Delete ${s.name}?`)) { await savesDelete(game.name, s.name); refreshSaves() } }}>×</button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
 
