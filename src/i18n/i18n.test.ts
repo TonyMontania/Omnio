@@ -52,8 +52,8 @@ describe('library order', () => {
     expect(CATEGORIES.map((c) => c.label).slice(0, 4)).toEqual(['Anime', 'Books', 'Donghua', 'Games'])
     setLanguage('es')
     expect(CATEGORIES.map((c) => c.label)).toEqual([
-      'Anime', 'Cómics occidentales', 'Donghua', 'Juegos', 'Libros', 'Manga',
-      'Manhua', 'Manhwa', 'Música', 'Novelas visuales', 'Películas', 'Series',
+      'Anime', 'Cómics Occidentales', 'Donghua', 'Juegos', 'Libros', 'Manga',
+      'Manhua', 'Manhwa', 'Música', 'Novelas Visuales', 'Películas', 'Series',
     ])
     setLanguage('en')
     expect(CATEGORIES[1].label).toBe('Books')

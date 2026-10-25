@@ -8,7 +8,7 @@
 
 **Todos tus pasatiempos en una sola app que vive en tu computadora.**
 
-Juegos · Música · Películas · Series · Anime · Donghua · Manga · Manhwa · Manhua · Cómics · Libros · Novelas visuales
+Juegos · Música · Películas · Series · Anime · Donghua · Manga · Manhwa · Manhua · Cómics · Libros · Novelas Visuales
 
 [![Descargar](https://img.shields.io/badge/Descargar-última%20versión-c9a227?style=for-the-badge)](https://github.com/TonyMontania/Omnio/releases/latest)
 
@@ -140,7 +140,7 @@ Los datos se guardan en `~/.local/share/com.omnio.app/`.
 
 **Registrar**
 
-- **12 bibliotecas**: Juegos · Música · Películas · Series · Anime · Donghua · Manga · Manhwa · Manhua · Cómics occidentales · Libros · Novelas visuales
+- **12 bibliotecas**: Juegos · Música · Películas · Series · Anime · Donghua · Manga · Manhwa · Manhua · Cómics Occidentales · Libros · Novelas Visuales
 - **Editor con pestañas** (Resumen / Identidad / Progreso / Imágenes / Historial / Relacionados / Notas) con vista previa en vivo de la tarjeta y del detalle
 - **Vistas**: cuadrícula, lista, compacta, Kanban por estado, línea de tiempo por año de lanzamiento y un diario de lo que agregaste y terminaste
 - **Campos personalizados** por biblioteca, en el editor y, si quieres, como etiqueta en la tarjeta
@@ -211,14 +211,14 @@ Las fuentes están agrupadas por la biblioteca que alimentan. Lo marcado como *S
 | [AniDB](https://anidb.net/) | Etiquetas con peso, referencias más precisas (pega el AID) | Nombre de cliente registrado |
 | [Kitsu](https://kitsu.app/) | Clasificación por edad cuando AniList no la tiene | Sin clave |
 
-**Manga · Manhwa · Manhua · Cómics occidentales**
+**Manga · Manhwa · Manhua · Cómics Occidentales**
 
 | Fuente | Qué completa | Acceso |
 | --- | --- | --- |
 | [AniList](https://anilist.co/) | Metadatos completos para manga y similares | Sin clave |
 | [MangaDex](https://mangadex.org/) | Metadatos completos + ID de MangaDex para el enlace a "capítulos nuevos" | Sin clave |
 | [Kitsu](https://kitsu.app/) | Alternativa para manga | Sin clave |
-| [ComicVine](https://comicvine.gamespot.com/) | Cómics occidentales (Marvel, DC, Image, independientes) | Clave de API gratuita |
+| [ComicVine](https://comicvine.gamespot.com/) | Cómics Occidentales (Marvel, DC, Image, independientes) | Clave de API gratuita |
 
 **Música**
 
@@ -234,7 +234,7 @@ Las fuentes están agrupadas por la biblioteca que alimentan. Lo marcado como *S
 | --- | --- | --- |
 | [OpenLibrary](https://openlibrary.org/) | Título, autores, descripción, editorial, ISBN, portada | Sin clave |
 
-**Novelas visuales**
+**Novelas Visuales**
 
 | Fuente | Qué completa | Acceso |
 | --- | --- | --- |
