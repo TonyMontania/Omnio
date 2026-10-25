@@ -142,7 +142,7 @@ import { buildStaticSiteHtml } from './exportSite'
 import { buildCsvExports, buildSingleCsv } from './CsvExporter'
 import {
   CategoryIcon,
-  InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon, HomeIcon, ArcadeIcon,
+  InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon, HomeIcon,
 } from './icons'
 
 import DistChart from './insights/DistChart'
@@ -638,7 +638,7 @@ function App() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [specialView, activePluginSlug])
-  useEffect(() => { if (!activePluginSlug) setPluginPageMeta(null) }, [activePluginSlug])
+  useEffect(() => { if (!activePluginSlug && specialView !== 'arcade') setPluginPageMeta(null) }, [activePluginSlug, specialView])
   // If the plugin whose view is open gets re-locked or hidden, snap back to Home.
   useEffect(() => {
     if (
@@ -2635,9 +2635,10 @@ function App() {
   }
   type PageCount = { n: number; unit: string }
   const pageMeta: { icon: React.ReactNode; title: string; count?: PageCount; onBack?: () => void; actions?: React.ReactNode; chips?: PageChip[] } | null = (() => {
-    // Home and Arcade own their viewport and skip the shell topbar.
+    // Home owns its viewport and skips the shell topbar; Arcade publishes
+    // its own meta through setPluginPageMeta like a plugin.
     if (specialView === 'home') return null
-    if (specialView === 'arcade') return null
+    if (specialView === 'arcade') return pluginPageMeta
     // Active plugin publishes its meta via setPageMeta; mirror it here.
     if (activePluginSlug) return pluginPageMeta
     // An open item: back arrow + title; its actions live in the page hero.
@@ -2780,12 +2781,11 @@ function App() {
     }
   })()
 
-  // Home and Arcade draw their own headers; with app-drawn window
-  // controls they still get a top bar so the controls have a place.
+  // Home draws its own header; with app-drawn window controls it still
+  // gets a top bar so the controls have a place.
   const customTitleBar = usesCustomTitleBar()
   const navMeta: typeof pageMeta = pageMeta ?? (!customTitleBar ? null
     : specialView === 'home' ? { icon: <HomeIcon />, title: 'Home' }
-    : specialView === 'arcade' ? { icon: <ArcadeIcon />, title: 'Arcade' }
     : { icon: null, title: '' })
 
   return (
@@ -3529,6 +3529,7 @@ function App() {
             <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
               <ArcadeView
                 games={arcadeGames}
+                setPageMeta={setPluginPageMeta}
                 onCreate={(g) => setArcadeGames((prev) => [...prev, g])}
                 onUpdate={(gid, patch) => setArcadeGames((prev) => prev.map((g) => g.id === gid ? { ...g, ...patch } : g))}
                 onDelete={(gid) => setArcadeGames((prev) => prev.filter((g) => g.id !== gid))}

@@ -1,33 +1,14 @@
-/* Arcade section — score / 1cc tracker for shmups. Layout is
-   deliberately dense and compact, mirroring doopu's Touhou 1CC
-   Tracker: every game becomes a small header + mini-grid that flows
-   in a wrap layout. Cells are tiny plain squares. */
+/* Arcade section — score / 1cc tracker for shmups. The chart keeps the
+   dense look of doopu's Touhou 1CC Tracker (small header + mini-grid per
+   game in a wrap layout); the page around it follows the library pages:
+   top-bar controls, titled blocks, cards with an accent hover. */
 
-.arcade-view {
-  padding: 12px 24px 32px;
-  overflow-y: auto;
+.arcade-view { display: flex; flex-direction: column; gap: 26px; }
+.arcade-block { display: flex; flex-direction: column; gap: 14px; }
+.arcade-block-title {
+  margin: 0; font-family: var(--font-display); font-size: 12px; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--accent);
 }
-
-.arcade-chart-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 14px;
-}
-.arcade-chart-header h1,
-.arcade-chart-header h2 {
-  font-family: var(--font-mono);
-  font-size: 15px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  margin: 0;
-  color: var(--text);
-}
-.arcade-chart-subhead { margin-top: 30px; }
-.arcade-chart-subhead h2 { font-size: 13px; }
 
 .arcade-empty {
   padding: 28px;
@@ -41,7 +22,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 22px 26px;
+  gap: 16px;
 }
 
 /* ---- Mini-grid card ---- */
@@ -55,7 +36,14 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+  padding: 12px 14px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  transition: border-color .15s;
 }
+.arcade-mini-card:hover { border-color: var(--accent); }
+.arcade-detail-grid-wrap .arcade-mini-card { background: none; border: 0; padding: 0; }
 .arcade-mini-table { width: auto; }
 /* Header: game logo displayed BIG at its natural aspect ratio (like a
    Steam library logo), sized to roughly match the width of the grid
@@ -77,6 +65,8 @@
   width: 220px;
   height: 160px;
 }
+/* Without a logo the one-line label is the whole header. */
+.arcade-mini-header:has(.arcade-mini-abbr-only) { height: auto; padding-bottom: 6px; }
 .arcade-mini-header:hover .arcade-mini-abbr,
 .arcade-mini-header:hover .arcade-mini-abbr-only { color: var(--accent); }
 .arcade-mini-header:hover .arcade-mini-logo { opacity: 0.85; }
@@ -168,48 +158,17 @@
 /* ---- Legend ---- */
 
 .arcade-legend {
-  margin-top: 28px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px;
   padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  display: inline-flex;
-  flex-direction: column;
-  gap: 4px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-dim);
+  background: var(--surface); border: 1px solid var(--border-soft); border-radius: 10px;
+  font-size: 12px; color: var(--text-dim);
 }
-.arcade-legend-title {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-
-/* Attribution line below the legend — subtle, one line, monospace so it
-   reads as metadata rather than body copy. */
-.arcade-credit {
-  margin-top: 16px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--text-faint);
-  letter-spacing: 0.04em;
-}
-.arcade-credit a {
-  color: var(--accent);
-  text-decoration: none;
-}
+.arcade-legend-row { display: inline-flex; align-items: center; gap: 8px; }
+.arcade-legend-row .arcade-mini-cell { cursor: default; width: 12px; height: 12px; }
+/* Attribution, pushed to the end of the legend row. */
+.arcade-credit { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); letter-spacing: 0.04em; }
+.arcade-credit a { color: var(--accent); text-decoration: none; }
 .arcade-credit a:hover { text-decoration: underline; }
-.arcade-legend-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.arcade-legend-row .arcade-mini-cell {
-  cursor: default;
-  width: 12px;
-  height: 12px;
-}
 
 /* ---- Template picker ---- */
 
@@ -240,61 +199,29 @@
 .arcade-template-list .picker-title { font-weight: 600; font-size: 13.5px; font-family: var(--font-mono); }
 .arcade-template-list .picker-desc  { font-size: 12px; color: var(--text-dim); }
 
-/* ---- Detail view (unchanged from previous iteration) ---- */
+/* ---- Detail view: hero header (styles/hero.css) with the logo on the
+   stage instead of a cover. ---- */
 
-.arcade-detail { padding: 4px 32px 32px; overflow-y: auto; }
-.arcade-detail-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+.arcade-hero .hero-stage { height: clamp(140px, 22vh, 220px); display: flex; align-items: center; justify-content: center; }
+.arcade-hero-logo {
+  position: relative; z-index: 1; max-width: min(60%, 520px); max-height: 75%; object-fit: contain;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .55));
 }
-.arcade-detail-title {
-  flex: 1;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text);
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
+.arcade-hero-abbr {
+  position: relative; z-index: 1; font-family: var(--font-display); font-size: 44px; font-weight: 700;
+  letter-spacing: .06em; color: var(--text-faint);
 }
-.arcade-detail-title:focus { border-color: var(--border); background: var(--surface-2); outline: none; }
-.arcade-detail-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 10px;
-  margin-bottom: 16px;
+.arcade-hero .hero-body { margin-top: 16px; padding: 0 4px; align-items: center; }
+.arcade-title-input {
+  width: 100%; margin: 0; padding: 2px 6px; margin-left: -6px; box-sizing: border-box;
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+  font-family: var(--font-display); font-size: clamp(24px, 3vw, 32px); font-weight: 600; color: var(--text);
 }
-.arcade-stat {
-  padding: 10px 14px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.arcade-stat-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-faint);
-}
-.arcade-stat-value { font-family: var(--font-display); font-size: 22px; font-weight: 600; }
-.arcade-stat-sub { font-size: 11px; color: var(--text-dim); }
+.arcade-title-input:hover { border-color: var(--border-soft); }
+.arcade-title-input:focus { border-color: var(--accent); background: var(--surface-2); outline: none; box-shadow: none; }
+.hero-stats dd small { display: block; margin-top: 2px; font-size: 11px; font-weight: 400; color: var(--text-dim); }
 
-.arcade-section { margin-top: 20px; }
-.arcade-section h3 {
-  font-family: var(--font-display);
-  font-size: 15px;
-  margin: 0 0 8px;
-  color: var(--text);
-}
-
-/* ---- Run editor (unchanged) ---- */
+/* ---- Run editor ---- */
 
 .arcade-run-editor { display: flex; flex-direction: column; gap: 12px; }
 .arcade-run-form {
@@ -340,7 +267,7 @@
   padding: 4px 0;
 }
 
-/* ---- New-game modal + section head + type picker ---- */
+/* ---- New-game modal + type picker ---- */
 
 .arcade-new-form { display: flex; flex-direction: column; gap: 14px; }
 .arcade-cover-drop {
@@ -379,12 +306,6 @@
 .arcade-type-tile.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft); }
 .arcade-type-title { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; }
 .arcade-type-desc { font-size: 12px; color: var(--text-dim); }
-
-.arcade-section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
 
 /* ---- Grid axes editor ---- */
 
@@ -445,70 +366,38 @@
 }
 .grid-editor-char > button:hover { color: #b04a4a; }
 
-/* ---- Score-log card grid (type='score' games on the main page) ---- */
+/* ---- Score-log cards (type='score' games on the main page) ---- */
 
 .arcade-score-flow {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 22px 18px;
 }
 .arcade-score-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
+  display: flex; flex-direction: column; gap: 0; padding: 3px 0 0;
+  background: none; border: 0; color: var(--text); cursor: pointer; text-align: left; min-width: 0;
 }
-.arcade-score-card:hover { border-color: var(--accent); }
-.arcade-score-cover {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 4px;
-  flex: 0 0 40px;
+.arcade-score-art {
+  position: relative; aspect-ratio: 16 / 9; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface); border-radius: 10px;
+  outline: 1px solid var(--border-soft); outline-offset: -1px;
+  transition: outline-color .15s, transform .15s;
 }
-.arcade-score-body { flex: 1; min-width: 0; }
-.arcade-score-title { font-weight: 600; font-size: 13.5px; }
-.arcade-score-pb {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-dim);
-}
+.arcade-score-card:hover .arcade-score-art { outline-color: var(--accent); transform: translateY(-2px); }
+.arcade-score-art img { max-width: 82%; max-height: 78%; object-fit: contain; }
+.arcade-score-art > span:first-child { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; }
+.arcade-score-art .arcade-badge { position: absolute; top: 8px; right: 8px; }
+.arcade-score-title { margin-top: 9px; font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arcade-score-pb { margin-top: 3px; font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
 .arcade-badge {
-  background: var(--accent-soft);
-  color: var(--accent);
-  padding: 1px 6px;
-  border-radius: 4px;
+  background: var(--accent);
+  color: #1a1408;
+  padding: 2px 7px;
+  border-radius: 999px;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-}
-
-/* ---- Detail logo ---- */
-.arcade-detail-logo {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-  border-radius: 6px;
-  flex: 0 0 56px;
-  background: var(--surface-2);
-  padding: 4px;
-}
-
-/* Score-log card logo (main chart page) */
-.arcade-score-logo {
-  width: 72px;
-  height: 72px;
-  object-fit: contain;
-  border-radius: 6px;
-  flex: 0 0 72px;
-  background: var(--surface);
-  padding: 6px;
 }
 
 .arcade-chart { display: flex; flex-direction: column; gap: 10px; }
