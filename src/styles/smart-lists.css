@@ -31,15 +31,15 @@
 .modal.smart-lists-modal {
   width: min(920px, 100%);
 }
-.smart-lists-modal .modal-header {
+.modal-backdrop .modal > .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-soft);
 }
-.smart-lists-modal .modal-header h2 { margin: 0; font-size: 18px; color: var(--text); font-family: var(--font-display); }
-.smart-lists-modal .modal-close {
+.modal-backdrop .modal > .modal-header h2 { margin: 0; font-size: 18px; color: var(--text); font-family: var(--font-display); }
+.modal-backdrop .modal .modal-close {
   background: transparent;
   border: none;
   color: var(--text-dim);
@@ -48,7 +48,7 @@
   padding: 4px 8px;
   border-radius: var(--radius-sm);
 }
-.smart-lists-modal .modal-close:hover { background: var(--surface-2); color: var(--text); }
+.modal-backdrop .modal .modal-close:hover { background: var(--surface-2); color: var(--text); }
 
 .smart-lists-body {
   display: grid;

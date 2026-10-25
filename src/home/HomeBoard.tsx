@@ -4,7 +4,7 @@
 // remove) and an "Add widget" picker; the parent persists the new
 // layout via `onSaveLayout`.
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Item } from '../types'
 import type { ArcadeGame } from '../types/arcade'
 import type { CategoryId } from '../types/items'
@@ -15,6 +15,8 @@ import {
   type HomeWidgetSlot, type WidgetSize, type HomeContext,
 } from './registry'
 import WidgetPreview from './WidgetPreview'
+import type { PluginPageMeta } from '../plugins/registry'
+import { HomeIcon } from '../icons'
 
 interface Props {
   items: Item[]
@@ -31,6 +33,7 @@ interface Props {
   onOpenSearch: () => void
   onOpenRandomizer?: () => void
   onQuickAdd?: (categoryId: CategoryId, title: string) => void
+  setPageMeta: (meta: PluginPageMeta | null) => void
 }
 
 const SIZE_LABELS: Record<WidgetSize, string> = {
@@ -43,7 +46,7 @@ export default function HomeBoard(props: Props) {
   const {
     items, arcadeGames, enabledCategories, layout, onSaveLayout,
     onOpenCategory, onOpenItem, onOpenCalendar, onOpenStats, onOpenArcade,
-    onQuickAdd,
+    onQuickAdd, setPageMeta,
   } = props
 
   const [editing, setEditing] = useState(false)
@@ -61,7 +64,24 @@ export default function HomeBoard(props: Props) {
     const h = today.getHours()
     return h < 6 ? 'Late night' : h < 12 ? 'Good morning' : h < 19 ? 'Good afternoon' : 'Good evening'
   }, [today])
-  const dateLabel = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+  const dateLabel = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+
+  // Greeting, date and the layout buttons live in the app's top bar.
+  useEffect(() => {
+    setPageMeta({
+      icon: <HomeIcon />,
+      title: greeting,
+      actions: (
+        <div className="ctl">
+          <span className="home-date">{dateLabel}</span>
+          {editing && <button type="button" className="secondary-btn" onClick={() => setPickerOpen(true)}>+ Add widget</button>}
+          <button type="button" className={editing ? 'add-btn' : 'secondary-btn'} onClick={() => setEditing((v) => !v)}>
+            {editing ? '✓ Done' : '✎ Edit layout'}
+          </button>
+        </div>
+      ),
+    })
+  }, [greeting, dateLabel, editing, setPageMeta])
 
   // The layout coming from settings might be empty (user cleared everything)
   // or missing (never touched). Both fall back to the default so the board
@@ -141,34 +161,9 @@ export default function HomeBoard(props: Props) {
 
   return (
     <div className="home">
-      <div className="home-header">
-        <div className="home-brand">
-          <svg className="brand-logo" viewBox="0 0 128 128" aria-hidden="true">
-            <circle cx="64" cy="64" r="46" fill="none" stroke="currentColor" strokeWidth="6" />
-            <path d="M64 26 L71.5 56.5 L102 64 L71.5 71.5 L64 102 L56.5 71.5 L26 64 L56.5 56.5 Z" fill="currentColor" />
-            <circle cx="64" cy="64" r="6" fill="none" stroke="currentColor" strokeWidth="4" />
-          </svg>
-          <div>
-            <h1>{greeting}</h1>
-            <span className="home-date">{dateLabel}</span>
-          </div>
-        </div>
-        <div className="home-utils">
-          <button
-            type="button"
-            className={editing ? 'home-util active' : 'home-util'}
-            onClick={() => setEditing((v) => !v)}
-            title="Toggle layout editor"
-          >
-            <span>{editing ? '✓ Done editing' : '✎ Edit layout'}</span>
-          </button>
-        </div>
-      </div>
-
       {editing && (
         <div className="home-edit-bar">
-          <span className="hint">Edit mode — drag widgets to reorder, or use the ↑/↓ buttons. Resize / remove from each card.</span>
-          <button type="button" className="secondary-btn" onClick={() => setPickerOpen(true)}>+ Add widget</button>
+          <span className="hint">Drag widgets to reorder them, or use ↑ / ↓. Resize, filter by library or remove each one from its header.</span>
         </div>
       )}
 

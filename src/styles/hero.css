@@ -122,3 +122,9 @@
   .hero-cover.square { width: 120px; }
   .hero-actions { padding-bottom: 0; }
 }
+
+/* Section heading shared by full pages (calendar, stats, playlists). */
+.page-section-title {
+  margin: 0; font-family: var(--font-display); font-size: 12px; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--accent);
+}

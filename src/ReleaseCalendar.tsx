@@ -1,15 +1,17 @@
 // Upcoming-releases view. Reads date fields off every item and renders
 // a "Coming up" list plus a paginated month grid. No network calls.
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Item } from './types'
 import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
 import { CalendarIcon } from './icons'
+import type { PluginPageMeta } from './plugins/registry'
 
 interface Props {
   items: Item[]
   onNavigate: (item: Item) => void
+  setPageMeta: (meta: PluginPageMeta | null) => void
 }
 
 type Entry = {
@@ -246,7 +248,7 @@ function daysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate()
 }
 
-export default function ReleaseCalendar({ items, onNavigate }: Props) {
+export default function ReleaseCalendar({ items, onNavigate, setPageMeta }: Props) {
   const today = useMemo(() => new Date(), [])
   const [monthCursor, setMonthCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [categoryFilter, setCategoryFilter] = useState<string>('')
@@ -290,48 +292,49 @@ export default function ReleaseCalendar({ items, onNavigate }: Props) {
 
   const upcoming = entries.slice(0, 20)
 
-  return (
-    <div className="release-calendar">
-      <div className="content-header">
-        <div className="page-title">
-          <span className="page-icon"><CalendarIcon /></span>
-          <div>
-            <h1>Release calendar</h1>
-            <span className="page-count">{entries.length} upcoming</span>
-          </div>
-        </div>
-        <div className="header-actions">
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} style={{ maxWidth: 200 }}>
+  // Title, count, library filter, per-episode toggle and export live in
+  // the app's top bar.
+  useEffect(() => {
+    setPageMeta({
+      icon: <CalendarIcon />,
+      title: 'Release calendar',
+      count: { n: entries.length, unit: 'upcoming' },
+      actions: (
+        <div className="ctl">
+          <select className="ctl-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label="Library">
             <option value="">All libraries</option>
             {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-dim)' }} title="Add one event per upcoming episode for currently-airing anime and series">
-            <input
-              type="checkbox"
-              checked={includeEpisodes}
-              onChange={(e) => setIncludeEpisodes(e.target.checked)}
-            />
-            <span>Per-episode</span>
-          </label>
+          <button
+            type="button"
+            className={`icon-btn text${includeEpisodes ? ' on' : ''}`}
+            aria-pressed={includeEpisodes}
+            onClick={() => setIncludeEpisodes((v) => !v)}
+            title="Add one event per upcoming episode for currently-airing anime and series"
+          >{includeEpisodes ? '✓ ' : ''}Per-episode</button>
           <button
             type="button"
             className="secondary-btn"
             disabled={entries.length === 0}
             onClick={() => downloadFile('omnio-releases.ics', 'text/calendar', toICS(entries))}
             title="Download an iCal file you can import into Google Calendar, Outlook, Apple Calendar, etc."
-          >⬇ Export .ics</button>
+          >↓ Export .ics</button>
         </div>
-      </div>
+      ),
+    })
+  }, [entries, categoryFilter, includeEpisodes, setPageMeta])
 
-      <div style={{ padding: '0 24px 24px', overflowY: 'auto' }}>
+  return (
+    <div className="release-calendar">
+      <div className="content-scroll">
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 3fr)', gap: 24, alignItems: 'start' }}>
 
           <section>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: 0 }}>Coming up next</h2>
-              <div className="view-toggle">
-                <button className={comingLayout === 'list' ? 'active' : ''} onClick={() => setComingLayout('list')}>☰ List</button>
-                <button className={comingLayout === 'grid' ? 'active' : ''} onClick={() => setComingLayout('grid')}>▦ Grid</button>
+              <h2 className="page-section-title">Coming up next</h2>
+              <div className="seg">
+                <button className={comingLayout === 'list' ? 'on' : ''} onClick={() => setComingLayout('list')}>☰ List</button>
+                <button className={comingLayout === 'grid' ? 'on' : ''} onClick={() => setComingLayout('grid')}>▦ Grid</button>
               </div>
             </div>
             {upcoming.length === 0 ? (
@@ -397,7 +400,7 @@ export default function ReleaseCalendar({ items, onNavigate }: Props) {
 
           <section>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: 0 }}>{fmtMonthYear(monthCursor)}</h2>
+              <h2 className="page-section-title">{fmtMonthYear(monthCursor)}</h2>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button type="button" className="secondary-btn" onClick={prevMonth}>←</button>
                 <button type="button" className="secondary-btn" onClick={jumpToday}>Today</button>

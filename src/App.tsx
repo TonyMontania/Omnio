@@ -142,7 +142,7 @@ import { buildStaticSiteHtml } from './exportSite'
 import { buildCsvExports, buildSingleCsv } from './CsvExporter'
 import {
   CategoryIcon,
-  InsightsIcon, SettingsIcon, FolderIcon, CalendarIcon, HomeIcon,
+  InsightsIcon, SettingsIcon, FolderIcon,
 } from './icons'
 
 import DistChart from './insights/DistChart'
@@ -428,6 +428,9 @@ function statusRank<T extends string>(value: T | undefined, fallback: T, options
   return idx < 0 ? options.length : idx
 }
 
+// Views that publish their own top-bar meta (like plugins do).
+const SELF_META_VIEWS = new Set<string>(['home', 'arcade', 'calendar', 'playlists'])
+
 type FolderSort = 'alpha' | 'recent' | 'count'
 type ArtistSort = 'yearDesc' | 'yearAsc' | 'recent' | 'alpha' | 'rating' | 'duration'
 
@@ -638,7 +641,7 @@ function App() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [specialView, activePluginSlug])
-  useEffect(() => { if (!activePluginSlug && specialView !== 'arcade') setPluginPageMeta(null) }, [activePluginSlug, specialView])
+  useEffect(() => { if (!activePluginSlug && !SELF_META_VIEWS.has(specialView)) setPluginPageMeta(null) }, [activePluginSlug, specialView])
   // If the plugin whose view is open gets re-locked or hidden, snap back to Home.
   useEffect(() => {
     if (
@@ -2635,10 +2638,8 @@ function App() {
   }
   type PageCount = { n: number; unit: string }
   const pageMeta: { icon: React.ReactNode; title: string; count?: PageCount; onBack?: () => void; actions?: React.ReactNode; chips?: PageChip[] } | null = (() => {
-    // Home owns its viewport and skips the shell topbar; Arcade publishes
-    // its own meta through setPluginPageMeta like a plugin.
-    if (specialView === 'home') return null
-    if (specialView === 'arcade') return pluginPageMeta
+    // These views publish their own meta through setPluginPageMeta, like a plugin.
+    if (SELF_META_VIEWS.has(specialView)) return pluginPageMeta
     // Active plugin publishes its meta via setPageMeta; mirror it here.
     if (activePluginSlug) return pluginPageMeta
     // An open item: back arrow + title; its actions live in the page hero.
@@ -2646,8 +2647,6 @@ function App() {
       const lib = CATEGORIES.find((c) => c.id === viewing.categoryId)
       return { icon: <CategoryIcon id={viewing.categoryId} />, title: lib?.label ?? viewing.title, onBack: () => setViewing(null) }
     }
-    if (specialView === 'calendar') return { icon: <CalendarIcon />, title: 'Release calendar' }
-    if (specialView === 'playlists') return { icon: <span className="page-icon-glyph">♪</span>, title: 'Playlists', count: { n: playlists.length, unit: playlists.length === 1 ? 'playlist' : 'playlists' } }
     if (specialView === 'stats') return { icon: <InsightsIcon />, title: 'Statistics' }
     if (specialView === 'settings') return { icon: <SettingsIcon />, title: 'Settings' }
     if (viewingArtist && specialView === 'none') {
@@ -2781,12 +2780,10 @@ function App() {
     }
   })()
 
-  // Home draws its own header; with app-drawn window controls it still
-  // gets a top bar so the controls have a place.
+  // With app-drawn window controls every view keeps a top bar, even one
+  // that hasn't published its meta yet, so the controls have a place.
   const customTitleBar = usesCustomTitleBar()
-  const navMeta: typeof pageMeta = pageMeta ?? (!customTitleBar ? null
-    : specialView === 'home' ? { icon: <HomeIcon />, title: 'Home' }
-    : { icon: null, title: '' })
+  const navMeta: typeof pageMeta = pageMeta ?? (customTitleBar ? { icon: null, title: '' } : null)
 
   return (
     <Suspense fallback={null}>
@@ -3463,6 +3460,7 @@ function App() {
           {specialView === 'home' && (
             <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
               <Home
+                setPageMeta={setPluginPageMeta}
                 items={items}
                 arcadeGames={arcadeGames}
                 enabledCategories={settings.enabledCategories}
@@ -3494,7 +3492,7 @@ function App() {
 
           {specialView === 'calendar' && (
             <Suspense fallback={<div style={{ padding: 32 }} className="hint">Loading…</div>}>
-              <ReleaseCalendar items={items} onNavigate={navigateToItem} />
+              <ReleaseCalendar items={items} onNavigate={navigateToItem} setPageMeta={setPluginPageMeta} />
             </Suspense>
           )}
 
@@ -3505,6 +3503,7 @@ function App() {
                 items={items}
                 onChange={setPlaylists}
                 onOpenItem={navigateToItem}
+                setPageMeta={setPluginPageMeta}
               />
             </Suspense>
           )}

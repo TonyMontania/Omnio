@@ -1,8 +1,5 @@
-/* Home dashboard — fullscreen landing view that replaces the sidebar.
-   No adjacent nav elements; everything the user needs to move around
-   lives inside this component (utility bar, library portal cards,
-   in-progress strip, upcoming). Meant to be the primary way in and out
-   of every library. */
+/* Home dashboard: a board of widgets. Greeting, date and the layout
+   buttons live in the app's top bar. */
 
 .home {
   flex: 1;
@@ -11,65 +8,8 @@
   overflow: hidden;
   background: var(--bg);
 }
-.home .content-scroll { flex: 1; overflow-y: auto; padding: 24px 40px 48px; }
-
-/* Header spans full width with brand + greeting on the left, utility
-   buttons on the right (calendar, stats, settings, search). These are
-   the only ways out of Home besides clicking a library card. */
-.home-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 24px 40px 20px;
-  border-bottom: 1px solid var(--border-soft);
-}
-.home-brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.home-brand .brand-logo { width: 44px; height: 44px; color: var(--accent); flex-shrink: 0; }
-.home-brand h1 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.home-date {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--text-dim);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-top: 2px;
-}
-.home-utils {
-  display: flex;
-  gap: 4px;
-}
-.home-util {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  color: var(--text-dim);
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
-}
-.home-util:hover {
-  background: var(--surface-2);
-  color: var(--text);
-  border-color: var(--border);
-}
-.home-util svg { width: 16px; height: 16px; }
-.home-util span { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.04em; text-transform: uppercase; }
+.home .content-scroll { flex: 1; overflow-y: auto; }
+.home-date { font-size: 12.5px; color: var(--text-faint); white-space: nowrap; margin-right: 4px; }
 
 /* Library cards — bigger than the earlier prototype since there's no
    sidebar competing for real estate. Grid is 2 per row on typical
@@ -336,15 +276,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 18px 20px 20px;
-  background: linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 92%, #000 8%) 100%);
+  padding: 16px 18px 18px;
+  background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset, 0 6px 16px rgba(0, 0, 0, 0.18);
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.home-widget:hover {
-  border-color: color-mix(in srgb, var(--accent) 20%, var(--border-soft) 80%);
+  border-radius: 12px;
+  transition: border-color 0.15s;
 }
 .home-widget.editing {
   border-color: var(--accent);
@@ -392,24 +328,16 @@
   min-height: 26px;
 }
 .home-widget-header h2 {
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 600;
   margin: 0;
-  color: var(--text);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-}
-.home-widget-header h2::before {
-  content: '';
-  display: inline-block;
-  width: 3px;
-  height: 14px;
-  background: var(--accent);
-  border-radius: 2px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 .home-widget-controls {
   margin-left: auto;
@@ -417,39 +345,31 @@
   gap: 4px;
   align-items: center;
 }
-.home-widget-controls button {
+.home-widget-controls button,
+.home-widget-controls select {
+  height: 26px; box-sizing: border-box;
   background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text);
+  border: 1px solid var(--border-soft);
+  color: var(--text-dim);
   font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 4px;
+  padding: 0 8px;
+  border-radius: 6px;
   cursor: pointer;
 }
-.home-widget-controls button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.home-widget-controls button:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+.home-widget-controls button.active { border-color: var(--accent); color: var(--accent); }
 .home-widget-controls button:disabled { opacity: 0.35; cursor: not-allowed; }
-.home-widget-controls button.danger:hover { border-color: #b04a4a; color: #b04a4a; }
-.home-widget-controls select {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 12px;
-  padding: 3px 6px;
-  border-radius: 4px;
-}
+.home-widget-controls button.danger:hover { border-color: var(--danger); color: var(--danger); }
 .home-widget-body { min-height: 40px; }
 
 .home-edit-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
   padding: 10px 14px;
-  margin: 4px 0 0;
-  background: var(--accent-soft);
+  margin: 0 0 14px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
   border: 1px dashed var(--accent);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
 }
+.home-edit-bar .hint { margin: 0; }
 
 /* Compact KPI-tile row inside `library-totals`. */
 .home-kpi-row {
@@ -594,46 +514,29 @@
 .home-bignum-grid-medium { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .home-bignum-grid-small { grid-template-columns: 1fr; }
 .home-bignum-tile {
-  position: relative;
-  background: linear-gradient(140deg,
-    color-mix(in srgb, var(--accent) 10%, var(--surface-2) 90%) 0%,
-    var(--surface-2) 100%);
-  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border) 80%);
-  border-radius: var(--radius-md);
-  padding: 22px 22px 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
-  overflow: hidden;
-  transition: border-color 0.15s, transform 0.15s;
-}
-.home-bignum-tile::after {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  opacity: 0.6;
-}
-.home-bignum-tile:hover {
-  border-color: var(--accent);
-  transform: translateY(-1px);
+  padding: 16px 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
 }
 .home-bignum-value {
   font-family: var(--font-display);
-  font-size: 40px;
+  font-size: 34px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--text);
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 .home-bignum-label {
   font-family: var(--font-mono);
   font-size: 10.5px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--text-faint);
 }
 
 /* Quick add — popover fired from the sidebar footer, matching the rest
