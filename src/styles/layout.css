@@ -1,4 +1,4 @@
-/* Top padding matches the `.sub-tabs` / `.toolbar` margin-bottom so the
+/* Top padding matches the `.toolbar` margin-bottom so the
    rhythm above the first row equals the rhythm between subsequent rows,
    now that the old .content-header (which had its own margin) is gone
    and the topnav provides the visual separation instead. */
@@ -169,23 +169,6 @@
   padding: 0;
 }
 
-.sub-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
-
-.sub-tab {
-  background: transparent;
-  border: 1px solid var(--border-soft);
-  color: var(--text-dim);
-  padding: 7px 14px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 12.5px;
-  font-family: var(--font-body);
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.sub-tab:hover { color: var(--text); background: var(--surface-hover); border-color: var(--text-faint); }
-.sub-tab.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); font-weight: 600; }
-.sub-tab.active:hover { background: var(--accent-soft); border-color: var(--accent); }
 
 .stats-bar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
 

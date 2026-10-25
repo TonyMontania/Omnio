@@ -174,13 +174,15 @@
 }
 .cmdk-group { padding: 4px 0; }
 .cmdk-group-label {
-  padding: 4px 14px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  padding: 6px 14px 4px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--text-faint);
+  color: var(--accent);
 }
+.cmdk-hit-sub .card-status { font-size: inherit; }
 .cmdk-hit {
   display: flex;
   align-items: center;

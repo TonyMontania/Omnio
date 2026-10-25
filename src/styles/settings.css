@@ -337,13 +337,12 @@
    Sits above the card group it introduces. */
 .settings-section-title {
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 18px;
-  color: var(--text);
-  margin: 22px 4px 4px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-soft);
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 22px 4px 2px;
 }
 .settings-form > .settings-section-title:first-child { margin-top: 4px; }
 
@@ -417,3 +416,15 @@
 }
 
 .settings-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-dim); cursor: pointer; margin-right: 6px; }
+
+/* Option pills in settings (Yes / No, Comfortable / Compact, …) read as
+   one segmented control, like the status filters on library pages. */
+.settings-form .field-group > :is(.pills, .yesno) {
+  display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; width: fit-content;
+  background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
+}
+.settings-form .field-group > :is(.pills, .yesno) > .pill {
+  background: none; border: 0; border-radius: 5px; padding: 5px 12px; color: var(--text-dim);
+}
+.settings-form .field-group > :is(.pills, .yesno) > .pill:hover { color: var(--text); background: none; }
+.settings-form .field-group > :is(.pills, .yesno) > .pill.active { background: var(--surface-hover); color: var(--text); font-weight: 600; box-shadow: inset 0 0 0 1px var(--border); }

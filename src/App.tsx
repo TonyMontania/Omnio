@@ -2647,7 +2647,24 @@ function App() {
       const lib = CATEGORIES.find((c) => c.id === viewing.categoryId)
       return { icon: <CategoryIcon id={viewing.categoryId} />, title: lib?.label ?? viewing.title, onBack: () => setViewing(null) }
     }
-    if (specialView === 'stats') return { icon: <InsightsIcon />, title: 'Statistics' }
+    if (specialView === 'stats') {
+      const statCats = CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id))
+      return {
+        icon: <InsightsIcon />,
+        title: 'Statistics',
+        actions: (
+          <div className="ctl">
+            <select className="ctl-select" value={statsCategory} onChange={(e) => setStatsCategory(e.target.value as CategoryId)} aria-label="Library">
+              {statCats.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
+            <div className="seg" role="tablist" aria-label="Chart type">
+              <button type="button" className={chartMode === 'pie' ? 'on' : ''} onClick={() => setChartMode('pie')}>◔ Pie</button>
+              <button type="button" className={chartMode === 'bar' ? 'on' : ''} onClick={() => setChartMode('bar')}>▤ Bar</button>
+            </div>
+          </div>
+        ),
+      }
+    }
     if (specialView === 'settings') return { icon: <SettingsIcon />, title: 'Settings' }
     if (viewingArtist && specialView === 'none') {
       const n = musicList.filter((m) => m.artist === viewingArtist.name).length
@@ -3019,17 +3036,7 @@ function App() {
                   </section>
                 )
               })()}
-              <div className="sub-tabs">
-                {CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id)).map((cat) => (
-                  <button key={cat.id} className={statsCategory === cat.id ? 'sub-tab active' : 'sub-tab'} onClick={() => setStatsCategory(cat.id)}>
-                    <CategoryIcon id={cat.id} /> {cat.label}
-                  </button>
-                ))}
-              </div>
-              <div className="view-toggle chart-toggle">
-                <button className={chartMode === 'pie' ? 'active' : ''} onClick={() => setChartMode('pie')}>◔ Pie</button>
-                <button className={chartMode === 'bar' ? 'active' : ''} onClick={() => setChartMode('bar')}>▤ Bar</button>
-              </div>
+              <h2 className="page-section-title stats-library-title"><CategoryIcon id={statsCategory} /> {CATEGORIES.find((c) => c.id === statsCategory)?.label}</h2>
               <DistChart data={getDistribution(statsCategory, items.filter((i) => i.categoryId === statsCategory))} mode={chartMode} />
 
               <Heatmap items={items.filter((i) => i.categoryId === statsCategory)} />
@@ -3662,11 +3669,11 @@ function App() {
                       <div className="yesno">
                         <button type="button" className={settings.notifyNewEpisodes ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, notifyNewEpisodes: true }))}>Yes</button>
                         <button type="button" className={!settings.notifyNewEpisodes ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, notifyNewEpisodes: false }))}>No</button>
-                        <button type="button" className="secondary-btn compact" onClick={async () => {
-                          const shown = await window.ipcRenderer.invoke('notify:desktop', 'Omnio', 'Notifications are working.')
-                          if (!shown) setToast('Your system blocked the notification. Check its notification settings for Omnio.')
-                        }}>Send a test</button>
                       </div>
+                      <button type="button" className="secondary-btn compact" style={{ alignSelf: 'flex-start' }} onClick={async () => {
+                        const shown = await window.ipcRenderer.invoke('notify:desktop', 'Omnio', 'Notifications are working.')
+                        if (!shown) setToast('Your system blocked the notification. Check its notification settings for Omnio.')
+                      }}>Send a test notification</button>
                       <p className="hint">While Omnio is open, it lets you know when a new episode of an anime, donghua or series you're <b>watching</b> comes out. Air times come from AniList, and from TMDb for series (needs your TMDb key in Integrations).</p>
                     </div>
                     <div className="field-group">

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Item, MusicArtist } from './types'
 import { assetSrc } from './types'
 import { CATEGORIES } from './categories'
+import { getUniversalStatusOptions, getUniversalStatusValue, statusTone } from './utils/statusUniversal'
 
 // Action verbs the palette can execute on Enter. Each maps to a
 // callback wired at the App level so we don't reach into router
@@ -338,8 +339,10 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
                 const ar = h.artist
                 const ac = h.action
                 const label = it?.title ?? ar?.name ?? ac?.label ?? ''
+                const statusValue = it ? getUniversalStatusValue(it) : ''
+                const statusLabel = it ? getUniversalStatusOptions(it.categoryId).find((o) => o.value === statusValue)?.label : undefined
                 const sub = it
-                  ? [it.artist, it.releaseYear, it.releaseDate ? new Date(it.releaseDate).getFullYear() : null].filter(Boolean).join(' · ')
+                  ? [it.artist ?? (it.devs ?? it.authors ?? it.studios ?? it.directors)?.slice(0, 2).join(', '), it.releaseYear || (it.releaseDate ? it.releaseDate.slice(0, 4) : null)].filter(Boolean).join(' · ')
                   : ar ? (ar.origin || 'Artist')
                   : (ac?.kind === 'add-item' ? 'Add'
                     : ac?.kind === 'open-view' ? 'Navigate'
@@ -362,7 +365,11 @@ export default function GlobalSearch({ open, items, artists, onClose, onOpenItem
                     </div>
                     <div className="cmdk-hit-text">
                       <div className="cmdk-hit-title">{label}</div>
-                      <div className="cmdk-hit-sub">{sub}</div>
+                      <div className="cmdk-hit-sub">
+                        {statusLabel && <span className={`card-status tone-${statusTone(statusValue)}`}>{statusLabel}</span>}
+                        {statusLabel && sub && <span aria-hidden> · </span>}
+                        {sub}
+                      </div>
                     </div>
                     <span className="cmdk-hit-matched">{h.matched}</span>
                   </button>
