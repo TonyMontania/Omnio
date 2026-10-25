@@ -178,6 +178,7 @@ import { resetForm as resetFormImpl, loadItemIntoForm as loadItemIntoFormImpl, t
 import { applyPatchFieldsToForm } from './editor/applyPatch'
 
 import './App.css'
+import { LANGUAGES, setLanguage as applyUiLanguage, t, tk, type Language } from './i18n'
 
 type Layout = 'list' | 'grid' | 'compact' | 'kanban' | 'timeline' | 'diary'
 type GroupBy = 'none' | 'year' | 'decade' | 'status' | 'rating'
@@ -223,6 +224,7 @@ type MotionMode = 'auto' | 'reduced'
 
 interface Settings {
   defaultLayout: Layout
+  language?: Language
   confirmDelete: boolean
   theme: ThemeName
   accent: AccentName
@@ -438,22 +440,22 @@ type FolderSort = 'alpha' | 'recent' | 'count'
 type ArtistSort = 'yearDesc' | 'yearAsc' | 'recent' | 'alpha' | 'rating' | 'duration'
 
 const FOLDER_SORTS: { value: FolderSort; label: string }[] = [
-  { value: 'alpha', label: 'Alphabetical' },
-  { value: 'recent', label: 'Most recent' },
-  { value: 'count', label: 'Most items' },
+  { value: 'alpha', label: tk('Alphabetical') },
+  { value: 'recent', label: tk('Most recent') },
+  { value: 'count', label: tk('Most items') },
 ]
 const ARTIST_SORTS: { value: ArtistSort; label: string }[] = [
-  { value: 'yearDesc', label: 'Release year ↓' },
-  { value: 'yearAsc', label: 'Release year ↑' },
-  { value: 'recent', label: 'Most recent' },
-  { value: 'alpha', label: 'Alphabetical' },
-  { value: 'rating', label: 'Rating' },
-  { value: 'duration', label: 'Duration (longest)' },
+  { value: 'yearDesc', label: tk('Release year ↓') },
+  { value: 'yearAsc', label: tk('Release year ↑') },
+  { value: 'recent', label: tk('Most recent') },
+  { value: 'alpha', label: tk('Alphabetical') },
+  { value: 'rating', label: tk('Rating') },
+  { value: 'duration', label: tk('Duration (longest)') },
 ]
 const FOLDER_LAYOUTS: { value: 'grid' | 'list' | 'compact'; label: string; icon: string }[] = [
-  { value: 'grid', label: 'Grid', icon: '▦' },
-  { value: 'list', label: 'List', icon: '☰' },
-  { value: 'compact', label: 'Compact', icon: '≡' },
+  { value: 'grid', label: tk('Grid'), icon: '▦' },
+  { value: 'list', label: tk('List'), icon: '☰' },
+  { value: 'compact', label: tk('Compact'), icon: '≡' },
 ]
 
 function sortFolders<T extends { name: string; createdAt?: number }>(list: T[], mode: FolderSort, count: (x: T) => number): T[] {
@@ -464,36 +466,36 @@ function sortFolders<T extends { name: string; createdAt?: number }>(list: T[], 
 }
 
 const GROUP_OPTIONS: { value: GroupBy; label: string }[] = [
-  { value: 'none', label: 'No grouping' },
-  { value: 'year', label: 'By year' },
-  { value: 'decade', label: 'By decade' },
-  { value: 'status', label: 'By status' },
-  { value: 'rating', label: 'By rating' },
+  { value: 'none', label: tk('No grouping') },
+  { value: 'year', label: tk('By year') },
+  { value: 'decade', label: tk('By decade') },
+  { value: 'status', label: tk('By status') },
+  { value: 'rating', label: tk('By rating') },
 ]
 
 // Sort choices offered for a library, in the order the top bar lists them.
 function sortOptionsFor(categoryId: CategoryId, inCollection: boolean): { value: SortBy; label: string }[] {
   const base: { value: SortBy; label: string }[] = [
-    { value: 'recent', label: 'Most recent' },
-    { value: 'alpha', label: 'Alphabetical' },
-    { value: 'rating', label: 'Rating' },
-    { value: 'custom', label: inCollection ? 'Manual order' : 'Custom order' },
+    { value: 'recent', label: tk('Most recent') },
+    { value: 'alpha', label: tk('Alphabetical') },
+    { value: 'rating', label: tk('Rating') },
+    { value: 'custom', label: inCollection ? tk('Manual order') : tk('Custom order') },
   ]
   const yearSorts: { value: SortBy; label: string }[] = [
-    { value: 'yearAsc', label: 'Year ↑' },
-    { value: 'yearDesc', label: 'Year ↓' },
+    { value: 'yearAsc', label: tk('Year ↑') },
+    { value: 'yearDesc', label: tk('Year ↓') },
   ]
   switch (categoryId) {
-    case 'videojuegos': return [...base, { value: 'time', label: 'Time played' }, { value: 'status', label: 'Status' }, { value: 'releaseAsc', label: 'Release date ↑' }, { value: 'releaseDesc', label: 'Release date ↓' }]
-    case 'musica': return [...base, { value: 'artist', label: 'By artist' }, ...yearSorts, { value: 'duration', label: 'Duration (longest)' }]
-    case 'peliculas': return [...base, ...yearSorts, { value: 'duration', label: 'Runtime (longest)' }]
-    case 'series': return [...base, { value: 'seriesStatus', label: 'Status' }, { value: 'episodes', label: 'Episodes watched' }, ...yearSorts]
+    case 'videojuegos': return [...base, { value: 'time', label: tk('Time played') }, { value: 'status', label: tk('Status') }, { value: 'releaseAsc', label: tk('Release date ↑') }, { value: 'releaseDesc', label: tk('Release date ↓') }]
+    case 'musica': return [...base, { value: 'artist', label: tk('By artist') }, ...yearSorts, { value: 'duration', label: tk('Duration (longest)') }]
+    case 'peliculas': return [...base, ...yearSorts, { value: 'duration', label: tk('Runtime (longest)') }]
+    case 'series': return [...base, { value: 'seriesStatus', label: tk('Status') }, { value: 'episodes', label: tk('Episodes watched') }, ...yearSorts]
     case 'anime':
-    case 'donghua': return [...base, { value: 'animeStatus', label: 'Status' }, { value: 'episodes', label: 'Episodes watched' }, ...yearSorts]
+    case 'donghua': return [...base, { value: 'animeStatus', label: tk('Status') }, { value: 'episodes', label: tk('Episodes watched') }, ...yearSorts]
     case 'manga':
     case 'manhwa':
     case 'manhua':
-    case 'comics_west': return [...base, { value: 'mangaStatus', label: 'Status' }, { value: 'chapters', label: 'Chapters read' }]
+    case 'comics_west': return [...base, { value: 'mangaStatus', label: tk('Status') }, { value: 'chapters', label: tk('Chapters read') }]
     default: return base
   }
 }
@@ -2607,13 +2609,13 @@ function App() {
 
   // Kanban / Timeline / Diary need a real item list — artist/group views degrade to classic.
   const supportsExtendedViews = subView === 'items' && !viewingArtist && !activeCollectionId
-  const VIEW_OPTIONS: { value: Layout; icon: string; label: string; hint: string; extended?: boolean }[] = [
-    { value: 'list',     icon: '☰', label: 'List',     hint: 'One card per row with meta' },
-    { value: 'grid',     icon: '▦', label: 'Grid',     hint: 'Cover-first tiles' },
-    { value: 'compact',  icon: '≡', label: 'Compact',  hint: 'Dense list, tiny covers' },
-    { value: 'kanban',   icon: '⊞', label: 'Kanban',   hint: 'Columns per status; drag to change', extended: true },
-    { value: 'timeline', icon: '⇢', label: 'Timeline', hint: 'Grouped by release year',            extended: true },
-    { value: 'diary',    icon: '✎', label: 'Diary',    hint: 'Chronological log',                  extended: true },
+  const VIEW_OPTIONS: { value: Layout; icon: string; label: string; extended?: boolean }[] = [
+    { value: 'list',     icon: '☰', label: t('List') },
+    { value: 'grid',     icon: '▦', label: t('Grid') },
+    { value: 'compact',  icon: '≡', label: t('Compact') },
+    { value: 'kanban',   icon: '⊞', label: t('Kanban'),   extended: true },
+    { value: 'timeline', icon: '⇢', label: t('Timeline'), extended: true },
+    { value: 'diary',    icon: '✎', label: t('Diary'),    extended: true },
   ]
   const availableViews = VIEW_OPTIONS.filter((o) => !o.extended || supportsExtendedViews)
   const exportShown = (kind: 'csv' | 'json') => {
@@ -2630,7 +2632,7 @@ function App() {
     const options = getUniversalStatusOptions(activeCategory)
     if (options.length === 0) return []
     return [
-      { key: 'all', label: 'All', count: itemsInCategory.length, active: !statusFilter, onClick: () => setStatusFilter(null) },
+      { key: 'all', label: t('All'), count: itemsInCategory.length, active: !statusFilter, onClick: () => setStatusFilter(null) },
       ...options.map((o) => ({
         key: o.value, label: o.label,
         count: itemsInCategory.filter((i) => getUniversalStatusValue(i) === o.value).length,
@@ -2654,7 +2656,7 @@ function App() {
       const statCats = CATEGORIES.filter((c) => !settings.enabledCategories || settings.enabledCategories.includes(c.id))
       return {
         icon: <InsightsIcon />,
-        title: 'Statistics',
+        title: tk('Statistics'),
         actions: (
           <div className="ctl">
             <select className="ctl-select" value={statsCategory} onChange={(e) => setStatsCategory(e.target.value as CategoryId)} aria-label="Library">
@@ -2668,38 +2670,38 @@ function App() {
         ),
       }
     }
-    if (specialView === 'settings') return { icon: <SettingsIcon />, title: 'Settings' }
+    if (specialView === 'settings') return { icon: <SettingsIcon />, title: tk('Settings') }
     if (viewingArtist && specialView === 'none') {
       const n = musicList.filter((m) => m.artist === viewingArtist.name).length
       return {
         icon: <CategoryIcon id="musica" />,
         title: viewingArtist.name,
-        count: { n, unit: n === 1 ? 'release' : 'releases' },
+        count: { n, unit: n === 1 ? tk('release') : tk('releases') },
         onBack: () => setViewingArtist(null),
         actions: (
           <PageControls
             search={search}
             onSearch={setSearch}
-            searchPlaceholder="Search releases"
+            searchPlaceholder={tk('Search releases')}
             sort={artistSort}
             sortOptions={ARTIST_SORTS}
             onSort={setArtistSort}
             layout={classicLayout}
             layoutOptions={FOLDER_LAYOUTS}
             onLayout={setLayout}
-            extra={<button type="button" className="secondary-btn" onClick={() => openArtistEditPanel(viewingArtist)}>✎ Edit</button>}
+            extra={<button type="button" className="secondary-btn" onClick={() => openArtistEditPanel(viewingArtist)}>✎ {t('Edit')}</button>}
           />
         ),
       }
     }
     if (specialView === 'simulcastBoard') {
       const airing = itemsInCategory.filter((i) => i.airingStatus === 'airing' && airingWeekday(i))
-      const browse = <button className="secondary-btn" onClick={() => setSeasonBrowserOpen(true)} title="See this season on AniList and add shows">Browse season</button>
-      return { icon: <CategoryIcon id={activeCategory} />, title: 'This season', count: { n: airing.length, unit: airing.length === 1 ? 'show' : 'shows' }, onBack: backToLibrary, actions: browse }
+      const browse = <button className="secondary-btn" onClick={() => setSeasonBrowserOpen(true)} title={t('See this season on AniList and add shows')}>{t('Browse season')}</button>
+      return { icon: <CategoryIcon id={activeCategory} />, title: tk('This season'), count: { n: airing.length, unit: airing.length === 1 ? tk('show') : tk('shows') }, onBack: backToLibrary, actions: browse }
     }
     const count: PageCount = showFolderListing
-      ? { n: categoryCollections.length, unit: categoryCollections.length === 1 ? 'group' : 'groups' }
-      : { n: visibleItems.length, unit: visibleItems.length === 1 ? 'item' : 'items' }
+      ? { n: categoryCollections.length, unit: categoryCollections.length === 1 ? tk('group') : tk('groups') }
+      : { n: visibleItems.length, unit: visibleItems.length === 1 ? tk('item') : tk('items') }
     const isAnimeLike = activeCategory === 'anime' || activeCategory === 'donghua'
     const label = current?.label ?? ''
     // Groups and Artists are sub-pages of the library with a back arrow.
@@ -2707,14 +2709,14 @@ function App() {
       const isGroups = subView === 'groups'
       return {
         icon: isGroups ? <FolderIcon /> : <CategoryIcon id={activeCategory} />,
-        title: `${label} · ${isGroups ? 'Groups' : 'Artists'}`,
-        count: isGroups ? count : { n: musicArtists.length, unit: musicArtists.length === 1 ? 'artist' : 'artists' },
+        title: `${label} · ${isGroups ? t('Groups') : t('Artists')}`,
+        count: isGroups ? count : { n: musicArtists.length, unit: musicArtists.length === 1 ? tk('artist') : tk('artists') },
         onBack: () => { setSubView('items'); resetListControls() },
         actions: (
           <PageControls
             search={search}
             onSearch={setSearch}
-            searchPlaceholder={isGroups ? 'Search groups' : 'Search artists'}
+            searchPlaceholder={isGroups ? tk('Search groups') : tk('Search artists')}
             sort={folderSort}
             sortOptions={FOLDER_SORTS}
             onSort={setFolderSort}
@@ -2722,8 +2724,8 @@ function App() {
             layoutOptions={FOLDER_LAYOUTS}
             onLayout={setLayout}
             create={isGroups
-              ? { label: '+ New group', placeholder: 'Group name', onCreate: handleCreateCollection }
-              : { label: '+ Add artist', placeholder: 'Artist name', onCreate: handleAddArtist }}
+              ? { label: tk('+ New group'), placeholder: tk('Group name'), onCreate: handleCreateCollection }
+              : { label: tk('+ Add artist'), placeholder: tk('Artist name'), onCreate: handleAddArtist }}
           />
         ),
       }
@@ -2770,8 +2772,8 @@ function App() {
         onSmartList={setActiveSmartListId}
         onManageSmartLists={() => setSmartListsModalOpen(true)}
         views={activeCollectionId ? [] : [
-          { label: 'Groups', icon: '▤', onClick: () => { setSubView('groups'); resetListControls() } },
-          ...(activeCategory === 'musica' ? [{ label: 'Artists', icon: '♪', onClick: () => { setSubView('artists'); resetListControls() } }] : []),
+          { label: tk('Groups'), icon: '▤', onClick: () => { setSubView('groups'); resetListControls() } },
+          ...(activeCategory === 'musica' ? [{ label: tk('Artists'), icon: '♪', onClick: () => { setSubView('artists'); resetListControls() } }] : []),
         ]}
         deleteMode={deleteMode}
         onToggleDelete={() => setDeleteMode((v) => !v)}
@@ -2781,8 +2783,8 @@ function App() {
           <button
             className="secondary-btn"
             onClick={() => { setSpecialView('simulcastBoard'); closePanel(); closeAllDetailViews() }}
-            title="Airing anime grouped by weekday"
-          >This season</button>
+            title={t('Airing anime grouped by weekday')}
+          >{t('This season')}</button>
         ) : undefined}
         addLabel="+ Add"
         onAdd={openAddPanel}
@@ -2804,6 +2806,11 @@ function App() {
   // that hasn't published its meta yet, so the controls have a place.
   const customTitleBar = usesCustomTitleBar()
   const navMeta: typeof pageMeta = pageMeta ?? (customTitleBar ? { icon: null, title: '' } : null)
+
+  // Applied during render so every t() call below already sees it; the
+  // keyed body remounts the screens when it changes.
+  const uiLanguage: Language = settings.language ?? 'en'
+  applyUiLanguage(uiLanguage)
 
   return (
     <Suspense fallback={null}>
@@ -2837,7 +2844,7 @@ function App() {
           </div>
         </div>
       )}
-      <div className="body">
+      <div className="body" key={uiLanguage}>
         <Sidebar
           items={items}
           collections={collections}
@@ -2889,11 +2896,11 @@ function App() {
               </button>
             )}
             <span className="topnav-page-icon">{navMeta.icon}</span>
-            <span className="topnav-page-title" data-tauri-drag-region>{navMeta.title}</span>
+            <span className="topnav-page-title" data-tauri-drag-region>{t(navMeta.title)}</span>
             {navMeta.count && (
               <span className="topnav-page-count">
                 <span className="count-n">{navMeta.count.n}</span>
-                <span className="count-unit">{navMeta.count.unit}</span>
+                <span className="count-unit">{t(navMeta.count.unit)}</span>
               </span>
             )}
             {navMeta.chips && (
@@ -3571,6 +3578,14 @@ function App() {
               <div className="settings-form">
                 {settingsTab === 'appearance' && (
                   <>
+                    <div className="field-group">
+                      <label>{t('Language')}</label>
+                      <div className="yesno">
+                        {LANGUAGES.map((l) => (
+                          <button key={l.value} type="button" className={(settings.language ?? 'en') === l.value ? 'pill active' : 'pill'} onClick={() => setSettings((s) => ({ ...s, language: l.value }))}>{l.label}</button>
+                        ))}
+                      </div>
+                    </div>
                     <div className="field-group">
                       <label>Theme</label>
                       {['Original', 'Cool', 'Vibrant', 'Warm'].map((family) => {

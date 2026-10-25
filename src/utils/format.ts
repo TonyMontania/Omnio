@@ -1,3 +1,5 @@
+import { locale } from '../i18n'
+
 // Tiny formatting helpers shared across editors / detail modals so the
 // next component that wants to show a file size or a friendly date
 // doesn't reinvent them (SaveFilesEditor originally inlined both).
@@ -12,13 +14,13 @@ export function formatBytes(n: number): string {
 export function formatDateTime(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleString(locale(), { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 export function formatDate(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
+  return d.toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: '2-digit' })
 }
 
 // Format a `YYYY-MM-DD` string without letting the timezone shift the day.
@@ -32,10 +34,10 @@ export function formatIsoDate(iso: string | undefined): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
   if (!m) {
     const fallback = new Date(iso)
-    return Number.isNaN(fallback.getTime()) ? iso : fallback.toLocaleDateString()
+    return Number.isNaN(fallback.getTime()) ? iso : fallback.toLocaleDateString(locale())
   }
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-  return d.toLocaleDateString()
+  return d.toLocaleDateString(locale())
 }
 
 // "Feb 25, 2022" for a date-only value, without the timezone shift
@@ -45,5 +47,5 @@ export function formatDay(iso: string | undefined): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
   const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return d.toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: 'numeric' })
 }

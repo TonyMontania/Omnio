@@ -9,6 +9,7 @@
 // every switch that doesn't handle it.
 
 import type { AnimeCategoryId, MangaCategoryId, CategoryId } from './types/items'
+import { t } from './i18n'
 
 export interface Category {
   id: CategoryId
@@ -16,24 +17,33 @@ export interface Category {
   singular: string
 }
 
-// Sorted alphabetically by label so every list surfaced in the UI (Home
-// cards, Settings library toggles, category pickers, Stats sub-tabs)
-// reads in the same order the user picked. Change this list to change the
-// display order everywhere.
+// Labels are translated on read (getters), so every list that shows a
+// library name follows the interface language without extra wiring.
+function category<I extends CategoryId>(id: I, label: string, singular: string): Category & { id: I } {
+  return {
+    id,
+    get label() { return t(label) },
+    get singular() { return t(singular) },
+  }
+}
+
+// Sorted alphabetically by English label so every list surfaced in the UI
+// (Settings library toggles, category pickers, Stats) reads in the same
+// order. Change this list to change the display order everywhere.
 export const CATEGORIES = [
-  { id: 'anime',         label: 'Anime',          singular: 'anime' },
-  { id: 'libros',        label: 'Books',          singular: 'book' },
-  { id: 'donghua',       label: 'Donghua',        singular: 'donghua' },
-  { id: 'videojuegos',   label: 'Games',          singular: 'game' },
-  { id: 'manga',         label: 'Manga',          singular: 'manga' },
-  { id: 'manhua',        label: 'Manhua',         singular: 'manhua' },
-  { id: 'manhwa',        label: 'Manhwa',         singular: 'manhwa' },
-  { id: 'peliculas',     label: 'Movies',         singular: 'movie' },
-  { id: 'musica',        label: 'Music',          singular: 'music' },
-  { id: 'series',        label: 'Series',         singular: 'series' },
-  { id: 'visual_novels', label: 'Visual Novels',  singular: 'visual novel' },
-  { id: 'comics_west',   label: 'Western Comics', singular: 'comic' },
-] as const satisfies readonly Category[]
+  category('anime',         'Anime',          'anime'),
+  category('libros',        'Books',          'book'),
+  category('donghua',       'Donghua',        'donghua'),
+  category('videojuegos',   'Games',          'game'),
+  category('manga',         'Manga',          'manga'),
+  category('manhua',        'Manhua',         'manhua'),
+  category('manhwa',        'Manhwa',         'manhwa'),
+  category('peliculas',     'Movies',         'movie'),
+  category('musica',        'Music',          'music'),
+  category('series',        'Series',         'series'),
+  category('visual_novels', 'Visual Novels',  'visual novel'),
+  category('comics_west',   'Western Comics', 'comic'),
+] as const
 
 // Runtime tuple of every valid id, derived from CATEGORIES so it can't
 // drift. Consumers that need string comparisons at runtime (schemas,

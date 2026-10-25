@@ -13,21 +13,33 @@ import type {
   AgeRating, RelationKind, Platform, BandStatus, MemberStatus,
   VisualNovelStatus, VnLength, VnField, VnCharacterRole, VnStaffRole, VnDevStatus,
 } from './entities'
+import { t } from '../i18n'
+
+// Option labels (and short labels) are translated on read, so every
+// dropdown, chip and card follows the interface language.
+function translated<T extends { label: string; short?: string }>(list: T[]): T[] {
+  return list.map((o) => {
+    const out = { ...o }
+    Object.defineProperty(out, 'label', { get: () => t(o.label), enumerable: true })
+    if (o.short !== undefined) Object.defineProperty(out, 'short', { get: () => t(o.short!), enumerable: true })
+    return out
+  })
+}
 
 // ---- Shared ----
 
 export const PLATFORM_SUGGESTIONS: Platform[] = ['PC', 'PlayStation 5', 'PlayStation 4', 'Xbox Series X/S', 'Xbox One', 'Nintendo Switch', 'Steam Deck', 'Mobile']
 
-export const AGE_RATING_OPTIONS: { value: AgeRating; label: string }[] = [
+export const AGE_RATING_OPTIONS: { value: AgeRating; label: string }[] = translated([
   { value: 'e', label: 'E (Everyone)' },
   { value: 'e10', label: 'E10+ (Everyone 10+)' },
   { value: 't', label: 'T (Teen)' },
   { value: 'm', label: 'M (Mature 17+)' },
   { value: 'ao', label: 'AO (Adults Only 18+)' },
   { value: 'rp', label: 'RP (Rating Pending)' },
-]
+])
 
-export const RELATION_OPTIONS: { value: RelationKind; label: string }[] = [
+export const RELATION_OPTIONS: { value: RelationKind; label: string }[] = translated([
   { value: 'sequel', label: 'Sequel' },
   { value: 'prequel', label: 'Prequel' },
   { value: 'side_story', label: 'Side story' },
@@ -45,26 +57,26 @@ export const RELATION_OPTIONS: { value: RelationKind; label: string }[] = [
   { value: 'crossover', label: 'Crossover' },
   { value: 'adaptation', label: 'Adaptation' },
   { value: 'other', label: 'Other' },
-]
+])
 
 // ---- Games ----
 
-export const OWNERSHIP_OPTIONS: { value: Ownership; label: string }[] = [
+export const OWNERSHIP_OPTIONS: { value: Ownership; label: string }[] = translated([
   { value: 'owned', label: 'Owned' },
   { value: 'shared', label: 'Shared' },
   { value: 'subscription', label: 'Subscription' },
   { value: 'unlicensed', label: 'Unlicensed' },
-]
+])
 
-export const GAME_STATUS_OPTIONS: { value: GameStatus; label: string }[] = [
+export const GAME_STATUS_OPTIONS: { value: GameStatus; label: string }[] = translated([
   { value: 'backlog', label: 'Backlog' },
   { value: 'playing', label: 'Playing' },
   { value: 'played', label: 'Played' },
   { value: 'completed', label: 'Completed' },
   { value: 'dropped', label: 'Dropped' },
-]
+])
 
-export const GAME_SOURCE_OPTIONS: { value: GameSource; label: string }[] = [
+export const GAME_SOURCE_OPTIONS: { value: GameSource; label: string }[] = translated([
   { value: 'original', label: 'Original' },
   { value: 'remake', label: 'Remake' },
   { value: 'remaster', label: 'Remaster' },
@@ -77,16 +89,16 @@ export const GAME_SOURCE_OPTIONS: { value: GameSource; label: string }[] = [
   { value: 'expanded', label: 'Expanded / Definitive edition' },
   { value: 'collection', label: 'Collection / Compilation' },
   { value: 'other', label: 'Other' },
-]
+])
 
-export const GAME_FIELD_OPTIONS: { value: GameField; label: string }[] = [
+export const GAME_FIELD_OPTIONS: { value: GameField; label: string }[] = translated([
   { value: 'title', label: 'Title' },
   { value: 'status', label: 'Status' },
   { value: 'playTime', label: 'Time played' },
   { value: 'rating', label: 'Rating' },
   { value: 'tags', label: 'Tags' },
   { value: 'deckCompat', label: 'Steam Deck Compatibility' },
-]
+])
 
 export const DEFAULT_GAME_FIELDS: Record<GameField, boolean> = {
   title: true, status: true, playTime: true, rating: true, tags: true, deckCompat: true,
@@ -94,28 +106,28 @@ export const DEFAULT_GAME_FIELDS: Record<GameField, boolean> = {
 
 // ---- Music ----
 
-export const MUSIC_TYPE_OPTIONS: { value: MusicType; label: string }[] = [
+export const MUSIC_TYPE_OPTIONS: { value: MusicType; label: string }[] = translated([
   { value: 'single', label: 'Single' },
   { value: 'ep', label: 'EP' },
   { value: 'album', label: 'Album' },
   { value: 'ost', label: 'OST' },
   { value: 'live', label: 'Live' },
   { value: 'recopilation', label: 'Recopilation' },
-]
+])
 
-export const BAND_STATUS_OPTIONS: { value: BandStatus; label: string }[] = [
+export const BAND_STATUS_OPTIONS: { value: BandStatus; label: string }[] = translated([
   { value: 'active', label: 'Active' },
   { value: 'hiatus', label: 'On hiatus' },
   { value: 'disbanded', label: 'Disbanded' },
   { value: 'unknown', label: 'Unknown' },
-]
+])
 
-export const MEMBER_STATUS_OPTIONS: { value: MemberStatus; label: string; short: string }[] = [
+export const MEMBER_STATUS_OPTIONS: { value: MemberStatus; label: string; short: string }[] = translated([
   { value: 'current',         label: 'Current',         short: 'Current'  },
   { value: 'current-touring', label: 'Current touring', short: 'Touring'  },
   { value: 'former',          label: 'Former',          short: 'Former'   },
   { value: 'former-touring',  label: 'Former touring',  short: 'Ex-tour'  },
-]
+])
 
 // Free-form, but these seed the autocomplete for band member roles.
 // Every word initial upper-cased so the picker leads with consistent
@@ -128,7 +140,7 @@ export const BAND_ROLE_SUGGESTIONS: string[] = [
   'Saxophone', 'Trumpet', 'Trombone', 'Violin', 'Cello', 'Flute',
 ]
 
-export const MUSIC_SOURCE_OPTIONS: { value: MusicSource; label: string }[] = [
+export const MUSIC_SOURCE_OPTIONS: { value: MusicSource; label: string }[] = translated([
   { value: 'original', label: 'Original' },
   { value: 'compilation', label: 'Compilation' },
   { value: 'soundtrack', label: 'Soundtrack' },
@@ -136,21 +148,21 @@ export const MUSIC_SOURCE_OPTIONS: { value: MusicSource; label: string }[] = [
   { value: 'deluxe', label: 'Deluxe edition' },
   { value: 'reissue', label: 'Reissue' },
   { value: 'other', label: 'Other' },
-]
+])
 
 // Physical vs digital ownership (manga family). "Both" is common for
 // collectors who buy volumes but keep up chapter-by-chapter online.
-export const MEDIA_OWNERSHIP_OPTIONS: { value: MediaOwnership; label: string }[] = [
+export const MEDIA_OWNERSHIP_OPTIONS: { value: MediaOwnership; label: string }[] = translated([
   { value: 'physical', label: 'Physical only' },
   { value: 'digital',  label: 'Digital only' },
   { value: 'both',     label: 'Both physical + digital' },
   { value: 'neither',  label: 'Neither owned' },
-]
+])
 
 // Goldmine standard grading — the vinyl-collector convention that
 // Discogs, Popsike and virtually every marketplace use. Labels stay
 // human-readable; storage form uses snake_case for stable comparisons.
-export const VINYL_CONDITION_OPTIONS: { value: VinylCondition; label: string }[] = [
+export const VINYL_CONDITION_OPTIONS: { value: VinylCondition; label: string }[] = translated([
   { value: 'mint',            label: 'Mint (M)' },
   { value: 'near_mint',       label: 'Near Mint (NM)' },
   { value: 'very_good_plus',  label: 'Very Good Plus (VG+)' },
@@ -159,16 +171,16 @@ export const VINYL_CONDITION_OPTIONS: { value: VinylCondition; label: string }[]
   { value: 'good',            label: 'Good (G)' },
   { value: 'fair',            label: 'Fair (F)' },
   { value: 'poor',            label: 'Poor (P)' },
-]
+])
 
-export const MUSIC_FIELD_OPTIONS: { value: MusicField; label: string }[] = [
+export const MUSIC_FIELD_OPTIONS: { value: MusicField; label: string }[] = translated([
   { value: 'title', label: 'Title' },
   { value: 'artist', label: 'Artist' },
   { value: 'releaseYear', label: 'Release year' },
   { value: 'type', label: 'Type' },
   { value: 'rating', label: 'Rating' },
   { value: 'tags', label: 'Tags' },
-]
+])
 
 export const DEFAULT_MUSIC_FIELDS: Record<MusicField, boolean> = {
   title: true, artist: true, releaseYear: true, type: true, rating: true, tags: true,
@@ -176,23 +188,23 @@ export const DEFAULT_MUSIC_FIELDS: Record<MusicField, boolean> = {
 
 // ---- Manga / Manhwa / Manhua / Western Comics ----
 
-export const MANGA_STATUS_OPTIONS: { value: MangaStatus; label: string }[] = [
+export const MANGA_STATUS_OPTIONS: { value: MangaStatus; label: string }[] = translated([
   { value: 'plan_to_read', label: 'Plan to read' },
   { value: 'reading', label: 'Reading' },
   { value: 'completed', label: 'Completed' },
   { value: 'paused', label: 'Paused' },
   { value: 'dropped', label: 'Dropped' },
-]
+])
 
-export const PUBLICATION_STATUS_OPTIONS: { value: PublicationStatus; label: string }[] = [
+export const PUBLICATION_STATUS_OPTIONS: { value: PublicationStatus; label: string }[] = translated([
   { value: 'publishing', label: 'Publishing' },
   { value: 'finished', label: 'Finished' },
   { value: 'hiatus', label: 'Hiatus' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'not_yet_released', label: 'Not yet released' },
-]
+])
 
-export const MANGA_SOURCE_OPTIONS: { value: MangaSource; label: string }[] = [
+export const MANGA_SOURCE_OPTIONS: { value: MangaSource; label: string }[] = translated([
   { value: 'original', label: 'Original' },
   { value: 'light_novel', label: 'Light novel' },
   { value: 'novel', label: 'Novel' },
@@ -200,16 +212,16 @@ export const MANGA_SOURCE_OPTIONS: { value: MangaSource; label: string }[] = [
   { value: 'visual_novel', label: 'Visual novel' },
   { value: 'anime', label: 'Anime' },
   { value: 'other', label: 'Other' },
-]
+])
 
-export const MANGA_FIELD_OPTIONS: { value: MangaField; label: string }[] = [
+export const MANGA_FIELD_OPTIONS: { value: MangaField; label: string }[] = translated([
   { value: 'title', label: 'Title' },
   { value: 'authors', label: 'Author' },
   { value: 'status', label: 'Status' },
   { value: 'chapters', label: 'Chapters read/total' },
   { value: 'rating', label: 'Rating' },
   { value: 'tags', label: 'Tags' },
-]
+])
 
 export const DEFAULT_MANGA_FIELDS: Record<MangaField, boolean> = {
   title: true, authors: true, status: true, chapters: true, rating: true, tags: true,
@@ -217,26 +229,26 @@ export const DEFAULT_MANGA_FIELDS: Record<MangaField, boolean> = {
 
 // ---- Anime / Donghua ----
 
-export const ANIME_STATUS_OPTIONS: { value: AnimeStatus; label: string }[] = [
+export const ANIME_STATUS_OPTIONS: { value: AnimeStatus; label: string }[] = translated([
   { value: 'plan_to_watch', label: 'Plan to watch' },
   { value: 'watching', label: 'Watching' },
   { value: 'completed', label: 'Completed' },
   { value: 'paused', label: 'Paused' },
   { value: 'dropped', label: 'Dropped' },
-]
+])
 
-export const AIRING_STATUS_OPTIONS: { value: AiringStatus; label: string }[] = [
+export const AIRING_STATUS_OPTIONS: { value: AiringStatus; label: string }[] = translated([
   { value: 'airing', label: 'Airing' },
   { value: 'finished', label: 'Finished' },
   { value: 'not_yet_aired', label: 'Not yet aired' },
   { value: 'cancelled', label: 'Cancelled' },
-]
+])
 
 // Ordered Monday-first — that's how simulcast schedules read on Anichart
 // / LiveChart / MAL's Seasonal boards, and it lets the Sunday column
 // stay as the "end of the week" visual anchor. `value` is what lands in
 // item.airingDay so the storage form is language-neutral.
-export const WEEKDAY_OPTIONS: { value: Weekday; label: string; short: string }[] = [
+export const WEEKDAY_OPTIONS: { value: Weekday; label: string; short: string }[] = translated([
   { value: 'monday',    label: 'Monday',    short: 'Mon' },
   { value: 'tuesday',   label: 'Tuesday',   short: 'Tue' },
   { value: 'wednesday', label: 'Wednesday', short: 'Wed' },
@@ -244,32 +256,32 @@ export const WEEKDAY_OPTIONS: { value: Weekday; label: string; short: string }[]
   { value: 'friday',    label: 'Friday',    short: 'Fri' },
   { value: 'saturday',  label: 'Saturday',  short: 'Sat' },
   { value: 'sunday',    label: 'Sunday',    short: 'Sun' },
-]
+])
 
-export const ANIME_FORMAT_OPTIONS: { value: AnimeFormat; label: string }[] = [
+export const ANIME_FORMAT_OPTIONS: { value: AnimeFormat; label: string }[] = translated([
   { value: 'tv', label: 'TV' },
   { value: 'movie', label: 'Movie' },
   { value: 'ova', label: 'OVA' },
   { value: 'ona', label: 'ONA' },
   { value: 'special', label: 'Special' },
   { value: 'music', label: 'Music Video' },
-]
+])
 
-export const ANIME_SEASON_OPTIONS: { value: AnimeSeason; label: string }[] = [
+export const ANIME_SEASON_OPTIONS: { value: AnimeSeason; label: string }[] = translated([
   { value: 'winter', label: 'Winter' },
   { value: 'spring', label: 'Spring' },
   { value: 'summer', label: 'Summer' },
   { value: 'fall', label: 'Fall' },
-]
+])
 
-export const DEMOGRAPHIC_OPTIONS: { value: Demographic; label: string }[] = [
+export const DEMOGRAPHIC_OPTIONS: { value: Demographic; label: string }[] = translated([
   { value: 'shonen', label: 'Shonen' },
   { value: 'shojo', label: 'Shojo' },
   { value: 'seinen', label: 'Seinen' },
   { value: 'josei', label: 'Josei' },
-]
+])
 
-export const ANIME_SOURCE_OPTIONS: { value: AnimeSource; label: string }[] = [
+export const ANIME_SOURCE_OPTIONS: { value: AnimeSource; label: string }[] = translated([
   { value: 'manga', label: 'Manga' },
   { value: 'light_novel', label: 'Light Novel' },
   { value: 'web_novel', label: 'Web Novel' },
@@ -278,15 +290,15 @@ export const ANIME_SOURCE_OPTIONS: { value: AnimeSource; label: string }[] = [
   { value: 'game', label: 'Game' },
   { value: 'visual_novel', label: 'Visual Novel' },
   { value: 'other', label: 'Other' },
-]
+])
 
-export const ANIME_FIELD_OPTIONS: { value: AnimeField; label: string }[] = [
+export const ANIME_FIELD_OPTIONS: { value: AnimeField; label: string }[] = translated([
   { value: 'title', label: 'Title' },
   { value: 'status', label: 'Status' },
   { value: 'episodes', label: 'Episodes watched/total' },
   { value: 'rating', label: 'Rating' },
   { value: 'tags', label: 'Tags' },
-]
+])
 
 export const DEFAULT_ANIME_FIELDS: Record<AnimeField, boolean> = {
   title: true, status: true, episodes: true, rating: true, tags: true,
@@ -294,30 +306,30 @@ export const DEFAULT_ANIME_FIELDS: Record<AnimeField, boolean> = {
 
 // ---- Series ----
 
-export const SERIES_STATUS_OPTIONS: { value: SeriesStatus; label: string }[] = [
+export const SERIES_STATUS_OPTIONS: { value: SeriesStatus; label: string }[] = translated([
   { value: 'plan_to_watch', label: 'Plan to watch' },
   { value: 'watching', label: 'Watching' },
   { value: 'completed', label: 'Completed' },
   { value: 'paused', label: 'Paused' },
   { value: 'dropped', label: 'Dropped' },
-]
+])
 
-export const SERIES_FORMAT_OPTIONS: { value: SeriesFormat; label: string }[] = [
+export const SERIES_FORMAT_OPTIONS: { value: SeriesFormat; label: string }[] = translated([
   { value: 'ongoing', label: 'Ongoing' },
   { value: 'ended', label: 'Ended' },
   { value: 'miniseries', label: 'Miniseries' },
   { value: 'limited', label: 'Limited series' },
   { value: 'anthology', label: 'Anthology' },
   { value: 'other', label: 'Other' },
-]
+])
 
-export const SERIES_FIELD_OPTIONS: { value: SeriesField; label: string }[] = [
+export const SERIES_FIELD_OPTIONS: { value: SeriesField; label: string }[] = translated([
   { value: 'title', label: 'Title' },
   { value: 'status', label: 'Status' },
   { value: 'episodes', label: 'Episodes watched/total' },
   { value: 'rating', label: 'Rating' },
   { value: 'tags', label: 'Tags' },
-]
+])
 
 export const DEFAULT_SERIES_FIELDS: Record<SeriesField, boolean> = {
   title: true, status: true, episodes: true, rating: true, tags: true,
@@ -325,7 +337,7 @@ export const DEFAULT_SERIES_FIELDS: Record<SeriesField, boolean> = {
 
 // ---- Movies ----
 
-export const MOVIE_SOURCE_OPTIONS: { value: MovieSource; label: string }[] = [
+export const MOVIE_SOURCE_OPTIONS: { value: MovieSource; label: string }[] = translated([
   { value: 'original', label: 'Original' },
   { value: 'book', label: 'Book' },
   { value: 'comic', label: 'Comic' },
@@ -334,61 +346,61 @@ export const MOVIE_SOURCE_OPTIONS: { value: MovieSource; label: string }[] = [
   { value: 'remake', label: 'Remake' },
   { value: 'sequel', label: 'Sequel' },
   { value: 'other', label: 'Other' },
-]
+])
 
-export const MOVIE_FIELD_OPTIONS: { value: MovieField; label: string }[] = [
+export const MOVIE_FIELD_OPTIONS: { value: MovieField; label: string }[] = translated([
   { value: 'title', label: 'Title' },
   { value: 'status', label: 'Watched status' },
   { value: 'year', label: 'Release year' },
   { value: 'rating', label: 'Rating' },
   { value: 'tags', label: 'Tags' },
-]
+])
 
 export const DEFAULT_MOVIE_FIELDS: Record<MovieField, boolean> = {
   title: true, status: true, year: true, rating: true, tags: true,
 }
 
-export const WATCH_LOCATION_OPTIONS: { value: WatchLocation; label: string }[] = [
+export const WATCH_LOCATION_OPTIONS: { value: WatchLocation; label: string }[] = translated([
   { value: 'cinema', label: 'Cinema' },
   { value: 'streaming', label: 'Streaming' },
   { value: 'physical', label: 'Physical Media' },
   { value: 'tv', label: 'TV' },
   { value: 'other', label: 'Other' },
-]
+])
 
 // ---- Books ----
 
-export const BOOK_STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
+export const BOOK_STATUS_OPTIONS: { value: BookStatus; label: string }[] = translated([
   { value: 'plan_to_read', label: 'Plan to read' },
   { value: 'reading', label: 'Reading' },
   { value: 'completed', label: 'Completed' },
   { value: 'paused', label: 'Paused' },
   { value: 'dropped', label: 'Dropped' },
-]
+])
 
-export const BOOK_FORMAT_OPTIONS: { value: BookFormat; label: string }[] = [
+export const BOOK_FORMAT_OPTIONS: { value: BookFormat; label: string }[] = translated([
   { value: 'paperback', label: 'Paperback' },
   { value: 'hardcover', label: 'Hardcover' },
   { value: 'ebook', label: 'E-book' },
   { value: 'audiobook', label: 'Audiobook' },
   { value: 'other', label: 'Other' },
-]
+])
 
-export const BOOK_SOURCE_OPTIONS: { value: BookSource; label: string }[] = [
+export const BOOK_SOURCE_OPTIONS: { value: BookSource; label: string }[] = translated([
   { value: 'original', label: 'Original' },
   { value: 'translation', label: 'Translation' },
   { value: 'adaptation', label: 'Adaptation' },
   { value: 'other', label: 'Other' },
-]
+])
 
-export const BOOK_FIELD_OPTIONS: { value: BookField; label: string }[] = [
+export const BOOK_FIELD_OPTIONS: { value: BookField; label: string }[] = translated([
   { value: 'title', label: 'Title' },
   { value: 'authors', label: 'Authors' },
   { value: 'status', label: 'Status' },
   { value: 'pages', label: 'Pages read/total' },
   { value: 'rating', label: 'Rating' },
   { value: 'tags', label: 'Tags' },
-]
+])
 
 export const DEFAULT_BOOK_FIELDS: Record<BookField, boolean> = {
   title: true, authors: true, status: true, pages: true, rating: true, tags: true,
@@ -396,39 +408,39 @@ export const DEFAULT_BOOK_FIELDS: Record<BookField, boolean> = {
 
 // ---- Visual Novels ----
 
-export const VN_STATUS_OPTIONS: { value: VisualNovelStatus; label: string }[] = [
+export const VN_STATUS_OPTIONS: { value: VisualNovelStatus; label: string }[] = translated([
   { value: 'plan_to_play', label: 'Plan to play' },
   { value: 'playing',      label: 'Playing' },
   { value: 'paused',       label: 'Paused' },
   { value: 'completed',    label: 'Completed' },
   { value: 'dropped',      label: 'Dropped' },
-]
+])
 
 // VNDB's own length buckets, with the hour ranges baked into the label so
 // users don't have to guess what "medium" means.
-export const VN_LENGTH_OPTIONS: { value: VnLength; label: string }[] = [
+export const VN_LENGTH_OPTIONS: { value: VnLength; label: string }[] = translated([
   { value: 'very_short', label: 'Very short (<2h)' },
   { value: 'short',      label: 'Short (2–10h)' },
   { value: 'medium',     label: 'Medium (10–30h)' },
   { value: 'long',       label: 'Long (30–50h)' },
   { value: 'very_long',  label: 'Very long (>50h)' },
-]
+])
 
-export const VN_CHARACTER_ROLE_OPTIONS: { value: VnCharacterRole; label: string }[] = [
+export const VN_CHARACTER_ROLE_OPTIONS: { value: VnCharacterRole; label: string }[] = translated([
   { value: 'protagonist', label: 'Protagonist' },
   { value: 'main',        label: 'Main character' },
   { value: 'side',        label: 'Side character' },
   { value: 'appears',     label: 'Appears' },
-]
+])
 
-export const VN_STAFF_ROLE_OPTIONS: { value: VnStaffRole; label: string }[] = [
+export const VN_STAFF_ROLE_OPTIONS: { value: VnStaffRole; label: string }[] = translated([
   { value: 'writer',     label: 'Writer / Scenario' },
   { value: 'artist',     label: 'Artist / CG' },
   { value: 'composer',   label: 'Composer / Music' },
   { value: 'director',   label: 'Director' },
   { value: 'translator', label: 'Translator' },
   { value: 'other',      label: 'Other' },
-]
+])
 
 // Common engines a Ren'Py-user might type. Free-form input; these seed the
 // datalist so muscle memory works.
@@ -438,24 +450,24 @@ export const VN_ENGINE_SUGGESTIONS: string[] = [
   'ADV+', 'Custom',
 ]
 
-export const VN_FIELD_OPTIONS: { value: VnField; label: string }[] = [
+export const VN_FIELD_OPTIONS: { value: VnField; label: string }[] = translated([
   { value: 'title',  label: 'Title' },
   { value: 'status', label: 'Status' },
   { value: 'length', label: 'Length' },
   { value: 'year',   label: 'Year' },
   { value: 'rating', label: 'Rating' },
   { value: 'tags',   label: 'Tags' },
-]
+])
 
 export const DEFAULT_VN_FIELDS: Record<VnField, boolean> = {
   title: true, status: true, length: true, year: false, rating: true, tags: true,
 }
 
-export const VN_DEV_STATUS_OPTIONS: { value: VnDevStatus; label: string }[] = [
+export const VN_DEV_STATUS_OPTIONS: { value: VnDevStatus; label: string }[] = translated([
   { value: 'finished',       label: 'Finished' },
   { value: 'in_development', label: 'In development' },
   { value: 'cancelled',      label: 'Cancelled' },
-]
+])
 
 // Language code → country flag emoji + human label. Used to prefix every
 // VN publisher with a flag ("Frontwing 🇯🇵") and to render the languages

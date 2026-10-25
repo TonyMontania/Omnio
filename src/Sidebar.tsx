@@ -9,6 +9,7 @@ import {
 } from './icons'
 import { useState } from 'react'
 import type { PluginDef } from './plugins/registry'
+import { plural, t } from './i18n'
 
 // Sprint H — MIME-ish payload for the drag-to-sidebar move gesture.
 // Cards set this on dragstart; sidebar library entries listen for it.
@@ -119,8 +120,8 @@ export default function Sidebar(props: Props) {
           type="button"
           className="sidebar-toggle"
           onClick={onToggleCollapsed}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? t('Expand sidebar') : t('Collapse sidebar')}
+          aria-label={collapsed ? t('Expand sidebar') : t('Collapse sidebar')}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             {collapsed
@@ -134,15 +135,15 @@ export default function Sidebar(props: Props) {
         type="button"
         className={active.kind === 'home' ? 'sidebar-item active' : 'sidebar-item'}
         onClick={onOpenHome}
-        title="Home"
+        title={t('Home')}
       >
         <span className="sidebar-icon"><HomeIcon /></span>
-        <span className="sidebar-label">Home</span>
+        <span className="sidebar-label">{t('Home')}</span>
       </button>
 
       {cats.length > 0 && (
         <div className="sidebar-section">
-          {!collapsed && <span className="sidebar-section-title">Libraries</span>}
+          {!collapsed && <span className="sidebar-section-title">{t('Libraries')}</span>}
           {cats.map((c) => {
             const n = items.filter((i) => i.categoryId === c.id).length
             const dropping = dropHoverCat === c.id
@@ -158,7 +159,7 @@ export default function Sidebar(props: Props) {
                 onDragOver={(e) => onLibraryDragOver(e, c.id)}
                 onDrop={(e) => onLibraryDrop(e, c.id)}
                 onDragLeave={() => onLibraryDragLeave(c.id)}
-                title={`${c.label} — ${n} ${n === 1 ? 'item' : 'items'}`}
+                title={`${c.label} — ${plural(n, '{n} item', '{n} items')}`}
               >
                 <span className="sidebar-icon"><CategoryIcon id={c.id} /></span>
                 <span className="sidebar-label">{c.label}</span>
@@ -171,13 +172,13 @@ export default function Sidebar(props: Props) {
 
       {showExtras && (
         <div className="sidebar-section">
-          {!collapsed && <span className="sidebar-section-title">Extras</span>}
+          {!collapsed && <span className="sidebar-section-title">{t('Extras')}</span>}
           {arcadeOn && (
             <button
               type="button"
               className={active.kind === 'arcade' ? 'sidebar-item active' : 'sidebar-item'}
               onClick={onOpenArcade}
-              title="Arcade — score log, 1cc grid, run tracker"
+              title={t('Arcade — score log, 1cc grid, run tracker')}
             >
               <span className="sidebar-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -187,7 +188,7 @@ export default function Sidebar(props: Props) {
                   <circle cx="17.5" cy="13.5" r="1" fill="currentColor" />
                 </svg>
               </span>
-              <span className="sidebar-label">Arcade</span>
+              <span className="sidebar-label">{t('Arcade')}</span>
             </button>
           )}
           {extraCats.map((c) => {
@@ -205,7 +206,7 @@ export default function Sidebar(props: Props) {
                 onDragOver={(e) => onLibraryDragOver(e, c.id)}
                 onDrop={(e) => onLibraryDrop(e, c.id)}
                 onDragLeave={() => onLibraryDragLeave(c.id)}
-                title={`${c.label} — ${n} ${n === 1 ? 'item' : 'items'}`}
+                title={`${c.label} — ${plural(n, '{n} item', '{n} items')}`}
               >
                 <span className="sidebar-icon"><CategoryIcon id={c.id} /></span>
                 <span className="sidebar-label">{c.label}</span>
@@ -223,7 +224,7 @@ export default function Sidebar(props: Props) {
                 type="button"
                 className={isActive ? 'sidebar-item active' : 'sidebar-item'}
                 onClick={() => onOpenPlugin?.(p.slug)}
-                title={`${p.label} — ${n} ${n === 1 ? 'item' : 'items'}`}
+                title={`${p.label} — ${plural(n, '{n} item', '{n} items')}`}
               >
                 <span className="sidebar-icon"><Icon /></span>
                 <span className="sidebar-label">{p.label}</span>
@@ -235,33 +236,33 @@ export default function Sidebar(props: Props) {
       )}
 
       <div className="sidebar-footer">
-        <button type="button" className="sidebar-item" onClick={onOpenSearch} title="Search (Ctrl+K)">
+        <button type="button" className="sidebar-item" onClick={onOpenSearch} title={t('Search (Ctrl+K)')}>
           <span className="sidebar-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
           </span>
-          <span className="sidebar-label">Search</span>
+          <span className="sidebar-label">{t('Search')}</span>
         </button>
         {onOpenQuickAdd && (
-          <button type="button" className="sidebar-item" onClick={onOpenQuickAdd} title="Quick add — drop a stub into any library">
+          <button type="button" className="sidebar-item" onClick={onOpenQuickAdd} title={t('Quick add — drop a stub into any library')}>
             <span className="sidebar-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </span>
-            <span className="sidebar-label">Quick add</span>
+            <span className="sidebar-label">{t('Quick add')}</span>
           </button>
         )}
         <button
           type="button"
           className={isActiveSpecial(active, 'calendar') ? 'sidebar-item active' : 'sidebar-item'}
           onClick={onOpenCalendar}
-          title="Release calendar"
+          title={t('Release calendar')}
         >
           <span className="sidebar-icon"><CalendarIcon /></span>
-          <span className="sidebar-label">Calendar</span>
+          <span className="sidebar-label">{t('Calendar')}</span>
         </button>
         {onOpenRandomizer && (
-          <button type="button" className="sidebar-item" onClick={onOpenRandomizer} title="Pick a random backlog item">
+          <button type="button" className="sidebar-item" onClick={onOpenRandomizer} title={t('Pick a random backlog item')}>
             <span className="sidebar-icon"><DiceIcon /></span>
-            <span className="sidebar-label">Random</span>
+            <span className="sidebar-label">{t('Random')}</span>
           </button>
         )}
         {onOpenPlaylists && (
@@ -269,29 +270,29 @@ export default function Sidebar(props: Props) {
             type="button"
             className={isActiveSpecial(active, 'playlists') ? 'sidebar-item active' : 'sidebar-item'}
             onClick={onOpenPlaylists}
-            title="Cross-library playlists"
+            title={t('Cross-library playlists')}
           >
             <span className="sidebar-icon">♪</span>
-            <span className="sidebar-label">Playlists</span>
+            <span className="sidebar-label">{t('Playlists')}</span>
           </button>
         )}
         <button
           type="button"
           className={isActiveSpecial(active, 'stats') ? 'sidebar-item active' : 'sidebar-item'}
           onClick={onOpenStats}
-          title="Statistics"
+          title={t('Statistics')}
         >
           <span className="sidebar-icon"><InsightsIcon /></span>
-          <span className="sidebar-label">Stats</span>
+          <span className="sidebar-label">{t('Stats')}</span>
         </button>
         <button
           type="button"
           className={isActiveSpecial(active, 'settings') ? 'sidebar-item active' : 'sidebar-item'}
           onClick={onOpenSettings}
-          title="Settings"
+          title={t('Settings')}
         >
           <span className="sidebar-icon"><SettingsIcon /></span>
-          <span className="sidebar-label">Settings</span>
+          <span className="sidebar-label">{t('Settings')}</span>
         </button>
       </div>
     </aside>

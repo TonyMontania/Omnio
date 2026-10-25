@@ -4,6 +4,7 @@
 // LibraryControls (styles/controls.css).
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { t } from '../i18n'
 
 export interface PageChoice<T extends string> { value: T; label: string; icon?: ReactNode }
 
@@ -51,28 +52,28 @@ export default function PageControls<S extends string, L extends string>(p: Prop
       {p.onSearch && (
         <label className="search-box">
           <span aria-hidden>⌕</span>
-          <input value={p.search ?? ''} onChange={(e) => p.onSearch!(e.target.value)} placeholder={p.searchPlaceholder ?? 'Search'} aria-label={p.searchPlaceholder ?? 'Search'} />
-          {p.search && <button type="button" aria-label="Clear search" onClick={() => p.onSearch!('')}>×</button>}
+          <input value={p.search ?? ''} onChange={(e) => p.onSearch!(e.target.value)} placeholder={t(p.searchPlaceholder ?? 'Search')} aria-label={t(p.searchPlaceholder ?? 'Search')} />
+          {p.search && <button type="button" aria-label={t('Clear search')} onClick={() => p.onSearch!('')}>×</button>}
         </label>
       )}
 
       <div className="pop-wrap" ref={view.ref}>
-        <button type="button" className={`icon-btn${view.open ? ' on' : ''}`} aria-label="View options" aria-expanded={view.open} title="Sort and layout" onClick={() => view.setOpen((v) => !v)}>⚙</button>
+        <button type="button" className={`icon-btn${view.open ? ' on' : ''}`} aria-label={t('View options')} aria-expanded={view.open} title={t('Sort and layout')} onClick={() => view.setOpen((v) => !v)}>⚙</button>
         {view.open && (
-          <div className="pop" role="dialog" aria-label="View options">
-            <div className="pop-label">Sort by</div>
+          <div className="pop" role="dialog" aria-label={t('View options')}>
+            <div className="pop-label">{t('Sort by')}</div>
             <div className="pop-list">
               {p.sortOptions.map((o) => (
-                <button type="button" key={o.value} className={p.sort === o.value ? 'on' : ''} onClick={() => p.onSort(o.value)}>{o.label}</button>
+                <button type="button" key={o.value} className={p.sort === o.value ? 'on' : ''} onClick={() => p.onSort(o.value)}>{t(o.label)}</button>
               ))}
             </div>
             {p.layoutOptions && p.onLayout && (
               <>
-                <div className="pop-label">Layout</div>
+                <div className="pop-label">{t('Layout')}</div>
                 <div className="pop-list">
                   {p.layoutOptions.map((o) => (
                     <button type="button" key={o.value} className={p.layout === o.value ? 'on' : ''} onClick={() => p.onLayout!(o.value)}>
-                      {o.icon && <span className="pop-icon" aria-hidden>{o.icon}</span>}{o.label}
+                      {o.icon && <span className="pop-icon" aria-hidden>{o.icon}</span>}{t(o.label)}
                     </button>
                   ))}
                 </div>
@@ -86,11 +87,11 @@ export default function PageControls<S extends string, L extends string>(p: Prop
 
       {p.create && (
         <div className="pop-wrap" ref={add.ref}>
-          <button type="button" className="add-btn" aria-expanded={add.open} onClick={() => add.setOpen((v) => !v)}>{p.create.label}</button>
+          <button type="button" className="add-btn" aria-expanded={add.open} onClick={() => add.setOpen((v) => !v)}>{t(p.create.label)}</button>
           {add.open && (
             <form className="pop pop-create" onSubmit={(e) => { e.preventDefault(); submit() }}>
-              <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={p.create.placeholder} aria-label={p.create.placeholder} />
-              <button type="submit" className="add-btn" disabled={!name.trim()}>Create</button>
+              <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={t(p.create.placeholder)} aria-label={t(p.create.placeholder)} />
+              <button type="submit" className="add-btn" disabled={!name.trim()}>{t('Create')}</button>
             </form>
           )}
         </div>
