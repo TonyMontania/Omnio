@@ -9,6 +9,7 @@ import type { AnyItem } from '../types/entities'
 import type { CategoryId } from '../types/items'
 import { assetSrc } from '../types'
 import { getUniversalStatusOptions, getUniversalStatusValue } from '../utils/statusUniversal'
+import { statusTone } from '../utils/statusUniversal'
 
 interface Props {
   items: AnyItem[]
@@ -155,7 +156,7 @@ export default function KanbanView({ items, categoryId, onOpen, onSetStatus }: P
             data-kanban-col={col.value}
           >
             <header className="kanban-col-header">
-              <span className="kanban-col-title">{col.label}</span>
+              <span className={`kanban-col-title card-status tone-${statusTone(col.value)}`}>{col.label}</span>
               <span className="kanban-col-count">{list.length}</span>
             </header>
             <div className="kanban-col-body">

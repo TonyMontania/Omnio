@@ -429,6 +429,9 @@ function statusRank<T extends string>(value: T | undefined, fallback: T, options
 }
 
 // Views that publish their own top-bar meta (like plugins do).
+// Date#getDay() index → the weekday values used by `airingDay`.
+const TODAY_WEEKDAY = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
 const SELF_META_VIEWS = new Set<string>(['home', 'arcade', 'calendar', 'playlists'])
 
 type FolderSort = 'alpha' | 'recent' | 'count'
@@ -2979,13 +2982,14 @@ function App() {
                   <div className="simulcast-grid">
                     {WEEKDAY_OPTIONS.map((w) => {
                       const list = byDay.get(w.value) ?? []
+                      const isToday = w.value === TODAY_WEEKDAY[new Date().getDay()]
                       return (
-                        <div key={w.value} className="simulcast-col">
+                        <div key={w.value} className={`simulcast-col${isToday ? ' today' : ''}`}>
                           <div className="simulcast-col-header">
-                            <span className="simulcast-day">{w.short}</span>
-                            <span className="simulcast-day-count">{list.length}</span>
+                            <span className="simulcast-day">{w.short}{isToday && <span className="simulcast-today">Today</span>}</span>
+                            {list.length > 0 && <span className="simulcast-day-count">{list.length}</span>}
                           </div>
-                          <div className="simulcast-col-body">
+                          <div className="simulcast-col-body list grid">
                             {list.length === 0 && <span className="simulcast-empty">—</span>}
                             {list.map((i) => (
                               <ItemCard
