@@ -47,6 +47,10 @@ fn main() {
             // all, and there is no meaningful recovery path.
             paths::init(app.handle()).expect("paths::init failed at boot");
 
+            // Leftovers from an in-app update (old portable exe,
+            // downloaded installers) are cleared on the next start.
+            handlers::updates::cleanup_after_update(app.handle());
+
             // Fase E first-boot migration — clone the user's Electron
             // library into the Tauri storage root if we detect one.
             // Runs before the renderer ever calls `data:load`, so the
@@ -103,9 +107,7 @@ fn main() {
             handlers::updates::updates_open_url,
             handlers::updates::updates_download,
             handlers::updates::updates_reveal,
-            handlers::updates::updates_launch_installer,
-            handlers::updates::updates_appimage_swap,
-            handlers::updates::updates_open_dmg,
+            handlers::updates::updates_apply,
             // Fetchers — 28 commands across 17 sources
             handlers::fetchers::sgdb_search,
             handlers::fetchers::sgdb_assets,

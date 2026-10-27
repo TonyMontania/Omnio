@@ -474,6 +474,9 @@ function optionLabel<T extends string>(options: { value: T; label: string }[], v
   return options.find((o) => o.value === value)?.label ?? value
 }
 
+// Builds that `updates:apply` can install and restart on their own.
+const AUTO_UPDATE_KINDS = new Set(['win-nsis', 'win-msi', 'win-portable', 'mac-arm64', 'mac-x64', 'linux-appimage', 'linux-deb', 'linux-rpm'])
+
 // Tab names of the item editor, translated when shown.
 const EDITOR_TAB_LABELS = {
   overview: tk('Overview'),
@@ -860,7 +863,7 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sgdbOpen, setSgdbOpen] = useState<null | 'grids' | 'heroes' | 'logos'>(null)
   const [bundleSgdbFor, setBundleSgdbFor] = useState<null | { entryId: string; title: string }>(null)
-  const [updateInfo, setUpdateInfo] = useState<null | { current: string; latest: string; htmlUrl?: string; publishedAt?: string; notes?: string; matchedAssetUrl?: string; matchedAssetName?: string }>(null)
+  const [updateInfo, setUpdateInfo] = useState<null | { current: string; latest: string; htmlUrl?: string; publishedAt?: string; notes?: string; matchedAssetUrl?: string; matchedAssetName?: string; matchedAssetSha256?: string }>(null)
   const [updateCheckState, setUpdateCheckState] = useState<'idle' | 'checking' | 'up-to-date' | 'error'>('idle')
   const [updateCheckError, setUpdateCheckError] = useState<string | null>(null)
   const [updateBannerDismissed, setUpdateBannerDismissed] = useState(false)
@@ -868,8 +871,9 @@ function App() {
   type DownloadState =
     | { phase: 'idle' }
     | { phase: 'downloading'; received: number; total: number }
-    | { phase: 'done'; path: string; size: number }
-    | { phase: 'error'; message: string }
+    | { phase: 'done'; path: string; size: number; verified: boolean }
+    | { phase: 'installing'; path: string }
+    | { phase: 'error'; message: string; path?: string }
   const [downloadState, setDownloadState] = useState<DownloadState>({ phase: 'idle' })
   const [updateModalOpen, setUpdateModalOpen] = useState(false)
 
@@ -885,12 +889,13 @@ function App() {
       const installKind = await invoke('updates:install-kind')
       let matchedAssetUrl: string | undefined
       let matchedAssetName: string | undefined
+      let matchedAssetSha256: string | undefined
       if (installKind.assetHint && Array.isArray(r.assets)) {
         const hit = r.assets.find((a) => a.name.toLowerCase().endsWith(installKind.assetHint.toLowerCase()))
-        if (hit) { matchedAssetUrl = hit.url; matchedAssetName = hit.name }
+        if (hit) { matchedAssetUrl = hit.url; matchedAssetName = hit.name; matchedAssetSha256 = hit.sha256 }
       }
       setUpdateInstallKind(installKind.kind)
-      setUpdateInfo({ current: r.current, latest: r.latest, htmlUrl: r.htmlUrl, publishedAt: r.publishedAt, notes: r.notes, matchedAssetUrl, matchedAssetName })
+      setUpdateInfo({ current: r.current, latest: r.latest, htmlUrl: r.htmlUrl, publishedAt: r.publishedAt, notes: r.notes, matchedAssetUrl, matchedAssetName, matchedAssetSha256 })
       setUpdateBannerDismissed(false)
       if (!silent) setUpdateCheckState('idle')
     } else {
@@ -916,29 +921,27 @@ function App() {
     if (!updateInfo?.matchedAssetUrl || !updateInfo.matchedAssetName) return
     setUpdateModalOpen(true)
     setDownloadState({ phase: 'downloading', received: 0, total: 0 })
-    const r = await invoke('updates:download', updateInfo.matchedAssetUrl, updateInfo.matchedAssetName)
+    const r = await invoke('updates:download', updateInfo.matchedAssetUrl, updateInfo.matchedAssetName, updateInfo.matchedAssetSha256 ?? null)
     if (!r.ok) {
-      setDownloadState({ phase: 'error', message: r.error })
+      setDownloadState({ phase: 'error', message: r.error === 'checksum-mismatch' ? t('The downloaded file doesn\'t match the published one, so it was deleted. Try again in a moment.') : r.error })
       return
     }
-    setDownloadState({ phase: 'done', path: r.path, size: r.size })
+    setDownloadState({ phase: 'done', path: r.path, size: r.size, verified: r.verified })
   }
 
+  // Installs the verified download the way this build was installed;
+  // Omnio closes and the new version opens on its own.
   const finalizeUpdate = async () => {
     if (downloadState.phase !== 'done') return
-    if (updateInstallKind === 'win-nsis') {
-      await invoke('updates:launch-installer', downloadState.path)
-    } else if (updateInstallKind === 'linux-appimage') {
-      const r = await invoke('updates:appimage-swap', downloadState.path)
-      if (!r.ok) setDownloadState({ phase: 'error', message: r.error })
-    } else if (updateInstallKind === 'mac-arm64' || updateInstallKind === 'mac-x64') {
-      await invoke('updates:open-dmg', downloadState.path)
+    const { path } = downloadState
+    if (!downloadState.verified || !AUTO_UPDATE_KINDS.has(updateInstallKind)) {
+      await invoke('updates:reveal', path)
       setUpdateModalOpen(false)
-    } else {
-      // Portable / unknown → reveal so the user can run it manually.
-      await invoke('updates:reveal', downloadState.path)
-      setUpdateModalOpen(false)
+      return
     }
+    setDownloadState({ phase: 'installing', path })
+    const r = await invoke('updates:apply', path, updateInstallKind)
+    if (!r.ok) setDownloadState({ phase: 'error', message: r.error, path })
   }
   // Single open-state for every metadata fetcher. Holds the registration
   // id (`'tmdb'` / `'igdb'` / …) of the modal currently on screen.
@@ -6726,7 +6729,7 @@ function App() {
 
 
       {updateModalOpen && updateInfo && (
-        <div className="modal-overlay" onClick={() => downloadState.phase !== 'downloading' && setUpdateModalOpen(false)}>
+        <div className="modal-overlay" onClick={() => downloadState.phase !== 'downloading' && downloadState.phase !== 'installing' && setUpdateModalOpen(false)}>
           <div className="modal-box" style={{ width: 440 }} onClick={(e) => e.stopPropagation()}>
             <p className="modal-brand">{t('Update to Omnio {latest}', { latest: updateInfo.latest })}</p>
             {downloadState.phase === 'downloading' && (() => {
@@ -6742,36 +6745,41 @@ function App() {
                 </>
               )
             })()}
-            {downloadState.phase === 'done' && (
-              <>
-                <p className="modal-message">
-                  {t('Download complete.')}{' '}
-                  {updateInstallKind === 'win-nsis' && t('Click Install to launch the setup — Windows will show a SmartScreen prompt because the build is unsigned.')}
-                  {updateInstallKind === 'win-portable' && t('The new portable exe is in your Downloads folder. Close Omnio and run it to finish the update.')}
-                  {(updateInstallKind === 'mac-arm64' || updateInstallKind === 'mac-x64') && t('Click Open DMG to mount the disk image. Drag Omnio.app to Applications like a normal install.')}
-                  {updateInstallKind === 'linux-appimage' && t('Click Replace and relaunch to make the new AppImage the active one.')}
-                  {updateInstallKind === 'unknown' && t('The file is in your Downloads folder.')}
-                </p>
-                <div className="modal-actions">
-                  <button className="ghost" onClick={() => setUpdateModalOpen(false)}>{t('Close')}</button>
-                  <button className="primary" onClick={finalizeUpdate}>
-                    {updateInstallKind === 'win-nsis' ? t('Install now') :
-                      updateInstallKind === 'linux-appimage' ? t('Replace and relaunch') :
-                      (updateInstallKind === 'mac-arm64' || updateInstallKind === 'mac-x64') ? t('Open DMG') :
-                      t('Reveal in folder')}
-                  </button>
-                </div>
-              </>
+            {downloadState.phase === 'done' && (() => {
+              const auto = downloadState.verified && AUTO_UPDATE_KINDS.has(updateInstallKind)
+              return (
+                <>
+                  <p className="modal-message">
+                    {auto ? t('Download complete and verified. Omnio will close, install the update and open again.') : downloadState.verified ? t('Download complete. This build can\'t update itself, so open the file from its folder to install it.') : t('Download complete, but it couldn\'t be verified, so Omnio won\'t install it on its own. You can open it from its folder.')}
+                  </p>
+                  {auto && updateInstallKind === 'win-msi' && <p className="hint">{t('Windows may ask for permission once.')}</p>}
+                  {auto && (updateInstallKind === 'linux-deb' || updateInstallKind === 'linux-rpm') && <p className="hint">{t('Linux will ask for your password to install the package.')}</p>}
+                  <div className="modal-actions">
+                    <button className="ghost" onClick={() => setUpdateModalOpen(false)}>{t('Later')}</button>
+                    <button className="primary" onClick={finalizeUpdate}>{auto ? t('Install and restart') : t('Show in folder')}</button>
+                  </div>
+                </>
+              )
+            })()}
+            {downloadState.phase === 'installing' && (
+              <p className="modal-message">{t('Installing… Omnio will open again in a moment.')}</p>
             )}
-            {downloadState.phase === 'error' && (
-              <>
-                <p className="modal-message" style={{ color: 'var(--danger)' }}>{t('Download failed: {message}', { message: downloadState.message })}</p>
-                <div className="modal-actions">
-                  <button className="ghost" onClick={() => setUpdateModalOpen(false)}>{t('Close')}</button>
-                  <button className="primary" onClick={startAssistedDownload}>{t('Retry')}</button>
-                </div>
-              </>
-            )}
+            {downloadState.phase === 'error' && (() => {
+              const failedPath = downloadState.path
+              return (
+                <>
+                  <p className="modal-message" style={{ color: 'var(--danger)' }}>
+                    {failedPath ? t('The update couldn\'t be installed: {message}', { message: downloadState.message }) : t('Download failed: {message}', { message: downloadState.message })}
+                  </p>
+                  <div className="modal-actions">
+                    <button className="ghost" onClick={() => setUpdateModalOpen(false)}>{t('Close')}</button>
+                    {failedPath
+                      ? <button className="primary" onClick={() => { void invoke('updates:reveal', failedPath); setUpdateModalOpen(false) }}>{t('Show in folder')}</button>
+                      : <button className="primary" onClick={startAssistedDownload}>{t('Retry')}</button>}
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
       )}

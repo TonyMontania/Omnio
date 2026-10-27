@@ -14,7 +14,7 @@ export type SimpleResult = { ok: true } | { ok: false; error: string }
 // Legacy handlers that return a bare boolean rather than the envelope.
 export type BoolResult = boolean
 
-export interface UpdateAssetRow { name: string; url: string; size: number }
+export interface UpdateAssetRow { name: string; url: string; size: number; sha256?: string }
 export type UpdatesCheckResult =
   | { ok: false; error: string }
   | {
@@ -34,7 +34,7 @@ export interface UpdatesInstallKind {
   arch: string
 }
 export type UpdatesDownloadResult =
-  | { ok: true; path: string; size: number }
+  | { ok: true; path: string; size: number; verified: boolean }
   | { ok: false; error: string }
 
 export type ItemExportResult =
@@ -176,15 +176,11 @@ export type IpcContract = {
   'updates:install-kind':
     { args: []; result: UpdatesInstallKind }
   'updates:download':
-    { args: [url: string, filename: string]; result: UpdatesDownloadResult }
+    { args: [url: string, filename: string, sha256: string | null]; result: UpdatesDownloadResult }
   'updates:reveal':
     { args: [filePath: string]; result: BoolResult }
-  'updates:launch-installer':
-    { args: [filePath: string]; result: BoolResult }
-  'updates:appimage-swap':
-    { args: [newPath: string]; result: SimpleResult }
-  'updates:open-dmg':
-    { args: [filePath: string]; result: BoolResult }
+  'updates:apply':
+    { args: [filePath: string, kind: string]; result: SimpleResult }
 
   // -- handlers/images.ts --
   'image:save':

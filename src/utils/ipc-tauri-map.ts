@@ -49,11 +49,9 @@ export const CHANNEL_ARG_NAMES: Record<string, string[]> = {
   'updates:check': ['currentVersion'],
   'updates:install-kind': [],
   'updates:open-url': ['url'],
-  'updates:download': ['url', 'filename'],
+  'updates:download': ['url', 'filename', 'sha256'],
   'updates:reveal': ['filePath'],
-  'updates:launch-installer': ['filePath'],
-  'updates:appimage-swap': ['newPath'],
-  'updates:open-dmg': ['filePath'],
+  'updates:apply': ['filePath', 'kind'],
 
   // -- fetchers -----------------------------------------------------
   'sgdb:search': ['apiKey', 'term'],

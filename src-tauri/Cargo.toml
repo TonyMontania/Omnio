@@ -41,6 +41,13 @@ regex = "1"
 # dedup stays consistent across a mixed-backend migration.
 sha1 = "0.10"
 
+# SHA-256 of downloaded updates, checked against the digest GitHub
+# publishes for every release asset before anything is installed.
+sha2 = "0.10"
+
+# Unpacks the Windows portable ZIP during an in-app update.
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
 # UUID generation for asset-filename collision fallbacks — mirrors
 # `crypto.randomUUID()` in electron/util.ts.
 uuid = { version = "1", features = ["v4"] }
