@@ -29,9 +29,7 @@ Juegos · Música · Películas · Series · Anime · Donghua · Manga · Manhwa
 - **Metadatos con un clic desde 14 fuentes**: portadas, descripciones, listas de temas, reparto, etiquetas.
 - **Tuyo y sin conexión**: sin cuentas, sin nube, sin telemetría. Tu biblioteca es una carpeta de archivos JSON que te pertenece.
 
-<p align="center">
-  <img width="1280" height="720" alt="Agregar un juego: buscar en IGDB, aplicar los metadatos y la portada, guardar" src="https://github.com/user-attachments/assets/79944c47-09fe-4747-b103-98f8f550fa03" />
-</p>
+https://github.com/user-attachments/assets/82b0c326-aa91-4cf0-a5a1-38c2cf101782
 
 ## Contenido
 
@@ -109,16 +107,20 @@ Los datos se guardan en `~/.local/share/com.omnio.app/`.
 
 ## Cómo se ve
 
-<img width="1696" height="1000" alt="Omnio: panel de inicio" src="https://github.com/user-attachments/assets/824f474b-ce75-4266-a8af-faa594288dfb" />
+![Inicio de Omnio](docs/screenshots/home.jpg)
+*Inicio: un tablero de widgets que puedes arrastrar, cambiar de tamaño y reordenar: lo que tienes en curso, un carrusel de portadas, números grandes, algo para elegir de tus pendientes y más.*
 
-*Panel de inicio: un tablero de widgets que puedes arrastrar, cambiar de tamaño y reordenar: lo que tienes en curso, lo que está en emisión, un carrusel de portadas, números grandes, un día como hoy y más.*
+![Biblioteca de Omnio](docs/screenshots/library.jpg)
+*Biblioteca: navegación por portadas con filtros por estado, búsqueda, orden, agrupación y acciones en lote.*
 
-<img width="1919" height="1031" alt="Omnio: cuadrícula de la biblioteca" src="https://github.com/user-attachments/assets/e89e97e9-46ce-4400-8fb4-92cf627aecd7" />
+![Página de detalle de Omnio](docs/screenshots/detail.jpg)
+*Página de detalle: banner, portada, tus datos de un vistazo y todo lo que completaron las fuentes de metadatos.*
 
-*Cuadrícula de la biblioteca: navegación por portadas con estados, listas inteligentes, agrupación, orden, filtros y acciones en lote.*
+![Editor de Omnio](docs/screenshots/editor.jpg)
+*Editor: pestañas para cada parte del elemento, vista previa en vivo de la tarjeta y del detalle, y metadatos con un clic desde 14 fuentes.*
 
-![Omnio: editor con pestañas y vista previa en vivo](https://github.com/user-attachments/assets/ffba12f6-f3b2-44b2-a531-91d16c804204)
-*Editor con pestañas (Resumen / Identidad / Progreso / Imágenes / Historial / Relacionados / Notas) con vista previa en vivo y metadatos con un clic desde 14 fuentes.*
+![Estadísticas de Omnio](docs/screenshots/stats.jpg)
+*Estadísticas: tiempo invertido por biblioteca, distribución por estado, actividad de finalización y tus desarrolladores, distribuidoras y plataformas más frecuentes.*
 
 ## ¿Por qué Omnio?
 

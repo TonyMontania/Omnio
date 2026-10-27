@@ -29,9 +29,7 @@ Games · Music · Movies · Series · Anime · Donghua · Manga · Manhwa · Man
 - **One-click metadata from 14 sources** — covers, descriptions, tracklists, cast, tags.
 - **Yours, offline** — no accounts, no cloud, no telemetry. Your library is a folder of JSON files you own.
 
-<p align="center">
-  <img width="1280" height="720" alt="Adding a game: search IGDB, apply the metadata and cover, save" src="https://github.com/user-attachments/assets/79944c47-09fe-4747-b103-98f8f550fa03" />
-</p>
+https://github.com/user-attachments/assets/82b0c326-aa91-4cf0-a5a1-38c2cf101782
 
 ## Contents
 
@@ -109,16 +107,20 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 
 ## See it in action
 
-<img width="1696" height="1000" alt="Omnio — Home dashboard" src="https://github.com/user-attachments/assets/824f474b-ce75-4266-a8af-faa594288dfb" />
+![Omnio home](docs/screenshots/home.jpg)
+*Home: a board of widgets you can drag, resize and rearrange: what you're in the middle of, a cover carousel, big numbers, something to pick from your backlog and more.*
 
-*Home dashboard — a customizable board of widgets you can drag, resize and rearrange: what you're in the middle of, what's airing, a cover carousel, big numbers, on this day and more.*
+![Omnio library grid](docs/screenshots/library.jpg)
+*Library: cover-first browsing with status filters, search, sorting, grouping and bulk actions.*
 
-<img width="1919" height="1031" alt="Omnio — Library grid" src="https://github.com/user-attachments/assets/e89e97e9-46ce-4400-8fb4-92cf627aecd7" />
+![Omnio detail page](docs/screenshots/detail.jpg)
+*Detail page: banner, cover, your stats at a glance and everything the metadata sources filled in.*
 
-*Library grid — cover-first browsing with status chips, smart lists, grouping, sorting, filters and bulk actions.*
+![Omnio editor](docs/screenshots/editor.jpg)
+*Editor: tabs for every part of an item, a live preview of the card and the detail page, and one-click metadata from 14 sources.*
 
-![Omnio — Tabbed editor with live preview](https://github.com/user-attachments/assets/ffba12f6-f3b2-44b2-a531-91d16c804204)
-*Tabbed editor (Overview / Identity / Progress / Media / History / Related / Notes) with live preview + one-click metadata fetch from 14 sources.*
+![Omnio statistics](docs/screenshots/stats.jpg)
+*Statistics: time invested per library, status breakdown, completion activity and your top developers, publishers and platforms.*
 
 ## Why Omnio?
 
