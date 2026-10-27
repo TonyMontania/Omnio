@@ -37,6 +37,7 @@ import {
   BOOK_FIELD_OPTIONS, DEFAULT_BOOK_FIELDS,
   VN_FIELD_OPTIONS, DEFAULT_VN_FIELDS,
   BAND_STATUS_OPTIONS,
+  AGE_RATING_OPTIONS, GAME_STATUS_OPTIONS, AIRING_STATUS_OPTIONS, ANIME_FORMAT_OPTIONS, ANIME_SEASON_OPTIONS, ANIME_SOURCE_OPTIONS, DEMOGRAPHIC_OPTIONS, GAME_SOURCE_OPTIONS, MANGA_SOURCE_OPTIONS, MOVIE_SOURCE_OPTIONS, MUSIC_SOURCE_OPTIONS, OWNERSHIP_OPTIONS, PUBLICATION_STATUS_OPTIONS, SERIES_FORMAT_OPTIONS,
 } from './types'
 
 import {
@@ -465,6 +466,12 @@ function hasOpaqueCorners(img: HTMLImageElement): boolean {
   } catch {
     return false
   }
+}
+
+// Label of a stored option value for the editor's live preview
+// ("owned" → "Owned"); unknown values show as they are.
+function optionLabel<T extends string>(options: { value: T; label: string }[], value: T | ''): string {
+  return options.find((o) => o.value === value)?.label ?? value
 }
 
 // Tab names of the item editor, translated when shown.
@@ -4809,23 +4816,23 @@ function App() {
                               return parts.length > 0 ? <p className="pd-line">{parts.join(' · ')}</p> : null
                             })()}
                             {isVideojuegos && playTime && <p className="pd-line">{t('{playTime}h played', { playTime: playTime })}</p>}
-                            {isVideojuegos && gameStatus && <p className="pd-line pd-status">{gameStatus.replace('_', ' ')}</p>}
+                            {isVideojuegos && gameStatus && <p className="pd-line pd-status">{optionLabel(GAME_STATUS_OPTIONS, gameStatus)}</p>}
                             {activeCategory === 'peliculas' && consumed && <p className="pd-line pd-status">{t('Watched')}{timesWatched && ` · ${timesWatched}x`}</p>}
                             {(activeCategory === 'anime' || activeCategory === 'donghua') && (
                               <>
-                                {watchStatus && <p className="pd-line pd-status">{watchStatus.replace(/_/g, ' ')}</p>}
+                                {watchStatus && <p className="pd-line pd-status">{optionLabel(ANIME_STATUS_OPTIONS, watchStatus)}</p>}
                                 {(episodesWatched || totalEpisodes) && <p className="pd-line">{t('Episodes: {episodesWatched}', { episodesWatched: episodesWatched || '0' })}{totalEpisodes && ` / ${totalEpisodes}`}</p>}
                               </>
                             )}
                             {activeCategory === 'series' && (
                               <>
-                                {seriesStatus && <p className="pd-line pd-status">{seriesStatus.replace(/_/g, ' ')}</p>}
+                                {seriesStatus && <p className="pd-line pd-status">{optionLabel(SERIES_STATUS_OPTIONS, seriesStatus)}</p>}
                                 {(episodesWatched || totalEpisodes) && <p className="pd-line">{t('Episodes: {episodesWatched}', { episodesWatched: episodesWatched || '0' })}{totalEpisodes && ` / ${totalEpisodes}`}</p>}
                               </>
                             )}
                             {isMangaLike(activeCategory) && (
                               <>
-                                {readingStatus && <p className="pd-line pd-status">{readingStatus.replace(/_/g, ' ')}</p>}
+                                {readingStatus && <p className="pd-line pd-status">{optionLabel(MANGA_STATUS_OPTIONS, readingStatus)}</p>}
                                 {(chaptersRead || totalChapters) && <p className="pd-line">{t('Chapters: {chaptersRead}', { chaptersRead: chaptersRead || '0' })}{totalChapters && ` / ${totalChapters}`}</p>}
                                 {(volumesRead || totalVolumesM) && <p className="pd-line">{t('Volumes: {volumesRead}', { volumesRead: volumesRead || '0' })}{totalVolumesM && ` / ${totalVolumesM}`}</p>}
                               </>
@@ -4841,11 +4848,11 @@ function App() {
                             {publishers.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Publishers')}</span><span className="pd-val">{publishers.join(', ')}</span></div>}
                             {platforms.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Platforms')}</span><span className="pd-val">{platforms.join(', ')}</span></div>}
                             {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
-                            {ownership && <div className="pd-field-row"><span className="pd-key">{t('Ownership')}</span><span className="pd-val">{ownership}</span></div>}
-                            {gameSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{gameSource}</span></div>}
+                            {ownership && <div className="pd-field-row"><span className="pd-key">{t('Ownership')}</span><span className="pd-val">{optionLabel(OWNERSHIP_OPTIONS, ownership)}</span></div>}
+                            {gameSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{optionLabel(GAME_SOURCE_OPTIONS, gameSource)}</span></div>}
                             {franchise && <div className="pd-field-row"><span className="pd-key">{t('Franchise')}</span><span className="pd-val">{franchise}</span></div>}
                             {(achievementsUnlocked || achievementsTotal) && <div className="pd-field-row"><span className="pd-key">{t('Achievements')}</span><span className="pd-val">{achievementsUnlocked || '0'} / {achievementsTotal || '?'}</span></div>}
-                            {ageRating && <div className="pd-field-row"><span className="pd-key">{t('Age rating')}</span><span className="pd-val">{ageRating}</span></div>}
+                            {ageRating && <div className="pd-field-row"><span className="pd-key">{t('Age rating')}</span><span className="pd-val">{optionLabel(AGE_RATING_OPTIONS, ageRating)}</span></div>}
                             {hasDlc && dlcList.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('DLC')}</span><span className="pd-val">{dlcList.length}</span></div>}
                             {hasAddons && addonsList.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Addons')}</span><span className="pd-val">{addonsList.length}</span></div>}
                             {isBundle && bundleContents.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Bundle')}</span><span className="pd-val">{t('{bundleContents} games', { bundleContents: bundleContents.length })}</span></div>}
@@ -4854,7 +4861,7 @@ function App() {
 
                         {activeCategory === 'musica' && (
                           <div className="pd-fields">
-                            {musicSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{musicSource}</span></div>}
+                            {musicSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{optionLabel(MUSIC_SOURCE_OPTIONS, musicSource)}</span></div>}
                             {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
                             {label && <div className="pd-field-row"><span className="pd-key">{t('Label')}</span><span className="pd-val">{label}</span></div>}
                             {producers.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Producers')}</span><span className="pd-val">{producers.join(', ')}</span></div>}
@@ -4873,7 +4880,7 @@ function App() {
                             {productionCompanies.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Production')}</span><span className="pd-val">{productionCompanies.join(', ')}</span></div>}
                             {distributors.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Distributed by')}</span><span className="pd-val">{distributors.join(', ')}</span></div>}
                             {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
-                            {movieSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{movieSource}</span></div>}
+                            {movieSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{optionLabel(MOVIE_SOURCE_OPTIONS, movieSource)}</span></div>}
                             {franchise && <div className="pd-field-row"><span className="pd-key">{t('Franchise')}</span><span className="pd-val">{franchise}</span></div>}
                             {contentRating && <div className="pd-field-row"><span className="pd-key">{t('Content rating')}</span><span className="pd-val">{contentRating}</span></div>}
                             {watchedWhere && <div className="pd-field-row"><span className="pd-key">{t('Watched on')}</span><span className="pd-val">{watchedWhere}</span></div>}
@@ -4889,7 +4896,7 @@ function App() {
                             {network && <div className="pd-field-row"><span className="pd-key">{t('Network')}</span><span className="pd-val">{network}</span></div>}
                             {country && <div className="pd-field-row"><span className="pd-key">{t('Country')}</span><span className="pd-val">{country}</span></div>}
                             {language && <div className="pd-field-row"><span className="pd-key">{t('Language')}</span><span className="pd-val">{language}</span></div>}
-                            {seriesFormat && <div className="pd-field-row"><span className="pd-key">{t('Format')}</span><span className="pd-val">{seriesFormat}</span></div>}
+                            {seriesFormat && <div className="pd-field-row"><span className="pd-key">{t('Format')}</span><span className="pd-val">{optionLabel(SERIES_FORMAT_OPTIONS, seriesFormat)}</span></div>}
                             {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
                             {contentRating && <div className="pd-field-row"><span className="pd-key">{t('Content rating')}</span><span className="pd-val">{contentRating}</span></div>}
                             {hasSeasons && seasons.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Seasons')}</span><span className="pd-val">{seasons.length}</span></div>}
@@ -4899,12 +4906,12 @@ function App() {
                         {(activeCategory === 'anime' || activeCategory === 'donghua') && (
                           <div className="pd-fields">
                             {studios.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Studios')}</span><span className="pd-val">{studios.join(', ')}</span></div>}
-                            {animeFormat && <div className="pd-field-row"><span className="pd-key">{t('Format')}</span><span className="pd-val">{animeFormat}</span></div>}
-                            {airingStatus && <div className="pd-field-row"><span className="pd-key">{t('Airing')}</span><span className="pd-val">{airingStatus}</span></div>}
-                            {(season || seasonYear) && <div className="pd-field-row"><span className="pd-key">{t('Season')}</span><span className="pd-val">{season} {seasonYear}</span></div>}
-                            {demographic && <div className="pd-field-row"><span className="pd-key">{t('Demographic')}</span><span className="pd-val">{demographic}</span></div>}
-                            {animeSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{animeSource}</span></div>}
-                            {ageRating && <div className="pd-field-row"><span className="pd-key">{t('Age rating')}</span><span className="pd-val">{ageRating}</span></div>}
+                            {animeFormat && <div className="pd-field-row"><span className="pd-key">{t('Format')}</span><span className="pd-val">{optionLabel(ANIME_FORMAT_OPTIONS, animeFormat)}</span></div>}
+                            {airingStatus && <div className="pd-field-row"><span className="pd-key">{t('Airing')}</span><span className="pd-val">{optionLabel(AIRING_STATUS_OPTIONS, airingStatus)}</span></div>}
+                            {(season || seasonYear) && <div className="pd-field-row"><span className="pd-key">{t('Season')}</span><span className="pd-val">{optionLabel(ANIME_SEASON_OPTIONS, season)} {seasonYear}</span></div>}
+                            {demographic && <div className="pd-field-row"><span className="pd-key">{t('Demographic')}</span><span className="pd-val">{optionLabel(DEMOGRAPHIC_OPTIONS, demographic)}</span></div>}
+                            {animeSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{optionLabel(ANIME_SOURCE_OPTIONS, animeSource)}</span></div>}
+                            {ageRating && <div className="pd-field-row"><span className="pd-key">{t('Age rating')}</span><span className="pd-val">{optionLabel(AGE_RATING_OPTIONS, ageRating)}</span></div>}
                             {episodeDuration && <div className="pd-field-row"><span className="pd-key">{t('Ep. duration')}</span><span className="pd-val">{t('{episodeDuration} min', { episodeDuration: episodeDuration })}</span></div>}
                             {(airedFrom || airedTo) && <div className="pd-field-row"><span className="pd-key">{t('Aired')}</span><span className="pd-val">{airedFrom || '?'} → {airedTo || '?'}</span></div>}
                             {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
@@ -4918,11 +4925,11 @@ function App() {
                             {mangaAuthors.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Authors')}</span><span className="pd-val">{mangaAuthors.join(', ')}</span></div>}
                             {mangaArtists.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Artists')}</span><span className="pd-val">{mangaArtists.join(', ')}</span></div>}
                             {magazine && <div className="pd-field-row"><span className="pd-key">{t('Magazine')}</span><span className="pd-val">{magazine}</span></div>}
-                            {pubStatus && <div className="pd-field-row"><span className="pd-key">{t('Publication')}</span><span className="pd-val">{pubStatus.replace(/_/g, ' ')}</span></div>}
-                            {mangaSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{mangaSource}</span></div>}
+                            {pubStatus && <div className="pd-field-row"><span className="pd-key">{t('Publication')}</span><span className="pd-val">{optionLabel(PUBLICATION_STATUS_OPTIONS, pubStatus)}</span></div>}
+                            {mangaSource && <div className="pd-field-row"><span className="pd-key">{t('Source')}</span><span className="pd-val">{optionLabel(MANGA_SOURCE_OPTIONS, mangaSource)}</span></div>}
                             {(startYear || endYear) && <div className="pd-field-row"><span className="pd-key">{t('Ran')}</span><span className="pd-val">{startYear || '?'} → {endYear || 'present'}</span></div>}
                             {genres.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Genres')}</span><span className="pd-val">{genres.join(', ')}</span></div>}
-                            {ageRating && <div className="pd-field-row"><span className="pd-key">{t('Age rating')}</span><span className="pd-val">{ageRating}</span></div>}
+                            {ageRating && <div className="pd-field-row"><span className="pd-key">{t('Age rating')}</span><span className="pd-val">{optionLabel(AGE_RATING_OPTIONS, ageRating)}</span></div>}
                             {volumeCovers.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Vol. covers')}</span><span className="pd-val">{volumeCovers.length}</span></div>}
                             {hasChapters && chapters.length > 0 && <div className="pd-field-row"><span className="pd-key">{t('Chapter list')}</span><span className="pd-val">{chapters.length}</span></div>}
                           </div>

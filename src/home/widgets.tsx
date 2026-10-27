@@ -429,7 +429,6 @@ registerHomeWidget({
                 {item.cover
                   ? <img src={assetSrc(item.cover)} alt="" loading="lazy" />
                   : <span>{item.title.charAt(0).toUpperCase()}</span>}
-                <span className="home-continue-arrow" aria-hidden>▶</span>
               </div>
               <div className="home-continue-body">
                 <div className="home-continue-title">{item.title}</div>
