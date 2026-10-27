@@ -4,7 +4,7 @@ All notable changes to Omnio are documented here. Format loosely follows [Keep a
 
 Each `## v<version>` section is the body of that tag's [GitHub Release](https://github.com/TonyMontania/Omnio/releases). Only user-visible changes land here — new features, fixes and behavior changes you'll actually notice while using the app.
 
-## v0.5.8 — 2026-10-26
+## v0.5.8 — 2026-10-27
 
 ### Added
 

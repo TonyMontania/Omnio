@@ -2,7 +2,7 @@
 
 Versión en español de las notas de cada versión, la que muestra Omnio cuando la interfaz está en español. La referencia es [CHANGELOG.md](CHANGELOG.md), que también es el texto de cada [versión en GitHub](https://github.com/TonyMontania/Omnio/releases).
 
-## v0.5.8 — 2026-10-26
+## v0.5.8 — 2026-10-27
 
 ### Novedades
 
