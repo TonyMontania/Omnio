@@ -75,6 +75,14 @@
   color: var(--accent);
 }
 
+.about-notes { display: flex; flex-direction: column; gap: 6px; }
+.about-notes-heading {
+  margin: 8px 0 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-dim);
+}
+.about-changelog.nested { margin-top: 4px; gap: 3px; }
+.about-changelog.nested li { color: var(--text-dim); }
+
 .welcome-modal { max-width: 460px; }
 .welcome-tips { list-style: none; padding: 0; margin: 12px 0 8px; display: flex; flex-direction: column; gap: 6px; }
 .welcome-tips li { font-size: 13px; color: var(--text-dim); padding-left: 14px; position: relative; }

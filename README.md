@@ -162,6 +162,7 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 - **Global search (Ctrl+K)** across every library with operator syntax (`favorite:true`, `year:>2020`, `status:playing`)
 - **Home widget board** — Continue where you left off, Currently airing, Upcoming this week, Cover carousel, Big numbers, On this day, Rating spread, Top of the year, Genre spotlight, Pick from your backlog and more. Drag & drop, resize, and quick-add from the sidebar
 - **Release calendar** — upcoming releases and airing dates, exportable to iCal
+- **Airing shows** — next-episode countdown on anime cards, a season browser on AniList and optional desktop notifications for new episodes
 - **Random picker** — let Omnio choose the next thing from your backlog
 - **Franchise timeline** across libraries, by sections or as a free-form diagram
 - **Statistics view** — per-category distribution + activity heatmap, cross-library genre matrix, monthly added-vs-finished chart, top rated / artists / genres / labels / devs / publishers / platforms
@@ -177,7 +178,8 @@ Building from source? See [CONTRIBUTING.md → Running locally](CONTRIBUTING.md#
 - **Export** — static HTML site (searchable, light/dark), MAL XML, iCal for release calendar, per-category CSV, Yearly Wrapped PNG
 - **Rolling backups** — 5 automatic snapshots per save, restore any of them; optional scheduled copy to a folder (Dropbox, OneDrive…)
 - **Clean-up tools** — find duplicates, merge genre and role variants, audit missing fields, fix broken covers, check a music artist's discography for missing albums
-- **In-app updater** — checks GitHub Releases, downloads the matching build
+- **Updates itself** — downloads the build that matches how you installed Omnio, checks its SHA-256, installs it and reopens
+- **English and Spanish** interface
 - **HTTP proxy** support for every outbound request
 - **11 themes × 8 accents** — Dark / Light / AMOLED / Nord / Tokyo Night / Solarized / Dracula / Catppuccin / Rosé Pine / Gruvbox / Everforest
 
@@ -282,7 +284,7 @@ Every shortcut can be changed or turned off in **Settings → Keyboard shortcuts
 ## Privacy
 
 - **No accounts, no telemetry, no analytics.** Nothing is sent home.
-- **Outbound requests only when you trigger them** — metadata lookups (one request per search you run) and the update check against GitHub Releases at startup.
+- **Outbound requests only for what you use** — metadata lookups when you search, the update check against GitHub Releases at startup, and, while Omnio is open, a check every 15 minutes with AniList (and TMDb, if you added your key) for the next episode of the airing shows in your library.
 - **API keys** you paste into Settings → Integrations live in `data/settings.json` on your disk and are only used to sign that source's requests.
 - **No third-party trackers** in the app or in the exported HTML site.
 

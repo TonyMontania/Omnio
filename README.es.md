@@ -162,6 +162,7 @@ Los datos se guardan en `~/.local/share/com.omnio.app/`.
 - **Búsqueda global (Ctrl+K)** en todas las bibliotecas, con operadores (`favorite:true`, `year:>2020`, `status:playing`)
 - **Panel de inicio con widgets**: Sigue donde quedaste, En emisión, Esta semana, Carrusel de portadas, Números grandes, Un día como hoy, Distribución de calificaciones, Lo mejor del año, Géneros destacados, Elegir de tus pendientes y más. Arrastra, cambia el tamaño y agrega rápido desde la barra lateral
 - **Calendario de lanzamientos**: próximos lanzamientos y fechas de emisión, exportable a iCal
+- **Lo que está en emisión**: cuenta regresiva al próximo episodio en las tarjetas de anime, explorador de temporada en AniList y notificaciones de escritorio opcionales para episodios nuevos
 - **Elegir al azar**: deja que Omnio elija lo próximo de tus pendientes
 - **Línea de tiempo de franquicias** entre bibliotecas, por secciones o como diagrama libre
 - **Estadísticas**: distribución por categoría + mapa de actividad, matriz de géneros entre bibliotecas, gráfico mensual de agregados y terminados, lo mejor calificado / artistas / géneros / sellos / desarrolladores / distribuidoras / plataformas
@@ -177,7 +178,8 @@ Los datos se guardan en `~/.local/share/com.omnio.app/`.
 - **Exportar**: sitio HTML estático (con búsqueda, claro/oscuro), XML de MAL, iCal del calendario de lanzamientos, CSV por categoría, imagen PNG del Resumen del año
 - **Copias de seguridad rotativas**: 5 instantáneas automáticas por guardado, restaura la que quieras; copia programada opcional a una carpeta (Dropbox, OneDrive…)
 - **Herramientas de limpieza**: buscar duplicados, unificar variantes de géneros y roles, revisar campos vacíos, arreglar portadas rotas, revisar qué álbumes te faltan de la discografía de un artista
-- **Actualizador integrado**: revisa GitHub Releases y descarga la versión que corresponde
+- **Se actualiza sola**: descarga la versión que corresponde a cómo instalaste Omnio, verifica su SHA-256, la instala y se vuelve a abrir
+- **Interfaz en inglés y español**
 - **Proxy HTTP** para todas las solicitudes salientes
 - **11 temas × 8 colores de acento**: Dark / Light / AMOLED / Nord / Tokyo Night / Solarized / Dracula / Catppuccin / Rosé Pine / Gruvbox / Everforest
 
@@ -282,7 +284,7 @@ Todos los atajos se pueden cambiar o desactivar en **Configuración → Atajos d
 ## Privacidad
 
 - **Sin cuentas, sin telemetría, sin analíticas.** No se envía nada a ningún servidor propio.
-- **Solo hay conexiones cuando tú las inicias**: búsquedas de metadatos (una solicitud por cada búsqueda que haces) y la búsqueda de actualizaciones en GitHub Releases al abrir la app.
+- **Solo se conecta para lo que usas**: búsquedas de metadatos cuando buscas, la búsqueda de actualizaciones en GitHub Releases al abrir la app y, mientras Omnio está abierto, una consulta cada 15 minutos a AniList (y a TMDb, si cargaste tu clave) por el próximo episodio de las series en emisión de tu biblioteca.
 - **Las claves de API** que pegas en Configuración → Integraciones se guardan en `data/settings.json` en tu disco y solo se usan para las solicitudes a esa fuente.
 - **Sin rastreadores de terceros** ni en la app ni en el sitio HTML exportado.
 

@@ -4,6 +4,41 @@ All notable changes to Omnio are documented here. Format loosely follows [Keep a
 
 Each `## v<version>` section is the body of that tag's [GitHub Release](https://github.com/TonyMontania/Omnio/releases). Only user-visible changes land here — new features, fixes and behavior changes you'll actually notice while using the app.
 
+## v0.5.8 — 2026-10-26
+
+### Added
+
+- **Omnio in Spanish.** Settings → Appearance → Language switches the whole interface between English and Spanish. Libraries are listed alphabetically in the language you pick and dates follow its format. Omnio reloads once when you switch.
+- **Updates install themselves.** When a new version is out, Omnio downloads the build that matches how you installed it, checks it against the SHA-256 that GitHub publishes for every file, installs it and opens again — Windows installer, MSI, portable ZIP, macOS app, AppImage, `.deb` and `.rpm`. A download that doesn't match is deleted and never installed. This works from 0.5.8 onward, so the update to 0.5.8 itself still goes through the previous flow.
+- **Next episode for airing shows.** Anime and donghua cards show the next episode and how long until it airs, from AniList. The release calendar lists exact next episodes too, from AniList for anime and from TMDb for series (with your TMDb key).
+- **Desktop notifications for new episodes** of the anime, donghua and series you're watching, while Omnio is open. Turn them on in Settings → Behavior.
+- **Browse the season on AniList** from the This season board and add shows straight from there.
+- **Import a public VNDB list** into Visual Novels. Statuses come from your VNDB labels and votes become star ratings; visual novels you already have are matched by VNDB id or title and only get your status, rating and dates.
+- **Settings file.** Settings → Data → Import & share exports your theme, Home layout, card fields, shortcuts, templates, custom fields, tag tree and smart lists to a file you can import on another computer. API keys are left out unless you ask for them.
+- **Artist photos and banners from Deezer and TheAudioDB.** "Search online" in the artist editor shows the images both sites have and saves the one you pick with your library.
+- **New Home widgets:** Recently added, Pinned (right-click any card → Pin to Home) and Recent 1cc clears from Arcade. Every widget can be limited to the libraries you choose, and the Add widget menu shows a small drawing of each one. Home also opens with a short greeting about something in your library.
+- **Time invested per library** at the top of Statistics.
+- **Score progression chart** for each Arcade game.
+- **App-styled title bar** on Windows and Linux: minimize, maximize and close sit in Omnio's top bar instead of the system frame.
+- **AppImage delta updates.** The AppImage carries its update information and each release publishes a `.zsync` file, so AppImageUpdate and Gear Lever can update it.
+
+### Changed
+
+- **New look across the app.** Every library has a one-row top bar with search, status filters, view options and actions; cards are cover-first with a status dot; every detail page — including artists and Arcade games — opens with a banner, the cover, quick stats and tabs. The item editor is tabbed with a live preview of the card and the detail page, and **Ctrl+S** saves from any tab. Home, Release calendar, Playlists, Statistics, Random, Quick add, Search, Settings, This season, Kanban, Diary, Timeline, dialogs and smart lists follow the same design.
+- **Line icons instead of emoji** everywhere in the interface.
+- **Group covers show the whole logo.** Wide or tall logos stay centered with a margin over a soft blurred backdrop instead of being cropped; square covers with their own background fill the tile.
+- **HowLongToBeat removed.** Its lookup, importer, editor field and sort options are gone, and the HowLongToBeat times stored on your games are removed.
+
+### Fixed
+
+- **Open folder and Show in folder open the right folder on Windows.** They used to open Documents instead of the folder you asked for.
+- **The scrollbar shows in compact density.**
+- **The top edge of the card hover outline** was cut off.
+- **Track and episode numbers no longer get cut off** in tracklists and episode lists; the number column grows with the number of digits.
+- **Cleaning orphan assets keeps artist and group images.**
+- **The editor's preview shows readable values** — "Owned", "Original", "T (Teen)" — instead of the stored ones.
+- **The welcome screen explains where your data lives** for every install type.
+
 ## v0.5.7 — 2026-10-05
 
 ### Fixed

@@ -103,6 +103,7 @@ import type { PluginDef, PluginPageMeta } from './plugins/registry'
 import { subscribePluginCounts } from './plugins/counts'
 const ArtistDetailView  = lazy(() => import('./ArtistDetailView'))
 const ArtistImagePicker = lazy(() => import('./ArtistImagePicker'))
+import ReleaseNotes from './components/ReleaseNotes'
 const SeasonBrowser = lazy(() => import('./SeasonBrowser'))
 const DetailModalRouter = lazy(() => import('./components/DetailModalRouter'))
 const DuplicatesModal   = lazy(() => import('./DuplicatesModal'))
@@ -4517,12 +4518,7 @@ function App() {
                         <p className="about-tagline">{t('A personal hobby backlog tracker for games, music, movies, series, anime, donghua, manga family, books and visual novels.')}</p>
                         <p className="about-line">{t('Local-only. No accounts, no telemetry, no cloud. Your data lives on this machine.')}</p>
                         <p className="about-section-title">{t('New in this release')}</p>
-                        <ul className="about-changelog">
-                          <li><b>{t('Fedora / RHEL')}{' '}<code>.rpm</code> {t('build')}</b>{' '}{t('— Tauri v2\'s native')}{' '}<code>rpm</code>{' '}{t('bundle target is on; the release ships')}{' '}<code>{t('omnio-<version>-1.x86_64.rpm')}</code>{' '}{t('next to the AppImage and')}{' '}<code>.deb</code>{t('. Install with')}{' '}<code>{t('sudo dnf install ./omnio-<version>-1.x86_64.rpm')}</code>{' '}{t('on Fedora / RHEL / CentOS / Rocky / Alma / openSUSE / Amazon Linux 2023.')}</li>
-                          <li><b>{t('Arch AUR:')}{' '}<code>omnio-bin</code></b>{' '}{t('— the release publishes a stamped PKGBUILD that repackages the upstream')}{' '}<code>.deb</code>{' '}{t('for Arch and derivatives.')}{' '}<code>{t('yay -S omnio-bin')}</code>.</li>
-                          <li><b>winget: <code>{t('TonyMontania.Omnio')}</code></b>{' '}{t('— three installer entries (NSIS + MSI + portable ZIP), each with its own SHA256.')}{' '}<code>{t('winget install TonyMontania.Omnio')}</code>.</li>
-                          <li><b>{t('In-app updater picks the right asset for every install variant')}</b>{' '}{t('— the detector was broken for portable (looked for an env var that doesn\'t exist), MSI (no branch at all) and')}{' '}<code>.deb</code>{' '}{t('(Linux always got AppImage). It now reads')}{' '}<code>{t('current_exe()')}</code>{t(', matches against Tauri v2\'s default install directories on Windows, and reads')}{' '}<code>/etc/os-release</code>{' '}{t('on Linux to split')}{' '}<code>.deb</code> {t('from')} <code>.rpm</code>{t('. Portable users finally get the portable ZIP; MSI users get the MSI; Fedora users get the RPM.')}</li>
-                        </ul>
+                        <ReleaseNotes version={APP_VERSION} onOpenLink={(url) => { void invoke('updates:open-url', url) }} />
                         <p className="about-line">
                           <a
                             href="https://github.com/TonyMontania/Omnio/releases"
